@@ -1,0 +1,15 @@
+KDIR=../target
+
+obj-m += aal_knf.o
+
+aal_knf-objs = aal_knf_driver.o knf_device.o
+
+.PHONY: clean install
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+clean:
+	$(RM) .*.cmd *.mod.c *.o *.ko* Module.symvers modules.order -r .tmp*
+
+install:

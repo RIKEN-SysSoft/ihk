@@ -1,0 +1,8 @@
+config AAL
+	bool "Enable Accelerator Abstraction Layer"
+	default y
+
+config AAL_DEBUG
+	bool "Enable debug output for AAL"
+    depends on AAL
+	default n
