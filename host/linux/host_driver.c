@@ -17,6 +17,7 @@
 #include <linux/file.h>
 #include <aal/aal_host_user.h>
 #include <aal/aal_host_driver.h>
+#include <aal/misc/debug.h>
 #include "host_linux.h"
 
 #define DEV_MAX_MINOR 64
@@ -103,10 +104,15 @@ static int __aal_os_load_file(struct aal_host_linux_os_data *data, char *fn)
 	int ret = 0;
 	loff_t size, done, pos = 0;
 	long r;
+	mm_segment_t fs;
 
 	if (data->ops->load_file) {
+		dprintf("AAL: os_load_file is defined. Use it.\n");
+
 		ret = data->ops->load_file(data, data->priv, fn);
 	} else if (data->ops->load_mem){
+		dprintf("AAL: os_load_mem is defined. Use it.\n");
+
 		file = filp_open(fn, O_RDONLY, 0);
 		if (IS_ERR(file)) {
 			return -ENOENT;
@@ -124,7 +130,13 @@ static int __aal_os_load_file(struct aal_host_linux_os_data *data, char *fn)
 		}
 
 		for (done = 0; ret == 0 && done < size; ) {
+			fs = get_fs();
+			set_fs(get_ds());
+
 			r = vfs_read(file, buf, PAGE_SIZE, &pos);
+
+			set_fs(fs);
+			
 			if (r <= 0) {
 				ret = (int)r;
 				break;
@@ -137,6 +149,7 @@ static int __aal_os_load_file(struct aal_host_linux_os_data *data, char *fn)
 
 		fput(file);
 	} else {
+		dprintf("AAL: No loading function is defined.\n");
 		ret = -EINVAL;
 	}
 
@@ -204,6 +217,8 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 	struct aal_host_linux_os_data *data;
 	
 	data = file->private_data;
+
+	dprintf("AAL: ioctl request = %x, arg = %lx\n", request, arg);
 
 	switch (request) {
 	case AAL_OS_LOAD:
