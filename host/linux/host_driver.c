@@ -19,11 +19,15 @@
 #include <aal/aal_host_driver.h>
 #include <aal/misc/debug.h>
 #include "host_linux.h"
+#include "ops_wrappers.h"
 
 #define DEV_MAX_MINOR 64
 #define OS_MAX_MINOR 64
 #define DEV_DEV_NAME "mcd"
 #define OS_DEV_NAME  "mcos"
+
+#define OS_DATA_INVALID ((void *)-1)
+#define DEV_DATA_INVALID ((void *)-1)
 
 static dev_t mcos_dev_num, mcd_dev_num;
 static struct class *mcos_class, *mcd_class;
@@ -50,7 +54,7 @@ static int aal_host_os_open(struct inode *inode, struct file *file)
 	}
 
 	data = os_data[idx];
-	if (!data) {
+	if (!data || data == OS_DATA_INVALID) {
 		return -ENOENT;
 	}
 	if (data->flag & AAL_OS_FLAG_SHARABLE) {
@@ -115,18 +119,21 @@ static int __aal_os_load_file(struct aal_host_linux_os_data *data, char *fn)
 
 		file = filp_open(fn, O_RDONLY, 0);
 		if (IS_ERR(file)) {
+			dprintf("AAL: file not found %s\n", fn);
 			return -ENOENT;
 		}
 
 		size = i_size_read(file->f_path.dentry->d_inode);
 		if (size <= 0) {
 			fput(file);
+			dprintf("AAL: file size invalid: %lld\n", size);
 			return -EINVAL;
 		}
 
 		buf = (unsigned char *)__get_free_page(GFP_KERNEL);
 		if (!buf) {
-			ret = -ENOMEM;
+			fput(file);
+			return -ENOMEM;
 		}
 
 		for (done = 0; ret == 0 && done < size; ) {
@@ -138,6 +145,7 @@ static int __aal_os_load_file(struct aal_host_linux_os_data *data, char *fn)
 			set_fs(fs);
 			
 			if (r <= 0) {
+				dprintf("vfs_read failed: %ld\n", r);
 				ret = (int)r;
 				break;
 			}
@@ -188,10 +196,19 @@ static int  __aal_os_boot(struct aal_host_linux_os_data *data, int flag)
 static int  __aal_os_shutdown(struct aal_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
+	void *buf;
+
+	if (data->kmsg_buf) {
+		buf = data->kmsg_buf;
+		data->kmsg_buf = NULL;
+		__aal_device_unmap_virtual(data->dev_data, buf, data->kmsg_len);
+		__aal_os_unmap_memory(data, data->kmsg_pa, data->kmsg_len);
+	}
 
 	if (data->ops->shutdown) {
 		ret = data->ops->shutdown(data, data->priv, flag);
 	}
+
 	return ret;
 }
 
@@ -208,6 +225,101 @@ static int __aal_os_ioctl_debug_request(struct aal_host_linux_os_data *data,
 	}
 
 	return ret;
+}
+
+static int __aal_os_alloc_resource(struct aal_host_linux_os_data *data,
+                                   struct aal_resource *resource)
+{
+	if (data->ops->alloc_resource) {
+		return data->ops->alloc_resource(data, data->priv, resource);
+	} else { 
+		return -EINVAL;
+	}
+}
+
+static int __aal_os_allocate_mem(struct aal_host_linux_os_data *data,
+                                 unsigned long arg)
+{
+	struct aal_resource resource;
+
+	memset(&resource, 0, sizeof(resource));
+	resource.memory = arg;
+
+	return __aal_os_alloc_resource(data, &resource);
+}
+
+static int __aal_os_allocate_cpu(struct aal_host_linux_os_data *data,
+                                 unsigned long arg)
+{
+	struct aal_resource resource;
+
+	memset(&resource, 0, sizeof(resource));
+	resource.cores = arg;
+
+	return __aal_os_alloc_resource(data, &resource);
+}
+
+static int __aal_os_query_status(struct aal_host_linux_os_data *data)
+{
+	if (data->ops->query_status) {
+		return data->ops->query_status(data, data->priv);
+	} else { 
+		return -EINVAL;
+	}
+}
+
+static void __aal_os_init_kmsg(struct aal_host_linux_os_data *data)
+{
+	unsigned long rpa, pa, size;
+
+	dprint_func_enter;
+
+	if (data->kmsg_buf) {
+		dprintf("data->kmsg_buf is not null: %p\n", data->kmsg_buf);
+		return;
+	}
+	
+	if (__aal_os_get_special_addr(data, AAL_SPADDR_KMSG, &rpa, &size)) {
+		dprintf("get_special_addr: failed.\n");
+		return;
+	}
+	dprint_var_x8(rpa);
+
+	pa = __aal_os_map_memory(data, rpa, size);
+	dprint_var_x8(pa);
+	if ((long)pa <= 0) {
+		return;
+	}
+	
+	data->kmsg_pa = pa;
+	data->kmsg_len = size;
+	data->kmsg_buf = __aal_device_map_virtual(data->dev_data, pa, size,
+	                                          NULL, AAL_MAP_FLAG_NOCACHE);
+	dprint_var_p(data->kmsg_buf);
+}
+
+static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
+                              char __user *buf)
+{
+	unsigned long flags;
+	int tail;
+
+	if (!data->kmsg_buf) {
+		spin_lock_irqsave(&data->lock, flags);
+		__aal_os_init_kmsg(data);
+		spin_unlock_irqrestore(&data->lock, flags);
+	}
+	if (!data->kmsg_buf) {
+		return -EINVAL;
+	}
+
+	/* XXX: How to share the structure definition with manycore aal? */
+	tail = *(int *)data->kmsg_buf;
+
+	copy_to_user(buf, (char *)(data->kmsg_buf) + sizeof(int) * 2,
+	             tail);
+
+	return tail;
 }
 
 static long aal_host_os_ioctl(struct file *file, unsigned int request,
@@ -231,6 +343,22 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 
 	case AAL_OS_SHUTDOWN:
 		ret = __aal_os_shutdown(data, arg);
+		break;
+
+	case AAL_OS_ALLOC_CPU:
+		ret = __aal_os_allocate_cpu(data, arg);
+		break;
+
+	case AAL_OS_ALLOC_MEM:
+		ret = __aal_os_allocate_mem(data, arg);
+		break;
+
+	case AAL_OS_QUERY_STATUS:
+		ret = __aal_os_query_status(data);
+		break;
+
+	case AAL_OS_READ_KMSG:
+		ret = __aal_os_read_kmsg(data, (char * __user)arg);
 		break;
 
 	default:
@@ -265,6 +393,9 @@ static int aal_host_device_open(struct inode *inode, struct file *file)
 	}
 
 	data = dev_data[idx];
+	if (!data || data == DEV_DATA_INVALID) {
+		return -EINVAL;
+	}
 	if (data->flag & AAL_DEVICE_FLAG_SHARABLE) {
 		atomic_inc(&data->refcount);
 	} else if (atomic_cmpxchg(&data->refcount, 0, 1) != 0) {
@@ -315,22 +446,13 @@ static int __aal_device_ioctl_debug_request(struct aal_host_linux_device_data *
 	return ret;
 }
 
-static int __aal_device_create_os(struct aal_host_linux_device_data *data,
-                                  unsigned long arg)
+static int __aal_device_create_os_init(struct aal_host_linux_device_data *data,
+                                       struct aal_host_linux_os_data **os_ptr,
+                                       unsigned long arg)
 {
-	int minor, ret;
 	struct aal_host_linux_os_data *os = NULL;
 	struct aal_register_os_data drv_data;
-	unsigned long flags;
-
-	spin_lock_irqsave(&os_data_lock, flags);
-	minor = os_max_minor;
-	if (minor >= OS_MAX_MINOR) {
-		spin_unlock_irqrestore(&os_data_lock, flags);
-		return -ENOMEM;
-	}
-	os_max_minor++;
-	spin_unlock_irqrestore(&os_data_lock, flags);
+	int ret;
 
 	os = kzalloc(sizeof(*os), GFP_KERNEL);
 	if (!os) {
@@ -356,48 +478,86 @@ static int __aal_device_create_os(struct aal_host_linux_device_data *data,
 
 	cdev_init(&os->cdev, &mcos_cdev_ops);
 	
-	os_data[minor] = os;
+	*os_ptr = os;
 
-	os->cdev.owner = THIS_MODULE;
-	os->dev_num = mcos_dev_num + minor;
-
-	if (cdev_add(&os->cdev, os->dev_num, 1) < 0) {
-		ret = -ENOMEM;
-		goto ERR;
-	}
-
-	if (IS_ERR(device_create(mcos_class, NULL, os->dev_num, NULL,
-	                         OS_DEV_NAME "%d", minor))) {
-		ret = -ENOMEM;
-		goto ERR;
-	}
-
-	return minor;
+	return 0;
 
 ERR:
 	if (os) {
 		kfree(os);
 	}
-
-	spin_lock_irqsave(&os_data_lock, flags);
-	if (os_max_minor == minor + 1) {
-		os_max_minor--;
-	}
-	spin_unlock_irqrestore(&os_data_lock, flags);
-	
 	return ret;
+}
+
+static int __aal_device_create_os(struct aal_host_linux_device_data *data,
+                                  unsigned long arg)
+{
+	int i, minor, ret;
+	unsigned long flags;
+	struct aal_host_linux_os_data *os = NULL;
+
+	/* first check if there is any free slot */
+	spin_lock_irqsave(&os_data_lock, flags);
+	for (i = 0; i < os_max_minor; i++) {
+		if (!os_data[i]) {
+			break;
+		}
+	}
+	if (i == os_max_minor) {
+		if (os_max_minor >= OS_MAX_MINOR) {
+			spin_unlock_irqrestore(&os_data_lock, flags);
+			return -ENOMEM;
+		}
+		os_max_minor++;
+	}
+
+	minor = i;
+	os_data[minor] = (void *)-1;
+
+	spin_unlock_irqrestore(&os_data_lock, flags);
+
+	if ((ret = __aal_device_create_os_init(data, &os, arg)) != 0) {
+		os_data[minor] = NULL;
+		return ret;
+	}
+
+	os->cdev.owner = THIS_MODULE;
+	os->dev_num = mcos_dev_num + minor;
+
+	if (cdev_add(&os->cdev, os->dev_num, 1) < 0) {
+		/* XXX: call destroy */
+		os_data[minor] = NULL;
+		kfree(os);
+		return -ENOMEM;
+	}
+
+	if (IS_ERR(device_create(mcos_class, NULL, os->dev_num, NULL,
+	                         OS_DEV_NAME "%d", minor))) {
+		/* XXX: call destroy */
+		os_data[minor] = NULL;
+		kfree(os);
+		return -ENOMEM;
+	}
+
+	os_data[minor] = os;
+
+	return minor;
 }
 
 static int __aal_device_destroy_os(struct aal_host_linux_device_data *data,
                                    struct aal_host_linux_os_data *os)
 {
-	int ret;
+	int ret = 0;
 
-	if (!os || !data || os->dev_data != data) {
+	dprintf("__aal_device_destroy_os (%p, %p)\n", data, os);
+	if (!os || os == OS_DATA_INVALID || !data || data == DEV_DATA_INVALID
+	    || os->dev_data != data) {
+		dprintf("%s: pointer invalid\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
 	if (atomic_read(&os->refcount) > 0) {
+		dprintf("%s: refcount != 0\n", __FUNCTION__);
 		return -EBUSY;
 	}
 
@@ -406,9 +566,11 @@ static int __aal_device_destroy_os(struct aal_host_linux_device_data *data,
 	if (data->ops->destroy_os) {
 		ret = data->ops->destroy_os(data, data->priv, os, os->priv);
 	}
+
 	if (ret != 0) {
 		return -EINVAL;
 	}
+	os_data[os->minor] = NULL;
 
 	cdev_del(&os->cdev);
 	device_destroy(mcos_class, os->dev_num);
@@ -535,20 +697,29 @@ core_initcall(aal_host_driver_init);
 aal_device_t aal_register_device(struct aal_register_device_data *param)
 {
 	struct aal_host_linux_device_data *data;
-	int minor;
+	int i, minor;
 	unsigned long flags;
 
 	spin_lock_irqsave(&dev_data_lock, flags);
-	minor = dev_max_minor;
-	if (minor >= DEV_MAX_MINOR) {
-		spin_unlock_irqrestore(&dev_data_lock, flags);
-		return NULL;
+	for (i = 0; i < dev_max_minor; i++) {
+		if (!dev_data[i]) {
+			break;
+		}
 	}
-	dev_max_minor++;
+	if (i == dev_max_minor) {
+		if (dev_max_minor >= DEV_MAX_MINOR) {
+			spin_unlock_irqrestore(&dev_data_lock, flags);
+			return NULL;
+		}
+		dev_max_minor++;
+	}
+	minor = i;
+	dev_data[i] = DEV_DATA_INVALID;
 	spin_unlock_irqrestore(&dev_data_lock, flags);
 
 	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if (!data) {
+		dev_data[minor] = NULL;
 		return NULL;
 	}
 
@@ -567,6 +738,7 @@ aal_device_t aal_register_device(struct aal_register_device_data *param)
 			spin_unlock_irqrestore(&dev_data_lock, flags);
 
 			kfree(data);
+			dev_data[minor] = NULL;
 			return NULL;
 		}
 	}
@@ -578,10 +750,12 @@ aal_device_t aal_register_device(struct aal_register_device_data *param)
 	data->dev_num = mcd_dev_num + minor;
 
 	if (cdev_add(&data->cdev, data->dev_num, 1) < 0) {
+		dev_data[minor] = NULL;
 		return NULL;
 	}
 	if (IS_ERR(device_create(mcd_class, NULL, data->dev_num, NULL,
 	                         DEV_DEV_NAME "%d", minor))) {
+		dev_data[minor] = NULL;
 		return NULL;
 	}
 
@@ -612,6 +786,8 @@ int aal_unregister_device(aal_device_t aaldev)
 	}
 
 	printk("AAL: Device %s unregistered.\n", data->name);
+	dev_data[data->minor] = NULL;
+
 	kfree(data);
 
 	return 0;

@@ -9,6 +9,11 @@
 #define AAL_OS_LOAD                   0x112a00
 #define AAL_OS_BOOT                   0x112a01
 #define AAL_OS_SHUTDOWN               0x112a02
+#define AAL_OS_QUERY_STATUS           0x112a03
+#define AAL_OS_ALLOC_CPU              0x112a10
+#define AAL_OS_ALLOC_MEM              0x112a11
+
+#define AAL_OS_READ_KMSG              0x112a20
 
 #define AAL_OS_DEBUG_START            0x122a00
 #define AAL_OS_DEBUG_END              0x122aff

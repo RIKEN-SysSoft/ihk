@@ -13,6 +13,7 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <aal/aal_host_driver.h>
+#include <aal/aal_host_misc.h>
 #include <aal/misc/debug.h>
 #include "knf.h"
 
@@ -31,6 +32,17 @@ extern int __knf_prepare_os_load(struct knf_device_data *kdd);
 extern int __knf_load_os_file(struct knf_device_data *kdd, const char *fn);
 extern int knf_boot_os(struct knf_device_data *kdd);
 extern void knf_shutdown(struct knf_device_data *kdd);
+extern int __knf_os_get_status(struct knf_device_data *kdd);
+extern int knf_issue_interrupt(struct knf_device_data *kdd,
+                               int apicid, int vector);
+extern int knf_map_aperture(struct knf_device_data *kdd,
+                            unsigned long ap_address, unsigned long phys,
+                            int npages);
+extern int knf_unmap_aperture(struct knf_device_data *kdd, 
+                              unsigned long ap_address, int npages);
+extern int __knf_get_special_addr(struct knf_device_data *kdd, 
+                                  enum aal_special_addr_type type,
+                                  unsigned long *addr, unsigned long *size);
 
 static int knf_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 {
@@ -72,11 +84,118 @@ static int knf_aal_os_shutdown(aal_os_t aal_os, void *priv, int flag)
 	return 0;
 }
 
+static int knf_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
+                                     struct aal_resource *resource)
+{
+/*	struct mee_os_data *os = priv; */
+
+	/*
+	 * XXX: We assume that only one kernel is running.
+	 * So succeeding in creating an OS means allocating all the resource
+	 * on the card.
+	 */
+
+	return 0;
+}
+
+static enum aal_os_status knf_aal_os_query_status(aal_os_t aal_os, void *priv)
+{
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+	int v;
+
+	/* XXX: Before booting, this should be maintained by this driver */
+	v = __knf_os_get_status(kdd);
+	if (v == 0) {
+		return AAL_OS_STATUS_BOOTING;
+	} else if (v == 1) {
+		return AAL_OS_STATUS_BOOTED;
+	} else if (v == 2) {
+		return AAL_OS_STATUS_READY;
+	}
+	return AAL_OS_STATUS_NOT_BOOTED;
+}
+
+int knf_aal_os_issue_interrupt(aal_os_t aal_os, void *priv, int cpu, int vector)
+{
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+
+	/* XXX: cpu to apic id */
+	return knf_issue_interrupt(kdd, cpu, vector);
+}
+
+static unsigned long knf_aal_os_map_memory(aal_os_t aal_os, void *priv,
+                                           unsigned long remote_phys,
+                                           unsigned long size)
+{
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+	unsigned long phys;
+
+	dprint_func_enter;
+	dprint_var_x8(size);
+
+	size = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
+
+	if (!(phys = aal_pagealloc_alloc(kdd->alloc_desc, size))) {
+		return (unsigned long)-ENOMEM;
+	}
+	
+	if (knf_map_aperture(kdd, phys, remote_phys, size)) {
+		aal_pagealloc_free(kdd->alloc_desc, phys, size);
+		return (unsigned long)-ENOMEM;
+	}
+
+	return phys;
+}
+
+static int knf_aal_os_unmap_memory(aal_os_t aal_os, void *priv,
+                                   unsigned long phys, unsigned long size)
+{
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+
+	size = (size + PAGE_SIZE) >> PAGE_SHIFT;
+
+	knf_unmap_aperture(kdd, phys, size);
+	aal_pagealloc_free(kdd->alloc_desc, phys, size);
+
+	return 0;
+}
+
+static int knf_aal_os_get_special_addr(aal_os_t aal_os, void *priv,
+                                       enum aal_special_addr_type type,
+                                       unsigned long *addr,
+                                       unsigned long *size)
+{
+	int v;
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+
+	v = __knf_os_get_status(kdd);
+	if (v < 1) {
+		return -EBUSY;
+	}
+
+	return __knf_get_special_addr(kdd, type, addr, size);
+}
+
 static struct aal_os_ops knf_aal_os_ops = {
 	.load_mem = knf_aal_os_load_mem,
 	.load_file = knf_aal_os_load_file,
+
 	.boot = knf_aal_os_boot,
 	.shutdown = knf_aal_os_shutdown,
+
+	.alloc_resource = knf_aal_os_alloc_resource,
+	.query_status = knf_aal_os_query_status,
+	.issue_interrupt = knf_aal_os_issue_interrupt,
+
+	.map_memory = knf_aal_os_map_memory,
+	.unmap_memory = knf_aal_os_unmap_memory,
+
+	.get_special_addr = knf_aal_os_get_special_addr,
 };	
 
 static struct aal_register_os_data knf_os_reg_data = {
@@ -145,12 +264,39 @@ static int knf_aal_create_os(aal_device_t aal_dev, void *priv,
 	return 0;
 }
 
-long knf_aal_debug_request(aal_device_t aal_dev, void *priv,
-                             unsigned int r, unsigned long arg)
+static long knf_aal_debug_request(aal_device_t aal_dev, void *priv,
+                                  unsigned int r, unsigned long arg)
 {
 	struct knf_device_data *kdd = priv;
 
 	return __knf_debug_request(kdd, r, arg);
+}
+
+static void *knf_aal_map_virtual(aal_device_t aal_dev, void *priv,
+                                 unsigned long phys, unsigned long size,
+                                 void *virt, int flags)
+{
+	struct knf_device_data *kdd = priv;
+	
+	if (!virt && (flags & AAL_MAP_FLAG_NOCACHE) && phys >= kdd->aperture_pa
+	    && phys + size < kdd->aperture_pa + kdd->aperture_len) {
+		return ((char *)kdd->aperture_va) + (phys - kdd->aperture_pa);
+	}
+	return aal_host_map_generic(aal_dev, phys, virt, size, flags);
+}
+
+static int knf_aal_unmap_virtual(aal_device_t aal_dev, void *priv,
+                                  void *virt, unsigned long size)
+{
+	struct knf_device_data *kdd = priv;
+
+	if (virt >= kdd->aperture_va
+	    && (unsigned char *)virt < ((unsigned char *)kdd->aperture_va
+	                                + kdd->aperture_len)) {
+		return 0;
+	}
+
+	return aal_host_unmap_generic(aal_dev, virt, size);
 }
 
 static struct aal_device_ops knf_aal_device_ops = {
@@ -158,6 +304,8 @@ static struct aal_device_ops knf_aal_device_ops = {
 	.exit = knf_aal_exit,
 	.create_os = knf_aal_create_os,
 	.debug_request = knf_aal_debug_request,
+	.map_virtual = knf_aal_map_virtual,
+	.unmap_virtual = knf_aal_unmap_virtual,
 };	
 
 static struct aal_register_device_data knf_dev_reg_data = {
@@ -190,6 +338,9 @@ static int knf_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	}
 	data->aal_dev = aald;
 
+	data->alloc_desc = aal_pagealloc_init(data->aperture_pa,
+	                                      data->aperture_len,
+	                                      PAGE_SIZE);
 	return 0;
 }
 
@@ -200,6 +351,7 @@ static void knf_remove(struct pci_dev *dev)
 	printk(KERN_INFO "knf: Removing %s...\n", pci_name(dev));
 
 	if (data) {
+		aal_pagealloc_destroy(data->alloc_desc);
 		aal_unregister_device(data->aal_dev);
 		kfree(data);
 	}

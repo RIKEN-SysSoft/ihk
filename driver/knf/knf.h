@@ -7,6 +7,7 @@ struct knf_device_data {
 	struct pci_dev *dev;
 	spinlock_t lock;
 	int status;
+	void *alloc_desc;
 
 	unsigned long aperture_pa, aperture_len;
 	void *aperture_va;

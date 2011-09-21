@@ -27,6 +27,9 @@ struct aal_host_linux_os_data {
 	atomic_t refcount;
 	struct aal_os_ops *ops;
 	void *priv;
+
+	void *kmsg_buf;
+	unsigned long kmsg_pa, kmsg_len;
 };
 
 #endif

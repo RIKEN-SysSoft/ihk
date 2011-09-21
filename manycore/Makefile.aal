@@ -1,0 +1,12 @@
+CFLAGS += -Wall -O -Iinclude -I../include 
+
+cc_cmd = $(CC) $(CFLAGS) -c -o $@ $<
+
+aal.o: $(OBJS)
+	$(LD) $(LDFLAGS) -r -o $@ $^
+
+%.o: %.c
+	$(cc_cmd)
+
+clean:
+	$(RM) *.o

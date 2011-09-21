@@ -28,6 +28,8 @@ static void knf_enable_interrupts(struct knf_device_data *kdd,
                                   int intr_mask, int dma_mask);
 static void knf_disable_interrupts(struct knf_device_data *kdd,
                                    int intr_mask, int dma_mask);
+static void knf_write_sbox(struct knf_device_data *kdd, int offset,
+                           unsigned int value);
 
 int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 {
@@ -40,7 +42,10 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	if ((err = pci_reenable_device(dev)) < 0) {
 		return err;
 	}
-	
+	if ((err = pci_set_dma_mask(dev, DMA_BIT_MASK(64))) < 0) {
+		return err;
+	}
+
 	kdd->aperture_pa = pci_resource_start(dev, DLDR_APT_BAR);
 	kdd->aperture_len = pci_resource_len(dev, DLDR_APT_BAR);
 	kdd->mmio_pa = pci_resource_start(dev, DLDR_MMIO_BAR);
@@ -62,8 +67,8 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 		return -ENOMEM;
 	}	
 	                                   
-	if (!(kdd->aperture_va = ioremap_nocache(kdd->aperture_pa,
-	                                         kdd->aperture_len))) {
+	if (!(kdd->aperture_va = ioremap_wc(kdd->aperture_pa,
+	                                    kdd->aperture_len))) {
 		knf_device_destroy(dev, kdd);
 		return -ENOMEM;
 	}
@@ -129,19 +134,75 @@ static void knf_write_sbox(struct knf_device_data *kdd, int offset,
 	                               MMIO_SBOX_BASE_OFFSET + offset));
 }
 
-static void set_gtt_entry(struct knf_device_data *kdd, int entry,
-                          unsigned long phys)
+static unsigned int get_gtt_entry(struct knf_device_data *kdd, int entry)
 {
-	writel((unsigned int)((phys >> PAGE_SHIFT) << 1) | 1,
+	return readl((unsigned int *)((char *)(kdd->mmio_va) + 
+	                              MMIO_GTT_BASE_OFFSET + 4 * entry));
+}
+
+static void set_gtt_entry(struct knf_device_data *kdd, int entry,
+                          unsigned long phys, unsigned int enable)
+{
+	writel((unsigned int)((phys >> PAGE_SHIFT) << 1) | enable,
 	       (unsigned int *)((char *)(kdd->mmio_va) + 
 	                        MMIO_GTT_BASE_OFFSET + 4 * entry));
 }
+
+int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
+                     unsigned long phys, int npages)
+{
+	int i = (int)((ap_address - kdd->aperture_pa) >> PAGE_SHIFT);
+	int e = i + npages;
+	unsigned long flags;
+
+	dprintf("knf: map_aperture %lx - %lx => %lx\n", ap_address,
+	        ap_address + (npages << PAGE_SHIFT), phys);
+
+	spin_lock_irqsave(&kdd->lock, flags);
+	for (; i < e; i++) {
+		set_gtt_entry(kdd, i, phys, 1);
+		phys += PAGE_SIZE;
+	}
+	spin_unlock_irqrestore(&kdd->lock, flags);
+
+	smp_mb();
+
+	knf_write_sbox(kdd, SBOX_SBQ_FLUSH, 1);
+	knf_write_sbox(kdd, SBOX_TLB_FLUSH, 1);
+
+	return 0;
+}
+
+int knf_unmap_aperture(struct knf_device_data *kdd, unsigned long ap_address,
+                       int npages)
+{
+	int i = (int)((ap_address - kdd->aperture_pa) >> PAGE_SHIFT);
+	int e = i + npages;
+	unsigned long flags;
+
+	dprintf("knf: unmap_aperture %lx - %lx\n", ap_address,
+	        ap_address + (npages << PAGE_SHIFT));
+
+	spin_lock_irqsave(&kdd->lock, flags);
+	for (; i < e; i++) {
+		set_gtt_entry(kdd, i, 0, 0);
+	}
+	spin_unlock_irqrestore(&kdd->lock, flags);
+
+	return 0;
+}
+
+int __knf_prepare_os_load(struct knf_device_data *kdd);
 
 void knf_shutdown(struct knf_device_data *kdd)
 {
 	unsigned int reset;
 
+	dprint_func_enter;
+
 	knf_write_sbox(kdd, SBOX_SCRATCH2, 0);	
+	knf_write_sbox(kdd, SBOX_SCRATCH12, 0);
+	knf_write_sbox(kdd, SBOX_SCRATCH13, 0);
 	knf_write_sbox(kdd, SBOX_SCRATCH14, 0);
 
 	reset = knf_read_sbox(kdd, SBOX_RGCR);
@@ -149,6 +210,8 @@ void knf_shutdown(struct knf_device_data *kdd)
 	knf_write_sbox(kdd, SBOX_RGCR, reset);
 
 	msleep(1000);
+
+	__knf_prepare_os_load(kdd);
 }
 
 static void load_scratch_values(struct knf_device_data *kdd)
@@ -196,7 +259,7 @@ int __knf_prepare_os_load(struct knf_device_data *kdd)
 	phys = kdd->os_load_offset;
 
 	for (i = 0; i < (kdd->aperture_len >> PAGE_SHIFT); i++) {
-		set_gtt_entry(kdd, i, phys);
+		set_gtt_entry(kdd, i, phys, 1);
 
 		phys += PAGE_SIZE;
 	}
@@ -206,6 +269,16 @@ int __knf_prepare_os_load(struct knf_device_data *kdd)
 	knf_write_sbox(kdd, SBOX_TLB_FLUSH, 1);
 	
 	return 0;
+}
+static void __knf_set_os_reserved_area(struct knf_device_data *kdd,
+                                       unsigned long size)
+{
+	knf_write_sbox(kdd, SBOX_SCRATCH3, (unsigned int)size);
+}
+
+static void __knf_set_os_size(struct knf_device_data *kdd, unsigned long size)
+{
+	knf_write_sbox(kdd, SBOX_SCRATCH5, (unsigned int)size);
 }
 
 int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
@@ -243,14 +316,23 @@ int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
 	}
 
 	set_fs(fs);
+
+	/*
+	 * Boot protocols
+	 *   TODO: How to calculate size if "load to memory" is used??
+	 *         (it seems that we can ignore this)
+	 *         Is this reserve size adequate?
+	 */
+	__knf_set_os_reserved_area(kdd, PAGE_SIZE);
+	__knf_set_os_size(kdd, size);
+
 FIN:
 	fput(file);
 
 	return ret;
 }
 
-static int knf_issue_interrupt(struct knf_device_data *kdd,
-                               int apicid, int vector)
+int knf_issue_interrupt(struct knf_device_data *kdd, int apicid, int vector)
 {
 	unsigned int val;
 
@@ -264,8 +346,14 @@ static int knf_issue_interrupt(struct knf_device_data *kdd,
 
 int knf_boot_os(struct knf_device_data *kdd)
 {
+	/* Make the state as zero */
+	knf_write_sbox(kdd, SBOX_SCRATCH12, 0);
+
 	knf_issue_interrupt(kdd, kdd->bsp_apic_id, MIC_DMA_INTERRUPT_VECTOR);
 	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
+
+	mdelay(1000);
+	dprintf("get_gtt_entry (b3) = %x\n", get_gtt_entry(kdd, 0));
 
 	return 0;
 }
@@ -273,14 +361,22 @@ int knf_boot_os(struct knf_device_data *kdd)
 long __knf_debug_request(struct knf_device_data *kdd, 
                              int r, unsigned long arg)
 {
+	unsigned int u;
+
 	switch (r) {
 
 	case KNF_DEBUG_READ_SCRATCH:
 		if (arg >= 0 && arg < 16) {
-			unsigned int u;
-
 			u = knf_read_sbox(kdd, SBOX_SCRATCH0 + arg * 4);
-			return (long)u;
+			return (unsigned long)u;
+		}
+		break;
+
+	case KNF_DEBUG_READ_SBOX:
+		if (arg >= 0 && arg < SBOX_TLB_DATIN0) {
+			u = knf_read_sbox(kdd, arg);
+			
+			return (unsigned long)u;
 		}
 		break;
 
@@ -307,7 +403,6 @@ static void knf_disable_interrupts(struct knf_device_data *kdd,
 	knf_write_sbox(kdd, SBOX_SICC0, reg);
 }
 
-
 irqreturn_t knf_irq_handler(int irq, void *data)
 {
 	struct knf_device_data *kdd = data;
@@ -320,4 +415,37 @@ irqreturn_t knf_irq_handler(int irq, void *data)
 	dprintf("Interrupt from KNF!\n");
 
 	return IRQ_HANDLED;
+}
+
+int __knf_os_get_status(struct knf_device_data *kdd)
+{
+	unsigned int v;
+
+	v = knf_read_sbox(kdd, SBOX_SCRATCH12);
+	if (v == 0) {
+		return 0;
+	} else if (v == 0x25470290) {
+		return 1;
+	} else if (v == 0x25470293) {
+		return 2;
+	} else {
+		return -1;
+	}
+}
+int __knf_get_special_addr(struct knf_device_data *kdd, 
+                           enum aal_special_addr_type type,
+                           unsigned long *addr,
+                           unsigned long *size)
+{
+	switch (type) {
+	case AAL_SPADDR_KMSG:
+		*addr = knf_read_sbox(kdd, SBOX_SCRATCH14);
+		*size = 8192; /* XXX: Magic Number */
+
+		if (*addr < PAGE_SIZE) { /* null or almost null pointer */
+			return -EIO;
+		}
+		return 0;
+	}
+	return -EINVAL;
 }
