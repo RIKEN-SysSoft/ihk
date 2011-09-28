@@ -34,7 +34,7 @@ unsigned int gtt_read(int index)
 void arch_start(void)
 {
 	/* Set up initial (temporary) stack */
-	asm volatile("leaq %0, %%rsp" : : "m" (stack[sizeof(stack)]));
+	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
 
 	main();
 

@@ -25,7 +25,7 @@ void arch_start(unsigned long param_addr)
 	boot_param_pa = param_addr;
 
 	/* Set up initial (temporary) stack */
-	asm volatile("leaq %0, %%rsp" : : "m" (stack[sizeof(stack)]));
+	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
 
 	main();
 

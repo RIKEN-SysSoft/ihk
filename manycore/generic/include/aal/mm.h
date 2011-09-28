@@ -44,5 +44,6 @@ struct aal_mc_pa_ops {
 };
 
 void aal_mc_set_page_allocator(struct aal_mc_pa_ops *);
+void aal_mc_set_page_fault_handler(void (*h)(unsigned long, void *));
 
 #endif
