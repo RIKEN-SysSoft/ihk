@@ -1,0 +1,14 @@
+cc_cmd_base = $(CC) $(CFLAGS) -c -o $@ $<
+ld_cmd_base = $(LD) $(LDFLAGS) -r -o $@ $^
+dep_cmd_base = $(CC) $(CFLAGS) -MM $^ > Makefile.dep
+
+ifeq ($(V),1)
+	cc_cmd = $(cc_cmd_base)
+	ld_cmd = $(cc_cmd_base)
+	dep_cmd = $(dep_cmd_base)
+else
+	cc_cmd = @echo '       ' CC $(AAL) $<; $(cc_cmd_base)
+	ld_cmd = @echo '       ' LD $(AAL) $@; $(ld_cmd_base)
+	dep_cmd = @echo '       ' DEPEND $(AAL); $(dep_cmd_base)
+endif
+

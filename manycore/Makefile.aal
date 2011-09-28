@@ -1,11 +1,17 @@
-CFLAGS += -Wall -O -Iinclude -I../include 
+CFLAGS += -Wall -O -Iinclude -I../generic/include -Wno-unused-function
+OBJS += string.o vsprintf.o abort.o
+AALBASE = ..
+AAL = [AAL]
 
-cc_cmd = $(CC) $(CFLAGS) -c -o $@ $<
+include ../Makefile.common
 
 aal.o: $(OBJS)
-	$(LD) $(LDFLAGS) -r -o $@ $^
+	$(ld_cmd)
 
 %.o: %.c
+	$(cc_cmd)
+
+%.o: ../generic/%.c
 	$(cc_cmd)
 
 clean:

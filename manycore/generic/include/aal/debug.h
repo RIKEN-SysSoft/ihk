@@ -9,4 +9,8 @@ struct aal_kmsg_buf {
 	char str[AAL_KMSG_SIZE - sizeof(int) * 2];
 };
 
+extern int kprintf(const char *format, ...);
+
+extern void panic(const char *msg);
+
 #endif
