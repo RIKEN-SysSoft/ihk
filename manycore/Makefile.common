@@ -1,14 +1,27 @@
-cc_cmd_base = $(CC) $(CFLAGS) -c -o $@ $<
-ld_cmd_base = $(LD) $(LDFLAGS) -r -o $@ $^
-dep_cmd_base = $(CC) $(CFLAGS) -MM $^ > Makefile.dep
+CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O3
+CFLAGS += -I$(AALBASE)/$(TARGET)/include
+
+-include $(AALBASE)/$(TARGET)/Makefile.config
+
+CFLAGS += -I$(AALBASE)/generic/include 
+
+O ?= .
 
 ifeq ($(V),1)
-	cc_cmd = $(cc_cmd_base)
-	ld_cmd = $(cc_cmd_base)
-	dep_cmd = $(dep_cmd_base)
+echo_cmd = 
+submake = make
 else
-	cc_cmd = @echo '       ' CC $(AAL) $<; $(cc_cmd_base)
-	ld_cmd = @echo '       ' LD $(AAL) $@; $(ld_cmd_base)
-	dep_cmd = @echo '       ' DEPEND $(AAL); $(dep_cmd_base)
+echo_cmd = @echo '       ' $1 $(ECHO_SUFFIX) $2; 
+submake = make --no-print-directory
 endif
 
+cc_cmd = $(call echo_cmd,CC,$<)$(CC) $(CFLAGS) -c -o $@ $<
+ld_cmd = $(call echo_cmd,LD,$@)$(LD) $(LDFLAGS) -r -o $@ $^
+dep_cmd = $(call echo_cmd,DEPEND,)$(CC) $(CFLAGS) -MM $^ > $@
+
+define make_implicit_src
+$$(O)/%.o: $1/%.c
+	$$(cc_cmd)
+$$(O)/%.o: $1/%.S
+	$$(cc_cmd)
+endef
