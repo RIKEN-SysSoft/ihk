@@ -9,7 +9,6 @@ DESTOBJS = $(addprefix $O/,$(AAL_OBJS))
 $(if $(O),,$(error AAL Output directory is not specified))
 
 include Makefile.common
-include $(TARGET)/Makefile.build
 
 AAL_SRCDIRS += generic $(TARGET)
 DEPSRCS = $(foreach d,$(AAL_SRCDIRS),$(wildcard $(d)/*.c $(d)/*.S))
