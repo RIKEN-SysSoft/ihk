@@ -14,6 +14,7 @@
 #include <linux/cdev.h>
 #include <aal/aal_host_driver.h>
 #include <aal/aal_host_misc.h>
+#include <aal/aal_host_user.h>
 #include <aal/misc/debug.h>
 #include <linux/shimos.h>
 
@@ -286,6 +287,7 @@ static int mee_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
 	for (i = 0, c = 0; i < MEE_MAX_CPUS; i++) {
 		if (os->coremaps & (1ULL << i)) {
 			if (c == cpu) {
+				dprintf("shimos_issue_ipi(%d, %d)\n", i, v);
 				shimos_issue_ipi(i, v);
 				return 0;
 			}
@@ -329,6 +331,17 @@ static int mee_aal_os_get_special_addr(aal_os_t aal_os, void *priv,
 	return -EINVAL;
 }
 
+static long mee_aal_os_debug_request(aal_os_t aal_os, void *priv,
+                                     unsigned int req, unsigned long arg)
+{
+	switch (req) {
+	case AAL_OS_DEBUG_START:
+		mee_aal_os_issue_interrupt(aal_os, priv, 0, arg);
+		return 0;
+	}
+	return -EINVAL;
+}
+
 static struct aal_os_ops mee_aal_os_ops = {
 	.load_mem = mee_aal_os_load_mem,
 	.boot = mee_aal_os_boot,
@@ -339,6 +352,7 @@ static struct aal_os_ops mee_aal_os_ops = {
 	.map_memory = mee_aal_os_map_memory,
 	.unmap_memory = mee_aal_os_unmap_memory,
 	.get_special_addr = mee_aal_os_get_special_addr,
+	.debug_request = mee_aal_os_debug_request,
 };	
 
 static struct aal_register_os_data mee_os_reg_data = {

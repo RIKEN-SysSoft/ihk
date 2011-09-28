@@ -14,6 +14,7 @@
 #include <linux/cdev.h>
 #include <aal/aal_host_driver.h>
 #include <aal/aal_host_misc.h>
+#include <aal/aal_host_user.h>
 #include <aal/misc/debug.h>
 #include "knf.h"
 
@@ -181,6 +182,20 @@ static int knf_aal_os_get_special_addr(aal_os_t aal_os, void *priv,
 	return __knf_get_special_addr(kdd, type, addr, size);
 }
 
+static long knf_aal_os_debug_request(aal_os_t aal_os, void *priv,
+                                     unsigned int req, unsigned long arg)
+{
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+
+	switch (req) {
+	case AAL_OS_DEBUG_START:
+		knf_aal_os_issue_interrupt(aal_os, priv, kdd->bsp_apic_id, arg);
+		return 0;
+	}
+	return -EINVAL;
+}
+
 static struct aal_os_ops knf_aal_os_ops = {
 	.load_mem = knf_aal_os_load_mem,
 	.load_file = knf_aal_os_load_file,
@@ -196,6 +211,8 @@ static struct aal_os_ops knf_aal_os_ops = {
 	.unmap_memory = knf_aal_os_unmap_memory,
 
 	.get_special_addr = knf_aal_os_get_special_addr,
+
+	.debug_request = knf_aal_os_debug_request,
 };	
 
 static struct aal_register_os_data knf_os_reg_data = {
