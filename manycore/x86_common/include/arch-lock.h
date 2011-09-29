@@ -1,6 +1,8 @@
 #ifndef __HEADER_X86_COMMON_ARCH_LOCK
 #define __HEADER_X86_COMMON_ARCH_LOCK
 
+#include <aal/cpu.h>
+
 typedef int aal_spinlock_t;
 
 #define AAL_STATIC_SPINLOCK_FUNCS

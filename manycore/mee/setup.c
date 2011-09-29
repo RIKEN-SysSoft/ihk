@@ -1,5 +1,6 @@
 #include <aal/debug.h>
 #include <aal/mm.h>
+#include <aal/cpu.h>
 #include <errno.h>
 
 /* MEE Setup.c */
@@ -64,3 +65,19 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 	/* No hole */
 }
 
+extern void x86_issue_ipi(int, int);
+void aal_mc_interrupt_host(int vector)
+{
+	x86_issue_ipi(0, 0xf1);
+}
+
+int aal_mc_get_vector(enum aal_mc_gv_type type)
+{
+
+	switch (type) {
+	case AAL_GV_IKC:
+		return 0xd1;
+	default:
+		return -ENOENT;
+	}
+}

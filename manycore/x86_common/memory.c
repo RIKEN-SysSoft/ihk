@@ -32,14 +32,14 @@ void *early_alloc_page(void)
 void *arch_alloc_page(enum aal_mc_ap_flag flag)
 {
 	if (pa_ops)
-		return pa_ops->alloc(flag);
+		return pa_ops->alloc(1, flag);
 	else
 		return early_alloc_page();
 }
 void arch_free_page(void *ptr)
 {
 	if (pa_ops)
-		pa_ops->free(ptr);
+		pa_ops->free(ptr, 1);
 }
 
 void *get_last_early_heap(void)

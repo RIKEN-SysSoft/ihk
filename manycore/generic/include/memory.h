@@ -2,6 +2,8 @@
 #define __HEADER_GENERIC_MEMORY_H
 
 #include <arch-memory.h>
+#include <aal/mm.h>
+
 #ifndef KERNEL_PHYS_OFFSET
 #define KERNEL_PHYS_OFFSET 0
 #endif

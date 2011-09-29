@@ -71,7 +71,7 @@ void *aal_pagealloc_init(unsigned long start, unsigned long size,
 
 	desc->start = start;
 	desc->last = 0;
-	desc->count = mapaligned;
+	desc->count = mapaligned >> 3;
 	desc->shift = page_shift;
 	desc->flag = flag;
 	spin_lock_init(&desc->lock);

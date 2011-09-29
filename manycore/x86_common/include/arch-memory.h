@@ -21,9 +21,12 @@
 #define LARGE_PAGE_SIZE    (1UL << LARGE_PAGE_SHIFT)
 #define LARGE_PAGE_MASK    (~((unsigned long)LARGE_PAGE_SIZE - 1))
 
-#define MAP_ST_START       0xffff880000000000UL
-#define MAP_FIXED_START    0xffffff0000000000UL
+#define MAP_ST_START       0xffff800000000000UL
+#define MAP_VMAP_START     0xfffff00000000000UL
+#define MAP_FIXED_START    0xffffffff70000000UL
 #define MAP_KERNEL_START   0xffffffff80000000UL
+
+#define MAP_VMAP_SIZE      0x0000000100000000UL
 
 #define PTL4_SHIFT         39
 #define PTL4_SIZE          (1UL << PTL4_SHIFT)

@@ -14,6 +14,8 @@
 #define LAPIC_TIMER_DIVIDE  0x3e0
 #define LAPIC_SPURIOUS      0x0f0
 #define LAPIC_EOI           0x0b0
+#define LAPIC_ICR0          0x300
+#define LAPIC_ICR2          0x310
 
 struct x86_regs{
         unsigned long ds, r15, r14, r13, r12, r11, r10, r9, r8;
@@ -246,6 +248,13 @@ void gpe_handler(struct x86_regs *regs)
 	panic("GPF");
 }
 
+void x86_issue_ipi(int apicid, int vector)
+{
+	kprintf("issue interrupt:%d\n", apicid);
+	lapic_write(LAPIC_ICR2, (unsigned int)apicid << 24);
+	lapic_write(LAPIC_ICR0, vector);
+}
+
 /** AAL Functions **/
 
 void cpu_halt(void)
@@ -298,7 +307,7 @@ int aal_mc_unregister_interrupt_handler(int vector,
 
 extern unsigned long __page_fault_handler_address;
 
-void aal_mc_set_page_fault_handler(void *handler_address)
+void aal_mc_set_page_fault_handler(void (*h)(unsigned long, void *))
 {
-	__page_fault_handler_address = (unsigned long)handler_address;
+	__page_fault_handler_address = (unsigned long)h;
 }

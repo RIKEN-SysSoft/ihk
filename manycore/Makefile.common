@@ -1,5 +1,6 @@
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O3
-CFLAGS += -I$(AALBASE)/$(TARGET)/include
+CFLAGS += -I$(AALBASE)/$(TARGET)/include -Wno-unused-function -I$(AALBASE)/../ikc/include
+CFLAGS += -DAAL_OS_MANYCORE
 
 -include $(AALBASE)/$(TARGET)/Makefile.config
 
