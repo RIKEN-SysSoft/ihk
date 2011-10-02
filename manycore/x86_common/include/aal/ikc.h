@@ -20,12 +20,12 @@ struct aal_ikc_channel_desc {
 	int                           remote_id;
 	int                           channel_id;
 	struct aal_ikc_queue_desc  recv, send;
-	int (*handler)(void *);
+	int (*handler)(void *, void *);
 };
 
 /* manycore side */
 int aal_mc_ikc_init_first(struct aal_ikc_channel_desc *,
-                          int handler(void *));
+                          int handler(void *, void *));
 #include <ikc/queue.h>
 
 #endif

@@ -1,11 +1,9 @@
-#ifdef AAL_OS_MANYCORE
-#include <list.h>
-#include <aal/ikc.h>
-#include <aal/debug.h>
 #include <ikc/aal.h>
-#include <string.h>
-#include <memory.h>
-#endif
+#include <ikc/queue.h>
+
+void aal_ikc_notify_remote_read(struct aal_ikc_channel_desc *c);
+void aal_ikc_notify_remote_write(struct aal_ikc_channel_desc *c);
+void aal_ikc_send_interrupt(struct aal_ikc_channel_desc *c);
 
 /*
  * NOTE: Local CPU is responsible to call the init
@@ -56,7 +54,7 @@ int aal_ikc_read_queue(struct aal_ikc_queue_head *q, void *packet, int flag)
 	if (aal_ikc_queue_is_empty(q)) {
 		return -1;
 	} else{
-		memcpy(packet, q + q->read_off, q->pktsize);
+		memcpy(packet, q + sizeof(*q) + q->read_off, q->pktsize);
 
 		o = q->read_off;
 		o += q->pktsize;
@@ -69,7 +67,7 @@ int aal_ikc_read_queue(struct aal_ikc_queue_head *q, void *packet, int flag)
 }
 
 int aal_ikc_read_queue_handler(struct aal_ikc_queue_head *q, 
-                               int (*h)(void *), int flag)
+                               int (*h)(void *, void *), void *harg, int flag)
 {
 	uint64_t o;
 
@@ -82,7 +80,7 @@ int aal_ikc_read_queue_handler(struct aal_ikc_queue_head *q,
 			o = 0;
 		}
 
-		h(q + q->read_off);
+		h(q + sizeof(*q) + q->read_off, harg);
 
 		q->read_off = o;
 	}
@@ -96,7 +94,7 @@ int aal_ikc_write_queue(struct aal_ikc_queue_head *q, void *packet, int flag)
 	if (aal_ikc_queue_is_full(q)) {
 		return -1;
 	} else {
-		memcpy(q + q->write_off, packet, q->pktsize);
+		memcpy(q + sizeof(*q) + q->write_off, packet, q->pktsize);
 
 		o = q->write_off;
 		o += q->pktsize;
@@ -111,13 +109,11 @@ int aal_ikc_write_queue(struct aal_ikc_queue_head *q, void *packet, int flag)
 /*
  * Channel and queue descriptors
  */
-static LIST_HEAD(aal_ikc_channels);
-
 void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
                        int rid, int cid,
                        struct aal_ikc_queue_head *rq,
                        struct aal_ikc_queue_head *wq,
-                       int (*packet_handler)(void *))
+                       int (*packet_handler)(void *, void *))
 {
 	c->remote_id = rid;
 	c->channel_id = cid;
@@ -136,6 +132,7 @@ int aal_ikc_send(struct aal_ikc_channel_desc *channel, void *p, int opt)
 
 	flags = aal_ikc_spinlock_lock(&channel->send.lock);
 	r = aal_ikc_write_queue(channel->send.queue, p, opt);
+	aal_ikc_notify_remote_write(channel);
 	aal_ikc_spinlock_unlock(&channel->send.lock, flags);
 
 	return r;
@@ -148,24 +145,39 @@ int aal_ikc_recv(struct aal_ikc_channel_desc *channel, void *p, int opt)
 
 	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
 	r = aal_ikc_read_queue(channel->recv.queue, p, opt);
+	/* XXX: Optimal interrupt */
+	aal_ikc_notify_remote_read(channel);
 	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
 
 	return r;
 }
 
 int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel, 
-                         int (*h)(void *), int opt)
+                         int (*h)(void *, void *), void *harg, int opt)
 {
 	unsigned long flags;
 	int r;
 
 	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
-	r = aal_ikc_read_queue_handler(channel->recv.queue, h, opt);
+	r = aal_ikc_read_queue_handler(channel->recv.queue, h, harg, opt);
+	/* XXX: Optimal interrupt */
+	aal_ikc_notify_remote_read(channel);
 	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
 
 	return r;
 }
 
+void aal_ikc_notify_remote_read(struct aal_ikc_channel_desc *c)
+{
+	aal_ikc_send_interrupt(c);
+}
+void aal_ikc_notify_remote_write(struct aal_ikc_channel_desc *c)
+{
+	aal_ikc_send_interrupt(c);
+}
+
+#ifdef AAL_OS_MANYCORE
+static LIST_HEAD(aal_ikc_channels);
 
 void aal_ikc_enable_channel(struct aal_ikc_channel_desc *channel)
 {
@@ -185,12 +197,11 @@ static void aal_ikc_interrupt_handler(void *priv)
 	/* XXX: Linear search? */
 	list_for_each_entry(c, &aal_ikc_channels, list) {
 		if (!aal_ikc_queue_is_empty(c->recv.queue)) {
-			aal_ikc_recv_handler(c, c->handler, 0);
+			aal_ikc_recv_handler(c, c->handler, NULL, 0);
 		}
 	}
 }
 
-#ifdef AAL_OS_MANYCORE
 static struct aal_mc_interrupt_handler aal_ikc_handler = {
 	.func = aal_ikc_interrupt_handler,
 	.priv = NULL,
@@ -202,15 +213,51 @@ void aal_ikc_system_init(void)
 	aal_mc_register_interrupt_handler(aal_mc_get_vector(AAL_GV_IKC),
 	                                  &aal_ikc_handler);
 }
+
 #else
-static struct aal_host_interrupt_handler aal_ikc_handler = {
-	.func = aal_ikc_interrupt_handler,
-};
 
-void aal_ikc_system_init(aal_dev_t device)
+extern struct aal_host_interrupt_handler *aal_host_os_get_ikc_handler(aal_os_t);
+extern struct list_head *aal_host_os_get_ikc_channel_list(aal_os_t);
+
+void aal_ikc_enable_channel(struct aal_ikc_channel_desc *channel)
 {
-	list_init(&aal_ikc_handler.list);
-	aal_ikc_handler.priv = device;
+	struct list_head *channels;
 
+	channels = aal_host_os_get_ikc_channel_list(channel->remote_os);
+	list_add_tail(&channel->list, channels);
+}
+
+void aal_ikc_disable_channel(struct aal_ikc_channel_desc *channel)
+{
+	list_del(&channel->list);
+}
+
+static void aal_ikc_interrupt_handler(aal_os_t os, void *os_priv, void *priv)
+{
+	/* This should be done in the software irq... */
+	struct aal_ikc_channel_desc *c;
+	struct list_head *channels;
+
+	channels = aal_host_os_get_ikc_channel_list(priv);
+
+	/* XXX: Linear search? */
+	list_for_each_entry(c, channels, list) {
+		if (!aal_ikc_queue_is_empty(c->recv.queue)) {
+			aal_ikc_recv_handler(c, c->handler, os, 0);
+		}
+	}
+}
+
+void aal_ikc_system_init(aal_os_t os)
+{
+	struct aal_host_interrupt_handler *h;
+	
+	h = aal_host_os_get_ikc_handler(os);
+	
+	INIT_LIST_HEAD(&h->list);
+	h->func = aal_ikc_interrupt_handler;
+	h->priv = os;
+
+	aal_os_register_interrupt_handler(os, 0, h);
 }
 #endif

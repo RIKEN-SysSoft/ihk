@@ -12,6 +12,7 @@
 #include <linux/cdev.h>
 #include <linux/interrupt.h>
 #include <aal/misc/debug.h>
+#include <ikc/msg.h>
 
 #include "knf.h"
 #include "knf_user.h"
@@ -352,9 +353,6 @@ int knf_boot_os(struct knf_device_data *kdd)
 	knf_issue_interrupt(kdd, kdd->bsp_apic_id, MIC_DMA_INTERRUPT_VECTOR);
 	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
 
-	mdelay(1000);
-	dprintf("get_gtt_entry (b3) = %x\n", get_gtt_entry(kdd, 0));
-
 	return 0;
 }
 
@@ -403,16 +401,40 @@ static void knf_disable_interrupts(struct knf_device_data *kdd,
 	knf_write_sbox(kdd, SBOX_SICC0, reg);
 }
 
+static LIST_HEAD(knf_interrupt_handlers);
+
+int knf_add_interrupt_handler(struct knf_device_data *kdd, int itype,
+                              aal_os_t os, void *os_priv,
+                              struct aal_host_interrupt_handler *h)
+{
+	h->os = os;
+	h->os_priv = os_priv;
+	list_add_tail(&h->list, &knf_interrupt_handlers);
+
+	return 0;
+}
+
+void knf_del_interrupt_handler(struct aal_host_interrupt_handler *h)
+{
+	list_del(&h->list);
+}
+
 irqreturn_t knf_irq_handler(int irq, void *data)
 {
 	struct knf_device_data *kdd = data;
 	unsigned int reg;
+	struct aal_host_interrupt_handler *h;
 
 	/* ack */
 	reg = knf_read_sbox(kdd, SBOX_SICR0);
 	knf_write_sbox(kdd, SBOX_SICR0, reg);
 
-	dprintf("Interrupt from KNF!\n");
+	/* XXX: Linear search? */
+	list_for_each_entry(h, &knf_interrupt_handlers, list) {
+		if (h->func) {
+			h->func(h->os, h->os_priv, h->priv);
+		}
+	}
 
 	return IRQ_HANDLED;
 }
@@ -443,6 +465,22 @@ int __knf_get_special_addr(struct knf_device_data *kdd,
 		*size = 8192; /* XXX: Magic Number */
 
 		if (*addr < PAGE_SIZE) { /* null or almost null pointer */
+			return -EIO;
+		}
+		return 0;
+
+	case AAL_SPADDR_MIKC_QUEUE_RECV:
+		*addr = knf_read_sbox(kdd, SBOX_SCRATCH13);
+		*size = MASTER_IKCQ_SIZE;
+		if (*addr < PAGE_SIZE) {
+			return -EIO;
+		}
+		return 0;
+
+	case AAL_SPADDR_MIKC_QUEUE_SEND:
+		*addr = knf_read_sbox(kdd, SBOX_SCRATCH15);
+		*size = MASTER_IKCQ_SIZE;
+		if (*addr < PAGE_SIZE) {
 			return -EIO;
 		}
 		return 0;

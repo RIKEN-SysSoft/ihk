@@ -1,7 +1,7 @@
 AALBASE = $(CURDIR)
 ECHO_SUFFIX = [AAL]
 
-AAL_OBJS += string.o vsprintf.o abort.o page_alloc.o ikc.o
+AAL_OBJS += string.o vsprintf.o abort.o page_alloc.o mikc.o ikc.o
 
 DESTOBJS = $(addprefix $O/,$(AAL_OBJS))
 SUBOPTS = CC=$(CC) LD=$(LD) V=$(V) TARGET=$(TARGET) AALBASE=$(AALBASE)

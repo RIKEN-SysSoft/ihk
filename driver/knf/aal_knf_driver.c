@@ -44,6 +44,10 @@ extern int knf_unmap_aperture(struct knf_device_data *kdd,
 extern int __knf_get_special_addr(struct knf_device_data *kdd, 
                                   enum aal_special_addr_type type,
                                   unsigned long *addr, unsigned long *size);
+extern int knf_add_interrupt_handler(struct knf_device_data *kdd, int itype,
+                                     aal_os_t os, void *os_priv,
+                                     struct aal_host_interrupt_handler *h);
+extern void knf_del_interrupt_handler(struct aal_host_interrupt_handler *h);
 
 static int knf_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 {
@@ -117,12 +121,34 @@ static enum aal_os_status knf_aal_os_query_status(aal_os_t aal_os, void *priv)
 	return AAL_OS_STATUS_NOT_BOOTED;
 }
 
+static int knf_aal_os_wait_for_status(aal_os_t aal_os, void *priv,
+                                      enum aal_os_status status, 
+                                      int sleepable, int timeout)
+{
+	enum aal_os_status s;
+	if (sleepable) {
+		/* TODO: Enable notification of status change, and wait */
+		return -1;
+	} else {
+		/* Polling */
+		while ((s = knf_aal_os_query_status(aal_os, priv)),
+		       s != status && s < AAL_OS_STATUS_SHUTDOWN 
+		       && timeout > 0) {
+			mdelay(100);
+			timeout--;
+		}
+		return s == status ? 0 : -1;
+	}
+}
+
 int knf_aal_os_issue_interrupt(aal_os_t aal_os, void *priv, int cpu, int vector)
 {
 	struct knf_os_data *os = priv;
 	struct knf_device_data *kdd = os->dev;
 
 	/* XXX: cpu to apic id */
+	if (cpu == 0) 
+		cpu = kdd->bsp_apic_id;
 	return knf_issue_interrupt(kdd, cpu, vector);
 }
 
@@ -162,6 +188,22 @@ static int knf_aal_os_unmap_memory(aal_os_t aal_os, void *priv,
 	knf_unmap_aperture(kdd, phys, size);
 	aal_pagealloc_free(kdd->alloc_desc, phys, size);
 
+	return 0;
+}
+
+static int knf_aal_os_reg_intr(aal_os_t aal_os, void *priv, int itype,
+                               struct aal_host_interrupt_handler *h)
+{
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+
+	return knf_add_interrupt_handler(kdd, itype, aal_os, priv, h);
+}
+
+static int knf_aal_os_unreg_intr(aal_os_t aal_os, void *priv, int itype,
+                                 struct aal_host_interrupt_handler *h)
+{
+	knf_del_interrupt_handler(h);
 	return 0;
 }
 
@@ -205,7 +247,11 @@ static struct aal_os_ops knf_aal_os_ops = {
 
 	.alloc_resource = knf_aal_os_alloc_resource,
 	.query_status = knf_aal_os_query_status,
+	.wait_for_status = knf_aal_os_wait_for_status,
 	.issue_interrupt = knf_aal_os_issue_interrupt,
+
+	.register_handler = knf_aal_os_reg_intr,
+	.unregister_handler = knf_aal_os_unreg_intr,
 
 	.map_memory = knf_aal_os_map_memory,
 	.unmap_memory = knf_aal_os_unmap_memory,
@@ -295,7 +341,7 @@ static void *knf_aal_map_virtual(aal_device_t aal_dev, void *priv,
 {
 	struct knf_device_data *kdd = priv;
 	
-	if (!virt && (flags & AAL_MAP_FLAG_NOCACHE) && phys >= kdd->aperture_pa
+	if (!virt && phys >= kdd->aperture_pa
 	    && phys + size < kdd->aperture_pa + kdd->aperture_len) {
 		return ((char *)kdd->aperture_va) + (phys - kdd->aperture_pa);
 	}

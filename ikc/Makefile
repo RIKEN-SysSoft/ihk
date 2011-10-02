@@ -1,4 +1,6 @@
 IKC_OBJS += queue.o
+
+ifeq ($(CONFIG_AAL),)
 DESTOBJS = $(addprefix $O/,$(IKC_OBJS))
 IKCBASE = $(CURDIR)
 DEPSRCS = $(wildcard $(IKCBASE)/*.c)
@@ -26,3 +28,8 @@ $(O)/Makefile.dep: $(DEPSRCS)
 
 $(O)/%.o: %.c
 	$(cc_cmd)
+else
+
+include aal/ikc/Makefile.linux
+
+endif

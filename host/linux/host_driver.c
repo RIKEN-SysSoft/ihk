@@ -40,6 +40,8 @@ static DEFINE_SPINLOCK(os_data_lock);
 static struct aal_host_linux_os_data *os_data[OS_MAX_MINOR];
 static int os_max_minor = 0;
 
+extern int ikc_master_init(aal_os_t os);
+
 /*
  * OS character device file operations.
  */
@@ -188,6 +190,9 @@ static int  __aal_os_boot(struct aal_host_linux_os_data *data, int flag)
 
 	if (data->ops->boot) {
 		ret = data->ops->boot(data, data->priv, flag);
+		if (ret == 0) {
+			ret = ikc_master_init(data);
+		}
 	}
 
 	return ret;
@@ -824,6 +829,58 @@ int aal_os_load_file(aal_os_t os, char *fn) {
 	return __aal_os_load_file(os, fn);
 }
 
+int aal_os_register_interrupt_handler(aal_os_t os, int itype,
+                                      struct aal_host_interrupt_handler *h)
+{
+	return __aal_os_register_handler(os, itype, h);
+}
+
+int aal_os_unregister_interrupt_handler(aal_os_t os, int itype,
+                                        struct aal_host_interrupt_handler *h)
+{
+	return __aal_os_unregister_handler(os, itype, h);
+}
+
+int aal_os_wait_for_status(aal_os_t os, enum aal_os_status status,
+                           int sleepable, int timeout)
+{
+	return __aal_os_wait_for_status(os, status, sleepable, timeout);
+}
+
+int aal_os_get_special_address(aal_os_t os, enum aal_special_addr_type type,
+                               unsigned long *pa, unsigned long *size)
+{
+	return __aal_os_get_special_addr(os, type, pa, size);
+}
+
+unsigned long aal_os_map_memory(aal_os_t os, unsigned long pa,
+                                unsigned long size)
+{
+	return __aal_os_map_memory(os, pa, size);
+}
+
+int aal_os_unmap_memory(aal_os_t os, unsigned long pa, unsigned long size)
+{
+	return __aal_os_unmap_memory(os, pa, size);
+}
+
+int aal_os_issue_interrupt(aal_os_t os, int cpu, int vector)
+{
+	return __aal_os_issue_interrupt(os, cpu, vector);
+}
+
+void *aal_device_map_virtual(aal_device_t dev, unsigned long pa,
+                           unsigned long size, void *virtual, int flag)
+{
+	return __aal_device_map_virtual(dev, pa, size, virtual, flag);
+}
+
+int aal_device_unmap_virtual(aal_device_t dev, void *virtual,
+                             unsigned long size)
+{
+	return __aal_device_unmap_virtual(dev, virtual, size);
+}
+
 EXPORT_SYMBOL(aal_register_device);
 EXPORT_SYMBOL(aal_unregister_device);
 EXPORT_SYMBOL(aal_device_create_os);
@@ -831,4 +888,7 @@ EXPORT_SYMBOL(aal_os_load_file);
 EXPORT_SYMBOL(aal_os_load_memory);
 EXPORT_SYMBOL(aal_os_boot);
 EXPORT_SYMBOL(aal_os_shutdown);
-
+EXPORT_SYMBOL(aal_os_register_interrupt_handler);
+EXPORT_SYMBOL(aal_os_unregister_interrupt_handler);
+EXPORT_SYMBOL(aal_os_get_special_address);
+EXPORT_SYMBOL(aal_os_wait_for_status);

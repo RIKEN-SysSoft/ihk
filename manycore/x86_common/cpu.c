@@ -250,7 +250,7 @@ void gpe_handler(struct x86_regs *regs)
 
 void x86_issue_ipi(int apicid, int vector)
 {
-	kprintf("issue interrupt:%d\n", apicid);
+	kprintf("issue interrupt:%d, %d\n", apicid, vector);
 	lapic_write(LAPIC_ICR2, (unsigned int)apicid << 24);
 	lapic_write(LAPIC_ICR0, vector);
 }

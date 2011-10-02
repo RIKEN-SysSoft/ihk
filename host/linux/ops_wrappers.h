@@ -47,10 +47,33 @@ AAL_OS_OPS_BEGIN(int, unmap_memory, unsigned long lphys, unsigned long size)
 	AAL_OPS_BODY(unmap_memory, lphys, size);
 }
 
+AAL_OS_OPS_BEGIN(int, register_handler, int itype,
+                 struct aal_host_interrupt_handler *h)
+{
+	AAL_OPS_BODY(register_handler, itype, h);
+}
+
+AAL_OS_OPS_BEGIN(int, unregister_handler, int itype,
+                 struct aal_host_interrupt_handler *h)
+{
+	AAL_OPS_BODY(unregister_handler, itype, h);
+}
+
 AAL_OS_OPS_BEGIN(int, get_special_addr, enum aal_special_addr_type type,
                  unsigned long *address, unsigned long *size)
 {
 	AAL_OPS_BODY(get_special_addr, type, address, size);
+}
+
+AAL_OS_OPS_BEGIN(int, wait_for_status, enum aal_os_status status,
+                 int sleepable, int timeout)
+{
+	AAL_OPS_BODY(wait_for_status, status, sleepable, timeout);
+}
+
+AAL_OS_OPS_BEGIN(int, issue_interrupt, int cpu, int vector)
+{
+	AAL_OPS_BODY(issue_interrupt, cpu, vector);
 }
 
 AAL_DEV_OPS_BEGIN(void *, map_virtual, unsigned long phys, unsigned long size,

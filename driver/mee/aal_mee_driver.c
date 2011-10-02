@@ -12,10 +12,12 @@
 #include <linux/miscdevice.h>
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
+#include <linux/interrupt.h>
 #include <aal/aal_host_driver.h>
 #include <aal/aal_host_misc.h>
 #include <aal/aal_host_user.h>
 #include <aal/misc/debug.h>
+#include <ikc/msg.h>
 #include <linux/shimos.h>
 
 #ifndef CONFIG_SHIMOS
@@ -28,6 +30,8 @@
 #define MEE_OS_STATUS_BOOTING  3
 
 #define MEE_MAX_CPUS 64
+
+#define MEE_COM_VECTOR  0xf1
 
 struct mee_os_data {
 	spinlock_t lock;
@@ -277,6 +281,26 @@ static enum aal_os_status mee_aal_os_query_status(aal_os_t aal_os, void *priv)
 	}
 }
 
+static int mee_aal_os_wait_for_status(aal_os_t aal_os, void *priv,
+                                      enum aal_os_status status, 
+                                      int sleepable, int timeout)
+{
+	enum aal_os_status s;
+	if (sleepable) {
+		/* TODO: Enable notification of status change, and wait */
+		return -1;
+	} else {
+		/* Polling */
+		while ((s = mee_aal_os_query_status(aal_os, priv)),
+		       s != status && s < AAL_OS_STATUS_SHUTDOWN 
+		       && timeout > 0) {
+			mdelay(100);
+			timeout--;
+		}
+		return s == status ? 0 : -1;
+	}
+}
+
 static int mee_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
                                       int cpu, int v)
 {
@@ -324,8 +348,24 @@ static int mee_aal_os_get_special_addr(aal_os_t aal_os, void *priv,
 		if (os->param.msg_buffer) {
 			*addr = os->param.msg_buffer;
 			*size = 8192;
+			return 0;
 		}
-		return 0;
+		break;
+
+	case AAL_SPADDR_MIKC_QUEUE_RECV:
+		if (os->param.mikc_queue_recv) {
+			*addr = os->param.mikc_queue_recv;
+			*size = MASTER_IKCQ_SIZE;
+			return 0;
+		}
+		break;
+	case AAL_SPADDR_MIKC_QUEUE_SEND:
+		if (os->param.mikc_queue_send) {
+			*addr = os->param.mikc_queue_send;
+			*size = MASTER_IKCQ_SIZE;
+			return 0;
+		}
+		break;
 	}
 
 	return -EINVAL;
@@ -342,15 +382,53 @@ static long mee_aal_os_debug_request(aal_os_t aal_os, void *priv,
 	return -EINVAL;
 }
 
+static LIST_HEAD(mee_interrupt_handlers);
+
+static int mee_aal_os_register_handler(aal_os_t os, void *os_priv, int itype,
+                                       struct aal_host_interrupt_handler *h)
+{
+	h->os = os;
+	h->os_priv = os_priv;
+	list_add_tail(&h->list, &mee_interrupt_handlers);
+
+	return 0;
+}
+
+static int mee_aal_os_unregister_handler(aal_os_t os, void *os_priv, int itype,
+                                         struct aal_host_interrupt_handler *h)
+{
+	list_del(&h->list);
+	return 0;
+}
+
+static irqreturn_t mee_irq_handler(int irq, void *data)
+{
+	struct aal_host_interrupt_handler *h;
+
+	printk("mee: interrupt!\n");
+
+	/* XXX: Linear search? */
+	list_for_each_entry(h, &mee_interrupt_handlers, list) {
+		if (h->func) {
+			h->func(h->os, h->os_priv, h->priv);
+		}
+	}
+
+	return IRQ_HANDLED;
+}
+
 static struct aal_os_ops mee_aal_os_ops = {
 	.load_mem = mee_aal_os_load_mem,
 	.boot = mee_aal_os_boot,
 	.shutdown = mee_aal_os_shutdown,
 	.alloc_resource = mee_aal_os_alloc_resource,
 	.query_status = mee_aal_os_query_status,
+	.wait_for_status = mee_aal_os_wait_for_status,
 	.issue_interrupt = mee_aal_os_issue_interrupt,
 	.map_memory = mee_aal_os_map_memory,
 	.unmap_memory = mee_aal_os_unmap_memory,
+	.register_handler = mee_aal_os_register_handler,
+	.unregister_handler = mee_aal_os_unregister_handler,
 	.get_special_addr = mee_aal_os_get_special_addr,
 	.debug_request = mee_aal_os_debug_request,
 };	
@@ -440,6 +518,8 @@ static int __init mee_init(void)
 
 	mee_data.aal_dev = aald;
 
+	shimos_set_irq_handler(mee_irq_handler);
+
 	mee_dma_init();
 
 	return 0;
@@ -449,6 +529,9 @@ static void __exit mee_exit(void)
 {
 	printk(KERN_INFO "mee: MEE finalizing...\n");
 	aal_unregister_device(mee_data.aal_dev);
+
+	shimos_set_irq_handler(NULL);
+
 	mee_dma_exit();
 }
 

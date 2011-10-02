@@ -2,15 +2,9 @@
 #include <aal/mm.h>
 #include <aal/cpu.h>
 #include <errno.h>
+#include "bootparam.h"
 
 /* MEE Setup.c */
-struct shimos_boot_param {
-	unsigned long start, end;
-	unsigned long cores;
-	unsigned long status;
-	unsigned long msg_buffer;
-};
-
 static unsigned char stack[8192] __attribute__((aligned(4096)));
 
 unsigned long boot_param_pa;
@@ -41,6 +35,18 @@ void arch_init(void)
 
 	setup_x86();
 	boot_param = map_fixed_area(boot_param_pa, sizeof(*boot_param), 0);
+}
+
+void arch_ready(void)
+{
+	/* Make it ready */
+	boot_param->status = 2;
+}
+
+void arch_set_mikc_queue(void *rq, void *wq)
+{
+	boot_param->mikc_queue_recv = virt_to_phys(wq);
+	boot_param->mikc_queue_send = virt_to_phys(rq);
 }
 
 unsigned long aal_mc_get_memory_address(enum aal_mc_gma_type type, int opt)
@@ -81,3 +87,5 @@ int aal_mc_get_vector(enum aal_mc_gv_type type)
 		return -ENOENT;
 	}
 }
+
+

@@ -21,6 +21,8 @@ enum aal_cpu_status {
 
 enum aal_special_addr_type {
 	AAL_SPADDR_KMSG = 1,
+	AAL_SPADDR_MIKC_QUEUE_RECV = 2,
+	AAL_SPADDR_MIKC_QUEUE_SEND = 3,
 };
 
 typedef void *aal_device_t;
@@ -29,6 +31,8 @@ typedef void *aal_os_t;
 #define aal_device_t_failed(p)   ((p) == NULL)
 
 struct aal_resource;
+
+struct aal_host_interrupt_handler;
 
 struct aal_os_ops {
 	int (*open)(aal_os_t, void *, const void *);
@@ -42,12 +46,20 @@ struct aal_os_ops {
 	int (*shutdown)(aal_os_t, void *, int);
 
 	int (*alloc_resource)(aal_os_t, void *, struct aal_resource *);
+
 	enum aal_os_status (*query_status)(aal_os_t, void *);
+	int (*wait_for_status)(aal_os_t, void *, enum aal_os_status, int, int);
+
 	int (*issue_interrupt)(aal_os_t, void *, int, int);
 
 	unsigned long (*map_memory)(aal_os_t, void *,
 	                            unsigned long, unsigned long);
 	int (*unmap_memory)(aal_os_t, void *, unsigned long, unsigned long);
+
+	int (*register_handler)(aal_os_t, void *, int,
+	                        struct aal_host_interrupt_handler *);
+	int (*unregister_handler)(aal_os_t, void *, int,
+	                          struct aal_host_interrupt_handler *);
 	
 	int (*get_special_addr)(aal_os_t, void *, enum aal_special_addr_type,
 	                        unsigned long *, unsigned long *);
@@ -99,6 +111,9 @@ struct aal_register_os_data {
 aal_device_t aal_register_device(struct aal_register_device_data *);
 int aal_unregister_device(aal_device_t);
 aal_os_t aal_device_create_os(aal_device_t, unsigned long);
+void *aal_device_map_virtual(aal_device_t, unsigned long, unsigned long,
+                             void *, int);
+int aal_device_unmap_virtual(aal_device_t, void *, unsigned long);
 
 struct aal_mem_region {
 	unsigned long start;
@@ -124,5 +139,29 @@ struct aal_resource {
 	int cores;            /* CPU Cores */
 	unsigned long memory; /* Memory */
 };
+
+struct aal_host_interrupt_handler {
+	struct list_head list;
+	void (*func)(aal_os_t, void *, void *);
+	void *priv;
+	/* Filled by AAL */
+	aal_os_t os;
+	void *os_priv;
+};
+
+int aal_os_register_interrupt_handler(aal_os_t os, int itype,
+                                      struct aal_host_interrupt_handler *h);
+int aal_os_unregister_interrupt_handler(aal_os_t os, int itype,
+                                        struct aal_host_interrupt_handler *h);
+int aal_os_wait_for_status(aal_os_t os, enum aal_os_status status,
+                           int sleepable, int timeout);
+int aal_os_get_special_address(aal_os_t os, enum aal_special_addr_type type,
+                               unsigned long *pa, unsigned long *size);
+unsigned long aal_os_map_memory(aal_os_t os,
+                                unsigned long pa, unsigned long size);
+int aal_os_unmap_memory(aal_os_t os, unsigned long pa, unsigned long size);
+
+int aal_os_issue_interrupt(aal_os_t os, int cpu, int vector);
+
 
 #endif

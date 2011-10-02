@@ -30,6 +30,11 @@ struct aal_host_linux_os_data {
 
 	void *kmsg_buf;
 	unsigned long kmsg_pa, kmsg_len;
+
+	struct list_head ikc_channels;
+	struct aal_host_interrupt_handler ikc_handler;
+
+	struct aal_ikc_channel_desc *mchannel;
 };
 
 #endif

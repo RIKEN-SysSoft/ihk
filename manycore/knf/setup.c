@@ -60,6 +60,11 @@ void arch_start(void)
 	while (1);
 }
 
+void arch_ready(void)
+{
+	sbox_write(SBOX_SCRATCH12, KNF_BOOT_MAGIC_READY);
+}
+
 void arch_init(void)
 {
 	init_sfi();
@@ -73,6 +78,12 @@ void arch_init(void)
 	setup_x86();
 
 	sbox_base = map_fixed_area(SBOX_BASE, SBOX_SIZE, 1);
+}
+
+void arch_set_mikc_queue(void *rq, void *wq)
+{
+	sbox_write(SBOX_SCRATCH13, virt_to_phys(wq));
+	sbox_write(SBOX_SCRATCH15, virt_to_phys(rq));
 }
 
 void aal_mc_interrupt_host(int vector)
