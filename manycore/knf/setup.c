@@ -114,11 +114,23 @@ unsigned long aal_mc_get_memory_address(enum aal_mc_gma_type type, int opt)
 
 int aal_mc_get_vector(enum aal_mc_gv_type type)
 {
-
 	switch (type) {
 	case AAL_GV_IKC:
 		return 0xd1;
 	default:
 		return -ENOENT;
 	}
+}
+
+unsigned long aal_mc_map_memory(void *os, unsigned long phys,
+                                unsigned long size)
+{
+	/* TODO: os support (currently, os is ignored and assumed to be Host) */
+	return host_to_pa(phys & MIC_SYSTEM_PAGE_MASK,
+	                  phys >> MIC_SYSTEM_PAGE_SHIFT);
+}
+
+void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
+{
+	return;
 }

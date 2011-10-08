@@ -41,6 +41,7 @@ static struct aal_host_linux_os_data *os_data[OS_MAX_MINOR];
 static int os_max_minor = 0;
 
 extern int ikc_master_init(aal_os_t os);
+extern void ikc_master_finalize(aal_os_t os);
 
 /*
  * OS character device file operations.
@@ -206,9 +207,11 @@ static int  __aal_os_shutdown(struct aal_host_linux_os_data *data, int flag)
 	if (data->kmsg_buf) {
 		buf = data->kmsg_buf;
 		data->kmsg_buf = NULL;
-		__aal_device_unmap_virtual(data->dev_data, buf, data->kmsg_len);
+		iounmap(data->kmsg_buf);
 		__aal_os_unmap_memory(data, data->kmsg_pa, data->kmsg_len);
 	}
+
+	ikc_master_finalize(data);
 
 	if (data->ops->shutdown) {
 		ret = data->ops->shutdown(data, data->priv, flag);
@@ -298,8 +301,7 @@ static void __aal_os_init_kmsg(struct aal_host_linux_os_data *data)
 	
 	data->kmsg_pa = pa;
 	data->kmsg_len = size;
-	data->kmsg_buf = __aal_device_map_virtual(data->dev_data, pa, size,
-	                                          NULL, AAL_MAP_FLAG_NOCACHE);
+	data->kmsg_buf = ioremap_nocache(pa, size);
 	dprint_var_p(data->kmsg_buf);
 }
 
@@ -310,9 +312,9 @@ static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
 	int tail;
 
 	if (!data->kmsg_buf) {
-		spin_lock_irqsave(&data->lock, flags);
+		mutex_lock(&data->kmsg_mutex);
 		__aal_os_init_kmsg(data);
-		spin_unlock_irqrestore(&data->lock, flags);
+		mutex_unlock(&data->kmsg_mutex);
 	}
 	if (!data->kmsg_buf) {
 		return -EINVAL;
@@ -465,6 +467,7 @@ static int __aal_device_create_os_init(struct aal_host_linux_device_data *data,
 		goto ERR;
 	}
 	spin_lock_init(&os->lock);
+	mutex_init(&os->kmsg_mutex);
 	atomic_set(&os->refcount, 0);
 
 	memset(&drv_data, 0, sizeof(drv_data));
@@ -642,8 +645,141 @@ static long aal_host_device_ioctl(struct file *file, unsigned int request,
 	return ret;
 }
 
+static long aal_host_device_read(struct file *file, char __user *buf,
+                                 size_t size, loff_t *off)
+{
+	unsigned long pa;
+	void *va;
+	size_t s;
+	struct aal_host_linux_device_data *data = file->private_data;
+
+	pa = aal_device_map_memory(data, *off, size);
+	if ((long)pa <= 0) {
+		return -EINVAL;
+	}
+	
+	va = aal_device_map_virtual(data, pa, size, NULL, 0);
+	if (!va) {
+		return -ENOMEM;
+	}
+	s = copy_to_user(buf, va, size);
+	if (s > 0) {
+		s = size - s;
+	} else {
+		s = size;
+	}
+	*off += s;
+
+	aal_device_unmap_virtual(data, va, size);
+
+	return s;
+}
+
+static long aal_host_device_write(struct file *file, const char __user *buf,
+                                  size_t size, loff_t *off)
+{
+	unsigned long pa;
+	void *va;
+	size_t s;
+	struct aal_host_linux_device_data *data = file->private_data;
+
+	pa = aal_device_map_memory(data, *off, size);
+	if ((long)pa <= 0) {
+		return -EINVAL;
+	}
+	
+	va = aal_device_map_virtual(data, pa, size, NULL, 0);
+	if (!va) {
+		return -ENOMEM;
+	}
+	s = copy_from_user(va, buf, size);
+	if (s > 0) {
+		s = size - s;
+	} else {
+		s = size;
+	}
+	*off += s;
+
+	aal_device_unmap_virtual(data, va, size);
+
+	return s;
+}
+
+struct aal_host_map_data {
+	int count;
+	unsigned long pa;
+};
+
+static void aal_host_device_mmap_open(struct vm_area_struct *vma)
+{
+	struct aal_host_map_data *md = vma->vm_private_data;
+
+	dprint_func_enter;
+	md->count++;
+
+	dprint_var_i4(md->count);
+}
+
+static void aal_host_device_mmap_close(struct vm_area_struct *vma)
+{
+	struct aal_host_map_data *md = vma->vm_private_data;
+	struct aal_host_linux_device_data *data = vma->vm_file->private_data;
+
+	dprint_func_enter;
+	dprint_var_i4(md->count);
+
+	if ((--md->count) > 0) {
+		return;
+	}
+
+	aal_device_unmap_memory(data, md->pa, vma->vm_end - vma->vm_start);
+	kfree(md);
+}
+	
+static struct vm_operations_struct aal_host_mmap_ops = {
+	.open = aal_host_device_mmap_open,
+	.close = aal_host_device_mmap_close,
+};
+
+int aal_host_device_mmap(struct file *file, struct vm_area_struct *vma)
+{
+	unsigned long pa;
+	struct aal_host_linux_device_data *data = file->private_data;
+	struct aal_host_map_data *md;
+	int r;
+
+	dprint_func_enter;
+	dprint_var_x8(vma->vm_pgoff);
+
+	pa = aal_device_map_memory(data, vma->vm_pgoff << PAGE_SHIFT,
+	                           vma->vm_end - vma->vm_start);
+	if ((long)pa <= 0) {
+		return -EINVAL;
+	}
+	
+
+	r = remap_pfn_range(vma, vma->vm_start, pa >> PAGE_SHIFT,
+	                    vma->vm_end - vma->vm_start,
+	                    vma->vm_page_prot);
+	if (r != 0) {
+		return r;
+	}
+
+	vma->vm_private_data = md = kzalloc(sizeof(*md), GFP_KERNEL);
+	md->pa = pa;
+	md->count = 0;
+	vma->vm_ops = &aal_host_mmap_ops;
+		
+	aal_host_device_mmap_open(vma);
+
+	return r;
+}
+
 static struct file_operations mcd_cdev_ops = {
 	.open = aal_host_device_open,
+	.read = aal_host_device_read,
+	.write = aal_host_device_write,
+	.mmap = aal_host_device_mmap,
 	.unlocked_ioctl = aal_host_device_ioctl,
 	.release = aal_host_device_release,
 };
@@ -856,17 +992,65 @@ int aal_os_get_special_address(aal_os_t os, enum aal_special_addr_type type,
 unsigned long aal_os_map_memory(aal_os_t os, unsigned long pa,
                                 unsigned long size)
 {
-	return __aal_os_map_memory(os, pa, size);
+	/* XXX: PAGE_SIZE should be device-specific */
+	unsigned long st, ed, offset, r;
+
+	offset = pa & (PAGE_SIZE - 1);
+	st = pa & PAGE_MASK;
+	ed = (pa + size + PAGE_SIZE - 1) & PAGE_MASK;
+	
+	r = __aal_os_map_memory(os, st, ed - st);
+	if ((long) r <= 0) {
+		return r;
+	}
+		
+	return r + offset;
 }
 
 int aal_os_unmap_memory(aal_os_t os, unsigned long pa, unsigned long size)
 {
-	return __aal_os_unmap_memory(os, pa, size);
+	/* XXX: PAGE_SIZE should be device-specific */
+	unsigned long st, ed;
+
+	st = pa & PAGE_MASK;
+	ed = (pa + size + PAGE_SIZE - 1) & PAGE_MASK;
+	
+	return __aal_os_unmap_memory(os, st, ed - st);
 }
 
 int aal_os_issue_interrupt(aal_os_t os, int cpu, int vector)
 {
 	return __aal_os_issue_interrupt(os, cpu, vector);
+}
+
+unsigned long aal_device_map_memory(aal_device_t dev, unsigned long pa,
+                                    unsigned long size)
+{
+	/* XXX: PAGE_SIZE should be device-specific */
+	unsigned long st, ed, offset, r;
+
+	offset = pa & (PAGE_SIZE - 1);
+	st = pa & PAGE_MASK;
+	ed = (pa + size + PAGE_SIZE - 1) & PAGE_MASK;
+	
+	r = __aal_device_map_memory(dev, st, ed - st);
+	if ((long) r <= 0) {
+		return r;
+	}
+		
+	return r + offset;
+}
+
+int aal_device_unmap_memory(aal_device_t dev, unsigned long pa,
+                            unsigned long size)
+{
+	/* XXX: PAGE_SIZE should be device-specific */
+	unsigned long st, ed;
+
+	st = pa & PAGE_MASK;
+	ed = (pa + size + PAGE_SIZE - 1) & PAGE_MASK;
+	
+	return __aal_device_unmap_memory(dev, st, ed - st);
 }
 
 void *aal_device_map_virtual(aal_device_t dev, unsigned long pa,

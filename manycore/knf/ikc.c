@@ -5,10 +5,12 @@
 #include <string.h>
 
 extern int aal_mc_ikc_init_first_local(struct aal_ikc_channel_desc *channel,
-                                       int (*packet_handler)(void *, void *));
+                                       int (*h)(struct aal_ikc_channel_desc *,
+                                                void *, void *));
 
 int aal_mc_ikc_init_first(struct aal_ikc_channel_desc *channel,
-                          int (*packet_handler)(void *, void *))
+                          int (*packet_handler)(struct aal_ikc_channel_desc *,
+                                                void *, void *))
 {
 	return aal_mc_ikc_init_first_local(channel, packet_handler);
 }

@@ -10,6 +10,10 @@ void aal_pagealloc_destroy(void *__desc);
 unsigned long aal_pagealloc_alloc(void *__desc, int npages);
 void aal_pagealloc_free(void *__desc, unsigned long address, int npages);
 
+unsigned long aal_pagealloc_alloc_size(void *__desc, unsigned long size);
+void aal_pagealloc_free_size(void *__desc, unsigned long address,
+                             unsigned long size);
+
 /* mm.c */
 void *aal_host_map_generic(aal_device_t dev, unsigned long phys,
                            void *virt, unsigned long size, int flags);

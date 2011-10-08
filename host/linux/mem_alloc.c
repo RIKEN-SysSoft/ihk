@@ -171,6 +171,13 @@ unsigned long aal_pagealloc_alloc(void *__desc, int npages)
 	return 0;
 }
 
+unsigned long aal_pagealloc_alloc_size(void *__desc, unsigned long size)
+{
+	struct aal_page_allocator_desc *desc = __desc;
+
+	return aal_pagealloc_alloc(desc, size >> desc->shift);
+}
+
 void aal_pagealloc_free(void *__desc, unsigned long address, int npages)
 {
 	struct aal_page_allocator_desc *desc = __desc;
@@ -188,9 +195,18 @@ void aal_pagealloc_free(void *__desc, unsigned long address, int npages)
 	spin_unlock_irqrestore(&desc->lock, flags);
 }
 
+void aal_pagealloc_free_size(void *__desc, unsigned long address,
+                                      unsigned long size)
+{
+	struct aal_page_allocator_desc *desc = __desc;
+
+	aal_pagealloc_free(desc, address, size >> desc->shift);
+}
 
 EXPORT_SYMBOL(aal_pagealloc_init);
 EXPORT_SYMBOL(aal_pagealloc_destroy);
 EXPORT_SYMBOL(aal_pagealloc_alloc);
 EXPORT_SYMBOL(aal_pagealloc_free);
+EXPORT_SYMBOL(aal_pagealloc_alloc_size);
+EXPORT_SYMBOL(aal_pagealloc_free_size);
 

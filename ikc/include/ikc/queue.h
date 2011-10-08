@@ -1,8 +1,11 @@
 #ifndef HEADER_AAL_IKC_QUEUE_H
 #define HEADER_AAL_IKC_QUEUE_H
 
-#include <ikc/aal.h>
-#include <aal/ikc.h>
+struct aal_ikc_channel_desc;
+struct aal_ikc_queue_desc;
+
+typedef int (*aal_ikc_ph_t)(struct aal_ikc_channel_desc *,
+                            void *, void *);
 
 struct aal_ikc_queue_head {
 /* 0 */
@@ -37,14 +40,18 @@ int aal_ikc_recv(struct aal_ikc_channel_desc *channel, void *p, int opt);
 
 #ifdef AAL_OS_MANYCORE
 void aal_ikc_system_init(void);
+void aal_ikc_system_exit(void);
 #else
 void aal_ikc_system_init(aal_os_t);
+void aal_ikc_system_exit(aal_os_t);
 #endif
 
 void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
                        int rid, int cid,
                        struct aal_ikc_queue_head *rq,
                        struct aal_ikc_queue_head *wq,
-                       int (*packet_handler)(void *, void *));
+                       aal_ikc_ph_t packet_handler);
+
+#include <ikc/aal.h>
 
 #endif

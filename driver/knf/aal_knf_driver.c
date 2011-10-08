@@ -163,7 +163,7 @@ static unsigned long knf_aal_os_map_memory(aal_os_t aal_os, void *priv,
 	dprint_func_enter;
 	dprint_var_x8(size);
 
-	size = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
+	size >>= PAGE_SHIFT;
 
 	if (!(phys = aal_pagealloc_alloc(kdd->alloc_desc, size))) {
 		return (unsigned long)-ENOMEM;
@@ -183,7 +183,7 @@ static int knf_aal_os_unmap_memory(aal_os_t aal_os, void *priv,
 	struct knf_os_data *os = priv;
 	struct knf_device_data *kdd = os->dev;
 
-	size = (size + PAGE_SIZE) >> PAGE_SHIFT;
+	size >>= PAGE_SHIFT;
 
 	knf_unmap_aperture(kdd, phys, size);
 	aal_pagealloc_free(kdd->alloc_desc, phys, size);
@@ -335,6 +335,43 @@ static long knf_aal_debug_request(aal_device_t aal_dev, void *priv,
 	return __knf_debug_request(kdd, r, arg);
 }
 
+static unsigned long knf_aal_map_memory(aal_os_t aal_os, void *priv,
+                                        unsigned long remote_phys,
+                                        unsigned long size)
+{
+	struct knf_device_data *kdd = priv;
+	unsigned long phys;
+
+	dprint_func_enter;
+	dprint_var_x8(size);
+
+	size >>= PAGE_SHIFT;
+
+	if (!(phys = aal_pagealloc_alloc(kdd->alloc_desc, size))) {
+		return (unsigned long)-ENOMEM;
+	}
+	
+	if (knf_map_aperture(kdd, phys, remote_phys, size)) {
+		aal_pagealloc_free(kdd->alloc_desc, phys, size);
+		return (unsigned long)-ENOMEM;
+	}
+
+	return phys;
+}
+
+static int knf_aal_unmap_memory(aal_device_t aal_dev, void *priv,
+                                unsigned long phys, unsigned long size)
+{
+	struct knf_device_data *kdd = priv;
+
+	size >>= PAGE_SHIFT;
+
+	knf_unmap_aperture(kdd, phys, size);
+	aal_pagealloc_free(kdd->alloc_desc, phys, size);
+
+	return 0;
+}
+
 static void *knf_aal_map_virtual(aal_device_t aal_dev, void *priv,
                                  unsigned long phys, unsigned long size,
                                  void *virt, int flags)
@@ -367,6 +404,8 @@ static struct aal_device_ops knf_aal_device_ops = {
 	.exit = knf_aal_exit,
 	.create_os = knf_aal_create_os,
 	.debug_request = knf_aal_debug_request,
+	.map_memory = knf_aal_map_memory,
+	.unmap_memory = knf_aal_unmap_memory,
 	.map_virtual = knf_aal_map_virtual,
 	.unmap_virtual = knf_aal_unmap_virtual,
 };	

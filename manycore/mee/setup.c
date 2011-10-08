@@ -89,3 +89,14 @@ int aal_mc_get_vector(enum aal_mc_gv_type type)
 }
 
 
+unsigned long aal_mc_map_memory(void *os, unsigned long phys,
+                                unsigned long size)
+{
+	/* TODO: os support (currently, os is ignored and assumed to be Host) */
+	return phys;
+}
+
+void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
+{
+	return;
+}

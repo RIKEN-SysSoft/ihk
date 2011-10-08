@@ -67,7 +67,9 @@ int aal_ikc_read_queue(struct aal_ikc_queue_head *q, void *packet, int flag)
 }
 
 int aal_ikc_read_queue_handler(struct aal_ikc_queue_head *q, 
-                               int (*h)(void *, void *), void *harg, int flag)
+                               struct aal_ikc_channel_desc *c,
+                               int (*h)(struct aal_ikc_channel_desc *,
+                                        void *, void *), void *harg, int flag)
 {
 	uint64_t o;
 
@@ -80,7 +82,7 @@ int aal_ikc_read_queue_handler(struct aal_ikc_queue_head *q,
 			o = 0;
 		}
 
-		h(q + sizeof(*q) + q->read_off, harg);
+		h(c, q + sizeof(*q) + q->read_off, harg);
 
 		q->read_off = o;
 	}
@@ -113,7 +115,7 @@ void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
                        int rid, int cid,
                        struct aal_ikc_queue_head *rq,
                        struct aal_ikc_queue_head *wq,
-                       int (*packet_handler)(void *, void *))
+                       aal_ikc_ph_t packet_handler)
 {
 	c->remote_id = rid;
 	c->channel_id = cid;
@@ -153,13 +155,14 @@ int aal_ikc_recv(struct aal_ikc_channel_desc *channel, void *p, int opt)
 }
 
 int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel, 
-                         int (*h)(void *, void *), void *harg, int opt)
+                         aal_ikc_ph_t h, void *harg, int opt)
 {
 	unsigned long flags;
 	int r;
 
 	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
-	r = aal_ikc_read_queue_handler(channel->recv.queue, h, harg, opt);
+	r = aal_ikc_read_queue_handler(channel->recv.queue, channel,
+	                               h, harg, opt);
 	/* XXX: Optimal interrupt */
 	aal_ikc_notify_remote_read(channel);
 	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
@@ -214,6 +217,11 @@ void aal_ikc_system_init(void)
 	                                  &aal_ikc_handler);
 }
 
+void aal_ikc_system_exit(void)
+{
+	aal_mc_unregister_interrupt_handler(aal_mc_get_vector(AAL_GV_IKC),
+	                                    &aal_ikc_handler);
+}
 #else
 
 extern struct aal_host_interrupt_handler *aal_host_os_get_ikc_handler(aal_os_t);
@@ -259,5 +267,14 @@ void aal_ikc_system_init(aal_os_t os)
 	h->priv = os;
 
 	aal_os_register_interrupt_handler(os, 0, h);
+}
+
+void aal_ikc_system_exit(aal_os_t os)
+{
+	struct aal_host_interrupt_handler *h;
+	
+	h = aal_host_os_get_ikc_handler(os);
+	
+	aal_os_unregister_interrupt_handler(os, 0, h);
 }
 #endif

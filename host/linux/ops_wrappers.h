@@ -76,6 +76,17 @@ AAL_OS_OPS_BEGIN(int, issue_interrupt, int cpu, int vector)
 	AAL_OPS_BODY(issue_interrupt, cpu, vector);
 }
 
+AAL_DEV_OPS_BEGIN(unsigned long, map_memory,
+                 unsigned long rphys, unsigned long size)
+{
+	AAL_OPS_BODY(map_memory, rphys, size);
+}
+
+AAL_DEV_OPS_BEGIN(int, unmap_memory, unsigned long lphys, unsigned long size)
+{
+	AAL_OPS_BODY(unmap_memory, lphys, size);
+}
+
 AAL_DEV_OPS_BEGIN(void *, map_virtual, unsigned long phys, unsigned long size,
                   void *virtual, int flags)
 {

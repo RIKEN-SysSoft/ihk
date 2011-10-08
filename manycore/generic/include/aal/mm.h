@@ -46,6 +46,10 @@ struct aal_mc_pa_ops {
 void aal_mc_set_page_allocator(struct aal_mc_pa_ops *);
 void aal_mc_set_page_fault_handler(void (*h)(unsigned long, void *));
 
+unsigned long aal_mc_map_memory(void *os, unsigned long phys, 
+                                unsigned long size);
+void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size);
+
 void *arch_alloc_page(enum aal_mc_ap_flag flag);
 void arch_free_page(void *ptr);
 

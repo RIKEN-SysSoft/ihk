@@ -6,7 +6,7 @@
 extern void arch_set_mikc_queue(void *r, void *w);
 
 int aal_mc_ikc_init_first_local(struct aal_ikc_channel_desc *channel,
-                                int (*packet_handler)(void *, void *))
+                                aal_ikc_ph_t packet_handler)
 {
 	struct aal_ikc_queue_head *rq, *wq;
 	struct aal_ikc_master_packet packet;

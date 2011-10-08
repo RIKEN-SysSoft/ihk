@@ -460,6 +460,21 @@ static int mee_aal_create_os(aal_device_t aal_dev, void *priv,
 	return 0;
 }
 
+static unsigned long mee_aal_map_memory(aal_device_t aal_dev, void *priv,
+                                        unsigned long remote_phys,
+                                        unsigned long size)
+{
+	/* We use the same physical memory. So no need to do something */
+	return remote_phys;
+}
+
+static int mee_aal_unmap_memory(aal_device_t aal_dev, void *priv,
+                                unsigned long local_phys,
+                                unsigned long size)
+{
+	return 0;
+}
+
 static void *mee_aal_map_virtual(aal_device_t aal_dev, void *priv,
                                  unsigned long phys, unsigned long size,
                                  void *virt, int flags)
@@ -482,10 +497,11 @@ static int mee_aal_unmap_virtual(aal_device_t aal_dev, void *priv,
 	}
 	return 0;
 }
-                                         
 
 static struct aal_device_ops mee_aal_device_ops = {
 	.create_os = mee_aal_create_os,
+	.map_memory = mee_aal_map_memory,
+	.unmap_memory = mee_aal_unmap_memory,
 	.map_virtual = mee_aal_map_virtual,
 	.unmap_virtual = mee_aal_unmap_virtual,
 };	

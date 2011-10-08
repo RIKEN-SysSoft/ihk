@@ -4,6 +4,7 @@
 #include <ikc/msg.h>
 #include <aal/lock.h>
 #include <types.h>
+#include <ikc/queue.h>
 
 #define IKC_DEST_HOST        0
 
@@ -20,13 +21,11 @@ struct aal_ikc_channel_desc {
 	int                           remote_id;
 	int                           channel_id;
 	struct aal_ikc_queue_desc  recv, send;
-	int (*handler)(void *, void *);
+	aal_ikc_ph_t               handler;
 };
 
 /* manycore side */
 int aal_mc_ikc_init_first(struct aal_ikc_channel_desc *,
-                          int handler(void *, void *));
-#include <ikc/queue.h>
-
+                          aal_ikc_ph_t handler);
 #endif
 

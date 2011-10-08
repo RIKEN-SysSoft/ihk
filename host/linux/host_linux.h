@@ -28,6 +28,7 @@ struct aal_host_linux_os_data {
 	struct aal_os_ops *ops;
 	void *priv;
 
+	struct mutex kmsg_mutex;
 	void *kmsg_buf;
 	unsigned long kmsg_pa, kmsg_len;
 

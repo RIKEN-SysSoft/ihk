@@ -81,6 +81,9 @@ struct aal_device_ops {
 	int (*destroy_os)(aal_device_t, void *, aal_os_t, void *);
 
 
+	unsigned long (*map_memory)(aal_device_t, void *,
+	                            unsigned long, unsigned long);
+	int (*unmap_memory)(aal_device_t, void *, unsigned long, unsigned long);
 	void *(*map_virtual)(aal_device_t, void *, unsigned long, unsigned long,
 	                     void *, int);
 	int (*unmap_virtual)(aal_device_t, void *, void *, unsigned long);
@@ -111,6 +114,10 @@ struct aal_register_os_data {
 aal_device_t aal_register_device(struct aal_register_device_data *);
 int aal_unregister_device(aal_device_t);
 aal_os_t aal_device_create_os(aal_device_t, unsigned long);
+unsigned long aal_device_map_memory(aal_device_t dev, unsigned long pa,
+                                    unsigned long size);
+int aal_device_unmap_memory(aal_device_t dev, unsigned long pa,
+                            unsigned long size);
 void *aal_device_map_virtual(aal_device_t, unsigned long, unsigned long,
                              void *, int);
 int aal_device_unmap_virtual(aal_device_t, void *, unsigned long);
