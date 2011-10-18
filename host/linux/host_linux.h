@@ -4,6 +4,8 @@
 #ifndef __HEADER_AAL_HOST_LINUX_H
 #define __HEADER_AAL_HOST_LINUX_H
 
+#include <ikc/master.h>
+
 struct aal_host_linux_device_data {
 	spinlock_t lock;
 	struct cdev cdev;
@@ -36,6 +38,12 @@ struct aal_host_linux_os_data {
 	struct aal_host_interrupt_handler ikc_handler;
 
 	struct aal_ikc_channel_desc *mchannel;
+	spinlock_t listener_lock;
+	struct aal_ikc_listen_param *listeners[AAL_IKC_MAX_PORT];
+	aal_ikc_ph_t packet_handler;
+
+	spinlock_t wait_lock;
+	struct list_head wait_list;
 };
 
 #endif

@@ -83,4 +83,6 @@ void *map_fixed_area(unsigned long phys, unsigned long size, int uncachable);
 #define AP_TRAMPOLINE       0x10000
 #define AP_TRAMPOLINE_SIZE  0x4000
 
+/* Local is cachable */
+#define AAL_IKC_QUEUE_PT_ATTR (PTATTR_WRITABLE | PTATTR_UNCACHABLE)
 #endif

@@ -113,7 +113,7 @@ static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
 				desc->map[j] = (unsigned long)-1;
 			}
 			aal_mc_spinlock_unlock(&desc->lock, flags);
-
+			kprintf("Found : %i, %lx\n", mi, ADDRESS(desc, mi, 0));
 			return ADDRESS(desc, mi, 0);
 		}
 	}

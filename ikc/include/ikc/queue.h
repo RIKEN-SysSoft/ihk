@@ -1,6 +1,10 @@
 #ifndef HEADER_AAL_IKC_QUEUE_H
 #define HEADER_AAL_IKC_QUEUE_H
 
+#include <ikc/aal.h>
+
+#define IKC_OS_HOST      ((aal_os_t)NULL)
+
 struct aal_ikc_channel_desc;
 struct aal_ikc_queue_desc;
 
@@ -23,7 +27,26 @@ struct aal_ikc_queue_head {
 /* 48 */
 	uint32_t        read_cpu;
 	uint32_t        write_cpu;
+	uint64_t        dummy2;
 /* 64 */
+};
+
+struct aal_ikc_queue_desc {
+	struct aal_ikc_queue_head *queue;  /* Virtual address */
+	struct aal_ikc_queue_head  cache;  /* Cache for local reference */
+	unsigned long              qrphys; /* Remote physical memory */
+	unsigned long              qphys;  /* Local physical memory */
+	aal_spinlock_t             lock;
+	uint32_t                   intr_cpu;
+};
+
+struct aal_ikc_channel_desc {
+	struct list_head           list;
+	aal_os_t                   remote_os;
+	int                        channel_id;
+	struct aal_ikc_queue_desc  recv, send;
+	aal_spinlock_t             lock;
+	aal_ikc_ph_t               handler;
 };
 
 int aal_ikc_init_queue(struct aal_ikc_queue_head *q,
@@ -33,25 +56,29 @@ int aal_ikc_queue_is_full(struct aal_ikc_queue_head *q);
 int aal_ikc_read_queue(struct aal_ikc_queue_head *q, void *packet, int flag);
 int aal_ikc_write_queue(struct aal_ikc_queue_head *q, void *packet, int flag);
 
+struct aal_ikc_channel_desc *aal_ikc_create_channel(aal_os_t os,
+                                                    int port,
+                                                    int packet_size,
+                                                    unsigned long qsize,
+                                                    unsigned long *rq,
+                                                    unsigned long *sq);
+void aal_ikc_free_channel(struct aal_ikc_channel_desc *desc);
+
 void aal_ikc_enable_channel(struct aal_ikc_channel_desc *channel);
 void aal_ikc_disable_channel(struct aal_ikc_channel_desc *channel);
 int aal_ikc_send(struct aal_ikc_channel_desc *channel, void *p, int opt);
 int aal_ikc_recv(struct aal_ikc_channel_desc *channel, void *p, int opt);
-
-#ifdef AAL_OS_MANYCORE
-void aal_ikc_system_init(void);
-void aal_ikc_system_exit(void);
-#else
+int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel, 
+                         aal_ikc_ph_t h, void *harg, int opt);
+int aal_ikc_set_remote_queue(struct aal_ikc_queue_desc *q, aal_os_t os,
+                             unsigned long rphys, unsigned long qsize);
 void aal_ikc_system_init(aal_os_t);
 void aal_ikc_system_exit(aal_os_t);
-#endif
 
 void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
-                       int rid, int cid,
+                       aal_os_t ros, int cid,
                        struct aal_ikc_queue_head *rq,
                        struct aal_ikc_queue_head *wq,
                        aal_ikc_ph_t packet_handler);
-
-#include <ikc/aal.h>
 
 #endif

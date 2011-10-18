@@ -18,8 +18,8 @@
 #include <ikc/msg.h>
 #include "host_linux.h"
 
-static int master_channel_packet_handler(struct aal_ikc_channel_desc *d,
-                                         void *__packet, void *__os);
+static int arch_master_handler(struct aal_ikc_channel_desc *c,
+                               void *__packet, void *__os);
 
 struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
                                                      aal_ikc_ph_t handler)
@@ -49,22 +49,16 @@ struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
 		wq = aal_device_map_virtual(os->dev_data, wp, wsz, NULL, 0);
 
 		c = kzalloc(sizeof(struct aal_ikc_channel_desc), GFP_KERNEL);
+		aal_ikc_init_desc(c, aal_os, 0, rq, wq,
+		                  aal_ikc_master_channel_packet_handler);
 
-		INIT_LIST_HEAD(&c->list);
-		c->handler = handler;
-		c->remote_os = aal_os;
-		c->channel_id = 0;
-
-		spin_lock_init(&c->recv.lock);
-		spin_lock_init(&c->send.lock);
-		c->recv.queue = rq;
-		c->send.queue = wq;
-		c->recv.pa = rp;
-		c->send.pa = wp;
-		c->recv.size = rsz;
-		c->send.size = wsz;
+		c->recv.qphys = rp;
+		c->send.qphys = wp;
+		c->recv.qrphys = r;
+		c->send.qrphys = w;
 
 		printk("c->remote_os = %p\n", c->remote_os);
+		os->packet_handler = handler;
 
 		return c;
 	} else {
@@ -77,13 +71,12 @@ int ikc_master_init(aal_os_t __os)
 {
 	struct aal_host_linux_os_data *os = __os;
 	struct aal_ikc_master_packet packet;
-	unsigned long flags;
 
 	printk("ikc_master_init\n");
-	INIT_LIST_HEAD(&os->ikc_channels);
 
 	os->mchannel = 
-		aal_host_ikc_init_first(os, master_channel_packet_handler);
+		aal_host_ikc_init_first(os, arch_master_handler);
+	printk("os(%p)->mchannel = %p\n", os, os->mchannel);
 	if (!os->mchannel) {
 		return -EINVAL;
 	} else {
@@ -108,8 +101,16 @@ void aal_ikc_destroy_channel(aal_os_t __os, struct aal_ikc_channel_desc *c)
 	}
 	aal_ikc_disable_channel(c);
 	
-	aal_device_unmap_memory(os->dev_data, c->recv.pa, c->recv.size);
-	aal_device_unmap_memory(os->dev_data, c->send.pa, c->send.size);
+
+	aal_device_unmap_virtual(os->dev_data, c->recv.queue,
+	                         c->recv.cache.queue_size);
+	aal_device_unmap_virtual(os->dev_data, c->send.queue,
+	                         c->send.cache.queue_size);
+
+	aal_device_unmap_memory(os->dev_data, c->recv.qphys,
+	                        c->recv.cache.queue_size);
+	aal_device_unmap_memory(os->dev_data, c->send.qphys,
+	                        c->send.cache.queue_size);
 	
 	kfree(c);
 }
@@ -124,17 +125,6 @@ void ikc_master_finalize(aal_os_t __os)
 		aal_ikc_destroy_channel(os, os->mchannel);
 	}
 	aal_ikc_system_exit(os);
-}
-
-static int master_channel_packet_handler(struct aal_ikc_channel_desc *c,
-                                         void *__packet, void *__os)
-{
-	struct aal_ikc_master_packet *packet = __packet;
-	struct aal_host_linux_os_data *os = __os;
-
-	/* TODO */
-	printk("Master packet! : %x\n", packet->msg);
-	return 0;
 }
 
 struct list_head *aal_host_os_get_ikc_channel_list(aal_os_t aal_os)
@@ -155,3 +145,63 @@ int aal_ikc_send_interrupt(struct aal_ikc_channel_desc *channel)
 {
 	return aal_os_issue_interrupt(channel->remote_os, 0, 0xd1);
 }
+
+aal_spinlock_t *aal_ikc_get_listener_lock(aal_os_t aal_os)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+
+	return &os->listener_lock;
+}
+
+struct aal_ikc_listen_param **aal_ikc_get_listener_entry(aal_os_t aal_os,
+                                                         int port)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+
+	return &(os->listeners[port]);
+}
+
+int aal_ikc_call_master_packet_handler(aal_os_t aal_os,
+                                       struct aal_ikc_channel_desc *c,
+                                       void *packet)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+
+	if (os->packet_handler) {
+		return os->packet_handler(c, packet, os);
+	}
+	return 0;
+}
+
+static int arch_master_handler(struct aal_ikc_channel_desc *c,
+                               void *__packet, void *__os)
+{
+	struct aal_ikc_master_packet *packet = __packet;
+	struct aal_host_linux_os_data *os = __os;
+
+	/* TODO */
+	printk("Master packet! : %x\n", packet->msg);
+	return 0;
+}
+
+struct list_head *aal_ikc_get_master_wait_list(aal_os_t aal_os)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+
+	return &os->wait_list;
+}
+aal_spinlock_t *aal_ikc_get_master_wait_lock(aal_os_t aal_os)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+
+	return &os->wait_lock;
+}
+
+struct aal_ikc_channel_desc *aal_os_get_master_channel(aal_os_t __os)
+{
+	struct aal_host_linux_os_data *os = __os;
+
+	printk("os(%p)->mchannel = %p\n", os, os->mchannel);
+	return os->mchannel;
+}
+

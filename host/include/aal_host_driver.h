@@ -97,6 +97,8 @@ struct aal_device_ops {
 
 #define AAL_MAP_FLAG_NOCACHE  1
 
+#define AAL_IKC_QUEUE_PT_ATTR AAL_MAP_FLAG_NOCACHE
+
 struct aal_register_device_data {
 	char *name;
 	struct aal_device_ops *ops;
@@ -170,5 +172,7 @@ int aal_os_unmap_memory(aal_os_t os, unsigned long pa, unsigned long size);
 
 int aal_os_issue_interrupt(aal_os_t os, int cpu, int vector);
 
+aal_device_t aal_host_find_dev(int index);
+aal_os_t aal_host_find_os(int index, aal_device_t dev);
 
 #endif

@@ -277,6 +277,11 @@ void cpu_restore_interrupt(unsigned long flags)
 	asm volatile("push %0; popf" : : "g"(flags) : "memory", "cc");
 }
 
+void cpu_pause(void)
+{
+	asm volatile("pause");
+}
+
 unsigned long cpu_disable_interrupt_save(void)
 {
 	unsigned long flags;

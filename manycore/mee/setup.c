@@ -72,9 +72,10 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 }
 
 extern void x86_issue_ipi(int, int);
-void aal_mc_interrupt_host(int vector)
+int aal_mc_interrupt_host(int vector)
 {
 	x86_issue_ipi(0, 0xf1);
+	return 0;
 }
 
 int aal_mc_get_vector(enum aal_mc_gv_type type)

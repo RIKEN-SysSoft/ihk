@@ -86,13 +86,15 @@ void arch_set_mikc_queue(void *rq, void *wq)
 	sbox_write(SBOX_SCRATCH15, virt_to_phys(rq));
 }
 
-void aal_mc_interrupt_host(int vector)
+int aal_mc_interrupt_host(int vector)
 {
 	unsigned int reg;
 	/* Vector is virtual vector, and we use interrupt 0 anyway */
 	reg = sbox_read(SBOX_SDBIC0);
 	reg |= 1U << 31;
 	sbox_write(SBOX_SDBIC0, reg);
+
+	return 0;
 }
 
 extern unsigned long sfi_get_memory_address(enum aal_mc_gma_type type, int opt);

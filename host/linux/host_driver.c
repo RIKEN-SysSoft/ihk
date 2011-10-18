@@ -308,7 +308,6 @@ static void __aal_os_init_kmsg(struct aal_host_linux_os_data *data)
 static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
                               char __user *buf)
 {
-	unsigned long flags;
 	int tail;
 
 	if (!data->kmsg_buf) {
@@ -471,7 +470,12 @@ static int __aal_device_create_os_init(struct aal_host_linux_device_data *data,
 	atomic_set(&os->refcount, 0);
 
 	memset(&drv_data, 0, sizeof(drv_data));
-	
+
+	spin_lock_init(&os->listener_lock);
+	spin_lock_init(&os->wait_lock);
+	INIT_LIST_HEAD(&os->ikc_channels);
+	INIT_LIST_HEAD(&os->wait_list);
+
 	if (data->ops->create_os && 
 	    (ret = data->ops->create_os(data, data->priv, arg, 
 	                                os, &drv_data))) {
@@ -830,7 +834,27 @@ ERR:
 
 	return -ENOMEM;
 }
+
+#ifndef MODULE
 core_initcall(aal_host_driver_init);
+#else
+static int __init aal_init(void)
+{
+	return aal_host_driver_init();
+}
+
+static void __exit aal_exit(void)
+{
+	/* XXX: TODO */
+	printk(KERN_ERR "This module should not be unloaded!\n");
+	return;
+}
+
+module_init(aal_init);
+module_exit(aal_exit);
+
+MODULE_LICENSE("GPL v2");
+#endif
 
 /*
  * AAL public function implementations
@@ -1065,6 +1089,32 @@ int aal_device_unmap_virtual(aal_device_t dev, void *virtual,
 	return __aal_device_unmap_virtual(dev, virtual, size);
 }
 
+aal_device_t aal_os_to_dev(aal_os_t os)
+{
+	return ((struct aal_host_linux_os_data *)os)->dev_data;
+}
+
+aal_device_t aal_host_find_dev(int index)
+{
+	if (!dev_data[index] || dev_data[index] == DEV_DATA_INVALID) {
+		return NULL;
+	} else{
+		return dev_data[index];
+	}
+}
+
+aal_os_t aal_host_find_os(int index, aal_device_t dev)
+{
+	if (!os_data[index] || os_data[index] == DEV_DATA_INVALID) {
+		return NULL;
+	} else{
+		if (!dev || os_data[index]->dev_data == dev) {
+			return os_data[index];
+		} else {
+			return NULL;
+		}
+	}
+}
 EXPORT_SYMBOL(aal_register_device);
 EXPORT_SYMBOL(aal_unregister_device);
 EXPORT_SYMBOL(aal_device_create_os);
@@ -1076,3 +1126,5 @@ EXPORT_SYMBOL(aal_os_register_interrupt_handler);
 EXPORT_SYMBOL(aal_os_unregister_interrupt_handler);
 EXPORT_SYMBOL(aal_os_get_special_address);
 EXPORT_SYMBOL(aal_os_wait_for_status);
+EXPORT_SYMBOL(aal_host_find_dev);
+EXPORT_SYMBOL(aal_host_find_os);

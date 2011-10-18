@@ -7,6 +7,10 @@ void cpu_enable_interrupt(void);
 void cpu_disable_interrupt(void);
 void cpu_halt(void);
 void cpu_restore_interrupt(unsigned long);
+void cpu_pause(void);
+
+#define barrier()   asm volatile("" : : : "memory")
+
 unsigned long cpu_disable_interrupt_save(void);
 
 struct aal_mc_interrupt_handler {
@@ -24,6 +28,7 @@ enum aal_mc_gv_type {
 };
 
 int aal_mc_get_vector(enum aal_mc_gv_type type);
+int aal_mc_interrupt_host(int vector);
 
 #endif
 

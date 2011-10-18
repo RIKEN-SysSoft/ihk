@@ -1,17 +1,18 @@
 #include <aal/ikc.h>
 #include <aal/lock.h>
+#include <ikc/msg.h>
 #include <memory.h>
 #include <string.h>
 
 extern void arch_set_mikc_queue(void *r, void *w);
+aal_ikc_ph_t arch_master_channel_packet_handler;
 
 int aal_mc_ikc_init_first_local(struct aal_ikc_channel_desc *channel,
                                 aal_ikc_ph_t packet_handler)
 {
 	struct aal_ikc_queue_head *rq, *wq;
-	struct aal_ikc_master_packet packet;
 
-	aal_ikc_system_init();
+	aal_ikc_system_init(NULL);
 
 	memset(channel, 0, sizeof(struct aal_ikc_channel_desc));
 
@@ -22,7 +23,10 @@ int aal_mc_ikc_init_first_local(struct aal_ikc_channel_desc *channel,
 	aal_ikc_init_queue(rq, 0, 0, PAGE_SIZE, MASTER_IKCQ_PKTSIZE);
 	aal_ikc_init_queue(wq, 0, 0, PAGE_SIZE, MASTER_IKCQ_PKTSIZE);
 
-	aal_ikc_init_desc(channel, IKC_DEST_HOST, 0, rq, wq, packet_handler);
+	arch_master_channel_packet_handler = packet_handler;
+
+	aal_ikc_init_desc(channel, IKC_OS_HOST, 0, rq, wq,
+	                  aal_ikc_master_channel_packet_handler);
 	aal_ikc_enable_channel(channel);
 
 	/* Set boot parameter */
