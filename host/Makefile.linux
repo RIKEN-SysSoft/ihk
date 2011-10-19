@@ -1,0 +1,10 @@
+KDIR = /lib/modules/`uname -r`/build
+
+KMAKE = make -C $(KDIR) M=$(PWD)
+
+all:
+	$(KMAKE)
+
+clean:
+	$(KMAKE) clean
+

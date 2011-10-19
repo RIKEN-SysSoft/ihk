@@ -1,0 +1,20 @@
+KDIR=/lib/modules/`uname -r`/build
+
+obj-m += aal.o
+
+aal-y = host_driver.o mem_alloc.o mm.o mikc.o
+aal-y += ikc/linux.o ikc/master.o ikc/queue.o
+
+EXTRA_CFLAGS := -I$(src)/../include -I$(src)/../../ikc/include
+
+.PHONY: clean install modules
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+clean:
+	$(RM) .*.cmd *.mod.c *.o *.ko* Module.symvers modules.order -r .tmp*
+
+install:
+
+

@@ -4,6 +4,8 @@ obj-m += aal_knf.o
 
 aal_knf-objs = aal_knf_driver.o knf_device.o
 
+EXTRA_CFLAGS = -I$(src)/../../include -I$(src)/../../../ikc/include
+
 .PHONY: clean install
 
 modules:
