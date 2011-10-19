@@ -121,7 +121,7 @@ int aal_ikc_master_channel_packet_handler(struct aal_ikc_channel_desc *c,
 		unsigned long rq, sq;
 		int port, r;
 
-		kprintf("Connect msg: %x, %lx, %lx, %lx\n",
+ 		kprintf("Connect msg: %x, %llx, %llx, %llx\n",
 		        packet->ref, packet->param[0], packet->param[1],
 		        packet->param[2]);
 
@@ -252,7 +252,7 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 			aal_ikc_free_channel(c);
 			return -wq.res.param[0];
 		} else {
-			kprintf("response = %lx, %lx, %lx\n",
+			kprintf("response = %llx, %llx, %llx\n",
 			        wq.res.param[0], wq.res.param[1],
 			        wq.res.param[2]);
 			aal_ikc_set_remote_queue(&c->send, os, wq.res.param[1],

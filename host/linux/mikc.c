@@ -30,6 +30,7 @@ struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
 	struct aal_ikc_channel_desc *c;
 
 	aal_ikc_system_init(aal_os);
+	os->ikc_initialized = 1;
 
 	if (aal_os_wait_for_status(aal_os, AAL_OS_STATUS_READY, 0, 30) == 0) {
 		/* XXX: 
@@ -121,10 +122,16 @@ void ikc_master_finalize(aal_os_t __os)
 
 	dprint_func_enter;
 
+	if (!os->ikc_initialized) {
+		return;
+	}
+
 	if (os->mchannel) {
 		aal_ikc_destroy_channel(os, os->mchannel);
 	}
 	aal_ikc_system_exit(os);
+
+	os->ikc_initialized = 0;
 }
 
 struct list_head *aal_host_os_get_ikc_channel_list(aal_os_t aal_os)
@@ -177,10 +184,9 @@ static int arch_master_handler(struct aal_ikc_channel_desc *c,
                                void *__packet, void *__os)
 {
 	struct aal_ikc_master_packet *packet = __packet;
-	struct aal_host_linux_os_data *os = __os;
 
 	/* TODO */
-	printk("Master packet! : %x\n", packet->msg);
+	printk("Unhandled master packet! : %x\n", packet->msg);
 	return 0;
 }
 
