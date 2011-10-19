@@ -1,4 +1,4 @@
-KDIR=/lib/modules/`uname -r`/build
+KDIR ?= /lib/modules/`uname -r`/build
 
 obj-m += aal.o
 
@@ -16,5 +16,4 @@ clean:
 	$(RM) .*.cmd *.mod.c *.o *.ko* Module.symvers modules.order -r .tmp*
 
 install:
-
 

@@ -34,6 +34,6 @@ else
 
 IKC_OBJS += linux.o
 
-include aal/ikc/Makefile.linux
+include $(src)/Makefile.linux
 
 endif
