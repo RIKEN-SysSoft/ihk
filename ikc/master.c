@@ -63,7 +63,6 @@ static int aal_ikc_master_send(aal_os_t os,
 	packet.param[1] = a2;
 	packet.param[2] = a3;
 
-	kprintf("master_channel.send : %p\n", c->send.queue);
 	return aal_ikc_send(c, &packet, 0);
 }
 
@@ -146,6 +145,8 @@ int aal_ikc_master_channel_packet_handler(struct aal_ikc_channel_desc *c,
 			                    AAL_IKC_MASTER_MSG_CONNECT_REPLY,
 			                    packet->ref, -r, 0, 0);
 		} else {
+			kprintf("(Accepted) Remote channeld id = %x\n",
+			        newc->remote_channel_id);
 			aal_ikc_enable_channel(newc);
 			aal_ikc_master_send(os,
 			                    AAL_IKC_MASTER_MSG_CONNECT_REPLY,
@@ -155,6 +156,27 @@ int aal_ikc_master_channel_packet_handler(struct aal_ikc_channel_desc *c,
 		break;
 	}
 	case AAL_IKC_MASTER_MSG_CONNECT_REPLY:
+		return aal_ikc_master_reply_handler(os, packet);
+
+	case AAL_IKC_MASTER_MSG_DISCONNECT:
+		newc = aal_ikc_find_channel(os, packet->ref);
+		kprintf("disconnect channel #%d => %p\n", packet->ref, newc);
+		if (!newc) {
+			return -ENOENT;
+		}
+
+		flags = aal_ikc_spinlock_lock(&newc->recv.lock);
+		newc->flag |= IKC_FLAG_DESTROY_ACKED;
+		aal_ikc_spinlock_unlock(&newc->recv.lock, flags);
+
+		if (!(newc->flag & IKC_FLAG_DESTROYING)) {
+			/* It will not sleep 
+			 * because it's already marked acked */
+			kprintf("Disconnect ack: %lx\n",
+			        newc->remote_channel_id);
+			aal_ikc_disconnect(newc);
+		}
+
 		return aal_ikc_master_reply_handler(os, packet);
 
 	default:
@@ -195,6 +217,20 @@ void aal_ikc_wait_reply_prepare(aal_os_t os,
 	aal_ikc_spinlock_unlock(lock, flags);
 }
 
+void aal_ikc_wait_finish(aal_os_t os, struct aal_ikc_master_wait_struct *ws)
+{
+	struct list_head *list;
+	aal_spinlock_t *lock;
+	unsigned long flags;
+
+	list = aal_ikc_get_master_wait_list(os);
+	lock = aal_ikc_get_master_wait_lock(os);
+
+	flags = aal_ikc_spinlock_lock(lock);
+	list_del(&ws->list);
+	aal_ikc_spinlock_unlock(lock, flags);
+}
+
 int aal_ikc_master_reply_handler(aal_os_t os,
                                  struct aal_ikc_master_packet *packet)
 {
@@ -210,7 +246,6 @@ int aal_ikc_master_reply_handler(aal_os_t os,
 	list_for_each_entry_safe(wq, next, list, list) {
 		if (wq->msg == packet->msg && wq->ref == packet->ref) {
 			memcpy(&wq->res, packet, sizeof(*packet));
-			list_del(&wq->list);
 
 			wq->status = 1;
 
@@ -219,6 +254,7 @@ int aal_ikc_master_reply_handler(aal_os_t os,
 	}
 	aal_ikc_spinlock_unlock(lock, flags);
 
+	kprintf("reply_handler end.\n");
 	return 0;
 }
 
@@ -227,7 +263,7 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 {
 	struct aal_ikc_channel_desc *c;
 	unsigned long rq = 0, sq = 0;
-	int ref;
+	int ref, ret;
 	struct aal_ikc_master_wait_struct wq;
 
 	c = aal_ikc_create_channel(os, p->port, p->pkt_size, p->queue_size,
@@ -245,7 +281,10 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 	if (aal_ikc_master_send(os, AAL_IKC_MASTER_MSG_CONNECT, ref,
 	                        ((unsigned long)p->pkt_size << 32) 
 	                        | p->port, sq, rq) == 0) {
-		if (aal_ikc_wait_master(&wq) != 0) {
+		ret = aal_ikc_wait_master(&wq);
+		aal_ikc_wait_finish(os, &wq);
+
+		if (ret != 0) {
 			aal_ikc_free_channel(c);
 			return -EINTR;
 		} else if (wq.res.param[0]){
@@ -257,10 +296,14 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 			        wq.res.param[2]);
 			aal_ikc_set_remote_queue(&c->send, os, wq.res.param[1],
 			                         p->queue_size);
+			c->remote_channel_id = c->send.cache.channel_id;
 			c->handler = p->handler;
+			kprintf("(Connected) Remote channeld id = %x\n",
+			        c->remote_channel_id);
 			aal_ikc_enable_channel(c);
 		}
 	} else {
+		aal_ikc_wait_finish(os, &wq);
 		aal_ikc_free_channel(c);
 		return -EBUSY;
 	}
@@ -269,3 +312,62 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 	return 0;
 }
 AAL_EXPORT_SYMBOL(aal_ikc_connect);
+
+
+int __aal_send_disconnect(struct aal_ikc_channel_desc *c)
+{
+	return aal_ikc_master_send(c->remote_os, AAL_IKC_MASTER_MSG_DISCONNECT, 
+	                           c->remote_channel_id, c->channel_id, 0, 0);
+}
+
+int __aal_wait_for_disconnect_ack(struct aal_ikc_channel_desc *c)
+{
+	struct aal_ikc_master_wait_struct wq;
+	int ret;
+	aal_os_t os = c->remote_os;
+
+	aal_ikc_wait_reply_prepare(os, &wq, 
+	                           AAL_IKC_MASTER_MSG_DISCONNECT,
+	                           c->channel_id);
+
+	if (__aal_send_disconnect(c) != 0) {
+		aal_ikc_wait_finish(os, &wq);
+		return -EBUSY;
+	}
+
+	if (!(c->flag & IKC_FLAG_DESTROY_ACKED)) {
+		ret = aal_ikc_wait_master(&wq);
+	} else {
+		ret = 0;
+	}
+	aal_ikc_wait_finish(os, &wq);
+	
+	return ret;
+}
+
+/* sync version. may sleep */
+int aal_ikc_disconnect(struct aal_ikc_channel_desc *c)
+{
+	unsigned long flags, cflag;
+	int r = 0;
+
+	flags = aal_ikc_spinlock_lock(&c->lock);
+	c->flag &= ~IKC_FLAG_ENABLED;
+	if (c->flag & IKC_FLAG_DESTROYING) {
+		aal_ikc_spinlock_unlock(&c->lock, flags);
+		return -EBUSY;
+	}
+	c->flag |= IKC_FLAG_DESTROYING;
+	cflag = c->flag;
+	aal_ikc_spinlock_unlock(&c->lock, flags);
+	
+	if (!(cflag & IKC_FLAG_DESTROY_ACKED)) {
+		r = __aal_wait_for_disconnect_ack(c);
+	} else {
+		r = __aal_send_disconnect(c);
+	}
+	
+	return r;
+}
+AAL_EXPORT_SYMBOL(aal_ikc_disconnect);
+

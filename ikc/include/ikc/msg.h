@@ -7,6 +7,7 @@
 
 #define AAL_IKC_MASTER_MSG_CONNECT       0x20000001
 #define AAL_IKC_MASTER_MSG_CONNECT_REPLY 0x20000002
+#define AAL_IKC_MASTER_MSG_DISCONNECT    0x20000008
 
 struct aal_ikc_master_packet {
 	uint32_t msg;

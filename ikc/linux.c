@@ -10,11 +10,6 @@ int aal_ikc_call_master_packet_handler(aal_os_t aal_os,
                                        void *packet);
 struct aal_ikc_channel_desc *aal_os_get_master_channel(aal_os_t __os);
 
-struct list_head *aal_ikc_get_channel_list(aal_os_t os)
-{
-	return aal_host_os_get_ikc_channel_list(os);
-}
-
 static void aal_ikc_interrupt_handler(aal_os_t os, void *os_priv, void *priv)
 {
 	/* This should be done in the software irq... */
@@ -25,7 +20,8 @@ static void aal_ikc_interrupt_handler(aal_os_t os, void *os_priv, void *priv)
 
 	/* XXX: Linear search? */
 	list_for_each_entry(c, channels, list) {
-		if (!aal_ikc_queue_is_empty(c->recv.queue)) {
+		if (aal_ikc_channel_enabled(c) && 
+		    !aal_ikc_queue_is_empty(c->recv.queue)) {
 			aal_ikc_recv_handler(c, c->handler, os, 0);
 		}
 	}

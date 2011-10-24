@@ -35,6 +35,7 @@ struct aal_host_linux_os_data {
 	unsigned long kmsg_pa, kmsg_len;
 
 	int ikc_initialized;
+	spinlock_t ikc_channel_lock;
 	struct list_head ikc_channels;
 	struct aal_host_interrupt_handler ikc_handler;
 
@@ -42,6 +43,7 @@ struct aal_host_linux_os_data {
 	spinlock_t listener_lock;
 	struct aal_ikc_listen_param *listeners[AAL_IKC_MAX_PORT];
 	aal_ikc_ph_t packet_handler;
+	atomic_t channel_id;
 
 	spinlock_t wait_lock;
 	struct list_head wait_list;

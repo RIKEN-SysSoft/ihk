@@ -22,7 +22,8 @@ struct aal_ikc_queue_head {
 	uint64_t        read_off;
 	uint64_t        write_off;
 /* 32 : Receiver */
-	uint64_t        dummy;
+	uint32_t        channel_id;
+	uint32_t        dummy;
 	uint64_t        queue_size;
 /* 48 */
 	uint32_t        read_cpu;
@@ -40,12 +41,23 @@ struct aal_ikc_queue_desc {
 	uint32_t                   intr_cpu;
 };
 
+enum aal_ikc_channel_flag {
+	IKC_FLAG_ENABLED        = 1,
+	IKC_FLAG_DESTROYING     = 2,
+	IKC_FLAG_DESTROY_ACKED  = 4,
+	IKC_FLAG_STATUS_MASK    = 7,
+};
+
 struct aal_ikc_channel_desc {
+	struct list_head           all_list;
 	struct list_head           list;
 	aal_os_t                   remote_os;
+	int                        remote_channel_id;
+	int                        port;
 	int                        channel_id;
 	struct aal_ikc_queue_desc  recv, send;
 	aal_spinlock_t             lock;
+	enum aal_ikc_channel_flag  flag;
 	aal_ikc_ph_t               handler;
 };
 
@@ -80,5 +92,11 @@ void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
                        struct aal_ikc_queue_head *rq,
                        struct aal_ikc_queue_head *wq,
                        aal_ikc_ph_t packet_handler);
+struct aal_ikc_channel_desc *aal_ikc_find_channel(aal_os_t os, int id);
+
+static int aal_ikc_channel_enabled(struct aal_ikc_channel_desc *c)
+{
+	return (c->flag & IKC_FLAG_STATUS_MASK) == IKC_FLAG_ENABLED;
+}
 
 #endif

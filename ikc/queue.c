@@ -114,24 +114,35 @@ int aal_ikc_write_queue(struct aal_ikc_queue_head *q, void *packet, int flag)
  * Channel and queue descriptors
  */
 void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
-                       aal_os_t ros, int cid,
+                       aal_os_t ros, int port,
                        struct aal_ikc_queue_head *rq,
                        struct aal_ikc_queue_head *wq,
                        aal_ikc_ph_t packet_handler)
 {
+	struct list_head *channels = aal_ikc_get_channel_list(ros);
+
 	INIT_LIST_HEAD(&c->list);
+	INIT_LIST_HEAD(&c->all_list);
+
 	c->remote_os = ros;
-	c->channel_id = cid;
+	c->port = port;
+	c->channel_id = aal_ikc_get_unique_channel_id(ros);
 	c->recv.queue = rq;
 	c->send.queue = wq;
-	if (rq)
+	if (rq) {
 		c->recv.cache = *rq;
-	if (wq)
+		c->recv.queue->channel_id = c->channel_id;
+	}
+	if (wq) {
 		c->send.cache = *wq;
+		c->remote_channel_id = c->send.cache.channel_id;
+	}
 	c->handler = packet_handler;
 
 	aal_ikc_spinlock_init(&c->recv.lock);
 	aal_ikc_spinlock_init(&c->send.lock);
+
+	list_add_tail(&c->list, channels);
 }
 
 int aal_ikc_set_remote_queue(struct aal_ikc_queue_desc *q, aal_os_t os,
@@ -222,6 +233,8 @@ void aal_ikc_free_channel(struct aal_ikc_channel_desc *desc)
 	aal_os_t os = desc->remote_os;
 	int qpages;
 
+	list_del(&desc->list);
+
 	if (desc->recv.queue) {
 		qpages = (desc->recv.queue->queue_size
 		          + sizeof(struct aal_ikc_queue_head) + PAGE_SIZE - 1)
@@ -259,8 +272,12 @@ int aal_ikc_send(struct aal_ikc_channel_desc *channel, void *p, int opt)
 	int r;
 
 	flags = aal_ikc_spinlock_lock(&channel->send.lock);
-	r = aal_ikc_write_queue(channel->send.queue, p, opt);
-	aal_ikc_notify_remote_write(channel);
+	if (aal_ikc_channel_enabled(channel)) {
+		r = aal_ikc_write_queue(channel->send.queue, p, opt);
+		aal_ikc_notify_remote_write(channel);
+	} else {
+		r = -EINVAL;
+	}
 	aal_ikc_spinlock_unlock(&channel->send.lock, flags);
 
 	return r;
@@ -272,9 +289,13 @@ int aal_ikc_recv(struct aal_ikc_channel_desc *channel, void *p, int opt)
 	int r;
 
 	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
-	r = aal_ikc_read_queue(channel->recv.queue, p, opt);
-	/* XXX: Optimal interrupt */
-	aal_ikc_notify_remote_read(channel);
+	if (aal_ikc_channel_enabled(channel)) {
+		r = aal_ikc_read_queue(channel->recv.queue, p, opt);
+		/* XXX: Optimal interrupt */
+		aal_ikc_notify_remote_read(channel);
+	} else {
+		r = -EINVAL;
+	}
 	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
 
 	return r;
@@ -287,10 +308,15 @@ int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel,
 	int r;
 
 	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
-	r = aal_ikc_read_queue_handler(channel->recv.queue, channel,
-	                               h, harg, opt);
-	/* XXX: Optimal interrupt */
-	aal_ikc_notify_remote_read(channel);
+	if (aal_ikc_channel_enabled(channel)) {
+		r = aal_ikc_read_queue_handler(channel->recv.queue, channel,
+		                               h, harg, opt);
+		/* XXX: Optimal interrupt */
+		aal_ikc_notify_remote_read(channel);
+		aal_ikc_notify_remote_read(channel);
+	} else {
+		r = -EINVAL;
+	}
 	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
 
 	return r;
@@ -305,17 +331,51 @@ void aal_ikc_notify_remote_write(struct aal_ikc_channel_desc *c)
 	aal_ikc_send_interrupt(c);
 }
 
+void __aal_ikc_enable_channel(struct aal_ikc_channel_desc *channel)
+{
+	channel->flag |= IKC_FLAG_ENABLED;
+}
+
+void __aal_ikc_disable_channel(struct aal_ikc_channel_desc *channel)
+{
+	channel->flag &= ~IKC_FLAG_ENABLED;
+}
+
 void aal_ikc_enable_channel(struct aal_ikc_channel_desc *channel)
 {
-	struct list_head *channels = 
-		aal_ikc_get_channel_list(channel->remote_os);
+	unsigned long flags;
 
-	list_add_tail(&channel->list, channels);
+	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
+	__aal_ikc_enable_channel(channel);
+	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
 }
 
 void aal_ikc_disable_channel(struct aal_ikc_channel_desc *channel)
 {
-	list_del(&channel->list);
+	unsigned long flags;
+
+	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
+	__aal_ikc_disable_channel(channel);
+	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
+}
+
+struct aal_ikc_channel_desc *aal_ikc_find_channel(aal_os_t os, int id)
+{
+	aal_spinlock_t *lock = aal_ikc_get_channel_list_lock(os);
+	struct list_head *channels = aal_ikc_get_channel_list(os);
+	struct aal_ikc_channel_desc *c;
+	unsigned long flags;
+
+	flags = aal_ikc_spinlock_lock(lock);
+	list_for_each_entry(c, channels, list) {
+		if (c->channel_id == id) {
+			aal_ikc_spinlock_unlock(lock, flags);
+			return c;
+		}
+	}
+	aal_ikc_spinlock_unlock(lock, flags);
+
+	return NULL;
 }
 
 AAL_EXPORT_SYMBOL(aal_ikc_send);
@@ -324,4 +384,4 @@ AAL_EXPORT_SYMBOL(aal_ikc_recv_handler);
 AAL_EXPORT_SYMBOL(aal_ikc_enable_channel);
 AAL_EXPORT_SYMBOL(aal_ikc_disable_channel);
 AAL_EXPORT_SYMBOL(aal_ikc_free_channel);
-
+AAL_EXPORT_SYMBOL(aal_ikc_find_channel);

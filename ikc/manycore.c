@@ -4,11 +4,16 @@
 
 struct aal_ikc_channel_desc *aal_mc_get_master_channel(void);
 
+static aal_spinlock_t aal_ikc_channels_lock;
 static LIST_HEAD(aal_ikc_channels);
 
 struct list_head *aal_ikc_get_channel_list(aal_os_t os)
 {
 	return &aal_ikc_channels;
+}
+aal_spinlock_t *aal_ikc_get_channel_list_lock(aal_os_t os)
+{
+	return &aal_ikc_channels_lock;
 }
 
 static void aal_ikc_interrupt_handler(void *priv)
@@ -18,7 +23,8 @@ static void aal_ikc_interrupt_handler(void *priv)
 
 	/* XXX: Linear search? */
 	list_for_each_entry(c, &aal_ikc_channels, list) {
-		if (!aal_ikc_queue_is_empty(c->recv.queue)) {
+		if (aal_ikc_channel_enabled(c) && 
+		    !aal_ikc_queue_is_empty(c->recv.queue)) {
 			aal_ikc_recv_handler(c, c->handler, NULL, 0);
 		}
 	}
@@ -75,7 +81,7 @@ int call_arch_master_packet_handler(void *os, struct aal_ikc_channel_desc *c,
 	return arch_master_channel_packet_handler(c, __packet, os);
 }
 
-static struct list_head wait_list;
+static LIST_HEAD(wait_list);
 static aal_spinlock_t wait_lock;
 
 struct list_head *aal_ikc_get_master_wait_list(aal_os_t aal_os)
@@ -105,4 +111,11 @@ int aal_ikc_wait_master(struct aal_ikc_master_wait_struct *ws)
 void aal_ikc_wake_master(struct aal_ikc_master_wait_struct *ws)
 {
 	ws->status = 1;
+}
+
+static aal_atomic_t channel_id;
+
+int aal_ikc_get_unique_channel_id(aal_os_t aal_os)
+{
+	return aal_atomic_inc_return(&channel_id);
 }

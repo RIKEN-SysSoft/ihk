@@ -134,11 +134,18 @@ void ikc_master_finalize(aal_os_t __os)
 	os->ikc_initialized = 0;
 }
 
-struct list_head *aal_host_os_get_ikc_channel_list(aal_os_t aal_os)
+struct list_head *aal_os_get_ikc_channel_list(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
 
 	return &os->ikc_channels;
+}
+
+spinlock_t *aal_os_get_ikc_channel_lock(aal_os_t aal_os)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+
+	return &os->ikc_channel_lock;
 }
 
 struct aal_host_interrupt_handler *aal_host_os_get_ikc_handler(aal_os_t aal_os)
@@ -209,5 +216,12 @@ struct aal_ikc_channel_desc *aal_os_get_master_channel(aal_os_t __os)
 
 	printk("os(%p)->mchannel = %p\n", os, os->mchannel);
 	return os->mchannel;
+}
+
+int aal_os_get_unique_channel_id(aal_os_t aal_os)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+	
+	return atomic_inc_return(&os->channel_id);
 }
 

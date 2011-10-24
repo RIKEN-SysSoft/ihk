@@ -49,4 +49,6 @@ struct aal_ikc_master_wait_struct {
 
 int aal_ikc_listen_port(aal_os_t os, struct aal_ikc_listen_param *param);
 int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p);
+int aal_ikc_disconnect(struct aal_ikc_channel_desc *c);
+
 #endif

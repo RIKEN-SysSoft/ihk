@@ -69,6 +69,10 @@ typedef wait_queue_head_t        aal_wait_t;
 
 aal_device_t aal_os_to_dev(aal_os_t);
 
+#define aal_ikc_get_unique_channel_id aal_os_get_unique_channel_id
+#define aal_ikc_get_channel_list_lock aal_os_get_ikc_channel_lock
+#define aal_ikc_get_channel_list      aal_os_get_ikc_channel_list
+
 #endif
 
 #include <ikc/queue.h>
@@ -78,7 +82,6 @@ struct aal_ikc_channel_desc;
 struct aal_ikc_master_wait_struct;
 
 int aal_ikc_send_interrupt(struct aal_ikc_channel_desc *c);
-struct list_head *aal_ikc_get_channel_list(aal_os_t os);
 
 struct aal_ikc_queue_head *aal_ikc_alloc_queue(int qpages);
 void aal_ikc_free_queue(struct aal_ikc_queue_head *q);
@@ -94,4 +97,8 @@ int aal_ikc_wait_master(struct aal_ikc_master_wait_struct *wq);
 void aal_ikc_wake_master(struct aal_ikc_master_wait_struct *wq);
 
 struct aal_ikc_channel_desc *aal_ikc_get_master_channel(aal_os_t os);
+struct list_head *aal_ikc_get_channel_list(aal_os_t os);
+aal_spinlock_t *aal_ikc_get_channel_list_lock(aal_os_t aal_os);
+int aal_ikc_get_unique_channel_id(aal_os_t aal_os);
+
 #endif
