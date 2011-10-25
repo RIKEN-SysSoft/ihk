@@ -101,19 +101,7 @@ void aal_ikc_destroy_channel(aal_os_t __os, struct aal_ikc_channel_desc *c)
 		return;
 	}
 	aal_ikc_disable_channel(c);
-	
-
-	aal_device_unmap_virtual(os->dev_data, c->recv.queue,
-	                         c->recv.cache.queue_size);
-	aal_device_unmap_virtual(os->dev_data, c->send.queue,
-	                         c->send.cache.queue_size);
-
-	aal_device_unmap_memory(os->dev_data, c->recv.qphys,
-	                        c->recv.cache.queue_size);
-	aal_device_unmap_memory(os->dev_data, c->send.qphys,
-	                        c->send.cache.queue_size);
-	
-	kfree(c);
+	aal_ikc_free_channel(c);
 }
 
 void ikc_master_finalize(aal_os_t __os)
