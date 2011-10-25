@@ -291,7 +291,7 @@ int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
 	mm_segment_t fs;
 
 	file = filp_open(filename, O_RDONLY, 0);
-	if (!file) {
+	if (IS_ERR(file)) {
 		return -ENOENT;
 	}
 
