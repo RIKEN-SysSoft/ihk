@@ -196,19 +196,14 @@ void setup_x86(void)
 {
 	cpu_disable_interrupt();
 
-	kprintf("init_idt\n");
 	init_idt();
 
-	kprintf("init_gdt\n");
 	init_gdt();
 
-	kprintf("init_page_table\n");
 	init_page_table();
 
-	kprintf("init_fpu\n");
 	init_fpu();
 
-	kprintf("init_lapic\n");
 	init_lapic();
 
 	kprintf("setup_x86 done.\n");

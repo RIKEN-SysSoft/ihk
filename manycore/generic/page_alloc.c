@@ -93,8 +93,6 @@ static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
 	unsigned long flags;
 	unsigned int i, j, mi;
 
-	kprintf("pagealloc_large_request : %d\n", nblocks);
-
 	flags = aal_mc_spinlock_lock(&desc->lock);
 	for (i = 0, mi = desc->last; i < desc->count; i++, mi++) {
 		if (mi > desc->count) {
@@ -113,7 +111,6 @@ static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
 				desc->map[j] = (unsigned long)-1;
 			}
 			aal_mc_spinlock_unlock(&desc->lock, flags);
-			kprintf("Found : %i, %lx\n", mi, ADDRESS(desc, mi, 0));
 			return ADDRESS(desc, mi, 0);
 		}
 	}
@@ -131,7 +128,6 @@ unsigned long aal_pagealloc_alloc(void *__desc, int npages)
 
 	/* If requested page is more than the half of the element,
 	 * we allocate the whole element (ulong) */
-	kprintf("pagealloc_request : %d\n", npages);
 	if (npages >= 32) {
 		return __aal_pagealloc_large(desc, (npages + 63) >> 6);
 	}

@@ -223,7 +223,6 @@ void aal_ikc_wait_finish(aal_os_t os, struct aal_ikc_master_wait_struct *ws)
 	aal_spinlock_t *lock;
 	unsigned long flags;
 
-	list = aal_ikc_get_master_wait_list(os);
 	lock = aal_ikc_get_master_wait_lock(os);
 
 	flags = aal_ikc_spinlock_lock(lock);
