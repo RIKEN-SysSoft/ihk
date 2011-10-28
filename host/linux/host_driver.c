@@ -379,8 +379,43 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 	return ret;
 }
 
+static long aal_host_os_write(struct file *file, const char __user *buf,
+                              size_t size, loff_t *off)
+{
+	int r;
+	struct aal_host_linux_os_data *data = file->private_data;
+	char *ubuf;
+
+	if (size < 0) {
+		return -EINVAL;
+	} else if (size > PAGE_SIZE * 16) {
+		return -E2BIG;
+	}
+	ubuf = kmalloc(size, GFP_KERNEL);
+	if (!ubuf) {
+		return -ENOMEM;
+	}
+
+	r = copy_from_user(ubuf, buf, size);
+	if (r > 0) {
+		kfree(ubuf);
+		return -EFAULT;
+	}
+
+	r = __aal_os_load_memory(data, ubuf, size, *off);
+	kfree(ubuf);
+
+	if (r == 0) {
+		*off += size;
+		return size;
+	} else {
+		return r;
+	}
+}
+
 static struct file_operations mcos_cdev_ops = {
 	.open = aal_host_os_open,
+	.write = aal_host_os_write,
 	.unlocked_ioctl = aal_host_os_ioctl,
 	.release = aal_host_os_release,
 };
@@ -1128,3 +1163,8 @@ EXPORT_SYMBOL(aal_os_get_special_address);
 EXPORT_SYMBOL(aal_os_wait_for_status);
 EXPORT_SYMBOL(aal_host_find_dev);
 EXPORT_SYMBOL(aal_host_find_os);
+EXPORT_SYMBOL(aal_os_to_dev);
+EXPORT_SYMBOL(aal_device_map_memory);
+EXPORT_SYMBOL(aal_device_unmap_memory);
+EXPORT_SYMBOL(aal_os_issue_interrupt);
+

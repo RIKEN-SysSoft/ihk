@@ -172,6 +172,7 @@ int aal_os_unmap_memory(aal_os_t os, unsigned long pa, unsigned long size);
 
 int aal_os_issue_interrupt(aal_os_t os, int cpu, int vector);
 
+aal_device_t aal_os_to_dev(aal_os_t os);
 aal_device_t aal_host_find_dev(int index);
 aal_os_t aal_host_find_os(int index, aal_device_t dev);
 
