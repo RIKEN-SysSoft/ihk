@@ -497,6 +497,7 @@ static int __aal_device_create_os_init(struct aal_host_linux_device_data *data,
 
 	os = kzalloc(sizeof(*os), GFP_KERNEL);
 	if (!os) {
+		printk("aal: kzalloc failed\n");
 		ret = -ENOMEM;
 		goto ERR;
 	}
@@ -514,6 +515,7 @@ static int __aal_device_create_os_init(struct aal_host_linux_device_data *data,
 	if (data->ops->create_os && 
 	    (ret = data->ops->create_os(data, data->priv, arg, 
 	                                os, &drv_data))) {
+		printk("aal: create_os failed (%d)\n", ret);
 		goto ERR;
 	}
 
@@ -553,6 +555,7 @@ static int __aal_device_create_os(struct aal_host_linux_device_data *data,
 	if (i == os_max_minor) {
 		if (os_max_minor >= OS_MAX_MINOR) {
 			spin_unlock_irqrestore(&os_data_lock, flags);
+			printk("aal: os_max_minor exceeds.\n");
 			return -ENOMEM;
 		}
 		os_max_minor++;
@@ -573,6 +576,7 @@ static int __aal_device_create_os(struct aal_host_linux_device_data *data,
 
 	if (cdev_add(&os->cdev, os->dev_num, 1) < 0) {
 		/* XXX: call destroy */
+		printk("aal: cdev_add failed (%d)\n", ret);
 		os_data[minor] = NULL;
 		kfree(os);
 		return -ENOMEM;
@@ -581,6 +585,7 @@ static int __aal_device_create_os(struct aal_host_linux_device_data *data,
 	if (IS_ERR(device_create(mcos_class, NULL, os->dev_num, NULL,
 	                         OS_DEV_NAME "%d", minor))) {
 		/* XXX: call destroy */
+		printk("aal: device_create failed.\n");
 		os_data[minor] = NULL;
 		kfree(os);
 		return -ENOMEM;
