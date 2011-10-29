@@ -886,7 +886,30 @@ static int __init aal_init(void)
 static void __exit aal_exit(void)
 {
 	/* XXX: TODO */
-	printk(KERN_ERR "This module should not be unloaded!\n");
+	int i;
+	aal_device_t dev;
+	unsigned long flags;
+
+	for (i = 0; i < dev_max_minor; i++) {
+		spin_lock_irqsave(&dev_data_lock, flags);
+		dev = dev_data[i];
+		dev_data[i] = DEV_DATA_INVALID;
+		spin_unlock_irqrestore(&dev_data_lock, flags);
+
+		if (dev && dev == DEV_DATA_INVALID) {
+			aal_unregister_device(dev);
+		}
+	}
+
+	if (mcos_class)
+		class_destroy(mcos_class);
+	if (mcos_dev_num)
+		unregister_chrdev_region(mcos_dev_num, OS_MAX_MINOR);
+	if (mcd_class)
+		class_destroy(mcd_class);
+	if (mcd_dev_num)
+		unregister_chrdev_region(mcd_dev_num, DEV_MAX_MINOR);
+
 	return;
 }
 
