@@ -139,7 +139,6 @@ unsigned long aal_pagealloc_alloc(void *__desc, int npages)
 
 	/* If requested page is more than the half of the element,
 	 * we allocate the whole element (ulong) */
-	printk("pagealloc_request : %d\n", npages);
 	if (npages >= 32) {
 		return __aal_pagealloc_large(desc, (npages + 63) >> 6);
 	}
