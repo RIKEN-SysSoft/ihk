@@ -3,6 +3,8 @@
 #include <aal/cpu.h>
 #include <types.h>
 #include <errno.h>
+#include <string.h>
+#include <registers.h>
 #include "knf.h"
 
 #define KNF_BOOT_MAGIC_BOOTED       0x25470290
@@ -98,6 +100,7 @@ int aal_mc_interrupt_host(int vector)
 }
 
 extern unsigned long sfi_get_memory_address(enum aal_mc_gma_type type, int opt);
+extern struct aal_mc_cpu_info *sfi_get_cpu_info(void);
 
 unsigned long aal_mc_get_memory_address(enum aal_mc_gma_type type, int opt)
 {
@@ -112,6 +115,11 @@ unsigned long aal_mc_get_memory_address(enum aal_mc_gma_type type, int opt)
 	}
 
 	return -ENOENT;
+}
+
+struct aal_mc_cpu_info *aal_mc_get_cpu_info(void)
+{
+	return sfi_get_cpu_info();
 }
 
 int aal_mc_get_vector(enum aal_mc_gv_type type)
@@ -135,4 +143,20 @@ unsigned long aal_mc_map_memory(void *os, unsigned long phys,
 void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
 {
 	return;
+}
+
+void arch_delay(int us)
+{
+	unsigned long tsc;
+
+	/* XXX: 1.2GHz */
+	tsc = rdtsc() + 833 * us;
+	while (rdtsc() < tsc) {
+		cpu_pause();
+	}
+}
+
+void x86_set_warm_reset(void)
+{
+	/* outb is not implemented; we do nothing */
 }

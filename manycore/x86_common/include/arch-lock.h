@@ -1,3 +1,6 @@
+/*
+ * Excerpted from Linux 3.0: arch/x86/include/asm/spinlock.h
+ */
 #ifndef __HEADER_X86_COMMON_ARCH_LOCK
 #define __HEADER_X86_COMMON_ARCH_LOCK
 

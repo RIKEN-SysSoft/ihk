@@ -6,6 +6,8 @@
 #include <memory.h>
 #include <string.h>
 #include <registers.h>
+#include <cpulocal.h>
+#include <march.h>
 
 #define LAPIC_ID            0x020
 #define LAPIC_TIMER         0x320
@@ -16,23 +18,37 @@
 #define LAPIC_EOI           0x0b0
 #define LAPIC_ICR0          0x300
 #define LAPIC_ICR2          0x310
+#define LAPIC_ESR           0x280
+
+#define APIC_INT_LEVELTRIG      0x08000
+#define APIC_INT_ASSERT         0x04000
+#define APIC_ICR_BUSY           0x01000
+#define APIC_DEST_PHYSICAL      0x00000
+#define APIC_DM_FIXED           0x00000
+#define APIC_DM_NMI             0x00400
+#define APIC_DM_INIT            0x00500
+#define APIC_DM_STARTUP         0x00600
 
 struct x86_regs{
-        unsigned long ds, r15, r14, r13, r12, r11, r10, r9, r8;
-        unsigned long rbp, rdi, rsi, rdx, rcx, rbx, rax;
+	unsigned long ds, r15, r14, r13, r12, r11, r10, r9, r8;
+	unsigned long rbp, rdi, rsi, rdx, rcx, rbx, rax;
 	unsigned long error, rip, cs, rflags, rsp, ss;
 };
+
+struct x86_cpu_local_variables *get_x86_this_cpu_local(void);
+void *get_x86_this_cpu_kstack(void);
+void init_processors_local(int max_id);
+void assign_processor_id(void);
+void arch_delay(int);
+void x86_set_warm_reset(void);
 
 extern int kprintf(const char *format, ...);
 
 static struct idt_entry{
-        uint32_t desc[4];
+	uint32_t desc[4];
 } idt[256] __attribute__((aligned(16)));
 
-static struct desc_ptr{
-        uint16_t size;
-        uint64_t address;
-} __attribute__((packed)) idt_desc, gdt_desc;
+static struct x86_desc_ptr idt_desc, gdt_desc;
 
 static uint64_t gdt[] __attribute__((aligned(16))) = {
 	0,                  /* 0 */
@@ -47,34 +63,22 @@ static uint64_t gdt[] __attribute__((aligned(16))) = {
 	0,                  /* (72: TSS) */
 };
 
-struct tss64{
-        unsigned int reserved0;
-        unsigned long rsp0;
-        unsigned long rsp1;
-        unsigned long rsp2;
-        unsigned int reserved1, reserved2;
-        unsigned long ist[7];
-        unsigned int reserved3, reserved4;
-        unsigned short reserved5;
-        unsigned short iomap_address;
-} __attribute__((packed));
-
 struct tss64 tss __attribute__((aligned(16)));
 
 static void set_idt_entry(int idx, unsigned long addr)
 {
-        idt[idx].desc[0] = (addr & 0xffff) | (KERNEL_CS << 16);
-        idt[idx].desc[1] = (addr & 0xffff0000) | 0x8e00;
-        idt[idx].desc[2] = (addr >> 32);
-        idt[idx].desc[3] = 0;
+	idt[idx].desc[0] = (addr & 0xffff) | (KERNEL_CS << 16);
+	idt[idx].desc[1] = (addr & 0xffff0000) | 0x8e00;
+	idt[idx].desc[2] = (addr >> 32);
+	idt[idx].desc[3] = 0;
 }
 
 static void set_idt_entry_trap_gate(int idx, unsigned long addr)
 {
-        idt[idx].desc[0] = (addr & 0xffff) | (KERNEL_CS << 16);
-        idt[idx].desc[1] = (addr & 0xffff0000) | 0xef00;
-        idt[idx].desc[2] = (addr >> 32);
-        idt[idx].desc[3] = 0;
+	idt[idx].desc[0] = (addr & 0xffff) | (KERNEL_CS << 16);
+	idt[idx].desc[1] = (addr & 0xffff0000) | 0xef00;
+	idt[idx].desc[2] = (addr >> 32);
+	idt[idx].desc[3] = 0;
 }
 
 extern uint64_t generic_common_handlers[];
@@ -92,19 +96,19 @@ static void init_idt(void)
 	int i;
 
 	idt_desc.size = sizeof(idt) - 1;
-        idt_desc.address = (unsigned long)idt;
+	idt_desc.address = (unsigned long)idt;
         
-        for (i = 0; i < 256; i++) {
-	        if (i >= 32) {
-		        INIT_LIST_HEAD(&handlers[i - 32]);
-	        }
-	        set_idt_entry(i, generic_common_handlers[i]);
-        }
+	for (i = 0; i < 256; i++) {
+		if (i >= 32) {
+			INIT_LIST_HEAD(&handlers[i - 32]);
+		}
+		set_idt_entry(i, generic_common_handlers[i]);
+	}
 
-        set_idt_entry(13, (unsigned long)general_protection_exception);
-        set_idt_entry(14, (unsigned long)page_fault);
+	set_idt_entry(13, (unsigned long)general_protection_exception);
+	set_idt_entry(14, (unsigned long)page_fault);
 
-        reload_idt();
+	reload_idt();
 }
 
 void init_fpu(void)
@@ -126,36 +130,41 @@ void init_fpu(void)
 	asm volatile("finit");
 }
 
+void reload_gdt(struct x86_desc_ptr *gdt_ptr)
+{
+	asm volatile("pushq %1\n"
+	             "leaq 1f(%%rip), %%rbx\n"
+	             "pushq %%rbx\n"
+	             "lgdt %0\n"
+	             "lretq\n"
+	             "1:\n" : :
+	             "m" (*gdt_ptr),
+	             "i" (KERNEL_CS) : "rbx");
+	asm volatile("movl %0, %%ds" : : "r"(KERNEL_DS));
+	asm volatile("movl %0, %%ss" : : "r"(KERNEL_DS));
+	/* And, set TSS */
+	asm volatile("ltr %0" : : "r"((short)GLOBAL_TSS) : "memory");
+}
+
 void init_gdt(void)
 {
-        register unsigned long stack_pointer asm("rsp");
-        unsigned long tss_addr = (unsigned long)&tss;
+	register unsigned long stack_pointer asm("rsp");
+	unsigned long tss_addr = (unsigned long)&tss;
 
-        memset(&tss, 0, sizeof(tss));
-        tss.rsp0 = stack_pointer;
+	memset(&tss, 0, sizeof(tss));
+	tss.rsp0 = stack_pointer;
         
-        /* 0x89 = Present (8) | Type = 9 (TSS) */
-        gdt[GLOBAL_TSS_ENTRY] = (sizeof(tss) - 1) 
-	        | ((tss_addr & 0xffffff) << 16)
-	        | (0x89UL << 40) | ((tss_addr & 0xff000000) << 32);
-        gdt[GLOBAL_TSS_ENTRY + 1] = (tss_addr >> 32);
+	/* 0x89 = Present (8) | Type = 9 (TSS) */
+	gdt[GLOBAL_TSS_ENTRY] = (sizeof(tss) - 1) 
+		| ((tss_addr & 0xffffff) << 16)
+		| (0x89UL << 40) | ((tss_addr & 0xff000000) << 32);
+	gdt[GLOBAL_TSS_ENTRY + 1] = (tss_addr >> 32);
 
-        gdt_desc.size = sizeof(gdt) - 1;
-        gdt_desc.address = (unsigned long)gdt;
+	gdt_desc.size = sizeof(gdt) - 1;
+	gdt_desc.address = (unsigned long)gdt;
         
-        /* Load the new GDT, and set up CS, DS and SS. */
-        asm volatile("pushq %1\n"
-                     "leaq 1f(%%rip), %%rbx\n"
-                     "pushq %%rbx\n"
-                     "lgdt %0\n"
-                     "lretq\n"
-                     "1:\n" : :
-                     "m" (gdt_desc),
-                     "i" (KERNEL_CS) : "rbx");
-        asm volatile("movl %0, %%ds" : : "r"(KERNEL_DS));
-        asm volatile("movl %0, %%ss" : : "r"(KERNEL_DS));
-        /* And, set TSS */
-        asm volatile("ltr %0" : : "r"((short)GLOBAL_TSS) : "memory");
+	/* Load the new GDT, and set up CS, DS and SS. */
+	reload_gdt(&gdt_desc);
 }
 
 static void *lapic_vp;
@@ -169,25 +178,74 @@ unsigned int lapic_read(int reg)
 	return *(volatile unsigned int *)((char *)lapic_vp + reg);
 }
 
+void lapic_icr_write(unsigned int h, unsigned int l)
+{
+	lapic_write(LAPIC_ICR2, (unsigned int)h);
+	lapic_write(LAPIC_ICR0, l);
+}
+
 void init_lapic(void)
 {
-        unsigned long baseaddr;
+	unsigned long baseaddr;
 
-        /* Enable Local APIC */
-        baseaddr = rdmsr(MSR_IA32_APIC_BASE);
-        lapic_vp = map_fixed_area(baseaddr & PAGE_MASK, PAGE_SIZE, 1);
-        kprintf("Local APIC Base = %lx (%p)\n", baseaddr, lapic_vp);
+	/* Enable Local APIC */
+	baseaddr = rdmsr(MSR_IA32_APIC_BASE);
+	if (!lapic_vp) {
+		lapic_vp = map_fixed_area(baseaddr & PAGE_MASK, PAGE_SIZE, 1);
+	}
+	baseaddr |= 0x800;
+	wrmsr(MSR_IA32_APIC_BASE, baseaddr);
 
-        baseaddr |= 0x800;
-        wrmsr(MSR_IA32_APIC_BASE, baseaddr);
-
-        kprintf("Local APIC ID = %lx\n",  lapic_read(LAPIC_ID));
-        lapic_write(LAPIC_SPURIOUS, 0x1ff);
+	lapic_write(LAPIC_SPURIOUS, 0x1ff);
 }
 
 void lapic_ack(void)
 {
-        lapic_write(LAPIC_EOI, 0);
+	lapic_write(LAPIC_EOI, 0);
+}
+
+static void init_smp_processor(void)
+{
+	struct x86_cpu_local_variables *v;
+	unsigned long tss_addr = (unsigned long)&v->tss;
+
+	v = get_x86_this_cpu_local();
+
+	v->apic_id = lapic_read(LAPIC_ID) >> LAPIC_ID_SHIFT;
+
+	memcpy(v->gdt, gdt, sizeof(v->gdt));
+	memset(&v->tss, 0, sizeof(v->tss));
+	tss.rsp0 = (unsigned long)get_x86_this_cpu_kstack();
+
+	v->gdt[GLOBAL_TSS_ENTRY] = (sizeof(v->tss) - 1) 
+		| ((tss_addr & 0xffffff) << 16)
+		| (0x89UL << 40) | ((tss_addr & 0xff000000) << 32);
+	v->gdt[GLOBAL_TSS_ENTRY + 1] = (tss_addr >> 32);
+
+	v->gdt_ptr.size = sizeof(v->gdt) - 1;
+	v->gdt_ptr.address = (unsigned long)v->gdt;
+        
+	/* Load the new GDT, and set up CS, DS and SS. */
+	reload_gdt(&v->gdt_ptr);
+}
+
+static char *trampoline_va, *first_page_va;
+
+void aal_mc_init_ap(void)
+{
+	struct aal_mc_cpu_info *cpu_info = aal_mc_get_cpu_info();
+
+	trampoline_va = map_fixed_area(AP_TRAMPOLINE, AP_TRAMPOLINE_SIZE,
+	                               0);
+	first_page_va = map_fixed_area(0, PAGE_SIZE, 0);
+
+	kprintf("# of cpus : %d\n", cpu_info->ncpus);
+	init_processors_local(cpu_info->ncpus);
+
+	/* Do initialization for THIS cpu (BSP) */
+	assign_processor_id();
+
+	init_smp_processor();
 }
 
 extern void init_page_table(void);
@@ -207,6 +265,38 @@ void setup_x86(void)
 	init_lapic();
 
 	kprintf("setup_x86 done.\n");
+}
+
+static volatile int cpu_boot_status;
+
+void call_ap_func(void (*next_func)(void))
+{
+	cpu_boot_status = 1;
+	next_func();
+}
+
+void setup_x86_ap(void (*next_func)(void))
+{
+	unsigned long rsp;
+	cpu_disable_interrupt();
+
+	assign_processor_id();
+
+	init_smp_processor();
+
+	reload_idt();
+
+	init_lapic();
+
+	init_fpu();
+
+	rsp = (unsigned long)get_x86_this_cpu_kstack();
+
+	asm volatile("movq %0, %%rdi\n"
+	             "movq %1, %%rsp\n"
+	             "call *%2" : : "r"(next_func), "r"(rsp), "r"(call_ap_func)
+	             : "rdi");
+	while(1);
 }
 
 void handle_interrupt(int vector, struct x86_regs *regs)
@@ -243,11 +333,62 @@ void gpe_handler(struct x86_regs *regs)
 	panic("GPF");
 }
 
-void x86_issue_ipi(int apicid, int vector)
+void x86_issue_ipi(unsigned int apicid, unsigned int low)
 {
-	kprintf("issue interrupt:%d, %d\n", apicid, vector);
-	lapic_write(LAPIC_ICR2, (unsigned int)apicid << 24);
-	lapic_write(LAPIC_ICR0, vector);
+	lapic_icr_write(apicid << LAPIC_ICR_ID_SHIFT, low);
+}
+
+static void outb(uint8_t v, uint16_t port)
+{
+	asm volatile("outb %0, %1" : : "a" (v), "d" (port));
+}
+
+static void set_warm_reset_vector(unsigned long ip)
+{
+	/* Write CMOS */
+	x86_set_warm_reset();
+
+	/* Set vector */
+	*(unsigned short *)(first_page_va + 0x469) = (ip >> 4);
+	*(unsigned short *)(first_page_va + 0x467) = ip & 0xf;
+}
+
+static void wait_icr_idle(void)
+{
+	while (lapic_read(LAPIC_ICR0) & APIC_ICR_BUSY) {
+		cpu_pause();
+	}
+}
+
+static void __x86_wakeup(int apicid, unsigned long ip)
+{
+	int retry = 3;
+
+	set_warm_reset_vector(ip);
+
+	/* Clear the error */
+	lapic_write(LAPIC_ESR, 0);
+	lapic_read(LAPIC_ESR);
+
+	/* INIT */
+	x86_issue_ipi(apicid, 
+	              APIC_INT_LEVELTRIG | APIC_INT_ASSERT | APIC_DM_INIT);
+	wait_icr_idle();
+
+	x86_issue_ipi(apicid, 
+	              APIC_INT_LEVELTRIG | APIC_DM_INIT);
+	wait_icr_idle();
+
+	while (retry--) {
+		lapic_read(LAPIC_ESR);
+		x86_issue_ipi(apicid, APIC_DM_STARTUP | (ip >> 12));
+		wait_icr_idle();
+
+		arch_delay(200);
+
+		if (cpu_boot_status) 
+			break;
+	}
 }
 
 /** AAL Functions **/
@@ -311,3 +452,30 @@ void aal_mc_set_page_fault_handler(void (*h)(unsigned long, void *))
 {
 	__page_fault_handler_address = (unsigned long)h;
 }
+
+extern char trampoline_code_data[], trampoline_code_data_end[];
+struct page_table *get_init_page_table(void);
+
+void aal_mc_boot_cpu(int cpuid, unsigned long pc)
+{
+	unsigned long *p;
+
+	p = (unsigned long *)trampoline_va;
+
+	memcpy(p, trampoline_code_data, 
+	       trampoline_code_data_end - trampoline_code_data);
+
+	p[1] = (unsigned long)virt_to_phys(get_init_page_table());
+	p[2] = (unsigned long)setup_x86_ap;
+	p[3] = pc;
+	
+	cpu_boot_status = 0;
+
+	__x86_wakeup(cpuid, AP_TRAMPOLINE);
+
+	/* XXX: Time out */
+	while (!cpu_boot_status) {
+		cpu_pause();
+	}
+}
+

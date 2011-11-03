@@ -308,6 +308,11 @@ void load_page_table(struct page_table *pt)
 	asm volatile ("movq %0, %%cr3" : : "r"(pt) : "memory");
 }
 
+struct page_table *get_init_page_table(void)
+{
+	return init_pt;
+}
+
 static unsigned long fixed_virt;
 static void init_fixed_area(struct page_table *pt)
 {
@@ -345,6 +350,12 @@ void *map_fixed_area(unsigned long phys, unsigned long size, int uncachable)
 	return (char *)v + poffset;
 }
 
+void init_low_area(struct page_table *pt)
+{
+	set_pt_large_page(pt, 0, 0, PTATTR_WRITABLE);
+}
+
+
 void init_page_table(void)
 {
 	init_pt = arch_alloc_page(0);
@@ -354,6 +365,7 @@ void init_page_table(void)
 	/* Normal memory area */
 	init_normal_area(init_pt);
 	init_fixed_area(init_pt);
+	init_low_area(init_pt);
 
 	load_page_table(init_pt);
 	kprintf("Page table is now at %p\n", init_pt);

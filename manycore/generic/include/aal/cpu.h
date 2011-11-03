@@ -30,5 +30,18 @@ enum aal_mc_gv_type {
 int aal_mc_get_vector(enum aal_mc_gv_type type);
 int aal_mc_interrupt_host(int vector);
 
+struct aal_mc_cpu_info {
+	int ncpus;
+	int *hw_ids;
+	int *nodes;
+};
+
+struct aal_mc_cpu_info *aal_mc_get_cpu_info(void);
+void aal_mc_boot_cpu(int cpuid, unsigned long pc);
+int aal_mc_get_processor_id(void);
+int aal_mc_get_hardware_processor_id(void);
+
+void aal_mc_init_ap(void);
+
 #endif
 

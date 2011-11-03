@@ -1,6 +1,8 @@
 #ifndef __HEADER_X86_COMMON_REGISTERS_H
 #define __HEADER_X86_COMMON_REGISTERS_H
 
+#include <types.h>
+
 #define MSR_FS_BASE    0xc0000100
 #define MSR_GS_BASE    0xc0000101
 
@@ -33,6 +35,15 @@ static unsigned long rdmsr(unsigned int index)
 	unsigned int high, low;
 
 	asm volatile("rdmsr" : "=a" (low), "=d" (high) : "c" (index));
+
+	return (unsigned long)high << 32 | low;
+}
+
+static unsigned long rdtsc(void)
+{
+	unsigned int high, low;
+
+	asm volatile("rdtsc" : "=a" (low), "=d" (high));
 
 	return (unsigned long)high << 32 | low;
 }
@@ -79,5 +90,22 @@ static unsigned long read_perfctr(int counter)
 {
 	return rdpmc(counter);
 }
+
+struct x86_desc_ptr {
+        uint16_t size;
+        uint64_t address;
+} __attribute__((packed));
+
+struct tss64 {
+        unsigned int reserved0;
+        unsigned long rsp0;
+        unsigned long rsp1;
+        unsigned long rsp2;
+        unsigned int reserved1, reserved2;
+        unsigned long ist[7];
+        unsigned int reserved3, reserved4;
+        unsigned short reserved5;
+        unsigned short iomap_address;
+} __attribute__((packed));
 
 #endif

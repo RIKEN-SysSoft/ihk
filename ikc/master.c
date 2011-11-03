@@ -219,7 +219,6 @@ void aal_ikc_wait_reply_prepare(aal_os_t os,
 
 void aal_ikc_wait_finish(aal_os_t os, struct aal_ikc_master_wait_struct *ws)
 {
-	struct list_head *list;
 	aal_spinlock_t *lock;
 	unsigned long flags;
 

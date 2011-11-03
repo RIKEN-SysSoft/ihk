@@ -1,6 +1,7 @@
 #include <aal/debug.h>
 #include <aal/types.h>
 #include <aal/mm.h>
+#include <aal/cpu.h>
 #include <errno.h>
 #include <string.h>
 
@@ -37,6 +38,8 @@ static int __sfi_table_num_entry(struct sfi_table_header *hdr, size_t s)
 	return (int)((hdr->len - sizeof(*hdr)) / s);
 }
 
+static struct aal_mc_cpu_info *aal_cpu_info;
+
 static void parse_sfi_cpus(struct sfi_table_header *hdr)
 {
 	int i, nentry;
@@ -46,9 +49,17 @@ static void parse_sfi_cpus(struct sfi_table_header *hdr)
 	kprintf("# of CPUs : %d\n", nentry);
 
 	apicids = (uint32_t *)(hdr + 1);
+
+	/* XXX: if nentry > 510, there will be problem! */
+	aal_cpu_info = early_alloc_page();
+	aal_cpu_info->hw_ids = (int *)(aal_cpu_info + 1);
+	aal_cpu_info->nodes = (int *)(aal_cpu_info + 1) + nentry;
+
 	for (i = 0; i < nentry; i++) {
-		kprintf("%d,", apicids[i]);
+		aal_cpu_info->hw_ids[i] = apicids[i];
+		aal_cpu_info->nodes = 0;
 	}
+	aal_cpu_info->ncpus = nentry;
 	kprintf("\n");
 }
 
@@ -131,8 +142,13 @@ unsigned long sfi_get_memory_address(enum aal_mc_gma_type type, int opt)
 	return -ENOENT;
 }
 
+struct aal_mc_cpu_info *sfi_get_cpu_info(void)
+{
+	return aal_cpu_info;
+}
+
 void __reserve_arch_pages(unsigned long start, unsigned long end,
                           void (*cb)(unsigned long, unsigned long, int))
 {
-
+	cb(0, 0x100000, 1);
 }
