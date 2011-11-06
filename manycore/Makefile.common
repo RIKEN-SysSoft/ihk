@@ -12,13 +12,14 @@ ifeq ($(V),1)
 echo_cmd = 
 submake = make
 else
-echo_cmd = @echo '       ' $1 $(ECHO_SUFFIX) $2; 
+echo_cmd = @echo ' ($(TARGET))' $1 $(ECHO_SUFFIX) $2; 
 submake = make --no-print-directory
 endif
 
 cc_cmd = $(call echo_cmd,CC,$<)$(CC) $(CFLAGS) -c -o $@ $<
 ld_cmd = $(call echo_cmd,LD,$@)$(LD) $(LDFLAGS) -r -o $@ $^
 dep_cmd = $(call echo_cmd,DEPEND,)$(CC) $(CFLAGS) -MM $^ > $@
+rm_cmd = $(call echo_cmd,CLEAN,)$(RM)
 
 define make_implicit_src
 $$(O)/%.o: $1/%.c

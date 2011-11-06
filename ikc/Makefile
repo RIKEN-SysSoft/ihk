@@ -21,7 +21,7 @@ $(O)/ikc.o: $(DESTOBJS)
 	$(ld_cmd)
 
 clean:
-	$(RM) $(DESTOBJS)
+	$(rm_cmd) $(DESTOBJS)
 
 depend: $(O)/Makefile.dep
 

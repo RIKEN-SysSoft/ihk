@@ -15,9 +15,12 @@ extern void main(void);
 extern void setup_x86(void);
 extern struct aal_kmsg_buf kmsg_buf;
 
-void arch_start(unsigned long param_addr)
+unsigned long x86_kernel_phys_base;
+
+void arch_start(unsigned long param_addr, unsigned long phys_address)
 {
-	boot_param = (struct shimos_boot_param *)param_addr;
+	x86_kernel_phys_base = phys_address;
+	boot_param = phys_to_virt(param_addr);
 	boot_param_pa = param_addr;
 
 	/* Set up initial (temporary) stack */
@@ -56,8 +59,9 @@ static void build_aal_cpu_info(void)
 void arch_init(void)
 {
 	/* Ack boot (trampoline code shall be free'd) */
-	boot_param->msg_buffer = (unsigned long)&kmsg_buf;
+	boot_param->msg_buffer = virt_to_phys(&kmsg_buf);
 	boot_param->status = 1;
+
 	build_aal_cpu_info();
 
 	setup_x86();

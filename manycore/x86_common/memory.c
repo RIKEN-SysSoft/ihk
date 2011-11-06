@@ -12,6 +12,8 @@ extern char _head[], _end[];
 
 struct aal_mc_pa_ops *pa_ops;
 
+extern unsigned long x86_kernel_phys_base;
+
 void *early_alloc_page(void)
 {
 	void *p;
@@ -19,6 +21,8 @@ void *early_alloc_page(void)
 	if (!last_page) {
 		last_page = (char *)(((unsigned long)_end + PAGE_SIZE)
 		                     & PAGE_MASK);
+		/* Convert the virtual address from text's to straight maps */
+		last_page = phys_to_virt(virt_to_phys(last_page));
 	} else if (last_page == (void *)-1) {
 		panic("Early allocator is already finalized. Do not use it.\n");
 	}
@@ -301,11 +305,15 @@ int aal_mc_pt_clear_page(page_table_t pt, void *virt)
 
 void load_page_table(struct page_table *pt)
 {
+	unsigned long pt_addr;
+
 	if (!pt) {
 		pt = init_pt;
 	}
 
-	asm volatile ("movq %0, %%cr3" : : "r"(pt) : "memory");
+	pt_addr = virt_to_phys(pt);
+
+	asm volatile ("movq %0, %%cr3" : : "r"(pt_addr) : "memory");
 }
 
 struct page_table *get_init_page_table(void)
@@ -319,6 +327,27 @@ static void init_fixed_area(struct page_table *pt)
 	fixed_virt = MAP_FIXED_START;
 
 	return;
+}
+
+void init_text_area(struct page_table *pt)
+{
+	unsigned long __end, phys, virt;
+	int i, nlpages;
+
+	__end = ((unsigned long)_end + LARGE_PAGE_SIZE * 2 - 1)
+		& LARGE_PAGE_MASK;
+	nlpages = (__end - MAP_KERNEL_START) >> LARGE_PAGE_SHIFT;
+
+	kprintf("# of large pages = %d\n", nlpages);
+
+	phys = x86_kernel_phys_base;
+	virt = MAP_KERNEL_START;
+	for (i = 0; i < nlpages; i++) {
+		set_pt_large_page(pt, (void *)virt, phys, PTATTR_WRITABLE);
+
+		virt += LARGE_PAGE_SIZE;
+		phys += LARGE_PAGE_SIZE;
+	}
 }
 
 void *map_fixed_area(unsigned long phys, unsigned long size, int uncachable)
@@ -355,7 +384,6 @@ void init_low_area(struct page_table *pt)
 	set_pt_large_page(pt, 0, 0, PTATTR_WRITABLE);
 }
 
-
 void init_page_table(void)
 {
 	init_pt = arch_alloc_page(0);
@@ -366,6 +394,7 @@ void init_page_table(void)
 	init_normal_area(init_pt);
 	init_fixed_area(init_pt);
 	init_low_area(init_pt);
+	init_text_area(init_pt);
 
 	load_page_table(init_pt);
 	kprintf("Page table is now at %p\n", init_pt);
@@ -393,4 +422,19 @@ void aal_mc_set_page_allocator(struct aal_mc_pa_ops *ops)
 {
 	last_page = NULL;
 	pa_ops = ops;
+}
+
+unsigned long virt_to_phys(void *v)
+{
+	unsigned long va = (unsigned long)v;
+	
+	if (va >= MAP_KERNEL_START) {
+		return va - MAP_KERNEL_START + x86_kernel_phys_base;
+	} else {
+		return va - MAP_ST_START;
+	}
+}
+void *phys_to_virt(unsigned long p)
+{
+	return (void *)(p + MAP_ST_START);
 }

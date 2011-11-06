@@ -5,7 +5,6 @@
 
 #ifndef KERNEL_PHYS_OFFSET
 #define KERNEL_PHYS_OFFSET 0
-#endif
 
 static unsigned long virt_to_phys(void *v)
 {
@@ -15,7 +14,10 @@ static void *phys_to_virt(unsigned long p)
 {
 	return (void *)(p + KERNEL_PHYS_OFFSET);
 }
+#endif
 
+unsigned long virt_to_phys(void *v);
+void *phys_to_virt(unsigned long p);
 
 enum aal_mc_pt_attribute {
 	PTATTR_WRITABLE   = 0x02,
