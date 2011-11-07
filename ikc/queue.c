@@ -308,12 +308,16 @@ int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel,
 	int r;
 
 	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
-	if (aal_ikc_channel_enabled(channel)) {
-		r = aal_ikc_read_queue_handler(channel->recv.queue, channel,
-		                               h, harg, opt);
+	if (aal_ikc_channel_enabled(channel) &&
+	    !aal_ikc_queue_is_empty(channel->recv.queue)) {
+		while (aal_ikc_read_queue_handler(channel->recv.queue,
+		                                  channel,
+		                                  h, harg, opt) == 0);
 		/* XXX: Optimal interrupt */
 		aal_ikc_notify_remote_read(channel);
 		aal_ikc_notify_remote_read(channel);
+
+		r = 0;
 	} else {
 		r = -EINVAL;
 	}
