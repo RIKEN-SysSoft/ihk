@@ -47,6 +47,8 @@ struct aal_host_linux_os_data {
 
 	spinlock_t wait_lock;
 	struct list_head wait_list;
+
+	struct list_head aux_call_list;
 };
 
 #endif

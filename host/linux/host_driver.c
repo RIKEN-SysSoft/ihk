@@ -328,6 +328,25 @@ static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
 	return tail;
 }
 
+static long __aal_os_ioctl_call_aux(struct aal_host_linux_os_data *os,
+                                    unsigned int request, unsigned long arg)
+{
+	struct aal_os_user_call *c;
+	int i;
+	
+	/* XXX: Very awkward iteration, and no lock! */
+	list_for_each_entry(c, &os->aux_call_list, list) {
+		for (i = 0; i < c->num_handlers; i++) {
+			if (c->handlers[i].request == request) {
+				return c->handlers[i].func(c->handlers[i].priv,
+				                           arg);
+			}
+		}
+	}
+
+	return -ENOSYS;
+}
+
 static long aal_host_os_ioctl(struct file *file, unsigned int request,
                               unsigned long arg)
 {
@@ -372,6 +391,9 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 		    request <= AAL_OS_DEBUG_END) {
 			ret = __aal_os_ioctl_debug_request(data,
 			                                   request, arg);
+		} else if (request >= AAL_OS_AUX_CALL_START &&
+		           request <= AAL_OS_AUX_CALL_END) {
+			ret = __aal_os_ioctl_call_aux(data, request, arg);
 		}
 		break;
 	}
@@ -511,6 +533,7 @@ static int __aal_device_create_os_init(struct aal_host_linux_device_data *data,
 	spin_lock_init(&os->wait_lock);
 	INIT_LIST_HEAD(&os->ikc_channels);
 	INIT_LIST_HEAD(&os->wait_list);
+	INIT_LIST_HEAD(&os->aux_call_list);
 
 	if (data->ops->create_os && 
 	    (ret = data->ops->create_os(data, data->priv, arg, 
@@ -1178,6 +1201,40 @@ aal_os_t aal_host_find_os(int index, aal_device_t dev)
 		}
 	}
 }
+
+int aal_os_register_user_call_handlers(aal_os_t aal_os,
+                                       struct aal_os_user_call *clist)
+{
+	int i;
+	unsigned long flags;
+	struct aal_host_linux_os_data *os = aal_os;
+
+	INIT_LIST_HEAD(&clist->list);
+	for (i = 0; i < clist->num_handlers; i++) {
+		if (clist->handlers[i].request < AAL_OS_AUX_CALL_START ||
+		    clist->handlers[i].request > AAL_OS_AUX_CALL_END) {
+			return -EINVAL;
+		}
+	}
+
+	spin_lock_irqsave(&os->lock, flags);
+	list_add_tail(&clist->list, &os->aux_call_list);
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	return 0;
+}
+
+void aal_os_unregister_user_call_handlers(aal_os_t aal_os,
+                                          struct aal_os_user_call *clist)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+	unsigned long flags;
+
+	spin_lock_irqsave(&os->lock, flags);
+	list_del(&clist->list);
+	spin_unlock_irqrestore(&os->lock, flags);
+}
+
 EXPORT_SYMBOL(aal_register_device);
 EXPORT_SYMBOL(aal_unregister_device);
 EXPORT_SYMBOL(aal_device_create_os);
@@ -1195,4 +1252,6 @@ EXPORT_SYMBOL(aal_os_to_dev);
 EXPORT_SYMBOL(aal_device_map_memory);
 EXPORT_SYMBOL(aal_device_unmap_memory);
 EXPORT_SYMBOL(aal_os_issue_interrupt);
+EXPORT_SYMBOL(aal_os_register_user_call_handlers);
+EXPORT_SYMBOL(aal_os_unregister_user_call_handlers);
 

@@ -18,5 +18,8 @@
 #define AAL_OS_DEBUG_START            0x122a00
 #define AAL_OS_DEBUG_END              0x122aff
 
+#define AAL_OS_AUX_CALL_START      0x10000000
+#define AAL_OS_AUX_CALL_END        0x7fffffff
+
 #define FLAG_AAL_OS_SHUTDOWN_FORCE    0x40000000
 #endif

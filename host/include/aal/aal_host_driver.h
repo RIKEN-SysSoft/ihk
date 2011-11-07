@@ -176,4 +176,22 @@ aal_device_t aal_os_to_dev(aal_os_t os);
 aal_device_t aal_host_find_dev(int index);
 aal_os_t aal_host_find_os(int index, aal_device_t dev);
 
+struct aal_os_user_call_handler {
+	unsigned int request;
+	void *priv;
+	long (*func)(void *priv, unsigned long arg);
+};
+
+struct aal_os_user_call {
+	struct list_head list;
+
+	int num_handlers;
+	struct aal_os_user_call_handler *handlers;
+};
+
+int aal_os_register_user_call_handlers(aal_os_t os,
+                                       struct aal_os_user_call *);
+void aal_os_unregister_user_call_handlers(aal_os_t os,
+                                          struct aal_os_user_call *);
+
 #endif
