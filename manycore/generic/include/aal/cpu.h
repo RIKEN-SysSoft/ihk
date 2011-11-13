@@ -53,4 +53,6 @@ void aal_mc_init_context(aal_mc_kernel_context_t *new_ctx,
 void aal_mc_switch_context(aal_mc_kernel_context_t *old_ctx,
                            aal_mc_kernel_context_t *new_ctx);
 
+void aal_mc_debug_show_interrupt_context(const void *reg);
+
 #endif
