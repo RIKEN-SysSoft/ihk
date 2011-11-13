@@ -37,8 +37,6 @@ void *__aal_pagealloc_init(unsigned long start, unsigned long size,
 	mapsize = (size >> page_shift);
 	mapaligned = ((mapsize + 63) >> 6) << 3;
 	descsize = sizeof(*desc) + mapaligned;
-	kprintf("start = %lx, size = %lx, unit = %lx\n",
-	        start, size, unit);
 	
 	descsize = (descsize + PAGE_SIZE - 1) >> PAGE_SHIFT;
 
@@ -62,8 +60,10 @@ void *__aal_pagealloc_init(unsigned long start, unsigned long size,
 	desc->count = mapaligned >> 3;
 	desc->shift = page_shift;
 	desc->flag = flag;
-	kprintf("desc = %p, start = %lx, count = %d, shift = %d, flag = %d\n",
-	        desc, desc->start, desc->count, desc->shift, desc->flag);
+
+	kprintf("Page allocator: %lx - %lx (%d)\n", start, start + size,
+	        page_shift);
+
 	aal_mc_spinlock_init(&desc->lock);
 
 	/* Reserve align padding area */

@@ -523,9 +523,6 @@ void aal_mc_init_context(aal_mc_kernel_context_t *new_ctx,
 	/* Set the return address */
 	new_ctx->rsp = (unsigned long)(sp - 1);
 	sp[-1] = (unsigned long)next_function;
-
-	kprintf("rsp: %p / ret : %lx\n", new_ctx->rsp, 
-	        *(unsigned long *)new_ctx->rsp);
 }
 
 void aal_mc_set_syscall_handler(int (*handler)(int, aal_mc_user_context_t *))

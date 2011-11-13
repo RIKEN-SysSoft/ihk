@@ -19,14 +19,13 @@ void *early_alloc_page(void)
 	void *p;
 
 	if (!last_page) {
-		last_page = (char *)(((unsigned long)_end + PAGE_SIZE)
+		last_page = (char *)(((unsigned long)_end + PAGE_SIZE - 1)
 		                     & PAGE_MASK);
 		/* Convert the virtual address from text's to straight maps */
 		last_page = phys_to_virt(virt_to_phys(last_page));
 	} else if (last_page == (void *)-1) {
 		panic("Early allocator is already finalized. Do not use it.\n");
 	}
-
 	p = last_page;
 	last_page += PAGE_SIZE;
 
@@ -422,10 +421,8 @@ extern void __reserve_arch_pages(unsigned long, unsigned long,
 void aal_mc_reserve_arch_pages(unsigned long start, unsigned long end,
                                void (*cb)(unsigned long, unsigned long, int))
 {
-	/* Reserve Text */
-	cb(virt_to_phys(_head), virt_to_phys(_end), 0);
-	/* Reserve temporal heap that we used during initialization */
-	cb(virt_to_phys(init_pt), virt_to_phys(get_last_early_heap()), 0);
+	/* Reserve Text + temporal heap */
+	cb(virt_to_phys(_head), virt_to_phys(get_last_early_heap()), 0);
 	/* Reserve trampoline area to boot the second ap */
 	cb(AP_TRAMPOLINE, AP_TRAMPOLINE + AP_TRAMPOLINE_SIZE, 0);
 	/* Reserve the null page */
