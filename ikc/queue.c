@@ -5,6 +5,25 @@ void aal_ikc_notify_remote_read(struct aal_ikc_channel_desc *c);
 void aal_ikc_notify_remote_write(struct aal_ikc_channel_desc *c);
 
 /*
+ * Do copy by long
+ */
+
+static void *memcpyl(void *dest, const void *src, size_t n)
+{
+	unsigned long *d = dest;
+	const unsigned long *s = src;
+
+	n /= sizeof(unsigned long);
+
+	while (n > 0) {
+		*(d++) = *(s++);
+		n--;
+	}
+
+	return dest;
+}
+
+/*
  * NOTE: Local CPU is responsible to call the init
  */
 int aal_ikc_init_queue(struct aal_ikc_queue_head *q,
@@ -21,9 +40,6 @@ int aal_ikc_init_queue(struct aal_ikc_queue_head *q,
 	q->read_cpu = 0;
 	q->write_cpu = 0;
 	q->queue_size = q->pktsize * q->pktcount;
-
-	kprintf("initq: %ld, %p, %d, %d\n", sizeof(struct aal_ikc_queue_head),
-	        q, q->pktsize, q->pktcount);
 
 	return 0;
 }
@@ -54,8 +70,8 @@ int aal_ikc_read_queue(struct aal_ikc_queue_head *q, void *packet, int flag)
 	if (aal_ikc_queue_is_empty(q)) {
 		return -1;
 	} else{
-		memcpy(packet, (char *)q + sizeof(*q) + q->read_off,
-		       q->pktsize);
+		memcpyl(packet, (char *)q + sizeof(*q) + q->read_off,
+		        q->pktsize);
 
 		o = q->read_off;
 		o += q->pktsize;
@@ -97,8 +113,8 @@ int aal_ikc_write_queue(struct aal_ikc_queue_head *q, void *packet, int flag)
 	if (aal_ikc_queue_is_full(q)) {
 		return -1;
 	} else {
-		memcpy((char *)q + sizeof(*q) + q->write_off,
-		       packet, q->pktsize);
+		memcpyl((char *)q + sizeof(*q) + q->write_off,
+		        packet, q->pktsize);
 
 		o = q->write_off;
 		o += q->pktsize;
@@ -168,7 +184,8 @@ struct aal_ikc_channel_desc *aal_ikc_create_channel(aal_os_t os,
                                                     int packet_size,
                                                     unsigned long qsize,
                                                     unsigned long *rq,
-                                                    unsigned long *sq)
+                                                    unsigned long *sq,
+                                                    enum aal_ikc_channel_flag f)
 {
 	unsigned long phys;
 	struct aal_ikc_channel_desc *desc;
@@ -177,19 +194,21 @@ struct aal_ikc_channel_desc *aal_ikc_create_channel(aal_os_t os,
 
 	qpages = (qsize + PAGE_SIZE - 1) >> PAGE_SHIFT;
 
-	desc = aal_ikc_malloc(sizeof(struct aal_ikc_channel_desc));
+	desc = aal_ikc_malloc(sizeof(struct aal_ikc_channel_desc)
+	                      + packet_size);
 	if (!desc) {
 		return NULL;
 	}
+
 	memset(desc, 0, sizeof(*desc));
-	kprintf("desc = %p\n", desc);
+
+	desc->flag = f;
 
 	if (!*rq) {
 		recvq = aal_ikc_alloc_queue(qpages);
 		if (!recvq) {
 			return NULL;
 		}
-		kprintf("recvq = %p\n", recvq);
 
 		aal_ikc_init_queue(recvq, 1, port, PAGE_SIZE * qpages,
 		                   packet_size);
@@ -199,11 +218,9 @@ struct aal_ikc_channel_desc *aal_ikc_create_channel(aal_os_t os,
 		desc->recv.qphys = *rq;
 	} else {
 		phys = aal_ikc_map_memory(os, *rq, qpages * PAGE_SIZE);
-		kprintf("phys = %lx\n", phys);
 		recvq = aal_ikc_map_virtual(aal_os_to_dev(os), phys,
 		                            qpages * PAGE_SIZE,
 		                            AAL_IKC_QUEUE_PT_ATTR);
-		kprintf("recvq = %p\n", recvq);
 
 		desc->recv.qrphys = *rq;
 		desc->recv.qphys = phys;
@@ -211,11 +228,9 @@ struct aal_ikc_channel_desc *aal_ikc_create_channel(aal_os_t os,
 	/* XXX: This do not assume local send queue */
 	if (*sq) {
 		phys = aal_ikc_map_memory(os, *sq, qpages * PAGE_SIZE);
-		kprintf("phys = %lx\n", phys);
 		sendq = aal_ikc_map_virtual(aal_os_to_dev(os), phys,
 		                            qpages,
 		                            AAL_IKC_QUEUE_PT_ATTR);
-		kprintf("sendq = %p\n", sendq);
 
 		desc->send.qrphys = *sq;
 		desc->send.qphys = phys;
@@ -274,7 +289,9 @@ int aal_ikc_send(struct aal_ikc_channel_desc *channel, void *p, int opt)
 	flags = aal_ikc_spinlock_lock(&channel->send.lock);
 	if (aal_ikc_channel_enabled(channel)) {
 		r = aal_ikc_write_queue(channel->send.queue, p, opt);
-		aal_ikc_notify_remote_write(channel);
+		if (!(opt & IKC_NO_NOTIFY)) {
+			aal_ikc_notify_remote_write(channel);
+		}
 	} else {
 		r = -EINVAL;
 	}
@@ -292,7 +309,9 @@ int aal_ikc_recv(struct aal_ikc_channel_desc *channel, void *p, int opt)
 	if (aal_ikc_channel_enabled(channel)) {
 		r = aal_ikc_read_queue(channel->recv.queue, p, opt);
 		/* XXX: Optimal interrupt */
-		aal_ikc_notify_remote_read(channel);
+		if (!(opt & IKC_NO_NOTIFY)) {
+			aal_ikc_notify_remote_read(channel);
+		}
 	} else {
 		r = -EINVAL;
 	}
@@ -301,8 +320,8 @@ int aal_ikc_recv(struct aal_ikc_channel_desc *channel, void *p, int opt)
 	return r;
 }
 
-int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel, 
-                         aal_ikc_ph_t h, void *harg, int opt)
+static int __aal_ikc_recv_nocopy(struct aal_ikc_channel_desc *channel,
+                                 aal_ikc_ph_t h, void *harg, int opt)
 {
 	unsigned long flags;
 	int r;
@@ -315,7 +334,6 @@ int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel,
 		                                  h, harg, opt) == 0);
 		/* XXX: Optimal interrupt */
 		aal_ikc_notify_remote_read(channel);
-		aal_ikc_notify_remote_read(channel);
 
 		r = 0;
 	} else {
@@ -323,6 +341,24 @@ int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel,
 	}
 	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
 
+	return r;
+}
+
+int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel, 
+                         aal_ikc_ph_t h, void *harg, int opt)
+{
+	int r = -ENOENT;
+
+	if (channel->flag & IKC_FLAG_NO_COPY) {
+		return __aal_ikc_recv_nocopy(channel, h, harg, opt);
+	} else {
+		while (aal_ikc_recv(channel, channel->packet_buf,
+		                    opt | IKC_NO_NOTIFY) == 0) {
+			h(channel, channel->packet_buf, harg);
+			r = 0;
+		}
+		aal_ikc_notify_remote_read(channel);
+	}
 	return r;
 }
 

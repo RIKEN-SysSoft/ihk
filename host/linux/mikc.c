@@ -49,7 +49,8 @@ struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
 		rq = aal_device_map_virtual(os->dev_data, rp, rsz, NULL, 0);
 		wq = aal_device_map_virtual(os->dev_data, wp, wsz, NULL, 0);
 
-		c = kzalloc(sizeof(struct aal_ikc_channel_desc), GFP_KERNEL);
+		c = kzalloc(sizeof(struct aal_ikc_channel_desc)
+		            + sizeof(struct aal_ikc_master_packet), GFP_KERNEL);
 		aal_ikc_init_desc(c, aal_os, 0, rq, wq,
 		                  aal_ikc_master_channel_packet_handler);
 
@@ -86,7 +87,7 @@ int ikc_master_init(aal_os_t __os)
 		printk("ikc_master_init done.\n");
 
 		/* ack send */
-		packet.msg = MASTER_PACKET_INIT_ACK;
+		packet.msg = AAL_IKC_MASTER_MSG_INIT_ACK;
 		aal_ikc_send(os->mchannel, &packet, 0);
 
 		return 0;
@@ -95,8 +96,6 @@ int ikc_master_init(aal_os_t __os)
 
 void aal_ikc_destroy_channel(aal_os_t __os, struct aal_ikc_channel_desc *c)
 {
-	struct aal_host_linux_os_data *os = __os;
-
 	if (!c) {
 		return;
 	}
@@ -213,3 +212,22 @@ int aal_os_get_unique_channel_id(aal_os_t aal_os)
 	return atomic_inc_return(&os->channel_id);
 }
 
+void aal_ikc_linux_init_work_data(aal_os_t aal_os,
+                                  void (*f)(struct work_struct *))
+{
+	struct aal_host_linux_os_data *os = aal_os;
+
+	INIT_WORK(&os->ikc_work, f);
+}
+
+void aal_ikc_linux_schedule_work(aal_os_t aal_os)
+{
+	struct aal_host_linux_os_data *os = aal_os;
+
+	schedule_work(&os->ikc_work);
+}
+
+aal_os_t aal_ikc_linux_get_os_from_work(struct work_struct *work)
+{
+	return container_of(work, struct aal_host_linux_os_data, ikc_work);
+}

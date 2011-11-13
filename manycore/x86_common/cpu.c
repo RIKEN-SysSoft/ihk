@@ -532,3 +532,20 @@ void aal_mc_set_syscall_handler(int (*handler)(int, aal_mc_user_context_t *))
 {
 	__x86_syscall_handler = handler;
 }
+
+void aal_mc_delay_us(int us)
+{
+	arch_delay(us);
+}
+
+void arch_show_interrupt_context(const void *reg)
+{
+	const struct x86_regs *regs = reg;
+
+	kprintf("CS:EIP = %4lx:%16lx\n", regs->cs, regs->rip);
+	kprintf("RAX RBX RCX RDX RSI RDI RSP RBP\n");
+	kprintf("%16lx %16lx %16lx %16lx\n",
+	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
+	kprintf("%16lx %16lx %16lx %16lx\n",
+	        regs->rsi, regs->rdi, regs->rsp, regs->rbp);
+}

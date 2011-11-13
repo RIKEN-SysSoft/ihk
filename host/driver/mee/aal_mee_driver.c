@@ -44,6 +44,11 @@ struct mee_os_data {
 	int boot_cpu;
 	unsigned long boot_rip;
 
+	struct aal_mem_info mem_info;
+	struct aal_mem_region mem_region;
+	struct aal_cpu_info cpu_info;
+	int cpu_hw_ids[MEE_MAX_CPUS];
+
 	struct shimos_boot_param param;
 
 	int status;
@@ -76,12 +81,32 @@ static void set_dev_status(struct mee_device_data *dev, int status)
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
+static void __build_os_info(struct mee_os_data *os)
+{
+	int i, c;
+
+	os->mem_info.n_mappable = os->mem_info.n_available = 1;
+	os->mem_info.n_fixed = 0;
+	os->mem_info.available = os->mem_info.mappable = &os->mem_region;
+	os->mem_info.fixed = NULL;
+	os->mem_region.start = os->mem_start;
+	os->mem_region.size = os->mem_end - os->mem_start;
+	
+	for (i = 0, c = 0; i < MEE_MAX_CPUS; i++) {
+		if (os->coremaps & (1ULL << i)) {
+			os->cpu_hw_ids[c] = i;
+			c++;
+		}
+	}
+	os->cpu_info.n_cpus = c;
+	os->cpu_info.hw_ids = os->cpu_hw_ids;
+}
+
 static int mee_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 {
 	struct mee_os_data *os = priv;
 	struct mee_device_data *dev = os->dev;
 	unsigned long flags;
-	int i;
 
 	spin_lock_irqsave(&dev->lock, flags);
 	if (dev->status != MEE_DEV_STATUS_READY) {
@@ -92,18 +117,14 @@ static int mee_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 	dev->status = MEE_DEV_STATUS_BOOTING;
 	spin_unlock_irqrestore(&dev->lock, flags);
 	
-	for (i = 0; i < MEE_MAX_CPUS; i++) {
-		if (os->coremaps & (1 << i)) {
-			os->boot_cpu = i;
-			break;
-		}
-	}
-	if (i == MEE_MAX_CPUS) {
+	__build_os_info(os);
+	if (os->cpu_info.n_cpus < 1) {
 		printk("mee: There are no CPU to boot!\n");
 		set_dev_status(dev, MEE_DEV_STATUS_READY);
 
 		return -EINVAL;
 	}
+	os->boot_cpu = os->cpu_info.hw_ids[0];
 
 	set_os_status(os, MEE_OS_STATUS_BOOTING);
 
@@ -418,6 +439,21 @@ static irqreturn_t mee_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static struct aal_mem_info *mee_aal_os_get_memory_info(aal_os_t aal_os,
+                                                       void *priv)
+{
+	struct mee_os_data *os = priv;
+
+	return &os->mem_info;
+}
+
+static struct aal_cpu_info *mee_aal_os_get_cpu_info(aal_os_t aal_os, void *priv)
+{
+	struct mee_os_data *os = priv;
+
+	return &os->cpu_info;
+}
+
 static struct aal_os_ops mee_aal_os_ops = {
 	.load_mem = mee_aal_os_load_mem,
 	.boot = mee_aal_os_boot,
@@ -432,6 +468,8 @@ static struct aal_os_ops mee_aal_os_ops = {
 	.unregister_handler = mee_aal_os_unregister_handler,
 	.get_special_addr = mee_aal_os_get_special_addr,
 	.debug_request = mee_aal_os_debug_request,
+	.get_memory_info = mee_aal_os_get_memory_info,
+	.get_cpu_info = mee_aal_os_get_cpu_info,
 };	
 
 static struct aal_register_os_data mee_os_reg_data = {

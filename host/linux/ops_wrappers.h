@@ -12,6 +12,9 @@
 	static rettype __aal_os_##name(struct aal_host_linux_os_data *data, \
 	                               __VA_ARGS__)
 
+#define AAL_OS_OPS_BEGIN_NOARG(rettype, name) \
+	static rettype __aal_os_##name(struct aal_host_linux_os_data *data)
+
 #define AAL_OPS_BODY(name, ...)	  \
 	do { \
 	if (data->ops->name) { \
@@ -25,6 +28,15 @@
 	do { \
 	if (data->ops->name) { \
 		return data->ops->name(data, data->priv, __VA_ARGS__); \
+	} else { \
+		return NULL; \
+	} \
+	} while (0)
+
+#define AAL_OPS_BODY_PTR_NOARG(name)	  \
+	do { \
+	if (data->ops->name) { \
+		return data->ops->name(data, data->priv); \
 	} else { \
 		return NULL; \
 	} \
@@ -74,6 +86,16 @@ AAL_OS_OPS_BEGIN(int, wait_for_status, enum aal_os_status status,
 AAL_OS_OPS_BEGIN(int, issue_interrupt, int cpu, int vector)
 {
 	AAL_OPS_BODY(issue_interrupt, cpu, vector);
+}
+
+AAL_OS_OPS_BEGIN_NOARG(struct aal_mem_info *, get_memory_info)
+{
+	AAL_OPS_BODY_PTR_NOARG(get_memory_info);
+}
+
+AAL_OS_OPS_BEGIN_NOARG(struct aal_cpu_info *, get_cpu_info)
+{
+	AAL_OPS_BODY_PTR_NOARG(get_cpu_info);
 }
 
 AAL_DEV_OPS_BEGIN(unsigned long, map_memory,

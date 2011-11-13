@@ -10,13 +10,18 @@ int aal_ikc_call_master_packet_handler(aal_os_t aal_os,
                                        void *packet);
 struct aal_ikc_channel_desc *aal_os_get_master_channel(aal_os_t __os);
 
-static void aal_ikc_interrupt_handler(aal_os_t os, void *os_priv, void *priv)
+void aal_ikc_linux_init_work_data(aal_os_t aal_os,
+                                  void (*f)(struct work_struct *));
+void aal_ikc_linux_schedule_work(aal_os_t aal_os);
+aal_os_t aal_ikc_linux_get_os_from_work(struct work_struct *work);
+
+static void ikc_work_func(struct work_struct *work)
 {
-	/* This should be done in the software irq... */
 	struct aal_ikc_channel_desc *c;
 	struct list_head *channels;
+	aal_os_t os = aal_ikc_linux_get_os_from_work(work);
 
-	channels = aal_ikc_get_channel_list(priv);
+	channels = aal_ikc_get_channel_list(os);
 
 	/* XXX: Linear search? */
 	list_for_each_entry(c, channels, list) {
@@ -25,6 +30,12 @@ static void aal_ikc_interrupt_handler(aal_os_t os, void *os_priv, void *priv)
 			aal_ikc_recv_handler(c, c->handler, os, 0);
 		}
 	}
+}
+
+static void aal_ikc_interrupt_handler(aal_os_t os, void *os_priv, void *priv)
+{
+	/* This should be done in the software irq... */
+	aal_ikc_linux_schedule_work(priv);
 }
 
 struct aal_ikc_channel_desc *aal_ikc_get_master_channel(aal_os_t os)
@@ -42,6 +53,7 @@ void aal_ikc_system_init(aal_os_t os)
 	h->func = aal_ikc_interrupt_handler;
 	h->priv = os;
 
+	aal_ikc_linux_init_work_data(os, ikc_work_func);
 	aal_os_register_interrupt_handler(os, 0, h);
 }
 

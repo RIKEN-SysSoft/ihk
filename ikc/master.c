@@ -83,7 +83,7 @@ int aal_ikc_accept(struct aal_ikc_channel_desc *cm,
 		return -ECONNABORTED;
 	}
 	c = aal_ikc_create_channel(cm->remote_os, p->port, p->pkt_size,
-	                           p->queue_size, rq, sq);
+	                           p->queue_size, rq, sq, 0);
 	if (!c) {
 		return -ENOMEM;
 	}
@@ -172,7 +172,7 @@ int aal_ikc_master_channel_packet_handler(struct aal_ikc_channel_desc *c,
 		if (!(newc->flag & IKC_FLAG_DESTROYING)) {
 			/* It will not sleep 
 			 * because it's already marked acked */
-			kprintf("Disconnect ack: %lx\n",
+			kprintf("Disconnect ack: %x\n",
 			        newc->remote_channel_id);
 			aal_ikc_disconnect(newc);
 		}
@@ -252,7 +252,6 @@ int aal_ikc_master_reply_handler(aal_os_t os,
 	}
 	aal_ikc_spinlock_unlock(lock, flags);
 
-	kprintf("reply_handler end.\n");
 	return 0;
 }
 
@@ -265,7 +264,7 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 	struct aal_ikc_master_wait_struct wq;
 
 	c = aal_ikc_create_channel(os, p->port, p->pkt_size, p->queue_size,
-	                           &rq, &sq);
+	                           &rq, &sq, 0);
 	if (!c) {
 		return -ENOMEM;
 	}
@@ -273,8 +272,6 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 
 	aal_ikc_wait_reply_prepare(os, &wq, AAL_IKC_MASTER_MSG_CONNECT_REPLY,
 	                           ref);
-
-	kprintf("os = %p\n", os);
 
 	if (aal_ikc_master_send(os, AAL_IKC_MASTER_MSG_CONNECT, ref,
 	                        ((unsigned long)p->pkt_size << 32) 

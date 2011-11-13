@@ -46,6 +46,7 @@ enum aal_ikc_channel_flag {
 	IKC_FLAG_DESTROYING     = 2,
 	IKC_FLAG_DESTROY_ACKED  = 4,
 	IKC_FLAG_STATUS_MASK    = 7,
+	IKC_FLAG_NO_COPY        = 0x10,
 };
 
 struct aal_ikc_channel_desc {
@@ -59,6 +60,7 @@ struct aal_ikc_channel_desc {
 	aal_spinlock_t             lock;
 	enum aal_ikc_channel_flag  flag;
 	aal_ikc_ph_t               handler;
+	char                       packet_buf[0];
 };
 
 int aal_ikc_init_queue(struct aal_ikc_queue_head *q,
@@ -73,11 +75,15 @@ struct aal_ikc_channel_desc *aal_ikc_create_channel(aal_os_t os,
                                                     int packet_size,
                                                     unsigned long qsize,
                                                     unsigned long *rq,
-                                                    unsigned long *sq);
+                                                    unsigned long *sq,
+                                                    enum aal_ikc_channel_flag);
 void aal_ikc_free_channel(struct aal_ikc_channel_desc *desc);
 
 void aal_ikc_enable_channel(struct aal_ikc_channel_desc *channel);
 void aal_ikc_disable_channel(struct aal_ikc_channel_desc *channel);
+
+#define IKC_NO_NOTIFY    0x100
+
 int aal_ikc_send(struct aal_ikc_channel_desc *channel, void *p, int opt);
 int aal_ikc_recv(struct aal_ikc_channel_desc *channel, void *p, int opt);
 int aal_ikc_recv_handler(struct aal_ikc_channel_desc *channel, 

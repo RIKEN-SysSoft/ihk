@@ -338,7 +338,8 @@ static long __aal_os_ioctl_call_aux(struct aal_host_linux_os_data *os,
 	list_for_each_entry(c, &os->aux_call_list, list) {
 		for (i = 0; i < c->num_handlers; i++) {
 			if (c->handlers[i].request == request) {
-				return c->handlers[i].func(c->handlers[i].priv,
+				return c->handlers[i].func(os, request,
+				                           c->handlers[i].priv,
 				                           arg);
 			}
 		}
@@ -1175,6 +1176,16 @@ int aal_device_unmap_virtual(aal_device_t dev, void *virtual,
 	return __aal_device_unmap_virtual(dev, virtual, size);
 }
 
+struct aal_mem_info *aal_os_get_memory_info(aal_os_t os)
+{
+	return __aal_os_get_memory_info(os);
+}
+
+struct aal_cpu_info *aal_os_get_cpu_info(aal_os_t os)
+{
+	return __aal_os_get_cpu_info(os);
+}
+
 aal_device_t aal_os_to_dev(aal_os_t os)
 {
 	return ((struct aal_host_linux_os_data *)os)->dev_data;
@@ -1254,4 +1265,6 @@ EXPORT_SYMBOL(aal_device_unmap_memory);
 EXPORT_SYMBOL(aal_os_issue_interrupt);
 EXPORT_SYMBOL(aal_os_register_user_call_handlers);
 EXPORT_SYMBOL(aal_os_unregister_user_call_handlers);
+EXPORT_SYMBOL(aal_os_get_memory_info);
+EXPORT_SYMBOL(aal_os_get_cpu_info);
 
