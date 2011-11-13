@@ -39,8 +39,11 @@ void aal_mc_reserve_arch_pages(unsigned long start, unsigned long end,
                                void (*cb)(unsigned long, unsigned long, int));
 
 struct aal_mc_pa_ops {
+	void *(*alloc_page)(int, enum aal_mc_ap_flag);
+	void (*free_page)(void *, int);
+
 	void *(*alloc)(int, enum aal_mc_ap_flag);
-	void (*free)(void *, int);
+	void (*free)(void *);
 };
 
 void aal_mc_set_page_allocator(struct aal_mc_pa_ops *);
@@ -56,6 +59,8 @@ void aal_mc_unmap_virtual(void *va, int npages);
 
 void *aal_mc_alloc_pages(int npages, enum aal_mc_ap_flag flag);
 void aal_mc_free_pages(void *p, int npages);
+void *aal_mc_allocate(int size, enum aal_mc_ap_flag flag);
+void aal_mc_free(void *p);
 
 void *arch_alloc_page(enum aal_mc_ap_flag flag);
 void arch_free_page(void *ptr);

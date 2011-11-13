@@ -65,12 +65,11 @@ void aal_ikc_free_queue(struct aal_ikc_queue_head *q)
 
 void *aal_ikc_malloc(int size)
 {
-	/* XXX: malloc is not implemented. Get one page even for a byte! */
-	return aal_mc_alloc_pages(1, 0);
+	return aal_mc_allocate(size, 0);
 }
 void aal_ikc_free(void *p)
 {
-	aal_mc_free_pages(p, 1);
+	return aal_mc_free(p);
 }
 
 extern aal_ikc_ph_t arch_master_channel_packet_handler;

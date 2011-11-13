@@ -36,20 +36,20 @@ void *early_alloc_page(void)
 void *arch_alloc_page(enum aal_mc_ap_flag flag)
 {
 	if (pa_ops)
-		return pa_ops->alloc(1, flag);
+		return pa_ops->alloc_page(1, flag);
 	else
 		return early_alloc_page();
 }
 void arch_free_page(void *ptr)
 {
 	if (pa_ops)
-		pa_ops->free(ptr, 1);
+		pa_ops->free_page(ptr, 1);
 }
 
 void *aal_mc_alloc_pages(int npages, enum aal_mc_ap_flag flag)
 {
 	if (pa_ops)
-		return pa_ops->alloc(npages, flag);
+		return pa_ops->alloc_page(npages, flag);
 	else
 		return NULL;
 }
@@ -57,7 +57,23 @@ void *aal_mc_alloc_pages(int npages, enum aal_mc_ap_flag flag)
 void aal_mc_free_pages(void *p, int npages)
 {
 	if (pa_ops)
-		pa_ops->free(p, npages);
+		pa_ops->free_page(p, npages);
+}
+
+void *aal_mc_allocate(int size, enum aal_mc_ap_flag flag)
+{
+	if (pa_ops && pa_ops->alloc)
+		return pa_ops->alloc(size, flag);
+	else
+		return aal_mc_alloc_pages(1, flag);
+}
+
+void aal_mc_free(void *p)
+{
+	if (pa_ops && pa_ops->free)
+		return pa_ops->free(p);
+	else
+		return aal_mc_free_pages(p, 1);
 }
 
 void *get_last_early_heap(void)
