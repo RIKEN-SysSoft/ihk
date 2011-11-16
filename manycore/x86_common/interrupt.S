@@ -103,8 +103,8 @@ general_protection_exception:
 .globl x86_syscall
 x86_syscall:
 		cld
-		movq	%rsp, %fs:24
-		movq	%fs:16, %rsp
+		movq	%rsp, %gs:24
+		movq	%gs:16, %rsp
 
 		pushq	$(USER_DS)
 		pushq	$0
@@ -112,7 +112,7 @@ x86_syscall:
 		pushq   $(USER_CS)
 		pushq	%rcx
 		pushq	$0
-		movq	%fs:24, %rcx
+		movq	%gs:24, %rcx
 		movq	%rcx, 32(%rsp)
 		PUSH_ALL_REGS
 		movq	120(%rsp), %rdi

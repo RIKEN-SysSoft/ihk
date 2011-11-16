@@ -17,7 +17,7 @@ aal_mc_switch_context:
 		movq	%rsp, 0(%rdi)
 1:
 		movq	0(%rsi), %rsp
-		movq	%rsp, %fs:16
+		movq	%rsp, %gs:16
 		movq	64(%rsi), %r15
 		movq	56(%rsi), %r14
 		movq	48(%rsi), %r13
