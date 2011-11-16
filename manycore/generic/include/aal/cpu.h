@@ -69,4 +69,12 @@ void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,
 
 void aal_mc_debug_show_interrupt_context(const void *reg);
 
+enum aal_asr_type {
+	AAL_ASR_X86_FS,
+	AAL_ASR_X86_GS,
+};
+
+int aal_mc_arch_set_special_register(enum aal_asr_type, unsigned long value);
+int aal_mc_arch_get_special_register(enum aal_asr_type, unsigned long *value);
+
 #endif

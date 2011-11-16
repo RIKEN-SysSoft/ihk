@@ -591,4 +591,34 @@ void arch_show_interrupt_context(const void *reg)
 	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
 	kprintf("%16lx %16lx %16lx %16lx\n",
 	        regs->rsi, regs->rdi, regs->rsp, regs->rbp);
+	kprintf("%16lx %16lx %16lx %16lx\n",
+	        regs->r8, regs->r9, regs->r10, regs->r11);
+	kprintf("%16lx %16lx %16lx %16lx\n",
+	        regs->r12, regs->r13, regs->r14, regs->r15);
+}
+
+int aal_mc_arch_set_special_register(enum aal_asr_type type,
+                                     unsigned long value)
+{
+	/* GS modification is not permitted */
+	switch (type) {
+	case AAL_ASR_X86_FS:
+		wrmsr(MSR_FS_BASE, value);
+		return 0;
+	default:
+		return -EINVAL;
+	}
+}
+
+int aal_mc_arch_get_special_register(enum aal_asr_type type,
+                                     unsigned long *value)
+{
+	/* GS modification is not permitted */
+	switch (type) {
+	case AAL_ASR_X86_FS:
+		*value = rdmsr(MSR_FS_BASE);
+		return 0;
+	default:
+		return -EINVAL;
+	}
 }
