@@ -257,7 +257,7 @@ void aal_mc_init_ap(void)
 extern void init_page_table(void);
 
 extern char x86_syscall[];
-int (*__x86_syscall_handler)(int, aal_mc_user_context_t *);
+long (*__x86_syscall_handler)(int, aal_mc_user_context_t *);
 
 void init_syscall(void)
 {
@@ -525,7 +525,53 @@ void aal_mc_init_context(aal_mc_kernel_context_t *new_ctx,
 	sp[-1] = (unsigned long)next_function;
 }
 
-void aal_mc_set_syscall_handler(int (*handler)(int, aal_mc_user_context_t *))
+extern char enter_user_mode[];
+                                       
+void aal_mc_init_user_process(aal_mc_kernel_context_t *ctx,
+                              aal_mc_user_context_t **puctx,
+                              void *stack_pointer, unsigned long new_pc,
+                              unsigned long user_sp)
+{
+	char *sp;
+	aal_mc_user_context_t *uctx;
+
+	sp = stack_pointer;
+	sp -= sizeof(aal_mc_user_context_t);
+	uctx = (aal_mc_user_context_t *)sp;
+
+	*puctx = uctx;
+
+	memset(uctx, 0, sizeof(aal_mc_user_context_t));
+	uctx->cs = USER_CS;
+	uctx->rip = new_pc;
+	uctx->ds = USER_DS;
+	uctx->ss = USER_DS;
+	uctx->rsp = user_sp;
+	uctx->rflags = RFLAGS_IF;
+
+	aal_mc_init_context(ctx, sp, (void (*)(void))enter_user_mode);
+}
+
+void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,
+                                enum aal_mc_user_context_regtype reg,
+                                unsigned long value)
+{
+	if (reg == AAL_UCR_STACK_POINTER) {
+		uctx->rsp = value;
+	} else if (reg == AAL_UCR_PROGRAM_COUNTER) {
+		uctx->rip = value;
+	}
+}
+
+void aal_mc_print_user_context(aal_mc_user_context_t *uctx)
+{
+	kprintf("CS:RIP = %04lx:%16lx\n", uctx->cs, uctx->rip);
+	kprintf("%16lx %16lx %16lx %16lx\n%16lx %16lx %16lx %16lx\n",
+	        uctx->rax, uctx->rbx, uctx->rcx, uctx->rdx,
+	        uctx->rsi, uctx->rdi, uctx->rsp, uctx->rbp);
+}
+
+void aal_mc_set_syscall_handler(long (*handler)(int, aal_mc_user_context_t *))
 {
 	__x86_syscall_handler = handler;
 }

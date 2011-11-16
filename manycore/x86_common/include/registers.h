@@ -3,6 +3,8 @@
 
 #include <types.h>
 
+#define RFLAGS_IF      (1 << 9)
+
 #define MSR_EFER       0xc0000080
 #define MSR_STAR       0xc0000081
 #define MSR_LSTAR      0xc0000082
