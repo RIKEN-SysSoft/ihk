@@ -257,7 +257,7 @@ void aal_mc_init_ap(void)
 extern void init_page_table(void);
 
 extern char x86_syscall[];
-int (*__x86_syscall_handler)(int, aal_mc_user_context_t *);
+long (*__x86_syscall_handler)(int, aal_mc_user_context_t *);
 
 void init_syscall(void)
 {
@@ -525,7 +525,53 @@ void aal_mc_init_context(aal_mc_kernel_context_t *new_ctx,
 	sp[-1] = (unsigned long)next_function;
 }
 
-void aal_mc_set_syscall_handler(int (*handler)(int, aal_mc_user_context_t *))
+extern char enter_user_mode[];
+                                       
+void aal_mc_init_user_process(aal_mc_kernel_context_t *ctx,
+                              aal_mc_user_context_t **puctx,
+                              void *stack_pointer, unsigned long new_pc,
+                              unsigned long user_sp)
+{
+	char *sp;
+	aal_mc_user_context_t *uctx;
+
+	sp = stack_pointer;
+	sp -= sizeof(aal_mc_user_context_t);
+	uctx = (aal_mc_user_context_t *)sp;
+
+	*puctx = uctx;
+
+	memset(uctx, 0, sizeof(aal_mc_user_context_t));
+	uctx->cs = USER_CS;
+	uctx->rip = new_pc;
+	uctx->ds = USER_DS;
+	uctx->ss = USER_DS;
+	uctx->rsp = user_sp;
+	uctx->rflags = RFLAGS_IF;
+
+	aal_mc_init_context(ctx, sp, (void (*)(void))enter_user_mode);
+}
+
+void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,
+                                enum aal_mc_user_context_regtype reg,
+                                unsigned long value)
+{
+	if (reg == AAL_UCR_STACK_POINTER) {
+		uctx->rsp = value;
+	} else if (reg == AAL_UCR_PROGRAM_COUNTER) {
+		uctx->rip = value;
+	}
+}
+
+void aal_mc_print_user_context(aal_mc_user_context_t *uctx)
+{
+	kprintf("CS:RIP = %04lx:%16lx\n", uctx->cs, uctx->rip);
+	kprintf("%16lx %16lx %16lx %16lx\n%16lx %16lx %16lx %16lx\n",
+	        uctx->rax, uctx->rbx, uctx->rcx, uctx->rdx,
+	        uctx->rsi, uctx->rdi, uctx->rsp, uctx->rbp);
+}
+
+void aal_mc_set_syscall_handler(long (*handler)(int, aal_mc_user_context_t *))
 {
 	__x86_syscall_handler = handler;
 }
@@ -545,4 +591,34 @@ void arch_show_interrupt_context(const void *reg)
 	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
 	kprintf("%16lx %16lx %16lx %16lx\n",
 	        regs->rsi, regs->rdi, regs->rsp, regs->rbp);
+	kprintf("%16lx %16lx %16lx %16lx\n",
+	        regs->r8, regs->r9, regs->r10, regs->r11);
+	kprintf("%16lx %16lx %16lx %16lx\n",
+	        regs->r12, regs->r13, regs->r14, regs->r15);
+}
+
+int aal_mc_arch_set_special_register(enum aal_asr_type type,
+                                     unsigned long value)
+{
+	/* GS modification is not permitted */
+	switch (type) {
+	case AAL_ASR_X86_FS:
+		wrmsr(MSR_FS_BASE, value);
+		return 0;
+	default:
+		return -EINVAL;
+	}
+}
+
+int aal_mc_arch_get_special_register(enum aal_asr_type type,
+                                     unsigned long *value)
+{
+	/* GS modification is not permitted */
+	switch (type) {
+	case AAL_ASR_X86_FS:
+		*value = rdmsr(MSR_FS_BASE);
+		return 0;
+	default:
+		return -EINVAL;
+	}
 }

@@ -1,3 +1,11 @@
+#define X86_CPU_LOCAL_OFFSET_TSS    128
+#define X86_CPU_LOCAL_OFFSET_KSTACK 16
+#define X86_CPU_LOCAL_OFFSET_USTACK 24
+#define KERNEL_CS                   32
+#define KERNEL_DS                   40
+#define USER_CS                     (48 + 3)
+#define USER_DS                     (56 + 3)
+
 #define PUSH_ALL_REGS     \
         pushq %rax; \
         pushq %rbx; \
@@ -15,7 +23,9 @@
         pushq %r14; \
         pushq %r15; \
         movq  %ds, %rax; \
-        pushq %rax
+        pushq %rax; \
+		movq  %ss, %rax; \
+		movq  %rax, %ds
 #define POP_ALL_REGS      \
         popq  %rax; \
         movq  %rax, %ds; \
@@ -90,19 +100,11 @@ general_protection_exception:
 		addq	$8, %rsp
 		iretq
 
-#define X86_CPU_LOCAL_OFFSET_TSS    128
-#define X86_CPU_LOCAL_OFFSET_KSTACK 16
-#define X86_CPU_LOCAL_OFFSET_USTACK 24
-#define KERNEL_CS                   32
-#define KERNEL_DS                   40
-#define USER_CS                     48
-#define USER_DS                     56
-
 .globl x86_syscall
 x86_syscall:
 		cld
-		movq	%rsp, %fs:24
-		movq	%fs:16, %rsp
+		movq	%rsp, %gs:24
+		movq	%gs:16, %rsp
 
 		pushq	$(USER_DS)
 		pushq	$0
@@ -110,7 +112,7 @@ x86_syscall:
 		pushq   $(USER_CS)
 		pushq	%rcx
 		pushq	$0
-		movq	%fs:24, %rcx
+		movq	%gs:24, %rcx
 		movq	%rcx, 32(%rsp)
 		PUSH_ALL_REGS
 		movq	120(%rsp), %rdi
@@ -122,6 +124,10 @@ x86_syscall:
 		movq	%rax, 120(%rsp)
 		POP_ALL_REGS
 		addq	$8, %rsp
-1:
-		jmp	1b
+		iretq
+
+.globl enter_user_mode
+enter_user_mode:		
+		POP_ALL_REGS
+		addq	$8, %rsp
 		iretq

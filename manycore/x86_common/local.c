@@ -62,7 +62,7 @@ void assign_processor_id(void)
 	id = aal_atomic_inc_return(&last_processor_id);
 
 	v = get_x86_cpu_local_variable(id);
-	set_fs_base(v);
+	set_gs_base(v);
 
 	v->processor_id = id;
 }
@@ -72,7 +72,7 @@ int aal_mc_get_processor_id(void)
 {
 	int id;
 
-	asm volatile("movl %%fs:0, %0" : "=r"(id));
+	asm volatile("movl %%gs:0, %0" : "=r"(id));
 
 	return id;
 }

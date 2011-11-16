@@ -43,7 +43,7 @@ int aal_mc_get_processor_id(void);
 int aal_mc_get_hardware_processor_id(void);
 
 void aal_mc_delay_us(int us);
-void aal_mc_set_syscall_handler(int (*handler)(int, aal_mc_user_context_t *));
+void aal_mc_set_syscall_handler(long (*handler)(int, aal_mc_user_context_t *));
 
 void aal_mc_init_ap(void);
 
@@ -53,6 +53,28 @@ void aal_mc_init_context(aal_mc_kernel_context_t *new_ctx,
 void aal_mc_switch_context(aal_mc_kernel_context_t *old_ctx,
                            aal_mc_kernel_context_t *new_ctx);
 
+void aal_mc_init_user_process(aal_mc_kernel_context_t *ctx,
+                              aal_mc_user_context_t **puctx,
+                              void *stack_pointer, unsigned long user_pc,
+                              unsigned long user_sp);
+
+enum aal_mc_user_context_regtype {
+	AAL_UCR_STACK_POINTER = 1,
+	AAL_UCR_PROGRAM_COUNTER = 2,
+};
+
+void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,
+                                enum aal_mc_user_context_regtype reg,
+                                unsigned long value);
+
 void aal_mc_debug_show_interrupt_context(const void *reg);
+
+enum aal_asr_type {
+	AAL_ASR_X86_FS,
+	AAL_ASR_X86_GS,
+};
+
+int aal_mc_arch_set_special_register(enum aal_asr_type, unsigned long value);
+int aal_mc_arch_get_special_register(enum aal_asr_type, unsigned long *value);
 
 #endif

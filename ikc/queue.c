@@ -146,12 +146,14 @@ void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
 	c->recv.queue = rq;
 	c->send.queue = wq;
 	if (rq) {
-		c->recv.cache = *rq;
 		c->recv.queue->channel_id = c->channel_id;
+		c->recv.queue->read_cpu = aal_ikc_get_processor_id();
+		c->recv.cache = *rq;
 	}
 	if (wq) {
-		c->send.cache = *wq;
 		c->remote_channel_id = c->send.cache.channel_id;
+		c->send.queue->write_cpu = aal_ikc_get_processor_id();
+		c->send.cache = *wq;
 	}
 	c->handler = packet_handler;
 
@@ -172,7 +174,7 @@ int aal_ikc_set_remote_queue(struct aal_ikc_queue_desc *q, aal_os_t os,
 	q->qrphys = rphys;
 	q->qphys = aal_ikc_map_memory(os, q->qrphys, qpages * PAGE_SIZE);
 	q->queue = aal_ikc_map_virtual(aal_os_to_dev(os), q->qphys,
-	                               qpages * PAGE_SIZE,
+	                               qpages,
 	                               AAL_IKC_QUEUE_PT_ATTR);
 	q->cache = *q->queue;
 
@@ -219,7 +221,7 @@ struct aal_ikc_channel_desc *aal_ikc_create_channel(aal_os_t os,
 	} else {
 		phys = aal_ikc_map_memory(os, *rq, qpages * PAGE_SIZE);
 		recvq = aal_ikc_map_virtual(aal_os_to_dev(os), phys,
-		                            qpages * PAGE_SIZE,
+		                            qpages,
 		                            AAL_IKC_QUEUE_PT_ATTR);
 
 		desc->recv.qrphys = *rq;
@@ -257,7 +259,7 @@ void aal_ikc_free_channel(struct aal_ikc_channel_desc *desc)
 		if (desc->recv.qrphys) {
 			aal_ikc_unmap_virtual(aal_os_to_dev(os),
 			                      desc->recv.queue,
-			                      qpages * PAGE_SIZE);
+			                      qpages);
 			aal_ikc_unmap_memory(os, desc->recv.qphys, qpages);
 		} else {
 			aal_ikc_free_queue(desc->recv.queue);
@@ -271,7 +273,7 @@ void aal_ikc_free_channel(struct aal_ikc_channel_desc *desc)
 		if (desc->send.qrphys) {
 			aal_ikc_unmap_virtual(aal_os_to_dev(os),
 			                      desc->send.queue,
-			                      qpages * PAGE_SIZE);
+			                      qpages);
 			aal_ikc_unmap_memory(os, desc->send.qphys, qpages);
 		} else {
 			aal_ikc_free_queue(desc->send.queue);

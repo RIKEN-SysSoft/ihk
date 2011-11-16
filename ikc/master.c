@@ -293,6 +293,7 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 			                         p->queue_size);
 			c->remote_channel_id = c->send.cache.channel_id;
 			c->handler = p->handler;
+			c->send.queue->write_cpu = c->recv.queue->read_cpu;
 			kprintf("(Connected) Remote channeld id = %x\n",
 			        c->remote_channel_id);
 			aal_ikc_enable_channel(c);
