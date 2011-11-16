@@ -301,6 +301,49 @@ static int __clear_pt_page(struct page_table *pt, void *virt, int largepage)
 	return 0;
 }
 
+int aal_mc_pt_virt_to_phys(struct page_table *pt,
+                           void *virt, unsigned long *phys)
+{
+	int l4idx, l3idx, l2idx, l1idx;
+	unsigned long v = (unsigned long)virt;
+
+	if (!pt) {
+		pt = init_pt;
+	}
+
+	l4idx = (v >> PTL4_SHIFT) & (PT_ENTRIES - 1);
+	l3idx = (v >> PTL3_SHIFT) & (PT_ENTRIES - 1);
+	l2idx = (v >> PTL2_SHIFT) & (PT_ENTRIES - 1);
+	l1idx = (v >> PTL1_SHIFT) & (PT_ENTRIES - 1);
+
+	if (!(pt->entry[l4idx] & PFL4_PRESENT)) {
+		return -EFAULT;
+	}
+	pt = phys_to_virt(pt->entry[l4idx] & PAGE_MASK);
+
+	if (!(pt->entry[l3idx] & PFL3_PRESENT)) {
+		return -EFAULT;
+	}
+	pt = phys_to_virt(pt->entry[l3idx] & PAGE_MASK);
+
+	if (!(pt->entry[l2idx] & PFL2_PRESENT)) {
+		return -EFAULT;
+	}
+	if ((pt->entry[l2idx] & PFL2_SIZE)) {
+		*phys = (pt->entry[l2idx] & LARGE_PAGE_MASK) | 
+			(v & (LARGE_PAGE_SIZE - 1));
+		return 0;
+	}
+	pt = phys_to_virt(pt->entry[l2idx] & PAGE_MASK);
+
+	if (!(pt->entry[l1idx] & PFL1_PRESENT)) {
+		return -EFAULT;
+	}
+
+	*phys = (pt->entry[l1idx] & PAGE_MASK) | (v & (PAGE_SIZE - 1));
+	return 0;
+}
+
 int set_pt_large_page(struct page_table *pt, void *virt, unsigned long phys,
                       enum aal_mc_pt_attribute attr)
 {
@@ -311,6 +354,18 @@ int aal_mc_pt_set_page(page_table_t pt, void *virt,
                        unsigned long phys, enum aal_mc_pt_attribute attr)
 {
 	return __set_pt_page(pt, virt, phys, attr);
+}
+
+struct page_table *aal_mc_pt_create(void)
+{
+	struct page_table *pt = aal_mc_alloc_pages(1, 0);
+
+	memset(pt->entry, 0, PAGE_SIZE);
+	/* Copy the kernel space */
+	memcpy(pt->entry + PT_ENTRIES / 2, init_pt->entry + PT_ENTRIES / 2,
+	       sizeof(pt->entry[0]) * PT_ENTRIES / 2);
+
+	return pt;
 }
 
 int aal_mc_pt_clear_page(page_table_t pt, void *virt)
@@ -329,6 +384,11 @@ void load_page_table(struct page_table *pt)
 	pt_addr = virt_to_phys(pt);
 
 	asm volatile ("movq %0, %%cr3" : : "r"(pt_addr) : "memory");
+}
+
+void aal_mc_load_page_table(struct page_table *pt)
+{
+	load_page_table(pt);
 }
 
 struct page_table *get_init_page_table(void)
