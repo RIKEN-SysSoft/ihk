@@ -95,6 +95,19 @@ void *memcpy(void *dest, const void *src, size_t n)
 	return dest;
 }
 
+void *memcpy_long(void *dest, const void *src, size_t n)
+{
+	const unsigned long *p1 = src;
+	unsigned long *p2 = dest;
+
+	n /= sizeof(unsigned long);
+	while (n > 0) {
+		*(p2++) = *(p1++);
+		n--;
+	}
+
+	return dest;
+}
 
 void *memset(void *s, int c, size_t n)
 {
