@@ -13,6 +13,8 @@
 #define aal_ikc_map_virtual(dev, p, n, a)  aal_mc_map_virtual(p, n, a)
 #define aal_ikc_unmap_virtual(dev, v, n)   aal_mc_unmap_virtual(v, n)
 
+#define aal_ikc_get_processor_id aal_mc_get_processor_id
+
 #define aal_os_to_dev(os)        NULL
 
 typedef void * aal_os_t;
@@ -62,6 +64,8 @@ typedef void * aal_wait_t;
 
 #define aal_ikc_map_virtual(d, p, z, f) aal_device_map_virtual(d, p, z, NULL, f)
 #define aal_ikc_unmap_virtual     aal_device_unmap_virtual
+
+#define aal_ikc_get_processor_id smp_processor_id
 
 #define kprintf                  printk
 
