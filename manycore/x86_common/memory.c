@@ -12,17 +12,20 @@ extern char _head[], _end[];
 
 struct aal_mc_pa_ops *pa_ops;
 
+extern unsigned long x86_kernel_phys_base;
+
 void *early_alloc_page(void)
 {
 	void *p;
 
 	if (!last_page) {
-		last_page = (char *)(((unsigned long)_end + PAGE_SIZE)
+		last_page = (char *)(((unsigned long)_end + PAGE_SIZE - 1)
 		                     & PAGE_MASK);
+		/* Convert the virtual address from text's to straight maps */
+		last_page = phys_to_virt(virt_to_phys(last_page));
 	} else if (last_page == (void *)-1) {
 		panic("Early allocator is already finalized. Do not use it.\n");
 	}
-
 	p = last_page;
 	last_page += PAGE_SIZE;
 
@@ -32,20 +35,20 @@ void *early_alloc_page(void)
 void *arch_alloc_page(enum aal_mc_ap_flag flag)
 {
 	if (pa_ops)
-		return pa_ops->alloc(1, flag);
+		return pa_ops->alloc_page(1, flag);
 	else
 		return early_alloc_page();
 }
 void arch_free_page(void *ptr)
 {
 	if (pa_ops)
-		pa_ops->free(ptr, 1);
+		pa_ops->free_page(ptr, 1);
 }
 
 void *aal_mc_alloc_pages(int npages, enum aal_mc_ap_flag flag)
 {
 	if (pa_ops)
-		return pa_ops->alloc(npages, flag);
+		return pa_ops->alloc_page(npages, flag);
 	else
 		return NULL;
 }
@@ -53,7 +56,23 @@ void *aal_mc_alloc_pages(int npages, enum aal_mc_ap_flag flag)
 void aal_mc_free_pages(void *p, int npages)
 {
 	if (pa_ops)
-		pa_ops->free(p, npages);
+		pa_ops->free_page(p, npages);
+}
+
+void *aal_mc_allocate(int size, enum aal_mc_ap_flag flag)
+{
+	if (pa_ops && pa_ops->alloc)
+		return pa_ops->alloc(size, flag);
+	else
+		return aal_mc_alloc_pages(1, flag);
+}
+
+void aal_mc_free(void *p)
+{
+	if (pa_ops && pa_ops->free)
+		return pa_ops->free(p);
+	else
+		return aal_mc_free_pages(p, 1);
 }
 
 void *get_last_early_heap(void)
@@ -301,11 +320,15 @@ int aal_mc_pt_clear_page(page_table_t pt, void *virt)
 
 void load_page_table(struct page_table *pt)
 {
+	unsigned long pt_addr;
+
 	if (!pt) {
 		pt = init_pt;
 	}
 
-	asm volatile ("movq %0, %%cr3" : : "r"(pt) : "memory");
+	pt_addr = virt_to_phys(pt);
+
+	asm volatile ("movq %0, %%cr3" : : "r"(pt_addr) : "memory");
 }
 
 struct page_table *get_init_page_table(void)
@@ -319,6 +342,27 @@ static void init_fixed_area(struct page_table *pt)
 	fixed_virt = MAP_FIXED_START;
 
 	return;
+}
+
+void init_text_area(struct page_table *pt)
+{
+	unsigned long __end, phys, virt;
+	int i, nlpages;
+
+	__end = ((unsigned long)_end + LARGE_PAGE_SIZE * 2 - 1)
+		& LARGE_PAGE_MASK;
+	nlpages = (__end - MAP_KERNEL_START) >> LARGE_PAGE_SHIFT;
+
+	kprintf("# of large pages = %d\n", nlpages);
+
+	phys = x86_kernel_phys_base;
+	virt = MAP_KERNEL_START;
+	for (i = 0; i < nlpages; i++) {
+		set_pt_large_page(pt, (void *)virt, phys, PTATTR_WRITABLE);
+
+		virt += LARGE_PAGE_SIZE;
+		phys += LARGE_PAGE_SIZE;
+	}
 }
 
 void *map_fixed_area(unsigned long phys, unsigned long size, int uncachable)
@@ -355,7 +399,6 @@ void init_low_area(struct page_table *pt)
 	set_pt_large_page(pt, 0, 0, PTATTR_WRITABLE);
 }
 
-
 void init_page_table(void)
 {
 	init_pt = arch_alloc_page(0);
@@ -366,6 +409,7 @@ void init_page_table(void)
 	init_normal_area(init_pt);
 	init_fixed_area(init_pt);
 	init_low_area(init_pt);
+	init_text_area(init_pt);
 
 	load_page_table(init_pt);
 	kprintf("Page table is now at %p\n", init_pt);
@@ -377,10 +421,8 @@ extern void __reserve_arch_pages(unsigned long, unsigned long,
 void aal_mc_reserve_arch_pages(unsigned long start, unsigned long end,
                                void (*cb)(unsigned long, unsigned long, int))
 {
-	/* Reserve Text */
-	cb(virt_to_phys(_head), virt_to_phys(_end), 0);
-	/* Reserve temporal heap that we used during initialization */
-	cb(virt_to_phys(init_pt), virt_to_phys(get_last_early_heap()), 0);
+	/* Reserve Text + temporal heap */
+	cb(virt_to_phys(_head), virt_to_phys(get_last_early_heap()), 0);
 	/* Reserve trampoline area to boot the second ap */
 	cb(AP_TRAMPOLINE, AP_TRAMPOLINE + AP_TRAMPOLINE_SIZE, 0);
 	/* Reserve the null page */
@@ -393,4 +435,19 @@ void aal_mc_set_page_allocator(struct aal_mc_pa_ops *ops)
 {
 	last_page = NULL;
 	pa_ops = ops;
+}
+
+unsigned long virt_to_phys(void *v)
+{
+	unsigned long va = (unsigned long)v;
+	
+	if (va >= MAP_KERNEL_START) {
+		return va - MAP_KERNEL_START + x86_kernel_phys_base;
+	} else {
+		return va - MAP_ST_START;
+	}
+}
+void *phys_to_virt(unsigned long p)
+{
+	return (void *)(p + MAP_ST_START);
 }

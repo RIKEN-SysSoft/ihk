@@ -38,6 +38,7 @@ struct aal_host_linux_os_data {
 	spinlock_t ikc_channel_lock;
 	struct list_head ikc_channels;
 	struct aal_host_interrupt_handler ikc_handler;
+	struct work_struct ikc_work;
 
 	struct aal_ikc_channel_desc *mchannel;
 	spinlock_t listener_lock;
@@ -47,6 +48,8 @@ struct aal_host_linux_os_data {
 
 	spinlock_t wait_lock;
 	struct list_head wait_list;
+
+	struct list_head aux_call_list;
 };
 
 #endif

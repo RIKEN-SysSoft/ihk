@@ -29,12 +29,6 @@
 #define APIC_DM_INIT            0x00500
 #define APIC_DM_STARTUP         0x00600
 
-struct x86_regs{
-	unsigned long ds, r15, r14, r13, r12, r11, r10, r9, r8;
-	unsigned long rbp, rdi, rsi, rdx, rcx, rbx, rax;
-	unsigned long error, rip, cs, rflags, rsp, ss;
-};
-
 struct x86_cpu_local_variables *get_x86_this_cpu_local(void);
 void *get_x86_this_cpu_kstack(void);
 void init_processors_local(int max_id);
@@ -204,18 +198,28 @@ void lapic_ack(void)
 	lapic_write(LAPIC_EOI, 0);
 }
 
+static void set_kstack(unsigned long ptr)
+{
+	struct x86_cpu_local_variables *v;
+
+	v = get_x86_this_cpu_local();
+	v->kernel_stack = ptr;
+	v->tss.rsp0 = ptr;
+}
+
 static void init_smp_processor(void)
 {
 	struct x86_cpu_local_variables *v;
-	unsigned long tss_addr = (unsigned long)&v->tss;
+	unsigned long tss_addr;
 
 	v = get_x86_this_cpu_local();
+	tss_addr = (unsigned long)&v->tss;
 
 	v->apic_id = lapic_read(LAPIC_ID) >> LAPIC_ID_SHIFT;
 
 	memcpy(v->gdt, gdt, sizeof(v->gdt));
+	
 	memset(&v->tss, 0, sizeof(v->tss));
-	tss.rsp0 = (unsigned long)get_x86_this_cpu_kstack();
 
 	v->gdt[GLOBAL_TSS_ENTRY] = (sizeof(v->tss) - 1) 
 		| ((tss_addr & 0xffffff) << 16)
@@ -227,6 +231,8 @@ static void init_smp_processor(void)
         
 	/* Load the new GDT, and set up CS, DS and SS. */
 	reload_gdt(&v->gdt_ptr);
+
+	set_kstack((unsigned long)get_x86_this_cpu_kstack());
 }
 
 static char *trampoline_va, *first_page_va;
@@ -250,6 +256,31 @@ void aal_mc_init_ap(void)
 
 extern void init_page_table(void);
 
+extern char x86_syscall[];
+int (*__x86_syscall_handler)(int, aal_mc_user_context_t *);
+
+void init_syscall(void)
+{
+	unsigned long r;
+
+	r = rdmsr(MSR_EFER);
+	r |= 1; /* SYSCALL Enable */
+	wrmsr(MSR_EFER, r);
+
+	r = (((unsigned long)KERNEL_CS) << 32) 
+		| (((unsigned long)USER_CS) << 48);
+	wrmsr(MSR_STAR, r);
+	
+	wrmsr(MSR_LSTAR, (unsigned long)x86_syscall);
+}
+
+void init_cpu(void)
+{
+	init_fpu();
+	init_lapic();
+	init_syscall();
+}
+
 void setup_x86(void)
 {
 	cpu_disable_interrupt();
@@ -260,9 +291,7 @@ void setup_x86(void)
 
 	init_page_table();
 
-	init_fpu();
-
-	init_lapic();
+	init_cpu();
 
 	kprintf("setup_x86 done.\n");
 }
@@ -286,9 +315,7 @@ void setup_x86_ap(void (*next_func)(void))
 
 	reload_idt();
 
-	init_lapic();
-
-	init_fpu();
+	init_cpu();
 
 	rsp = (unsigned long)get_x86_this_cpu_kstack();
 
@@ -314,7 +341,7 @@ void handle_interrupt(int vector, struct x86_regs *regs)
 			kprintf("Exception %d at %lx:%lx\n",
 			        vector, regs->cs, regs->rip);
 		}
-		panic("Unhandled excepion");
+		panic("Unhandled exception");
 	} else {
 		list_for_each_entry(h, &handlers[vector - 32], list) {
 			if (h->func) {
@@ -330,6 +357,8 @@ void gpe_handler(struct x86_regs *regs)
 {
 	kprintf("General protection fault (err: %lx, %lx:%lx)\n",
 	        regs->error, regs->cs, regs->rip);
+	kprintf("R: %016lx %016lx %016lx %016lx\n",
+	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
 	panic("GPF");
 }
 
@@ -479,3 +508,41 @@ void aal_mc_boot_cpu(int cpuid, unsigned long pc)
 	}
 }
 
+void aal_mc_init_context(aal_mc_kernel_context_t *new_ctx,
+                         void *stack_pointer, void (*next_function)(void))
+{
+	unsigned long *sp;
+
+	if (!stack_pointer) {
+		stack_pointer = get_x86_this_cpu_kstack();
+	}
+
+	sp = stack_pointer;
+	memset(new_ctx, 0, sizeof(aal_mc_kernel_context_t));
+
+	/* Set the return address */
+	new_ctx->rsp = (unsigned long)(sp - 1);
+	sp[-1] = (unsigned long)next_function;
+}
+
+void aal_mc_set_syscall_handler(int (*handler)(int, aal_mc_user_context_t *))
+{
+	__x86_syscall_handler = handler;
+}
+
+void aal_mc_delay_us(int us)
+{
+	arch_delay(us);
+}
+
+void arch_show_interrupt_context(const void *reg)
+{
+	const struct x86_regs *regs = reg;
+
+	kprintf("CS:EIP = %4lx:%16lx\n", regs->cs, regs->rip);
+	kprintf("RAX RBX RCX RDX RSI RDI RSP RBP\n");
+	kprintf("%16lx %16lx %16lx %16lx\n",
+	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
+	kprintf("%16lx %16lx %16lx %16lx\n",
+	        regs->rsi, regs->rdi, regs->rsp, regs->rbp);
+}

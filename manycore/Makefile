@@ -30,7 +30,7 @@ $(O)/ikc/ikc.o: FORCE
 
 clean:
 	@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc clean
-	$(RM) $(DESTOBJS)
+	$(rm_cmd) $(DESTOBJS)
 
 depend: $(O)/Makefile.dep
 

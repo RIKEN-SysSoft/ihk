@@ -3,6 +3,10 @@
 
 #include <types.h>
 
+#define MSR_EFER       0xc0000080
+#define MSR_STAR       0xc0000081
+#define MSR_LSTAR      0xc0000082
+#define MSR_FMASK      0xc0000084
 #define MSR_FS_BASE    0xc0000100
 #define MSR_GS_BASE    0xc0000101
 
@@ -107,5 +111,11 @@ struct tss64 {
         unsigned short reserved5;
         unsigned short iomap_address;
 } __attribute__((packed));
+
+struct x86_regs {
+	unsigned long ds, r15, r14, r13, r12, r11, r10, r9, r8;
+	unsigned long rbp, rdi, rsi, rdx, rcx, rbx, rax;
+	unsigned long error, rip, cs, rflags, rsp, ss;
+};
 
 #endif

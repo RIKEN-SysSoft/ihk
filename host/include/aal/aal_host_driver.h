@@ -33,6 +33,8 @@ typedef void *aal_os_t;
 struct aal_resource;
 
 struct aal_host_interrupt_handler;
+struct aal_mem_info;
+struct aal_cpu_info;
 
 struct aal_os_ops {
 	int (*open)(aal_os_t, void *, const void *);
@@ -60,6 +62,9 @@ struct aal_os_ops {
 	                        struct aal_host_interrupt_handler *);
 	int (*unregister_handler)(aal_os_t, void *, int,
 	                          struct aal_host_interrupt_handler *);
+
+	struct aal_mem_info *(*get_memory_info)(aal_os_t, void *);
+	struct aal_cpu_info *(*get_cpu_info)(aal_os_t, void *);
 	
 	int (*get_special_addr)(aal_os_t, void *, enum aal_special_addr_type,
 	                        unsigned long *, unsigned long *);
@@ -138,6 +143,14 @@ struct aal_mem_info {
 	struct aal_mem_region *mappable;
 };
 
+struct aal_cpu_info {
+	int n_cpus;
+	int *hw_ids;
+};
+
+struct aal_mem_info *aal_os_get_memory_info(aal_os_t os);
+struct aal_cpu_info *aal_os_get_cpu_info(aal_os_t os);
+
 /* Allocate all available cpus */
 #define AAL_RESOURCE_CPU_ALL  -1
 #define AAL_RESOURCE_MEM_ALL  -1
@@ -175,5 +188,24 @@ int aal_os_issue_interrupt(aal_os_t os, int cpu, int vector);
 aal_device_t aal_os_to_dev(aal_os_t os);
 aal_device_t aal_host_find_dev(int index);
 aal_os_t aal_host_find_os(int index, aal_device_t dev);
+
+struct aal_os_user_call_handler {
+	unsigned int request;
+	void *priv;
+	long (*func)(aal_os_t os, 
+	             unsigned int request, void *priv, unsigned long arg);
+};
+
+struct aal_os_user_call {
+	struct list_head list;
+
+	int num_handlers;
+	struct aal_os_user_call_handler *handlers;
+};
+
+int aal_os_register_user_call_handlers(aal_os_t os,
+                                       struct aal_os_user_call *);
+void aal_os_unregister_user_call_handlers(aal_os_t os,
+                                          struct aal_os_user_call *);
 
 #endif

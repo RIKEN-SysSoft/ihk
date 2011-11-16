@@ -2,7 +2,7 @@ KDIR=../target
 
 obj-m += aal_mee.o
 
-aal_mee-objs = aal_mee_driver.o 
+aal_mee-objs = aal_mee_driver.o dmacore.o dmacore_intr.o
 
 EXTRA_CFLAGS = -I$(src)/../../include -I$(src)/../../../ikc/include
 

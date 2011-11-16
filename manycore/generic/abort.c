@@ -12,3 +12,10 @@ void panic(const char *msg)
 	}
 }
 
+extern void arch_show_interrupt_context(const void*);
+
+void aal_mc_debug_show_interrupt_context(const void *reg)
+{
+	arch_show_interrupt_context(reg);
+}
+

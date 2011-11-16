@@ -52,8 +52,12 @@ unsigned long host_to_pa(unsigned long host, int smptentry)
 		+ ((unsigned long)smptentry << MIC_SYSTEM_PAGE_SHIFT);
 }
 
-void arch_start(void)
+unsigned long x86_kernel_phys_base;
+
+void arch_start(unsigned long param, unsigned long phys_address)
 {
+	x86_kernel_phys_base = phys_address;
+
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
 
@@ -69,13 +73,13 @@ void arch_ready(void)
 
 void arch_init(void)
 {
-	init_sfi();
-	init_smpt();
-
 	/* Notify the address of the kmsg */
-	sbox_write(SBOX_SCRATCH14, (unsigned int)(unsigned long)&kmsg_buf);
+	sbox_write(SBOX_SCRATCH14, (unsigned int)virt_to_phys(&kmsg_buf));
 	/* Ack boot (trampoline code shall be free'd) */
 	sbox_write(SBOX_SCRATCH12, KNF_BOOT_MAGIC_BOOTED);
+
+	init_sfi();
+	init_smpt();
 
 	setup_x86();
 
