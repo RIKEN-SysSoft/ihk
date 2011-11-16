@@ -9,8 +9,8 @@
 
 #define KERNEL_CS          (KERNEL_CS_ENTRY * 8)
 #define KERNEL_DS          (KERNEL_DS_ENTRY * 8)
-#define USER_CS            (USER_CS_ENTRY * 8)
-#define USER_DS            (USER_DS_ENTRY * 8)
+#define USER_CS            (USER_CS_ENTRY * 8 + 3)
+#define USER_DS            (USER_DS_ENTRY * 8 + 3)
 #define GLOBAL_TSS         (GLOBAL_TSS_ENTRY * 8)
 
 #define PAGE_SHIFT         12
@@ -21,6 +21,7 @@
 #define LARGE_PAGE_SIZE    (1UL << LARGE_PAGE_SHIFT)
 #define LARGE_PAGE_MASK    (~((unsigned long)LARGE_PAGE_SIZE - 1))
 
+#define USER_END           0x0000800000000000UL
 #define MAP_ST_START       0xffff800000000000UL
 #define MAP_VMAP_START     0xfffff00000000000UL
 #define MAP_FIXED_START    0xffffffff70000000UL
