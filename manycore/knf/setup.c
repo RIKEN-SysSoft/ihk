@@ -93,7 +93,7 @@ void arch_set_mikc_queue(void *rq, void *wq)
 	sbox_write(SBOX_SCRATCH15, virt_to_phys(rq));
 }
 
-int aal_mc_interrupt_host(int vector)
+int aal_mc_interrupt_host(int cpu, int vector)
 {
 	unsigned int reg;
 	/* Vector is virtual vector, and we use interrupt 0 anyway */

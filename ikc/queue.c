@@ -163,6 +163,11 @@ void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
 	list_add_tail(&c->list, channels);
 }
 
+void aal_ikc_channel_set_cpu(struct aal_ikc_channel_desc *c, int cpu)
+{
+	c->send.queue->write_cpu = c->recv.queue->read_cpu = cpu;
+}
+
 int aal_ikc_set_remote_queue(struct aal_ikc_queue_desc *q, aal_os_t os,
                              unsigned long rphys, unsigned long qsize)
 {
@@ -387,6 +392,9 @@ void aal_ikc_enable_channel(struct aal_ikc_channel_desc *channel)
 {
 	unsigned long flags;
 
+	kprintf("Channel %d enabled. Recv CPU = %d.\n",
+	        channel->channel_id, channel->send.queue->read_cpu);
+
 	flags = aal_ikc_spinlock_lock(&channel->recv.lock);
 	__aal_ikc_enable_channel(channel);
 	aal_ikc_spinlock_unlock(&channel->recv.lock, flags);
@@ -427,3 +435,5 @@ AAL_EXPORT_SYMBOL(aal_ikc_enable_channel);
 AAL_EXPORT_SYMBOL(aal_ikc_disable_channel);
 AAL_EXPORT_SYMBOL(aal_ikc_free_channel);
 AAL_EXPORT_SYMBOL(aal_ikc_find_channel);
+AAL_EXPORT_SYMBOL(aal_ikc_channel_set_cpu);
+

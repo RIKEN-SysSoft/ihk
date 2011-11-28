@@ -82,6 +82,8 @@ void aal_ikc_free_channel(struct aal_ikc_channel_desc *desc);
 void aal_ikc_enable_channel(struct aal_ikc_channel_desc *channel);
 void aal_ikc_disable_channel(struct aal_ikc_channel_desc *channel);
 
+void aal_ikc_channel_set_cpu(struct aal_ikc_channel_desc *c, int cpu);
+
 #define IKC_NO_NOTIFY    0x100
 
 int aal_ikc_send(struct aal_ikc_channel_desc *channel, void *p, int opt);

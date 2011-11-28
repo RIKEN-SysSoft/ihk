@@ -2,6 +2,7 @@
 #include <ikc/master.h>
 #include <linux/slab.h>
 #include <asm/bitops.h>
+#include <asm/smp.h>
 
 extern struct list_head *aal_host_os_get_ikc_channel_list(aal_os_t aal_os);
 struct aal_host_interrupt_handler *aal_host_os_get_ikc_handler(aal_os_t aal_os);

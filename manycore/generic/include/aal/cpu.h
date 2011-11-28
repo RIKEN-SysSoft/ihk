@@ -29,7 +29,7 @@ enum aal_mc_gv_type {
 };
 
 int aal_mc_get_vector(enum aal_mc_gv_type type);
-int aal_mc_interrupt_host(int vector);
+int aal_mc_interrupt_host(int cpu, int vector);
 
 struct aal_mc_cpu_info {
 	int ncpus;
