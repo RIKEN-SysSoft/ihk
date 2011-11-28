@@ -103,6 +103,11 @@ struct aal_mc_cpu_info *aal_mc_get_cpu_info(void)
 	return aal_cpu_info;
 }
 
+unsigned long get_transit_page_table(void)
+{
+	return boot_param->ident_table;
+}
+
 void __reserve_arch_pages(unsigned long start, unsigned long end,
                           void (*cb)(unsigned long, unsigned long, int))
 {

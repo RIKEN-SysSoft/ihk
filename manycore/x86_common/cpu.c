@@ -486,6 +486,7 @@ void aal_mc_set_page_fault_handler(void (*h)(unsigned long, void *))
 
 extern char trampoline_code_data[], trampoline_code_data_end[];
 struct page_table *get_init_page_table(void);
+unsigned long get_transit_page_table(void);
 
 void aal_mc_boot_cpu(int cpuid, unsigned long pc)
 {
@@ -499,7 +500,11 @@ void aal_mc_boot_cpu(int cpuid, unsigned long pc)
 	p[1] = (unsigned long)virt_to_phys(get_init_page_table());
 	p[2] = (unsigned long)setup_x86_ap;
 	p[3] = pc;
-	
+	p[6] = (unsigned long)get_transit_page_table();
+	if (!p[6]) {
+		p[6] = p[1];
+	}
+
 	cpu_boot_status = 0;
 
 	__x86_wakeup(cpuid, AP_TRAMPOLINE);

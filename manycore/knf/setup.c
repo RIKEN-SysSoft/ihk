@@ -150,6 +150,11 @@ void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
 	return;
 }
 
+unsigned long get_transit_page_table(void)
+{
+	return 0;
+}
+
 void arch_delay(int us)
 {
 	unsigned long tsc;
