@@ -12,6 +12,8 @@
 #define AAL_OS_QUERY_STATUS           0x112a03
 #define AAL_OS_ALLOC_CPU              0x112a10
 #define AAL_OS_ALLOC_MEM              0x112a11
+#define AAL_OS_RESERVE_CPU            0x112a12
+#define AAL_OS_RESERVE_MEM            0x112a13
 
 #define AAL_OS_READ_KMSG              0x112a20
 

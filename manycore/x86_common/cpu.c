@@ -35,6 +35,7 @@ void init_processors_local(int max_id);
 void assign_processor_id(void);
 void arch_delay(int);
 void x86_set_warm_reset(void);
+void x86_init_perfctr(void);
 
 extern int kprintf(const char *format, ...);
 
@@ -279,6 +280,7 @@ void init_cpu(void)
 	init_fpu();
 	init_lapic();
 	init_syscall();
+	x86_init_perfctr();
 }
 
 void setup_x86(void)

@@ -7,6 +7,9 @@ struct shimos_boot_param {
 	unsigned long status;
 	unsigned long msg_buffer;
 	unsigned long mikc_queue_recv, mikc_queue_send;
+
+	unsigned long dma_address;
+	unsigned long ident_table;
 };
 
 extern struct shimos_boot_param *boot_param;

@@ -34,6 +34,16 @@
 
 #define MEE_COM_VECTOR  0xf1
 
+struct mee_boot_param {
+	struct shimos_boot_param bp;
+
+	unsigned long msg_buffer;
+	unsigned long mikc_queue_recv, mikc_queue_send;
+
+	unsigned long dma_address;
+	unsigned long ident_table;
+};
+
 struct mee_os_data {
 	spinlock_t lock;
 
@@ -49,7 +59,7 @@ struct mee_os_data {
 	struct aal_cpu_info cpu_info;
 	int cpu_hw_ids[MEE_MAX_CPUS];
 
-	struct shimos_boot_param param;
+	struct mee_boot_param param;
 
 	int status;
 };
@@ -57,11 +67,33 @@ struct mee_os_data {
 #define MEE_DEV_STATUS_READY    0
 #define MEE_DEV_STATUS_BOOTING  1
 
+static unsigned long mee_dma_config_pa;
+
 struct mee_device_data {
 	spinlock_t lock;
 	aal_device_t aal_dev;
 	int status;
+
+	struct aal_dma_channel mee_host_channel;
 };
+
+static int mee_dma_request(aal_dma_channel_t, struct aal_dma_request *);
+
+struct aal_dma_ops mee_dma_ops = {
+	.request = mee_dma_request,
+};
+
+static aal_dma_channel_t mee_aal_get_dma_channel(aal_device_t dev, void *priv,
+                                                 int channel)
+{
+	struct mee_device_data *data = priv;
+
+	data->mee_host_channel.dev = dev;
+	data->mee_host_channel.channel = 0;
+	data->mee_host_channel.ops = &mee_dma_ops;
+
+	return &data->mee_host_channel;
+}
 
 static void set_os_status(struct mee_os_data *os, int status)
 {
@@ -132,11 +164,18 @@ static int mee_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 	dprint_var_x8(os->boot_rip);
 
 	memset(&os->param, 0, sizeof(os->param));
-	os->param.start = os->mem_start;
-	os->param.end = os->mem_end;
-	os->param.cores = os->coremaps;
-	
-	return shimos_boot_cpu_kloader(os->boot_cpu, os->boot_rip, &os->param);
+	os->param.bp.start = os->mem_start;
+	os->param.bp.end = os->mem_end;
+	os->param.bp.cores = os->coremaps;
+	os->param.dma_address = mee_dma_config_pa;
+	os->param.ident_table = __pa(shimos_get_ident_page_table());
+
+	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
+	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps,
+	        mee_dma_config_pa);
+
+	return shimos_boot_cpu_kloader(os->boot_cpu, os->boot_rip,
+	                               &os->param.bp);
 }
 
 static int mee_aal_os_load_mem(aal_os_t aal_os, void *priv, const char *buf,
@@ -238,7 +277,7 @@ static int mee_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
 	struct mee_os_data *os = priv;
 	int apicids[MEE_MAX_CPUS];
 	int i, n, ret = 0;
-	unsigned long start, flags;
+	unsigned long flags;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != MEE_OS_STATUS_INITIAL) {
@@ -248,16 +287,27 @@ static int mee_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
 	os->status = MEE_OS_STATUS_LOADING;
 	spin_unlock_irqrestore(&os->lock, flags);
 
-	if (resource->cores) {
-		if (resource->cores > MEE_MAX_CPUS) {
+	if (resource->cpu_cores) {
+		if (resource->cpu_cores > MEE_MAX_CPUS) {
 			ret = -EINVAL;
+		} else if (resource->flags & AAL_RESOURCE_FLAG_CPU_SPECIFIED) {
+			n = resource->cpu_cores;
+			if (shimos_reserve_cpus(resource->cpu_cores, 
+			                        resource->cores) == 0) {
+				for (i = 0; i < n; i++) {
+					os->coremaps |= 
+						(1ULL << resource->cores[i]);
+				}
+ 			} else {
+				ret = -ENOMEM;
+			}
 		} else {
-			n = shimos_allocate_cpus(resource->cores, apicids);
+			n = shimos_allocate_cpus(resource->cpu_cores, apicids);
 			for (i = 0; i < n; i++) {
 				if (apicids[i] < MEE_MAX_CPUS) {
 					dprintf("MEE: Core %d allocated.\n",
 					        apicids[i]);
-					os->coremaps |= (1 << apicids[i]);
+					os->coremaps |= (1ULL << apicids[i]);
 				}
 			}
 			if (n <= 0) {
@@ -265,14 +315,22 @@ static int mee_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
 			}
 		}
 	}
+
 	/* TODO: When we allocate more than an area... */
-	if (!ret && resource->memory) {
-		if (shimos_allocate_memory(resource->memory,
-		                           &start)) {
+	if (!ret && resource->mem_size) {
+		if (resource->flags & AAL_RESOURCE_FLAG_MEM_SPECIFIED) {
+			if (shimos_reserve_memory(resource->mem_start,
+			                          resource->mem_size)) {
+				ret = -ENOMEM;
+			}
+		} else if (shimos_allocate_memory(resource->mem_size,
+		                                  &resource->mem_start)) {
 			ret = -ENOMEM;
-		} else {
-			os->mem_start = start;
-			os->mem_end = os->mem_start + resource->memory;
+		}
+
+		if (!ret) { /* If successfully allocated ... */
+			os->mem_start = resource->mem_start;
+			os->mem_end = os->mem_start + resource->mem_size;
 
 			dprintf("MEE: Memory %lx - %lx allocated.\n",
 			        os->mem_start, os->mem_end);
@@ -291,9 +349,9 @@ static enum aal_os_status mee_aal_os_query_status(aal_os_t aal_os, void *priv)
 	status = os->status;
 
 	if (status == MEE_OS_STATUS_BOOTING) {
-		if (os->param.status == 1) {
+		if (os->param.bp.status == 1) {
 			return AAL_OS_STATUS_BOOTED;
-		} else if(os->param.status == 2) {
+		} else if(os->param.bp.status == 2) {
 			return AAL_OS_STATUS_READY;
 		} else {
 			return AAL_OS_STATUS_BOOTING;
@@ -333,7 +391,6 @@ static int mee_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
 	for (i = 0, c = 0; i < MEE_MAX_CPUS; i++) {
 		if (os->coremaps & (1ULL << i)) {
 			if (c == cpu) {
-				dprintf("shimos_issue_ipi(%d, %d)\n", i, v);
 				shimos_issue_ipi(i, v);
 				return 0;
 			}
@@ -537,38 +594,15 @@ static int mee_aal_unmap_virtual(aal_device_t aal_dev, void *priv,
 	return 0;
 }
 
-static unsigned long data1[64], data2[64];
-
-extern int mee_device_dma_request(aal_device_t dev, int channel,
-                                  unsigned long src, unsigned long dest,
-                                  unsigned long size,
-                                  void (*callback)(void *), void *priv, 
-                                  unsigned long value, int intr);
 static unsigned long mee_get_pa(void *ptr);
 
 static long mee_aal_debug_request(aal_device_t aal_dev, void *priv,
                                   unsigned int req, unsigned long arg)
 {
-	int i;
-
 	switch (req) {
 	case AAL_DEVICE_DEBUG_START + 0x10:
 		mee_dma_issue_interrupt();
 		return 0;
-
-	case AAL_DEVICE_DEBUG_START + 0x11:
-		for (i = 0; i < sizeof(data1) / sizeof(data1[0]); i++) {
-			data1[i] = arg;
-		}
-
-		i = mee_device_dma_request(aal_dev, 0, mee_get_pa(data1),
-		                           mee_get_pa(data2), sizeof(data1),
-		                           NULL, NULL, 0, 0);
-
-		printk("data1 : %p (%lx), data2 : %p (%lx)\n",
-		       data1, mee_get_pa(data1), data2, mee_get_pa(data2));
-		return i;
-
 	}
 	return -EINVAL;
 }
@@ -580,6 +614,7 @@ static struct aal_device_ops mee_aal_device_ops = {
 	.map_virtual = mee_aal_map_virtual,
 	.unmap_virtual = mee_aal_unmap_virtual,
 	.debug_request = mee_aal_debug_request,
+	.get_dma_channel = mee_aal_get_dma_channel,
 };	
 
 /* Only one device instance available */
@@ -721,13 +756,6 @@ static int mee_dma_init(void)
 	__prepare_idt();
 	mee_dma_pt_pa = mee_get_pa(mee_dma_page_table);
 
-	{
-		extern int mee_dma_intr_count;
-
-		printk("mee_dma_intr_count : %p\n", &mee_dma_intr_count);
-	}
-
-	printk("status : %lx\n", mee_dma_config.status);
 	shimos_boot_cpu_linux(apicid, (unsigned long)shimos_dma_start);
 
 	/* Wait for dma boot */
@@ -738,6 +766,8 @@ static int mee_dma_init(void)
 	printk("DMA Start Acked.\n");
 
 	mee_dma_desc_init();
+
+	mee_dma_config_pa = mee_get_pa(&mee_dma_config);
 
 	return 0;
 }
@@ -751,4 +781,14 @@ static void mee_dma_exit(void)
 void mee_dma_issue_interrupt(void)
 {
 	shimos_issue_ipi(mee_dma_apicid, MEE_DMA_VECTOR);
+}
+
+extern int __mee_dma_request(aal_device_t dev, int channel,
+                             struct aal_dma_request *req);
+
+static int mee_dma_request(aal_dma_channel_t channel, struct aal_dma_request *r)
+{
+	__mee_dma_request(channel->dev, channel->channel, r);
+
+	return 0;
 }

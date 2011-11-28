@@ -14,6 +14,12 @@
 
 #define MSR_IA32_APIC_BASE 0x000000001b
 
+#define CVAL(event, mask) \
+        ((((event) & 0xf00) << 24) | ((mask) << 8) | ((event) & 0xff))
+#define CVAL2(event, mask, inv, count)    \
+        ((((event) & 0xf00) << 24) | ((mask) << 8) | ((event) & 0xff) | \
+         ((inv & 1) << 23) | ((count & 0xff) << 24))
+
 /* AMD */
 #define MSR_PERF_CTL_0 0xc0010000
 #define MSR_PERF_CTR_0 0xc0010004

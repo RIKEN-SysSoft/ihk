@@ -1,6 +1,7 @@
 #include <aal/debug.h>
 #include <aal/mm.h>
 #include <aal/cpu.h>
+#include <aal/perfctr.h>
 #include <types.h>
 #include <errno.h>
 #include <string.h>
@@ -164,3 +165,17 @@ void x86_set_warm_reset(void)
 {
 	/* outb is not implemented; we do nothing */
 }
+
+/* TODO: Change it to the actual value! */
+static unsigned int perf_map_nehalem[] = 
+{
+	[APT_TYPE_INSTRUCTIONS] = CVAL(0xc0, 0x00),
+	[APT_TYPE_L1D_MISS]     = CVAL(0x51, 0x01),
+	[APT_TYPE_L1I_MISS]     = CVAL(0x80, 0x02),
+	[APT_TYPE_L2_MISS]      = CVAL(0x24, 0xaa),
+	[APT_TYPE_LLC_MISS]     = CVAL(0x2e, 0x41),
+	[PERFCTR_MAX_TYPE] = -1,
+};
+
+unsigned int *x86_march_perfmap = perf_map_nehalem;
+

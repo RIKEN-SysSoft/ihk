@@ -35,6 +35,37 @@ struct aal_resource;
 struct aal_host_interrupt_handler;
 struct aal_mem_info;
 struct aal_cpu_info;
+struct aal_dma_request;
+struct aal_dma_channel_info;
+
+struct aal_dma_channel {
+	aal_device_t dev;
+	int channel;
+	struct aal_dma_ops *ops;
+};
+typedef struct aal_dma_channel *aal_dma_channel_t;
+
+struct aal_dma_ops {
+	int (*request)(aal_dma_channel_t, struct aal_dma_request *);
+	void (*get_info)(aal_dma_channel_t, struct aal_dma_channel_info *);
+};
+
+struct aal_dma_request {
+	aal_os_t *src_os;
+	unsigned long src_phys;
+	aal_os_t *dest_os;
+	unsigned long dest_phys;
+	unsigned long size;
+	
+	void (*callback)(void *);
+	void *priv;
+	unsigned long *notify;
+};
+
+struct aal_dma_channel_info {
+	unsigned long status;
+	unsigned long min_size, max_size;
+};
 
 struct aal_os_ops {
 	int (*open)(aal_os_t, void *, const void *);
@@ -74,6 +105,10 @@ struct aal_os_ops {
 
 struct aal_register_os_data;
 
+struct aal_dma_info {
+	unsigned int num_channels, align;
+};
+
 struct aal_device_ops {
 	int (*init)(aal_device_t, void *);
 	int (*exit)(aal_device_t, void *);
@@ -95,6 +130,9 @@ struct aal_device_ops {
 
 	long (*debug_request)(aal_device_t, void *, unsigned int,
 	                      unsigned long);
+
+	aal_dma_channel_t (*get_dma_channel)(aal_device_t, void *, int);
+	int (*get_dma_info)(aal_device_t, void *, struct aal_dma_info *);
 };
 
 #define AAL_DEVICE_FLAG_SHARABLE  1
@@ -155,11 +193,16 @@ struct aal_cpu_info *aal_os_get_cpu_info(aal_os_t os);
 #define AAL_RESOURCE_CPU_ALL  -1
 #define AAL_RESOURCE_MEM_ALL  -1
 
+#define AAL_RESOURCE_FLAG_CPU_SPECIFIED  0x1
+#define AAL_RESOURCE_FLAG_MEM_SPECIFIED  0x2
+
 struct aal_resource {
 	int flags;
 
-	int cores;            /* CPU Cores */
-	unsigned long memory; /* Memory */
+	int cpu_cores; 
+	unsigned long mem_size;    /* Memory */
+	unsigned long mem_start; /* Start address */
+	int cores[0];  /* CPU Cores */
 };
 
 struct aal_host_interrupt_handler {
@@ -207,5 +250,9 @@ int aal_os_register_user_call_handlers(aal_os_t os,
                                        struct aal_os_user_call *);
 void aal_os_unregister_user_call_handlers(aal_os_t os,
                                           struct aal_os_user_call *);
+
+int aal_device_get_dma_info(aal_device_t data, struct aal_dma_info *info);
+aal_dma_channel_t aal_device_get_dma_channel(aal_device_t data, int channel);
+int aal_dma_request(aal_dma_channel_t aal_ch, struct aal_dma_request *req);
 
 #endif
