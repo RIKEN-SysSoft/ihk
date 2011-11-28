@@ -151,7 +151,7 @@ static int mee_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 	
 	__build_os_info(os);
 	if (os->cpu_info.n_cpus < 1) {
-		printk("mee: There are no CPU to boot!\n");
+		dprintf("mee: There are no CPU to boot!\n");
 		set_dev_status(dev, MEE_DEV_STATUS_READY);
 
 		return -EINVAL;
@@ -213,7 +213,7 @@ static int mee_aal_os_load_mem(aal_os_t aal_os, void *priv, const char *buf,
 	for (; size > 0; ) {
 		virt = ioremap_cache(phys, PAGE_SIZE);
 		if (!virt) {
-			printk("mee: Failed to map %lx\n", phys);
+			dprintf("mee: Failed to map %lx\n", phys);
 
 			set_os_status(os, MEE_OS_STATUS_INITIAL);
 
@@ -483,8 +483,6 @@ static int mee_aal_os_unregister_handler(aal_os_t os, void *os_priv, int itype,
 static irqreturn_t mee_irq_handler(int irq, void *data)
 {
 	struct aal_host_interrupt_handler *h;
-
-	printk("mee: interrupt!\n");
 
 	/* XXX: Linear search? */
 	list_for_each_entry(h, &mee_interrupt_handlers, list) {
