@@ -84,6 +84,7 @@ struct aal_os_ops {
 	int (*wait_for_status)(aal_os_t, void *, enum aal_os_status, int, int);
 
 	int (*issue_interrupt)(aal_os_t, void *, int, int);
+	int (*set_kargs)(aal_os_t, void *, char *);
 
 	unsigned long (*map_memory)(aal_os_t, void *,
 	                            unsigned long, unsigned long);

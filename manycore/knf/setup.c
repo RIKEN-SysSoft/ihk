@@ -184,3 +184,8 @@ static unsigned int perf_map_nehalem[] =
 
 unsigned int *x86_march_perfmap = perf_map_nehalem;
 
+char *aal_mc_get_kernel_args(void)
+{
+	return "";
+}
+

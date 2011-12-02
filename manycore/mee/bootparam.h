@@ -10,6 +10,7 @@ struct shimos_boot_param {
 
 	unsigned long dma_address;
 	unsigned long ident_table;
+	char kernel_args[256];
 };
 
 extern struct shimos_boot_param *boot_param;

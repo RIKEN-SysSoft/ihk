@@ -385,6 +385,40 @@ static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
 	return tail;
 }
 
+static int __aal_os_set_kargs(struct aal_host_linux_os_data *data,
+                              char __user *buf)
+{
+	char *kbuf;
+
+	kbuf = kmalloc(1024, GFP_KERNEL);
+	if (!kbuf) {
+		return -ENOMEM;
+	}
+	if (strncpy_from_user(kbuf, buf, 1024) < 0) {
+		kfree(kbuf);
+		return -EFAULT;
+	}
+	kbuf[1023] = 0;
+	
+	if (data->ops->set_kargs) {
+		return data->ops->set_kargs(data, data->priv, kbuf);
+	} else {
+		return -EINVAL;
+	}
+}
+
+static int __aal_os_clear_kmsg(struct aal_host_linux_os_data *data)
+{
+	if (!data->kmsg_buf) {
+		return -EINVAL;
+	}
+
+	/* XXX: How to share the structure definition with manycore aal? */
+	*(int *)data->kmsg_buf = 0;
+
+	return 0;
+}
+
 static long __aal_os_ioctl_call_aux(struct aal_host_linux_os_data *os,
                                     unsigned int request, unsigned long arg)
 {
@@ -413,7 +447,7 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 	
 	data = file->private_data;
 
-	dprintf("AAL: ioctl request = %x, arg = %lx\n", request, arg);
+/*	dprintf("AAL: ioctl request = %x, arg = %lx\n", request, arg); */
 
 	switch (request) {
 	case AAL_OS_LOAD:
@@ -448,8 +482,16 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __aal_os_query_status(data);
 		break;
 
+	case AAL_OS_SET_KARGS:
+		ret = __aal_os_set_kargs(data, (char * __user)arg);
+		break;
+
 	case AAL_OS_READ_KMSG:
 		ret = __aal_os_read_kmsg(data, (char * __user)arg);
+		break;
+
+	case AAL_OS_CLEAR_KMSG:
+		ret = __aal_os_clear_kmsg(data);
 		break;
 
 	default:

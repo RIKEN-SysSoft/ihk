@@ -355,12 +355,12 @@ void handle_interrupt(int vector, struct x86_regs *regs)
 	lapic_ack();
 }
 
+void arch_show_interrupt_context(const void *reg);
 void gpe_handler(struct x86_regs *regs)
 {
 	kprintf("General protection fault (err: %lx, %lx:%lx)\n",
 	        regs->error, regs->cs, regs->rip);
-	kprintf("R: %016lx %016lx %016lx %016lx\n",
-	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
+	arch_show_interrupt_context(regs);
 	panic("GPF");
 }
 
@@ -551,7 +551,6 @@ void aal_mc_init_user_process(aal_mc_kernel_context_t *ctx,
 	memset(uctx, 0, sizeof(aal_mc_user_context_t));
 	uctx->cs = USER_CS;
 	uctx->rip = new_pc;
-	uctx->ds = USER_DS;
 	uctx->ss = USER_DS;
 	uctx->rsp = user_sp;
 	uctx->rflags = RFLAGS_IF;
@@ -573,9 +572,9 @@ void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,
 void aal_mc_print_user_context(aal_mc_user_context_t *uctx)
 {
 	kprintf("CS:RIP = %04lx:%16lx\n", uctx->cs, uctx->rip);
-	kprintf("%16lx %16lx %16lx %16lx\n%16lx %16lx %16lx %16lx\n",
+	kprintf("%16lx %16lx %16lx %16lx\n%16lx %16lx %16lx\n",
 	        uctx->rax, uctx->rbx, uctx->rcx, uctx->rdx,
-	        uctx->rsi, uctx->rdi, uctx->rsp, uctx->rbp);
+	        uctx->rsi, uctx->rdi, uctx->rsp);
 }
 
 void aal_mc_set_syscall_handler(long (*handler)(int, aal_mc_user_context_t *))
@@ -596,12 +595,10 @@ void arch_show_interrupt_context(const void *reg)
 	kprintf("RAX RBX RCX RDX RSI RDI RSP RBP\n");
 	kprintf("%16lx %16lx %16lx %16lx\n",
 	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
-	kprintf("%16lx %16lx %16lx %16lx\n",
-	        regs->rsi, regs->rdi, regs->rsp, regs->rbp);
+	kprintf("%16lx %16lx %16lx\n",
+	        regs->rsi, regs->rdi, regs->rsp);
 	kprintf("%16lx %16lx %16lx %16lx\n",
 	        regs->r8, regs->r9, regs->r10, regs->r11);
-	kprintf("%16lx %16lx %16lx %16lx\n",
-	        regs->r12, regs->r13, regs->r14, regs->r15);
 }
 
 int aal_mc_arch_set_special_register(enum aal_asr_type type,

@@ -42,6 +42,8 @@ struct mee_boot_param {
 
 	unsigned long dma_address;
 	unsigned long ident_table;
+
+	char kernel_args[256];
 };
 
 struct mee_os_data {
@@ -58,6 +60,8 @@ struct mee_os_data {
 	struct aal_mem_region mem_region;
 	struct aal_cpu_info cpu_info;
 	int cpu_hw_ids[MEE_MAX_CPUS];
+
+	char kernel_args[256]; /* will be copied to boot_param on boot */
 
 	struct mee_boot_param param;
 
@@ -169,6 +173,8 @@ static int mee_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 	os->param.bp.cores = os->coremaps;
 	os->param.dma_address = mee_dma_config_pa;
 	os->param.ident_table = __pa(shimos_get_ident_page_table());
+	strncpy(os->param.kernel_args, os->kernel_args,
+	        sizeof(os->param.kernel_args));
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps,
@@ -361,6 +367,27 @@ static enum aal_os_status mee_aal_os_query_status(aal_os_t aal_os, void *priv)
 	}
 }
 
+static int mee_aal_os_set_kargs(aal_os_t aal_os, void *priv, char *buf)
+{
+	unsigned long flags;
+	struct mee_os_data *os = priv;
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != MEE_OS_STATUS_INITIAL) {
+		printk("mee: OS status is not initial.\n");
+		spin_unlock_irqrestore(&os->lock, flags);
+		return -EBUSY;
+	}
+	os->status = MEE_OS_STATUS_LOADING;
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	strncpy(os->kernel_args, buf, sizeof(os->kernel_args));
+
+	set_os_status(os, MEE_OS_STATUS_INITIAL);
+
+	return 0;
+}
+
 static int mee_aal_os_wait_for_status(aal_os_t aal_os, void *priv,
                                       enum aal_os_status status, 
                                       int sleepable, int timeout)
@@ -516,6 +543,7 @@ static struct aal_os_ops mee_aal_os_ops = {
 	.alloc_resource = mee_aal_os_alloc_resource,
 	.query_status = mee_aal_os_query_status,
 	.wait_for_status = mee_aal_os_wait_for_status,
+	.set_kargs = mee_aal_os_set_kargs,
 	.issue_interrupt = mee_aal_os_issue_interrupt,
 	.map_memory = mee_aal_os_map_memory,
 	.unmap_memory = mee_aal_os_unmap_memory,

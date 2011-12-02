@@ -10,12 +10,14 @@
 #define AAL_OS_BOOT                   0x112a01
 #define AAL_OS_SHUTDOWN               0x112a02
 #define AAL_OS_QUERY_STATUS           0x112a03
+#define AAL_OS_SET_KARGS              0x112a04
 #define AAL_OS_ALLOC_CPU              0x112a10
 #define AAL_OS_ALLOC_MEM              0x112a11
 #define AAL_OS_RESERVE_CPU            0x112a12
 #define AAL_OS_RESERVE_MEM            0x112a13
 
 #define AAL_OS_READ_KMSG              0x112a20
+#define AAL_OS_CLEAR_KMSG             0x112a21
 
 #define AAL_OS_DEBUG_START            0x122a00
 #define AAL_OS_DEBUG_END              0x122aff
