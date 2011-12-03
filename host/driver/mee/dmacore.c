@@ -93,8 +93,8 @@ void shimos_dma_main(void)
 		halt();
 	}
 
+	mee_dma_config.doorbell = 0;
 	while (1) {
-		mee_dma_config.doorbell = 0;
 		while (!mee_dma_config.doorbell) {
 			cpu_relax();
 		}

@@ -415,15 +415,12 @@ static int mee_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
 	int i, c;
 
 	/* better calcuation or make map */
-	for (i = 0, c = 0; i < MEE_MAX_CPUS; i++) {
-		if (os->coremaps & (1ULL << i)) {
-			if (c == cpu) {
-				shimos_issue_ipi(i, v);
-				return 0;
-			}
-			c++;
-		}
+	printk("IPI: %d => %d\n", cpu, os->cpu_info.hw_ids[cpu]);
+	if (cpu < 0 || cpu >= os->cpu_info.n_cpus) {
+		return -EINVAL;
 	}
+	shimos_issue_ipi(os->cpu_info.hw_ids[cpu], v);
+
 	return -EINVAL;
 }
 

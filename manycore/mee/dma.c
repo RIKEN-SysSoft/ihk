@@ -38,11 +38,15 @@ void mee_mc_dma_init(unsigned long cfg_addr)
 	mee_mc_dma_config = 
 		map_fixed_area(cfg_addr, sizeof(struct mee_dma_config_struct),
 		               0);
+
+	kprintf("DMA Config: %lx", cfg_addr);
 	for (i = 0; i < MEE_DMA_CHANNELS; i++) {
 		desc_ptrs[i] =
 			map_fixed_area(mee_mc_dma_config->channels[i].desc_ptr,
 			               PAGE_SIZE, 0);
+		kprintf(" (%lx)", mee_mc_dma_config->channels[i].desc_ptr);
 	}
+	kprintf("\n");
 }
 
 int aal_mc_dma_request(int channel, struct aal_dma_request *req)

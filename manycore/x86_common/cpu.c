@@ -328,6 +328,8 @@ void setup_x86_ap(void (*next_func)(void))
 	while(1);
 }
 
+void arch_show_interrupt_context(const void *reg);
+
 void handle_interrupt(int vector, struct x86_regs *regs)
 {
 	struct aal_mc_interrupt_handler *h;
@@ -343,6 +345,7 @@ void handle_interrupt(int vector, struct x86_regs *regs)
 			kprintf("Exception %d at %lx:%lx\n",
 			        vector, regs->cs, regs->rip);
 		}
+		arch_show_interrupt_context(regs);
 		panic("Unhandled exception");
 	} else {
 		list_for_each_entry(h, &handlers[vector - 32], list) {
@@ -355,7 +358,6 @@ void handle_interrupt(int vector, struct x86_regs *regs)
 	lapic_ack();
 }
 
-void arch_show_interrupt_context(const void *reg);
 void gpe_handler(struct x86_regs *regs)
 {
 	kprintf("General protection fault (err: %lx, %lx:%lx)\n",
@@ -556,6 +558,7 @@ void aal_mc_init_user_process(aal_mc_kernel_context_t *ctx,
 	uctx->rflags = RFLAGS_IF;
 
 	aal_mc_init_context(ctx, sp, (void (*)(void))enter_user_mode);
+	ctx->rsp0 = stack_pointer;
 }
 
 void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,

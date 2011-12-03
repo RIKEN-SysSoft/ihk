@@ -21,10 +21,11 @@ static void aal_ikc_interrupt_handler(void *priv)
 	/* This should be done in the software irq... */
 	struct aal_ikc_channel_desc *c;
 
-	/* XXX: Linear search? */
+	/* XXX: Linear search?, Per-core list of the queues! */
 	list_for_each_entry(c, &aal_ikc_channels, list) {
 		if (aal_ikc_channel_enabled(c) && 
-		    !aal_ikc_queue_is_empty(c->recv.queue)) {
+		    !aal_ikc_queue_is_empty(c->recv.queue) &&
+		    c->recv.queue->read_cpu == aal_mc_get_processor_id()) {
 			aal_ikc_recv_handler(c, c->handler, NULL, 0);
 		}
 	}
