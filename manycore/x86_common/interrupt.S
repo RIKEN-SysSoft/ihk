@@ -13,31 +13,15 @@
         pushq %rdx; \
         pushq %rsi; \
         pushq %rdi; \
-        pushq %rbp; \
         pushq %r8;  \
         pushq %r9; \
         pushq %r10; \
-        pushq %r11; \
-        pushq %r12; \
-        pushq %r13; \
-        pushq %r14; \
-        pushq %r15; \
-        movq  %ds, %rax; \
-        pushq %rax; \
-		movq  %ss, %rax; \
-		movq  %rax, %ds
+        pushq %r11; 
 #define POP_ALL_REGS      \
-        popq  %rax; \
-        movq  %rax, %ds; \
-        popq  %r15; \
-        popq  %r14; \
-        popq  %r13; \
-        popq  %r12; \
         popq  %r11; \
         popq  %r10; \
         popq  %r9;  \
         popq  %r8;  \
-        popq  %rbp; \
         popq  %rdi; \
         popq  %rsi; \
         popq  %rdx; \
@@ -63,7 +47,7 @@ vector=vector+1
 
 common_interrupt:
 		PUSH_ALL_REGS
-		movq    128(%rsp), %rdi
+		movq    80(%rsp), %rdi
 		movq	%rsp, %rsi
 		call 	handle_interrupt /* Enter C code */
 		POP_ALL_REGS
@@ -115,17 +99,24 @@ x86_syscall:
 		movq	%gs:24, %rcx
 		movq	%rcx, 32(%rsp)
 		PUSH_ALL_REGS
-		movq	120(%rsp), %rdi
+		movq	72(%rsp), %rdi
 		movw	%ss, %ax
 		movw	%ax, %ds
 		movq	%rsp, %rsi
-		movq	__x86_syscall_handler(%rip), %rax
-		callq	*%rax
-		movq	%rax, 120(%rsp)
+		callq	*__x86_syscall_handler(%rip)
+1:		
+		movq	%rax, 72(%rsp)
 		POP_ALL_REGS
+#ifdef USE_SYSRET
+		movq	8(%rsp), %rcx
+		movq	24(%rsp), %r11
+		movq	32(%rsp), %rsp
+		sysretq
+#else
 		addq	$8, %rsp
 		iretq
-
+#endif
+		
 .globl enter_user_mode
 enter_user_mode:		
 		POP_ALL_REGS

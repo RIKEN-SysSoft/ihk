@@ -65,7 +65,7 @@ typedef void * aal_wait_t;
 #define aal_ikc_map_virtual(d, p, z, f) aal_device_map_virtual(d, p, z, NULL, f)
 #define aal_ikc_unmap_virtual     aal_device_unmap_virtual
 
-#define aal_ikc_get_processor_id smp_processor_id
+#define aal_ikc_get_processor_id() cpu_physical_id(smp_processor_id())
 
 #define kprintf                  printk
 

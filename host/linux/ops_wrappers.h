@@ -120,4 +120,13 @@ AAL_DEV_OPS_BEGIN(int, unmap_virtual, void *virtual, int flags)
 	AAL_OPS_BODY(unmap_virtual, virtual, flags);
 }
 
+AAL_DEV_OPS_BEGIN(aal_dma_channel_t, get_dma_channel, int channel)
+{
+	AAL_OPS_BODY_PTR(get_dma_channel, channel);
+}
+AAL_DEV_OPS_BEGIN(int, get_dma_info, struct aal_dma_info *info)
+{
+	AAL_OPS_BODY(get_dma_info, info);
+}
+
 #endif

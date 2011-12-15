@@ -144,7 +144,9 @@ struct aal_host_interrupt_handler *aal_host_os_get_ikc_handler(aal_os_t aal_os)
 
 int aal_ikc_send_interrupt(struct aal_ikc_channel_desc *channel)
 {
-	return aal_os_issue_interrupt(channel->remote_os, 0, 0xd1);
+	return aal_os_issue_interrupt(channel->remote_os, 
+	                              channel->send.queue->read_cpu,
+	                              0xd1);
 }
 
 aal_spinlock_t *aal_ikc_get_listener_lock(aal_os_t aal_os)

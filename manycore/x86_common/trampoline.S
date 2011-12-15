@@ -24,8 +24,10 @@ stack_ptr:
 	.quad	0		/* initial stack */
 debug:
 	.quad	0		/* debug area */
-
-cpu_start_body:	
+transit_pgtbl:
+	.quad	0		/* 32->64 bit table address */
+		
+cpu_start_body:
 	cli
 	wbinvd
 
@@ -74,7 +76,7 @@ protect_start:
 	leal    (stack_end - base)(%ebx), %esp
 	
 	/* Load a page table */
-	movl    (header_pgtbl - base)(%ebx), %eax
+	movl    (transit_pgtbl - base)(%ebx), %eax
 	movl	%eax, %cr3
 	
 1:
@@ -96,7 +98,8 @@ protect_start:
 .balign 8 
 start_64:
 	/* Okay, we are completely in the long mode ! */
-	movq	%cr3, %rax
+	/* So, use the real page table! */
+	movq	(header_pgtbl - base)(%ebx), %rax
 	movq	%rax, %cr3
 
 	movq    (func_address - base)(%ebx), %rcx

@@ -11,6 +11,7 @@ struct mee_dma_config_struct mee_dma_config;
 int mee_dma_intr_status;
 
 int mee_dma_intr_count;
+int mee_dma_intr_issued;
 
 /*
  * The functions below run in the same memory space as Linux kernel.
@@ -70,7 +71,7 @@ static void shimos_dma_process_channel(struct mee_dma_channel *channel)
 {
 	struct mee_dma_desc *desc, *cur;
 
-	desc = channel->desc_ptr;
+	desc = (struct mee_dma_desc *)channel->desc_ptr;
 	for (; channel->head != channel->tail;
 	     channel->tail = __next(channel, channel->tail)) {
 		cur = desc + channel->tail;
@@ -92,12 +93,12 @@ void shimos_dma_main(void)
 		halt();
 	}
 
+	mee_dma_config.doorbell = 0;
 	while (1) {
-		mee_dma_config.doorbell = 0;
-		mb();
-		while (mee_dma_config.doorbell) {
-			halt();
+		while (!mee_dma_config.doorbell) {
+			cpu_relax();
 		}
+		mee_dma_config.doorbell = 0;
 
 		for (i = 0; i < MEE_DMA_CHANNELS; i++) {
 			shimos_dma_process_channel(mee_dma_config.channels + i);
@@ -116,21 +117,20 @@ void mee_dma_desc_init(void)
 
 	for (i = 0; i < MEE_DMA_CHANNELS; i++) {
 		c = mee_dma_config.channels + i;
-		c->desc_ptr = (void *)__get_free_page(GFP_KERNEL);
+		c->desc_ptr = virt_to_phys((void *)__get_free_page(GFP_KERNEL));
 		c->head = c->tail = 0;
-		c->len = PAGE_SIZE / sizeof(*c->desc_ptr);
+		c->len = PAGE_SIZE / sizeof(struct mee_dma_desc);
 		spin_lock_init(&c->lock);
 	}
 	mee_dma_config.doorbell = 1;
 	mee_dma_issue_interrupt();
-
 }
 
 static char __mee_desc_check_room(struct mee_dma_channel *c, int ndesc)
 {
 	int h = c->head, t = c->tail;
-
-	if (h <= t) {
+ 
+	if (t <= h) {
 		t += c->len;
 	}
 	if (h + ndesc < t) { /* OK */
@@ -141,16 +141,13 @@ static char __mee_desc_check_room(struct mee_dma_channel *c, int ndesc)
 }
 
 /* Host uses 0 */
-int mee_device_dma_request(aal_device_t dev, int channel,
-                           unsigned long src, unsigned long dest,
-                           unsigned long size,
-                           void (*callback)(void *), void *priv, 
-                           unsigned long value, int intr)
+int __mee_dma_request(aal_device_t dev, int channel,
+                      struct aal_dma_request *req)
 {
 	unsigned long flags;
 	struct mee_dma_channel *c;
 	int ndesc = 1;
-	struct mee_dma_desc *desc;
+	struct mee_dma_desc *desc, *desc_head;
 	unsigned long h;
 
 	if (channel < 0 || channel >= MEE_DMA_CHANNELS) {
@@ -159,7 +156,7 @@ int mee_device_dma_request(aal_device_t dev, int channel,
 
 	c = mee_dma_config.channels + channel;
 	
-	if ((intr && callback) || (!intr && priv)) {
+	if (req->callback || req->notify) {
 		ndesc++;
 	}
 
@@ -172,25 +169,28 @@ int mee_device_dma_request(aal_device_t dev, int channel,
 
 	h = c->head;
 
-	desc = c->desc_ptr + h;
+	desc_head = phys_to_virt(c->desc_ptr);
+
+	desc = desc_head + h;
 	desc->type = 1;
 	desc->param1 = 0;
-	desc->param2 = (void *)src;
-	desc->param3 = (void *)dest;
-	desc->param4 = size;
+	desc->param2 = (void *)req->src_phys;
+	desc->param3 = (void *)req->dest_phys;
+	desc->param4 = req->size;
 
 	h = __next(c, h);
 
 	if (ndesc > 1) {
-		desc = c->desc_ptr + h;
+		desc = desc_head + h;
 		desc->type = 2;
 		desc->param1 = 0;
-		if (!intr && priv) {
-			desc->param2 = (void *)priv;
-			desc->param4 = value;
-		} else {
-			desc->param1 = cpu_physical_id(smp_processor_id()) &
+
+		if (req->callback) {
+			desc->param1 = cpu_physical_id(smp_processor_id()) |
 				MEE_DMA_DESC_PARAM1_INTR;
+		} else if(req->notify) {
+			desc->param2 = (void *)req->notify;
+			desc->param4 = (unsigned long)req->priv;
 		}
 		h = __next(c, h);
 	}
@@ -199,7 +199,8 @@ int mee_device_dma_request(aal_device_t dev, int channel,
 	spin_unlock_irqrestore(&c->lock, flags);
 
 	mee_dma_config.doorbell = 1;
-	mee_dma_issue_interrupt();
+	/*	mee_dma_issue_interrupt(); */
+
 	return 0;
 }
 

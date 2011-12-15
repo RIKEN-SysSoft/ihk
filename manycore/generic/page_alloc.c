@@ -95,7 +95,7 @@ static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
 
 	flags = aal_mc_spinlock_lock(&desc->lock);
 	for (i = 0, mi = desc->last; i < desc->count; i++, mi++) {
-		if (mi > desc->count) {
+		if (mi >= desc->count) {
 			mi = 0;
 		}
 		if (mi + nblocks >= desc->count) {
@@ -132,11 +132,11 @@ unsigned long aal_pagealloc_alloc(void *__desc, int npages)
 		return __aal_pagealloc_large(desc, (npages + 63) >> 6);
 	}
 
-	mask = (1 << npages) - 1;
+	mask = (1UL << npages) - 1;
 
 	flags = aal_mc_spinlock_lock(&desc->lock);
 	for (i = 0, mi = desc->last; i < desc->count; i++, mi++) {
-		if (mi > desc->count) {
+		if (mi >= desc->count) {
 			mi = 0;
 		}
 		

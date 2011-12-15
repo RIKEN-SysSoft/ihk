@@ -35,6 +35,7 @@ void init_processors_local(int max_id);
 void assign_processor_id(void);
 void arch_delay(int);
 void x86_set_warm_reset(void);
+void x86_init_perfctr(void);
 
 extern int kprintf(const char *format, ...);
 
@@ -112,6 +113,8 @@ void init_fpu(void)
 	asm volatile("movq %%cr0, %0" : "=r"(reg));
 	/* Unset EM and TS flag. */
 	reg &= ~((1 << 2) | (1 << 3));
+	/* Set MP flag */
+	reg |= 1 << 1;
 	asm volatile("movq %0, %%cr0" : : "r"(reg));
 
 #ifdef ENABLE_SSE
@@ -279,6 +282,7 @@ void init_cpu(void)
 	init_fpu();
 	init_lapic();
 	init_syscall();
+	x86_init_perfctr();
 }
 
 void setup_x86(void)
@@ -326,6 +330,8 @@ void setup_x86_ap(void (*next_func)(void))
 	while(1);
 }
 
+void arch_show_interrupt_context(const void *reg);
+
 void handle_interrupt(int vector, struct x86_regs *regs)
 {
 	struct aal_mc_interrupt_handler *h;
@@ -341,6 +347,7 @@ void handle_interrupt(int vector, struct x86_regs *regs)
 			kprintf("Exception %d at %lx:%lx\n",
 			        vector, regs->cs, regs->rip);
 		}
+		arch_show_interrupt_context(regs);
 		panic("Unhandled exception");
 	} else {
 		list_for_each_entry(h, &handlers[vector - 32], list) {
@@ -357,8 +364,7 @@ void gpe_handler(struct x86_regs *regs)
 {
 	kprintf("General protection fault (err: %lx, %lx:%lx)\n",
 	        regs->error, regs->cs, regs->rip);
-	kprintf("R: %016lx %016lx %016lx %016lx\n",
-	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
+	arch_show_interrupt_context(regs);
 	panic("GPF");
 }
 
@@ -484,6 +490,7 @@ void aal_mc_set_page_fault_handler(void (*h)(unsigned long, void *))
 
 extern char trampoline_code_data[], trampoline_code_data_end[];
 struct page_table *get_init_page_table(void);
+unsigned long get_transit_page_table(void);
 
 void aal_mc_boot_cpu(int cpuid, unsigned long pc)
 {
@@ -497,7 +504,11 @@ void aal_mc_boot_cpu(int cpuid, unsigned long pc)
 	p[1] = (unsigned long)virt_to_phys(get_init_page_table());
 	p[2] = (unsigned long)setup_x86_ap;
 	p[3] = pc;
-	
+	p[6] = (unsigned long)get_transit_page_table();
+	if (!p[6]) {
+		p[6] = p[1];
+	}
+
 	cpu_boot_status = 0;
 
 	__x86_wakeup(cpuid, AP_TRAMPOLINE);
@@ -544,12 +555,12 @@ void aal_mc_init_user_process(aal_mc_kernel_context_t *ctx,
 	memset(uctx, 0, sizeof(aal_mc_user_context_t));
 	uctx->cs = USER_CS;
 	uctx->rip = new_pc;
-	uctx->ds = USER_DS;
 	uctx->ss = USER_DS;
 	uctx->rsp = user_sp;
 	uctx->rflags = RFLAGS_IF;
 
 	aal_mc_init_context(ctx, sp, (void (*)(void))enter_user_mode);
+	ctx->rsp0 = (unsigned long)stack_pointer;
 }
 
 void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,
@@ -566,9 +577,9 @@ void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,
 void aal_mc_print_user_context(aal_mc_user_context_t *uctx)
 {
 	kprintf("CS:RIP = %04lx:%16lx\n", uctx->cs, uctx->rip);
-	kprintf("%16lx %16lx %16lx %16lx\n%16lx %16lx %16lx %16lx\n",
+	kprintf("%16lx %16lx %16lx %16lx\n%16lx %16lx %16lx\n",
 	        uctx->rax, uctx->rbx, uctx->rcx, uctx->rdx,
-	        uctx->rsi, uctx->rdi, uctx->rsp, uctx->rbp);
+	        uctx->rsi, uctx->rdi, uctx->rsp);
 }
 
 void aal_mc_set_syscall_handler(long (*handler)(int, aal_mc_user_context_t *))
@@ -589,12 +600,10 @@ void arch_show_interrupt_context(const void *reg)
 	kprintf("RAX RBX RCX RDX RSI RDI RSP RBP\n");
 	kprintf("%16lx %16lx %16lx %16lx\n",
 	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
-	kprintf("%16lx %16lx %16lx %16lx\n",
-	        regs->rsi, regs->rdi, regs->rsp, regs->rbp);
+	kprintf("%16lx %16lx %16lx\n",
+	        regs->rsi, regs->rdi, regs->rsp);
 	kprintf("%16lx %16lx %16lx %16lx\n",
 	        regs->r8, regs->r9, regs->r10, regs->r11);
-	kprintf("%16lx %16lx %16lx %16lx\n",
-	        regs->r12, regs->r13, regs->r14, regs->r15);
 }
 
 int aal_mc_arch_set_special_register(enum aal_asr_type type,

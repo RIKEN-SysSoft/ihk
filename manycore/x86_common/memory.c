@@ -88,7 +88,7 @@ static struct page_table *init_pt;
 
 static unsigned long setup_l2(struct page_table *pt,
                               unsigned long page_head, unsigned long start,
-                              unsigned end)
+                              unsigned long end)
 {
 	int i;
 	unsigned long phys;
@@ -96,7 +96,7 @@ static unsigned long setup_l2(struct page_table *pt,
 	for (i = 0; i < PT_ENTRIES; i++) {
 		phys = page_head + ((unsigned long)i << PTL2_SHIFT);
 
-		if (phys + PTL2_SIZE < start || phys >= end) {
+		if (phys + PTL2_SIZE <= start || phys >= end) {
 			pt->entry[i] = 0;
 			continue;
 		}
@@ -109,7 +109,7 @@ static unsigned long setup_l2(struct page_table *pt,
 
 static unsigned long setup_l3(struct page_table *pt,
                               unsigned long page_head, unsigned long start,
-                              unsigned end)
+                              unsigned long end)
 {
 	int i;
 	unsigned long phys, pt_phys;
@@ -117,11 +117,10 @@ static unsigned long setup_l3(struct page_table *pt,
 	for (i = 0; i < PT_ENTRIES; i++) {
 		phys = page_head + ((unsigned long)i << PTL3_SHIFT);
 
-		if (phys + PTL3_SIZE < start || phys >= end) {
+		if (phys + PTL3_SIZE <= start || phys >= end) {
 			pt->entry[i] = 0;
 			continue;
 		}
-
 		pt_phys = setup_l2(arch_alloc_page(0), phys, start, end);
 
 		pt->entry[i] = pt_phys | PFL3_KERN_ATTR;
@@ -413,7 +412,8 @@ void init_text_area(struct page_table *pt)
 		& LARGE_PAGE_MASK;
 	nlpages = (__end - MAP_KERNEL_START) >> LARGE_PAGE_SHIFT;
 
-	kprintf("# of large pages = %d\n", nlpages);
+	kprintf("TEXT: # of large pages = %d\n", nlpages);
+	kprintf("TEXT: Base address = %lx\n", x86_kernel_phys_base);
 
 	phys = x86_kernel_phys_base;
 	virt = MAP_KERNEL_START;

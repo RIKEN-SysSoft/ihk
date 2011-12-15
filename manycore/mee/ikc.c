@@ -17,6 +17,7 @@ int aal_mc_ikc_init_first(struct aal_ikc_channel_desc *channel,
 }
 
 int aal_ikc_send_interrupt(struct aal_ikc_channel_desc *channel)
-{
-	return aal_mc_interrupt_host(0);
+{	
+	return aal_mc_interrupt_host(channel->recv.queue->write_cpu,
+	                             AAL_GV_IKC);
 }

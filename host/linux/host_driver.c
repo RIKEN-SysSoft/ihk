@@ -251,7 +251,7 @@ static int __aal_os_allocate_mem(struct aal_host_linux_os_data *data,
 	struct aal_resource resource;
 
 	memset(&resource, 0, sizeof(resource));
-	resource.memory = arg;
+	resource.mem_size = arg;
 
 	return __aal_os_alloc_resource(data, &resource);
 }
@@ -262,7 +262,64 @@ static int __aal_os_allocate_cpu(struct aal_host_linux_os_data *data,
 	struct aal_resource resource;
 
 	memset(&resource, 0, sizeof(resource));
-	resource.cores = arg;
+	resource.cpu_cores = arg;
+
+	return __aal_os_alloc_resource(data, &resource);
+}
+
+static int __aal_os_reserve_cpu(struct aal_host_linux_os_data *data,
+                                unsigned long ptr)
+{
+	struct aal_resource *pres;
+	int i, n;
+	int *__user u = (int *)ptr;
+
+	if (copy_from_user(&n, u, sizeof(int))) {
+		return -EFAULT;
+	}
+	if (n < 0 || n > 512) {
+		return -EINVAL;
+	}
+
+	pres = kmalloc(sizeof(struct aal_resource) + sizeof(int) * n,
+	               GFP_KERNEL);
+	if (!pres) {
+		return -ENOMEM;
+	}
+	memset(pres, 0, sizeof(struct aal_resource) + sizeof(int) * n);
+	pres->flags = AAL_RESOURCE_FLAG_CPU_SPECIFIED;
+	pres->cpu_cores = n;
+
+	u++;
+
+	for (i = 0; i < n; i++) {
+		if (copy_from_user(pres->cores + i, u++, sizeof(int))) {
+			kfree(pres);
+			return -EFAULT;
+		}
+	}
+
+	n = __aal_os_alloc_resource(data, pres);
+	kfree(pres);
+
+	return n;
+}
+
+static int __aal_os_reserve_mem(struct aal_host_linux_os_data *data,
+                                unsigned long ptr)
+{
+	unsigned long *__user u = (unsigned long *)ptr;
+	unsigned long params[2];
+	struct aal_resource resource;
+	
+	if (copy_from_user(params, u, sizeof(unsigned long) * 2)) {
+		return -EFAULT;
+	}
+
+	memset(&resource, 0, sizeof(resource));
+	resource.flags = AAL_RESOURCE_FLAG_MEM_SPECIFIED;
+	resource.mem_start = params[0];
+	resource.mem_size = params[1];
 
 	return __aal_os_alloc_resource(data, &resource);
 }
@@ -328,6 +385,40 @@ static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
 	return tail;
 }
 
+static int __aal_os_set_kargs(struct aal_host_linux_os_data *data,
+                              char __user *buf)
+{
+	char *kbuf;
+
+	kbuf = kmalloc(1024, GFP_KERNEL);
+	if (!kbuf) {
+		return -ENOMEM;
+	}
+	if (strncpy_from_user(kbuf, buf, 1024) < 0) {
+		kfree(kbuf);
+		return -EFAULT;
+	}
+	kbuf[1023] = 0;
+	
+	if (data->ops->set_kargs) {
+		return data->ops->set_kargs(data, data->priv, kbuf);
+	} else {
+		return -EINVAL;
+	}
+}
+
+static int __aal_os_clear_kmsg(struct aal_host_linux_os_data *data)
+{
+	if (!data->kmsg_buf) {
+		return -EINVAL;
+	}
+
+	/* XXX: How to share the structure definition with manycore aal? */
+	*(int *)data->kmsg_buf = 0;
+
+	return 0;
+}
+
 static long __aal_os_ioctl_call_aux(struct aal_host_linux_os_data *os,
                                     unsigned int request, unsigned long arg)
 {
@@ -356,7 +447,7 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 	
 	data = file->private_data;
 
-	dprintf("AAL: ioctl request = %x, arg = %lx\n", request, arg);
+/*	dprintf("AAL: ioctl request = %x, arg = %lx\n", request, arg); */
 
 	switch (request) {
 	case AAL_OS_LOAD:
@@ -379,12 +470,28 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __aal_os_allocate_mem(data, arg);
 		break;
 
+	case AAL_OS_RESERVE_CPU:
+		ret = __aal_os_reserve_cpu(data, arg);
+		break;
+
+	case AAL_OS_RESERVE_MEM:
+		ret = __aal_os_reserve_mem(data, arg);
+		break;
+
 	case AAL_OS_QUERY_STATUS:
 		ret = __aal_os_query_status(data);
 		break;
 
+	case AAL_OS_SET_KARGS:
+		ret = __aal_os_set_kargs(data, (char * __user)arg);
+		break;
+
 	case AAL_OS_READ_KMSG:
 		ret = __aal_os_read_kmsg(data, (char * __user)arg);
+		break;
+
+	case AAL_OS_CLEAR_KMSG:
+		ret = __aal_os_clear_kmsg(data);
 		break;
 
 	default:
@@ -824,7 +931,6 @@ int aal_host_device_mmap(struct file *file, struct vm_area_struct *vma)
 	if ((long)pa <= 0) {
 		return -EINVAL;
 	}
-	
 
 	r = remap_pfn_range(vma, vma->vm_start, pa >> PAGE_SHIFT,
 	                    vma->vm_end - vma->vm_start,
@@ -1057,6 +1163,16 @@ aal_os_t aal_device_create_os(aal_device_t data, unsigned long arg)
 	}
 }
 
+aal_dma_channel_t aal_device_get_dma_channel(aal_device_t data, int channel)
+{
+	return __aal_device_get_dma_channel(data, channel);
+}
+
+int aal_device_get_dma_info(aal_device_t data, struct aal_dma_info *info)
+{
+	return __aal_device_get_dma_info(data, info);
+}
+
 int aal_os_boot(aal_os_t os, int flag)
 {
 	return __aal_os_boot(os, flag);
@@ -1246,6 +1362,17 @@ void aal_os_unregister_user_call_handlers(aal_os_t aal_os,
 	spin_unlock_irqrestore(&os->lock, flags);
 }
 
+int aal_dma_request(aal_dma_channel_t aal_ch, struct aal_dma_request *req)
+{
+	struct aal_dma_channel *adc = aal_ch;
+
+	if (adc->ops->request) {
+		return adc->ops->request(aal_ch, req);
+	} else {
+		return -EINVAL;
+	}
+}
+
 EXPORT_SYMBOL(aal_register_device);
 EXPORT_SYMBOL(aal_unregister_device);
 EXPORT_SYMBOL(aal_device_create_os);
@@ -1267,4 +1394,6 @@ EXPORT_SYMBOL(aal_os_register_user_call_handlers);
 EXPORT_SYMBOL(aal_os_unregister_user_call_handlers);
 EXPORT_SYMBOL(aal_os_get_memory_info);
 EXPORT_SYMBOL(aal_os_get_cpu_info);
-
+EXPORT_SYMBOL(aal_device_get_dma_channel);
+EXPORT_SYMBOL(aal_device_get_dma_info);
+EXPORT_SYMBOL(aal_dma_request);

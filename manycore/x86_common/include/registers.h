@@ -14,6 +14,12 @@
 
 #define MSR_IA32_APIC_BASE 0x000000001b
 
+#define CVAL(event, mask) \
+        ((((event) & 0xf00) << 24) | ((mask) << 8) | ((event) & 0xff))
+#define CVAL2(event, mask, inv, count)    \
+        ((((event) & 0xf00) << 24) | ((mask) << 8) | ((event) & 0xff) | \
+         ((inv & 1) << 23) | ((count & 0xff) << 24))
+
 /* AMD */
 #define MSR_PERF_CTL_0 0xc0010000
 #define MSR_PERF_CTR_0 0xc0010004
@@ -115,8 +121,8 @@ struct tss64 {
 } __attribute__((packed));
 
 struct x86_regs {
-	unsigned long ds, r15, r14, r13, r12, r11, r10, r9, r8;
-	unsigned long rbp, rdi, rsi, rdx, rcx, rbx, rax;
+	unsigned long r11, r10, r9, r8;
+	unsigned long rdi, rsi, rdx, rcx, rbx, rax;
 	unsigned long error, rip, cs, rflags, rsp, ss;
 };
 

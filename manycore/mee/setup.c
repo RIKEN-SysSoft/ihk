@@ -1,6 +1,7 @@
 #include <aal/debug.h>
 #include <aal/mm.h>
 #include <aal/cpu.h>
+#include <aal/perfctr.h>
 #include <errno.h>
 #include <registers.h>
 #include "bootparam.h"
@@ -102,6 +103,11 @@ struct aal_mc_cpu_info *aal_mc_get_cpu_info(void)
 	return aal_cpu_info;
 }
 
+unsigned long get_transit_page_table(void)
+{
+	return boot_param->ident_table;
+}
+
 void __reserve_arch_pages(unsigned long start, unsigned long end,
                           void (*cb)(unsigned long, unsigned long, int))
 {
@@ -109,9 +115,9 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 }
 
 extern void x86_issue_ipi(int, int);
-int aal_mc_interrupt_host(int vector)
+int aal_mc_interrupt_host(int cpu, int vector)
 {
-	x86_issue_ipi(0, 0xf1);
+	x86_issue_ipi(cpu, 0xf1);
 	return 0;
 }
 
@@ -126,6 +132,10 @@ int aal_mc_get_vector(enum aal_mc_gv_type type)
 	}
 }
 
+char *aal_mc_get_kernel_args(void)
+{
+	return boot_param->kernel_args;
+}
 
 unsigned long aal_mc_map_memory(void *os, unsigned long phys,
                                 unsigned long size)
@@ -159,3 +169,29 @@ void x86_set_warm_reset(void)
 	asm volatile("outb %0, $0x70" : : "a"((char)0xf));
 	asm volatile("outb %0, $0x71" : : "a"((char)0xa));
 }
+
+void mee_mc_dma_init(unsigned long cfg_addr);
+
+void aal_mc_dma_init(void)
+{
+	mee_mc_dma_init(boot_param->dma_address);
+}
+
+static unsigned int perf_map_nehalem[] = 
+{
+	[APT_TYPE_INSTRUCTIONS]  = CVAL(0xc0, 0x00),
+	[APT_TYPE_L1D_REQUEST]   = CVAL(0x43, 0x01),
+	[APT_TYPE_L1I_REQUEST]   = CVAL(0x80, 0x03),
+	[APT_TYPE_L1D_MISS]      = CVAL(0x51, 0x01),
+	[APT_TYPE_L1I_MISS]      = CVAL(0x80, 0x02),
+	[APT_TYPE_L2_MISS]       = CVAL(0x24, 0xaa),
+	[APT_TYPE_LLC_MISS]      = CVAL(0x2e, 0x41),
+	[APT_TYPE_DTLB_MISS]     = CVAL(0x49, 0x01),
+	[APT_TYPE_ITLB_MISS]     = CVAL(0x85, 0x01),
+	[APT_TYPE_STALL]         = CVAL2(0x0e, 0x01, 1, 1),
+	[APT_TYPE_CYCLE]         = CVAL(0x3c, 0x00),
+	[PERFCTR_MAX_TYPE] = -1,
+};
+
+unsigned int *x86_march_perfmap = perf_map_nehalem;
+

@@ -1,10 +1,7 @@
 #ifndef __HEADER_MEE_DMA_H
 #define __HEADER_MEE_DMA_H
 
-#include <linux/spinlock.h>
-
-/* 32 byte */
-/* MEMCPY: param2 (src), param3 (dest), param4 (len) */
+#include <aal/lock.h>
 
 #define MEE_DMA_DESC_PARAM1_INTR  0x10000000
 
@@ -16,7 +13,6 @@ struct mee_dma_desc {
 	unsigned long param4;
 };
 
-
 #define MEE_DMA_CHANNELS  2
 
 struct mee_dma_channel {
@@ -26,7 +22,7 @@ struct mee_dma_channel {
 	unsigned long tail;
 
 	/* Lock for head, not tail (because single r/w for tail) */
-	spinlock_t lock;
+	aal_spinlock_t lock;
 };
 
 struct mee_dma_config_struct {
@@ -35,10 +31,5 @@ struct mee_dma_config_struct {
 	unsigned long doorbell; /* doorbell */
 	unsigned long status; /* core status */
 };
-
-extern struct mee_dma_config_struct mee_dma_config;
-void mee_dma_issue_interrupt(void);
-
-void mee_dma_desc_init(void);
 
 #endif

@@ -1,6 +1,7 @@
 #include <aal/debug.h>
 #include <aal/mm.h>
 #include <aal/cpu.h>
+#include <aal/perfctr.h>
 #include <types.h>
 #include <errno.h>
 #include <string.h>
@@ -92,7 +93,7 @@ void arch_set_mikc_queue(void *rq, void *wq)
 	sbox_write(SBOX_SCRATCH15, virt_to_phys(rq));
 }
 
-int aal_mc_interrupt_host(int vector)
+int aal_mc_interrupt_host(int cpu, int vector)
 {
 	unsigned int reg;
 	/* Vector is virtual vector, and we use interrupt 0 anyway */
@@ -149,6 +150,11 @@ void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
 	return;
 }
 
+unsigned long get_transit_page_table(void)
+{
+	return 0;
+}
+
 void arch_delay(int us)
 {
 	unsigned long tsc;
@@ -164,3 +170,22 @@ void x86_set_warm_reset(void)
 {
 	/* outb is not implemented; we do nothing */
 }
+
+/* TODO: Change it to the actual value! */
+static unsigned int perf_map_nehalem[] = 
+{
+	[APT_TYPE_INSTRUCTIONS] = CVAL(0xc0, 0x00),
+	[APT_TYPE_L1D_MISS]     = CVAL(0x51, 0x01),
+	[APT_TYPE_L1I_MISS]     = CVAL(0x80, 0x02),
+	[APT_TYPE_L2_MISS]      = CVAL(0x24, 0xaa),
+	[APT_TYPE_LLC_MISS]     = CVAL(0x2e, 0x41),
+	[PERFCTR_MAX_TYPE] = -1,
+};
+
+unsigned int *x86_march_perfmap = perf_map_nehalem;
+
+char *aal_mc_get_kernel_args(void)
+{
+	return "";
+}
+
