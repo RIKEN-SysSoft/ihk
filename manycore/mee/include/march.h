@@ -11,4 +11,6 @@
 #define MSR_IA32_FIXED_CTR0  0x00000309
 #define MSR_PERF_GLOBAL_CTRL 0x0000038f
 
+#define ENABLE_SSE
+
 #endif

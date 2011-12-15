@@ -113,6 +113,8 @@ void init_fpu(void)
 	asm volatile("movq %%cr0, %0" : "=r"(reg));
 	/* Unset EM and TS flag. */
 	reg &= ~((1 << 2) | (1 << 3));
+	/* Set MP flag */
+	reg |= 1 << 1;
 	asm volatile("movq %0, %%cr0" : : "r"(reg));
 
 #ifdef ENABLE_SSE
@@ -558,7 +560,7 @@ void aal_mc_init_user_process(aal_mc_kernel_context_t *ctx,
 	uctx->rflags = RFLAGS_IF;
 
 	aal_mc_init_context(ctx, sp, (void (*)(void))enter_user_mode);
-	ctx->rsp0 = stack_pointer;
+	ctx->rsp0 = (unsigned long)stack_pointer;
 }
 
 void aal_mc_modify_user_context(aal_mc_user_context_t *uctx,
