@@ -25,4 +25,18 @@
 #define MIC_DMA_INTERRUPT_VECTOR 229
 #define MIC_ICR_INTVEC_SHIFT 0
 
+/* /card/driver/include/mic/micscif_smpt.h */
+#define SNOOP_ON  (0 << 0)
+#define SNOOP_OFF (1 << 0)
+#define NUM_SMPT_REGISTERS 32
+#define SMPT_MASK 0x1F
+#define MIC_SYSTEM_PAGE_SHIFT 34ULL
+#define MIC_SYSTEM_PAGE_MASK ((1ULL << MIC_SYSTEM_PAGE_SHIFT) - 1ULL)
+#define BUILD_SMPT(NO_SNOOP, HOST_ADDR)  \
+	(uint32_t)(((((HOST_ADDR)<< 2) & (~0x03)) | ((NO_SNOOP) & (0x01))))
+
+#define MIC_SYSTEM_BASE     0x8000000000ULL
+
+#define KNF_DMA_CHANNELS            8
+
 #endif /* MICCONST_H */

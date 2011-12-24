@@ -14,10 +14,8 @@
 #include <aal/misc/debug.h>
 #include <ikc/msg.h>
 
-#include "knf.h"
 #include "knf_user.h"
-#include "mic/micconst.h"
-#include "mic/micsboxdefine.h"
+#include "mic.h"
 
 void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *data);
 
@@ -31,6 +29,10 @@ static void knf_disable_interrupts(struct knf_device_data *kdd,
                                    int intr_mask, int dma_mask);
 static void knf_write_sbox(struct knf_device_data *kdd, int offset,
                            unsigned int value);
+
+void __knf_dma_init(struct knf_device_data *kdd);
+void __knf_dma_finalize(struct knf_device_data *kdd);
+int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg);
 
 int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 {
@@ -92,6 +94,8 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	}
 	kdd->irq = dev->irq;
 
+	__knf_dma_init(kdd);
+
 	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
 
 	return 0;
@@ -112,6 +116,8 @@ void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *kdd)
 		free_irq(kdd->irq, kdd);
 	}
 
+	__knf_dma_finalize(kdd);
+
 	if (kdd->aperture_va)
 		iounmap(kdd->aperture_va);
 	if (kdd->mmio_va)
@@ -120,19 +126,6 @@ void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *kdd)
 	release_mem_region(kdd->aperture_pa, kdd->aperture_len);
 	release_mem_region(kdd->mmio_pa, kdd->mmio_len);
 	pci_disable_device(dev);
-}
-
-static unsigned int knf_read_sbox(struct knf_device_data *kdd, int offset)
-{
-	return readl((unsigned int *)((char *)(kdd->mmio_va) + 
-	                              MMIO_SBOX_BASE_OFFSET + offset));
-}
-
-static void knf_write_sbox(struct knf_device_data *kdd, int offset,
-                           unsigned int value)
-{
-	writel(value, (unsigned int *)((char *)(kdd->mmio_va) + 
-	                               MMIO_SBOX_BASE_OFFSET + offset));
 }
 
 static unsigned int get_gtt_entry(struct knf_device_data *kdd, int entry)
@@ -377,6 +370,9 @@ long __knf_debug_request(struct knf_device_data *kdd,
 			return (unsigned long)u;
 		}
 		break;
+
+	case KNF_DEBUG_DMA_TEST:
+		return __knf_dma_test(kdd, arg);
 
 	}
 	return -EINVAL;

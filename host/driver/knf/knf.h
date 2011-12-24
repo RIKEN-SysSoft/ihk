@@ -2,6 +2,18 @@
 #define KNF_H
 #include <aal/aal_host_driver.h>
 
+#define KNF_DMA_CHANNELS 8
+
+struct knf_dma_channel {
+	struct knf_device_data *kdd;
+	spinlock_t lock;
+	int head, tail;
+	int channel;
+	int desc_count;
+	int owner;
+	union md_mic_dma_desc *desc;
+};
+
 struct knf_device_data {
 	aal_device_t aal_dev;
 	struct pci_dev *dev;
@@ -17,6 +29,8 @@ struct knf_device_data {
 	int irq;
 	unsigned long os_load_offset;
 	unsigned int bsp_apic_id;
+
+	struct knf_dma_channel channels[KNF_DMA_CHANNELS];
 };
 
 #define KNFDD_STATUS_READY          1
