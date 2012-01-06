@@ -8,10 +8,11 @@ AAL: Accelerator Abstraction Layer
 
 (Linux)
 
-There are two choices to compile the AAL from source: one is building 
-as kernel modules, and another is integrating the AAL into the kernel source. 
+There are two choices to compile the AAL from source: one is integrating 
+the AAL into the kernel source, and the other is building 
+as kernel modules.
 The former is required when you use MEE because MEE requires kernel integration.
-Usually, the latter is sufficient.
+Otherwise, the latter is sufficient.
 
 1) Build as modules
 
