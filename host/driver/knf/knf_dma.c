@@ -132,7 +132,7 @@ void __knf_dma_finalize(struct knf_device_data *kdd)
 	}
 }
 
-unsigned long hogehoge;
+unsigned long long st0, st1, st2, ed;
 
 static void __debug_print_dma_reg(struct knf_dma_channel *c)
 {
@@ -143,72 +143,60 @@ static void __debug_print_dma_reg(struct knf_dma_channel *c)
 	        sbox_dma_read(c, SBOX_DHPR_0));
 }
 
-int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
-{
-	union md_mic_dma_desc *desc;
-	struct knf_dma_channel *c = &kdd->channels[4];
-
-	desc = __knf_desc_proceed_head(c);
-	desc->desc.status.type = 2;
-
-	printk("hogehoge = %p (%lx)\n", &hogehoge, hogehoge);
-	printk("virt to mic phys = %lx, %lx\n",
-	       virt_to_phys(&hogehoge), phys_to_mic_phys(virt_to_phys(&hogehoge)));
-
-	desc->desc.status.dap = virt_to_mic_phys(&hogehoge);
-	desc->desc.status.data = arg;
-		printk("STATUS : dap = %lx, data = %lx, intr = %lx\n",
-		        desc->desc.status.dap, desc->desc.status.data,
-		        desc->desc.status.intr);
-
-	sbox_dma_write(c, SBOX_DHPR_0, c->head);
-	__debug_print_dma_reg(c);
-
-	printk("hogehoge = %lx <= %p\n",
-	       *(unsigned long *)phys_to_virt(virt_to_phys(&hogehoge)),
-	       phys_to_virt(virt_to_phys(&hogehoge)));
-
-	return 0;
-}
-
 int __knf_dma_request(struct knf_device_data *kdd, int channel,
                       struct aal_dma_request *req)
 {
 	unsigned long flags;
 	struct knf_dma_channel *c;
-	int ndesc = 1;
+	int i, cdesc, ndesc = 1, size;
 	union md_mic_dma_desc *desc;
 
-	c = &kdd->channels[channel];
+	c = &kdd->channels[channel + 4];
 	if (!c->desc) {
 		return -EINVAL;
 	}
+	/* 64K per one desc */
+	cdesc = (req->size + 65535) >> 16;
+	ndesc = cdesc;
 	if (req->callback || req->notify) {
 		ndesc++;
 	}
-
+	
 	spin_lock_irqsave(&c->lock, flags);
 	if (!__knf_desc_check_room(c, ndesc)) {
 		spin_unlock_irqrestore(&c->lock, flags);
 		return -EBUSY;
 	}
+
+	size = req->size >> 6;
 	
-	desc = __knf_desc_proceed_head(c);
-	desc->desc.memcpy.type = 1;
-	if (req->src_os) {
-		desc->desc.memcpy.sap = req->src_phys;
-	} else {
-		desc->desc.memcpy.sap = phys_to_mic_phys(req->src_phys);
-	}
-	if (req->dest_os) {
-		desc->desc.memcpy.dap = req->dest_phys;
-	} else {
-		desc->desc.memcpy.dap = phys_to_mic_phys(req->dest_phys);
+	for (i = 0; i < cdesc; i++) {
+		desc = __knf_desc_proceed_head(c);
+		desc->desc.memcpy.type = 1;
+		if (req->src_os) {
+			desc->desc.memcpy.sap = req->src_phys;
+		} else {
+			desc->desc.memcpy.sap = phys_to_mic_phys(req->src_phys);
+		}
+		if (req->dest_os) {
+			desc->desc.memcpy.dap = req->dest_phys;
+		} else {
+			desc->desc.memcpy.dap = 
+				phys_to_mic_phys(req->dest_phys);
+		}
+
+		desc->desc.memcpy.sap += i << 16;
+		desc->desc.memcpy.dap += i << 16;
+
+		if (size > 1024) {
+			desc->desc.memcpy.length = 1024;
+			size -= 1024;
+		} else { 
+			desc->desc.memcpy.length = size;
+		}
 	}
 
-	desc->desc.memcpy.length = req->size >> 6; /* 2^6 = 64 */
-
-	if (ndesc > 1) {
+	if (req->callback || req->notify) {
 		desc = __knf_desc_proceed_head(c);
 		desc->desc.status.type = 2;
 		if (req->callback) {
@@ -225,9 +213,67 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 			desc->desc.status.data = (unsigned long)req->priv;
 		}
 	}
+	rdtscll(st1);
 	sbox_dma_write(c, SBOX_DHPR_0, c->head);
 	
 	spin_unlock_irqrestore(&c->lock, flags);
 
 	return 0;
 }
+
+int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
+{
+	unsigned long fin = 0;
+	struct aal_dma_request req;
+	unsigned long to;
+	int loop = 0;
+	unsigned long *buf;
+
+	if (arg > 4 * 1048576) {
+		return -ENOMEM;
+	}
+
+	buf = (void *)__get_free_pages(GFP_KERNEL, 10);
+	if (!buf) {
+		return -ENOMEM;
+	}
+
+	rdtscll(st0);
+	memset(&req, 0, sizeof(req));
+
+	req.src_phys = 0x40000000;
+	req.src_os = kdd;
+	req.dest_phys = virt_to_phys(buf);
+
+	req.size = arg;
+	req.notify = (void *)virt_to_phys(&fin);
+	req.priv = (void *)29;
+
+	__knf_dma_request(kdd, 0, &req);
+	rdtscll(st2);
+
+	to = st2 + 1024UL * 1024 * 1024 * 3;
+
+	while (!fin) {
+		cpu_relax();
+		loop++;
+		rdtscll(ed);
+		if (ed > to) {
+			printk("Timeout\n");
+			break;
+		}
+	}
+
+	rdtscll(ed);
+
+	printk("TSC: %lld, %lld, %lld\n",
+	       st1 - st0, st2 - st0, ed - st0);
+	printk("Fin : %lx (%d)\n", fin, loop);
+
+	__debug_print_dma_reg(kdd->channels + 4);
+
+	free_pages((unsigned long)buf, 10);
+
+	return ed - st2;
+}
+
