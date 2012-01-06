@@ -1,0 +1,5 @@
+
+(Manycore)
+- Context switching
+  - save and restore FS (msr)
+  - ES
