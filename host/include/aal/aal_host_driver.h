@@ -40,6 +40,7 @@ struct aal_dma_channel_info;
 
 struct aal_dma_channel {
 	aal_device_t dev;
+	void *priv;
 	int channel;
 	struct aal_dma_ops *ops;
 };
