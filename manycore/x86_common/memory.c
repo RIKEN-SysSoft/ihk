@@ -290,8 +290,13 @@ static int __clear_pt_page(struct page_table *pt, void *virt, int largepage)
 	}
 	pt = phys_to_virt(pt->entry[l3idx] & PAGE_MASK);
 
-	if (largepage && !(pt->entry[l2idx] & PFL2_PRESENT)) {
-		return -EINVAL;
+	if (largepage) {
+		if (!(pt->entry[l2idx] & PFL2_PRESENT)) {
+			return -EINVAL;
+		} else {
+			pt->entry[l2idx] = 0;
+			return 0;
+		}
 	}
 	pt = phys_to_virt(pt->entry[l2idx] & PAGE_MASK);
 
