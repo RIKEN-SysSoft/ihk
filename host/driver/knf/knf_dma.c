@@ -106,6 +106,11 @@ static void __initialize_dma(struct knf_dma_channel *c)
 	c->head = c->tail = 0;
 }
 
+void __knf_reset_dma_registers(struct knf_device_data *kdd)
+{
+	__initialize_dma(kdd->channels + 4);
+}
+
 void __knf_dma_init(struct knf_device_data *kdd)
 {
 	/* Host only uses channels >= 4 */
@@ -122,7 +127,8 @@ void __knf_dma_init(struct knf_device_data *kdd)
 	channels[4].owner = 1;
 	channels[4].desc = ring;
 	channels[4].desc_count = PAGE_SIZE / sizeof(union md_mic_dma_desc);
-	__initialize_dma(channels + 4);
+
+	__knf_reset_dma_registers(kdd);
 }
 
 void __knf_dma_finalize(struct knf_device_data *kdd)

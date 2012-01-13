@@ -33,6 +33,7 @@ static void knf_write_sbox(struct knf_device_data *kdd, int offset,
 void __knf_dma_init(struct knf_device_data *kdd);
 void __knf_dma_finalize(struct knf_device_data *kdd);
 int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg);
+void __knf_reset_dma_registers(struct knf_device_data *kdd);
 
 int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 {
@@ -262,6 +263,9 @@ int __knf_prepare_os_load(struct knf_device_data *kdd)
 
 	knf_write_sbox(kdd, SBOX_TLB_FLUSH, 1);
 	
+	/* DMA init */
+	__knf_reset_dma_registers(kdd);
+
 	return 0;
 }
 static void __knf_set_os_reserved_area(struct knf_device_data *kdd,
