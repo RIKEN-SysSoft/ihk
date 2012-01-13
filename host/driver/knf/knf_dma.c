@@ -228,9 +228,14 @@ int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
 	unsigned long to;
 	int loop = 0;
 	unsigned long *buf;
+	aal_dma_channel_t dma_channel;
 
 	if (arg > 4 * 1048576) {
 		return -ENOMEM;
+	}
+	dma_channel = aal_device_get_dma_channel(kdd->aal_dev, 0);
+	if (!dma_channel) {
+		return -EINVAL;
 	}
 
 	buf = (void *)__get_free_pages(GFP_KERNEL, 10);
@@ -249,7 +254,7 @@ int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
 	req.notify = (void *)virt_to_phys(&fin);
 	req.priv = (void *)29;
 
-	__knf_dma_request(kdd, 0, &req);
+	aal_dma_request(dma_channel, &req);
 	rdtscll(st2);
 
 	to = st2 + 1024UL * 1024 * 1024 * 3;
