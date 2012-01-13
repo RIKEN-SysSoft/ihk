@@ -30,6 +30,7 @@ struct knf_device_data {
 	unsigned long os_load_offset;
 	unsigned int bsp_apic_id;
 
+	struct aal_dma_channel aal_channels[KNF_DMA_CHANNELS];
 	struct knf_dma_channel channels[KNF_DMA_CHANNELS];
 };
 

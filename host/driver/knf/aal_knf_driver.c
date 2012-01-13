@@ -274,6 +274,8 @@ extern void knf_device_destroy(struct pci_dev *dev,
                                struct knf_device_data *data);
 extern long __knf_debug_request(struct knf_device_data *kdd, 
                                 int r, unsigned long arg);
+aal_dma_channel_t knf_aal_get_dma_channel(aal_device_t dev, void *priv,
+                                          int channel);
 
 static int knf_aal_init(aal_device_t aal_dev, void *priv)
 {
@@ -408,6 +410,7 @@ static struct aal_device_ops knf_aal_device_ops = {
 	.unmap_memory = knf_aal_unmap_memory,
 	.map_virtual = knf_aal_map_virtual,
 	.unmap_virtual = knf_aal_unmap_virtual,
+	.get_dma_channel = knf_aal_get_dma_channel,
 };	
 
 static struct aal_register_device_data knf_dev_reg_data = {

@@ -277,3 +277,30 @@ int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
 	return ed - st2;
 }
 
+static int knf_dma_request(aal_dma_channel_t channel, struct aal_dma_request *r)
+{
+	__knf_dma_request(channel->dev, channel->channel, r);
+
+	return 0;
+}
+
+struct aal_dma_ops knf_dma_ops = {
+	.request = knf_dma_request,
+};
+
+aal_dma_channel_t knf_aal_get_dma_channel(aal_device_t dev, void *priv,
+                                          int channel)
+{
+	struct knf_device_data *data = priv;
+
+	if (channel < 0 || channel >= KNF_DMA_CHANNELS - 4) {
+		return NULL;
+	}
+
+	data->aal_channels[channel].dev = dev;
+	data->aal_channels[channel].channel = channel;
+	data->aal_channels[channel].ops = &knf_dma_ops;
+
+	return &data->aal_channels[channel];
+}
+
