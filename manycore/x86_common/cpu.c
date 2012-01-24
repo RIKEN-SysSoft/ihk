@@ -631,3 +631,9 @@ int aal_mc_arch_get_special_register(enum aal_asr_type type,
 		return -EINVAL;
 	}
 }
+
+int aal_mc_interrupt_cpu(int cpu, int vector)
+{
+	x86_issue_ipi(cpu, vector);
+	return 0;
+}

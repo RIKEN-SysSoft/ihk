@@ -52,6 +52,7 @@ void aal_mc_init_context(aal_mc_kernel_context_t *new_ctx,
                          void (*next_function)(void));
 void aal_mc_switch_context(aal_mc_kernel_context_t *old_ctx,
                            aal_mc_kernel_context_t *new_ctx);
+int aal_mc_interrupt_cpu(int cpu, int vector);
 
 void aal_mc_init_user_process(aal_mc_kernel_context_t *ctx,
                               aal_mc_user_context_t **puctx,
