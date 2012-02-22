@@ -693,7 +693,8 @@ MODULE_LICENSE("GPL");
 /*
  * DMA stuff
  */
-static int mee_dma_apicid;
+static int mee_dma_apicid = -1;
+module_param(mee_dma_apicid, int, 0444);
 
 static unsigned long mee_dma_page_table[512] __attribute__((aligned(4096)));
 static unsigned long mee_dma_stack[512] __attribute__((aligned(4096)));
@@ -769,24 +770,32 @@ static int mee_dma_init(void)
 {
 	int apicid;
 
-	if (shimos_allocate_cpus(1, &apicid) != 1) {
-		printk("MEE: Failed to allocate CPU core for DMA!\n");
-		return -ENOMEM;
+	if (mee_dma_apicid >= 0) {
+		if (shimos_reserve_cpus(1, &mee_dma_apicid)) {
+			printk("MEE: Failed to reserve CPU core for DMA!\n");
+			return -ENOMEM;
+		}
+	} else { 
+		if (shimos_allocate_cpus(1, &apicid) != 1) {
+			printk("MEE: Failed to allocate CPU core for DMA!\n");
+			return -ENOMEM;
+		}
+		mee_dma_apicid = apicid;
 	}
-	mee_dma_apicid = apicid;
+	printk("MEE: DMA Core APIC ID = %d\n", mee_dma_apicid);
 
 	/* XXX: module only */
 	__prepare_idt();
 	mee_dma_pt_pa = mee_get_pa(mee_dma_page_table);
 
-	shimos_boot_cpu_linux(apicid, (unsigned long)shimos_dma_start);
+	shimos_boot_cpu_linux(mee_dma_apicid, (unsigned long)shimos_dma_start);
 
 	/* Wait for dma boot */
 	while (!mee_dma_config.status) {
 		mb();
 		cpu_relax();
 	}
-	printk("DMA Start Acked.\n");
+	printk("DMA Start Acked : %ld\n", sizeof(struct aal_dma_request));
 
 	mee_dma_desc_init();
 
