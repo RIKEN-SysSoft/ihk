@@ -22,6 +22,8 @@ typedef void * aal_device_t;
 
 typedef void * aal_wait_t;
 
+#define AAL_THIS_OS  ((aal_os_t)-1L)
+
 #include <types.h>
 #include <list.h>
 #include <aal/debug.h>

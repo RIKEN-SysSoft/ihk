@@ -412,10 +412,8 @@ static int mee_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
                                       int cpu, int v)
 {
 	struct mee_os_data *os = priv;
-	int i, c;
 
 	/* better calcuation or make map */
-	printk("IPI: %d => %d\n", cpu, os->cpu_info.hw_ids[cpu]);
 	if (cpu < 0 || cpu >= os->cpu_info.n_cpus) {
 		return -EINVAL;
 	}
@@ -479,7 +477,8 @@ static long mee_aal_os_debug_request(aal_os_t aal_os, void *priv,
 {
 	switch (req) {
 	case AAL_OS_DEBUG_START:
-		mee_aal_os_issue_interrupt(aal_os, priv, 0, arg);
+		mee_aal_os_issue_interrupt(aal_os, priv, (arg >> 8),
+		                           (arg & 0xff));
 		return 0;
 	}
 	return -EINVAL;

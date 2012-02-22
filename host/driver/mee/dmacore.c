@@ -110,18 +110,31 @@ void shimos_dma_main(void)
  * The functions below are called by Linux
  * (where the codes can be written normally)
  */
+static unsigned long mee_get_pa(void *ptr)
+{
+	unsigned pa;
+
+	pa = vmalloc_to_pfn(ptr) << PAGE_SHIFT;
+	pa |= ((unsigned long)ptr) & (PAGE_SIZE - 1);
+
+	return pa;
+}
 void mee_dma_desc_init(void)
 {
 	int i;
 	struct mee_dma_channel *c;
 
 	for (i = 0; i < MEE_DMA_CHANNELS; i++) {
+		printk("DMA Channels (%d): %lx\n", 
+		       i, mee_get_pa(mee_dma_config.channels + i));
 		c = mee_dma_config.channels + i;
 		c->desc_ptr = virt_to_phys((void *)__get_free_page(GFP_KERNEL));
 		c->head = c->tail = 0;
 		c->len = PAGE_SIZE / sizeof(struct mee_dma_desc);
 		spin_lock_init(&c->lock);
+		printk("Desc Ptr: %lx\n", c->desc_ptr);
 	}
+
 	mee_dma_config.doorbell = 1;
 	mee_dma_issue_interrupt();
 }
