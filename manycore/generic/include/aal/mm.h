@@ -21,6 +21,11 @@ enum aal_mc_ap_flag {
 	AAL_MC_AP_FLAG,
 };
 
+enum aal_mc_pt_prepare_flag {
+	AAL_MC_PT_FIRST_LEVEL,
+	AAL_MC_PT_LAST_LEVEL,
+};
+
 struct aal_mc_memory_area {
 	unsigned long start;
 	unsigned long size;
@@ -72,6 +77,8 @@ int aal_mc_pt_set_page(page_table_t pt, void *virt, unsigned long phys,
 int aal_mc_pt_change_page(page_table_t pt, void *virt,
                           enum aal_mc_pt_attribute);
 int aal_mc_pt_clear_page(page_table_t pt, void *virt);
+int aal_mc_pt_prepare_map(page_table_t pt, void *virt, unsigned long size,
+                          enum aal_mc_pt_prepare_flag);
 
 struct page_table *aal_mc_pt_create(void);
 void aal_mc_load_page_table(struct page_table *pt);

@@ -78,6 +78,15 @@
 #define PFL2_KERN_ATTR       (PFL2_PRESENT | PFL2_WRITABLE)
 #define PFL1_KERN_ATTR       (PFL1_PRESENT | PFL1_WRITABLE)
 
+/* For easy conversion, it is better to be the same as architecture's ones */
+enum aal_mc_pt_attribute {
+	PTATTR_ACTIVE     = 0x01,
+	PTATTR_WRITABLE   = 0x02,
+	PTATTR_USER       = 0x04,
+	PTATTR_LARGEPAGE  = 0x80,
+	PTATTR_UNCACHABLE = 0x10000,
+};
+
 void *early_alloc_page(void);
 void *get_last_early_heap(void);
 

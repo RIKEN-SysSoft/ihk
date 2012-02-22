@@ -80,6 +80,13 @@ void *get_last_early_heap(void)
 	return last_page;
 }
 
+void flush_tlb(void)
+{
+	unsigned long cr3;
+
+	asm volatile("movq %%cr3, %0; movq %0, %%cr3" : "=r"(cr3) : : "memory");
+}
+
 struct page_table {
 	uint64_t entry[PT_ENTRIES];
 };
@@ -162,7 +169,12 @@ static struct page_table *__alloc_new_pt(void)
 	return newpt;
 }
 
-#define ATTR_MASK (PTATTR_WRITABLE | PTATTR_USER)
+/*
+ * XXX: Confusingly, L4 and L3 automatically add PRESENT,
+ *      but L2 and L1 do not!
+ */
+
+#define ATTR_MASK (PTATTR_WRITABLE | PTATTR_USER | PTATTR_ACTIVE)
 static unsigned long attr_to_l4attr(enum aal_mc_pt_attribute attr)
 {
 	return (attr & ATTR_MASK) | PFL4_PRESENT;
@@ -173,8 +185,7 @@ static unsigned long attr_to_l3attr(enum aal_mc_pt_attribute attr)
 }
 static unsigned long attr_to_l2attr(enum aal_mc_pt_attribute attr)
 {
-	unsigned long r = (attr & (ATTR_MASK | PTATTR_LARGEPAGE))
-		| PFL2_PRESENT;
+	unsigned long r = (attr & (ATTR_MASK | PTATTR_LARGEPAGE));
 
 	if ((attr & PTATTR_UNCACHABLE) && (attr & PTATTR_LARGEPAGE)) {
 		return r | PFL2_PCD | PFL2_PWT; 
@@ -184,11 +195,18 @@ static unsigned long attr_to_l2attr(enum aal_mc_pt_attribute attr)
 static unsigned long attr_to_l1attr(enum aal_mc_pt_attribute attr)
 {
 	if (attr & PTATTR_UNCACHABLE) {
-		return (attr & ATTR_MASK) | PFL1_PWT | PFL1_PWT | PFL1_PRESENT;
+		return (attr & ATTR_MASK) | PFL1_PWT | PFL1_PWT;
 	} else { 
-		return (attr & ATTR_MASK) | PFL1_PRESENT;
+		return (attr & ATTR_MASK);
 	}
 }
+
+#define GET_VIRT_INDICES(virt, l4i, l3i, l2i, l1i) \
+	l4i = ((virt) >> PTL4_SHIFT) & (PT_ENTRIES - 1); \
+	l3i = ((virt) >> PTL3_SHIFT) & (PT_ENTRIES - 1); \
+	l2i = ((virt) >> PTL2_SHIFT) & (PT_ENTRIES - 1); \
+	l1i = ((virt) >> PTL1_SHIFT) & (PT_ENTRIES - 1)
+
 
 static int __set_pt_page(struct page_table *pt, void *virt, unsigned long phys,
                          int attr)
@@ -206,10 +224,7 @@ static int __set_pt_page(struct page_table *pt, void *virt, unsigned long phys,
 		phys &= PAGE_MASK;
 	}
 
-	l4idx = (v >> PTL4_SHIFT) & (PT_ENTRIES - 1);
-	l3idx = (v >> PTL3_SHIFT) & (PT_ENTRIES - 1);
-	l2idx = (v >> PTL2_SHIFT) & (PT_ENTRIES - 1);
-	l1idx = (v >> PTL1_SHIFT) & (PT_ENTRIES - 1);
+	GET_VIRT_INDICES(v, l4idx, l3idx, l2idx, l1idx);
 
 /* TODO: more detailed attribute check */
 	if (pt->entry[l4idx] & PFL4_PRESENT) {
@@ -246,7 +261,8 @@ static int __set_pt_page(struct page_table *pt, void *virt, unsigned long phys,
 		pt = phys_to_virt(pt->entry[l2idx] & PAGE_MASK);
 	} else {
 		newpt = __alloc_new_pt();
-		pt->entry[l2idx] = virt_to_phys(newpt) | attr_to_l2attr(attr);
+		pt->entry[l2idx] = virt_to_phys(newpt) | attr_to_l2attr(attr)
+			| PFL2_PRESENT;
 		pt = newpt;
 	}
 
@@ -275,10 +291,7 @@ static int __clear_pt_page(struct page_table *pt, void *virt, int largepage)
 		v &= PAGE_MASK;
 	}
 
-	l4idx = (v >> PTL4_SHIFT) & (PT_ENTRIES - 1);
-	l3idx = (v >> PTL3_SHIFT) & (PT_ENTRIES - 1);
-	l2idx = (v >> PTL2_SHIFT) & (PT_ENTRIES - 1);
-	l1idx = (v >> PTL1_SHIFT) & (PT_ENTRIES - 1);
+	GET_VIRT_INDICES(v, l4idx, l3idx, l2idx, l1idx);
 
 	if (!(pt->entry[l4idx] & PFL4_PRESENT)) {
 		return -EINVAL;
@@ -315,10 +328,7 @@ int aal_mc_pt_virt_to_phys(struct page_table *pt,
 		pt = init_pt;
 	}
 
-	l4idx = (v >> PTL4_SHIFT) & (PT_ENTRIES - 1);
-	l3idx = (v >> PTL3_SHIFT) & (PT_ENTRIES - 1);
-	l2idx = (v >> PTL2_SHIFT) & (PT_ENTRIES - 1);
-	l1idx = (v >> PTL1_SHIFT) & (PT_ENTRIES - 1);
+	GET_VIRT_INDICES(v, l4idx, l3idx, l2idx, l1idx);
 
 	if (!(pt->entry[l4idx] & PFL4_PRESENT)) {
 		return -EFAULT;
@@ -351,13 +361,57 @@ int aal_mc_pt_virt_to_phys(struct page_table *pt,
 int set_pt_large_page(struct page_table *pt, void *virt, unsigned long phys,
                       enum aal_mc_pt_attribute attr)
 {
-	return __set_pt_page(pt, virt, phys, attr | PTATTR_LARGEPAGE);
+	return __set_pt_page(pt, virt, phys, attr | PTATTR_LARGEPAGE
+	                     | PTATTR_ACTIVE);
 }
 
 int aal_mc_pt_set_page(page_table_t pt, void *virt,
                        unsigned long phys, enum aal_mc_pt_attribute attr)
 {
-	return __set_pt_page(pt, virt, phys, attr);
+	return __set_pt_page(pt, virt, phys, attr | PTATTR_ACTIVE);
+}
+
+int aal_mc_pt_prepare_map(page_table_t p, void *virt, unsigned long size,
+                          enum aal_mc_pt_prepare_flag flag)
+{
+	int l4idx, l4e, ret = 0;
+	unsigned long v = (unsigned long)virt;
+	struct page_table *pt = p, *newpt;
+	unsigned long l;
+	enum aal_mc_pt_attribute attr = PTATTR_WRITABLE;
+
+	if (!pt) {
+		pt = init_pt;
+	}
+
+	l4idx = ((v) >> PTL4_SHIFT) & (PT_ENTRIES - 1);
+
+	if (flag == AAL_MC_PT_FIRST_LEVEL) {
+		l4e = ((v + size) >> PTL4_SHIFT)  & (PT_ENTRIES - 1);
+
+		for (; l4idx <= l4e; l4idx++) {
+			if (pt->entry[l4idx] & PFL4_PRESENT) {
+				return 0;
+			} else {
+				newpt = __alloc_new_pt();
+				if (!newpt) {
+					ret = -ENOMEM;
+				} else { 
+					pt->entry[l4idx] = virt_to_phys(newpt)
+						| attr_to_l4attr(attr);
+				}
+			}
+		}
+	} else {
+		/* Call without ACTIVE flag */
+		l = v + size;
+		for (; v < l; v += PAGE_SIZE) {
+			if ((ret = __set_pt_page(pt, (void *)v, 0, attr))) {
+				break;
+			}
+		}
+	}
+	return ret;
 }
 
 struct page_table *aal_mc_pt_create(void)
@@ -434,7 +488,7 @@ void *map_fixed_area(unsigned long phys, unsigned long size, int uncachable)
 {
 	unsigned long poffset, paligned;
 	int i, npages;
-	int flag = PTATTR_WRITABLE;
+	int flag = PTATTR_WRITABLE | PTATTR_ACTIVE;
 	void *v = (void *)fixed_virt;
 
 	poffset = phys & (PAGE_SIZE - 1);
@@ -453,8 +507,8 @@ void *map_fixed_area(unsigned long phys, unsigned long size, int uncachable)
 		fixed_virt += PAGE_SIZE;
 		paligned += PAGE_SIZE;
 	}
-
-	load_page_table(init_pt);
+	
+	flush_tlb();
 
 	return (char *)v + poffset;
 }

@@ -19,12 +19,5 @@ static void *phys_to_virt(unsigned long p)
 unsigned long virt_to_phys(void *v);
 void *phys_to_virt(unsigned long p);
 
-enum aal_mc_pt_attribute {
-	PTATTR_WRITABLE   = 0x02,
-	PTATTR_USER       = 0x04,
-	PTATTR_LARGEPAGE  = 0x80,
-	PTATTR_UNCACHABLE = 0x10000,
-};
-
 #endif
 
