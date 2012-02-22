@@ -99,7 +99,7 @@ void shimos_dma_main(void)
 			cpu_relax();
 		}
 		mee_dma_config.doorbell = 0;
-
+		mb();
 		for (i = 0; i < MEE_DMA_CHANNELS; i++) {
 			shimos_dma_process_channel(mee_dma_config.channels + i);
 		}
