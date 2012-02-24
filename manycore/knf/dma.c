@@ -8,6 +8,12 @@
 #include <string.h>
 #include "knf.h"
 
+#ifdef DEBUG_DMA
+#define dprintf kprintf
+#else
+#define dprintf(...)
+#endif
+
 struct knf_dma_channel {
 	aal_spinlock_t lock;
 	int head, tail;
@@ -50,11 +56,11 @@ struct knf_dma_channel channels[8];
 
 static void __debug_print_dma_reg(struct knf_dma_channel *c)
 {
-	kprintf("Channel %d:\n", c->channel);
-	kprintf("DCR : %x\n", sbox_read(SBOX_DCR));
-	kprintf("DRAR-HI : %x, LO : %x\n", sbox_dma_read(c, SBOX_DRAR_HI_0),
+	dprintf("Channel %d:\n", c->channel);
+	dprintf("DCR : %x\n", sbox_read(SBOX_DCR));
+	dprintf("DRAR-HI : %x, LO : %x\n", sbox_dma_read(c, SBOX_DRAR_HI_0),
 	        sbox_dma_read(c, SBOX_DRAR_LO_0));
-	kprintf("DTPR : %x, DHPR : %x\n", sbox_dma_read(c, SBOX_DTPR_0),
+	dprintf("DTPR : %x, DHPR : %x\n", sbox_dma_read(c, SBOX_DTPR_0),
 	        sbox_dma_read(c, SBOX_DHPR_0));
 }
 
@@ -82,6 +88,8 @@ static void __initialize_dma(struct knf_dma_channel *c)
 	sbox_dma_write(c, SBOX_DHPR_0, 0);
 
 	c->head = c->tail = 0;
+
+	kprintf("DMA Channel %d initialized.\n", c->channel);
 }
 
 static void __initialize_host_dma(struct knf_dma_channel *c)
@@ -96,6 +104,8 @@ static void __initialize_host_dma(struct knf_dma_channel *c)
 	dcr &= ~(3 << (channel * 2));
 	dcr |= c->owner << (channel * 2);
 	sbox_write(SBOX_DCR, dcr);
+
+	kprintf("DMA Channel %d initialized.\n", c->channel);
 }
 
 void aal_mc_dma_init(void)
@@ -159,6 +169,16 @@ static union md_mic_dma_desc *__knf_desc_proceed_head(struct knf_dma_channel *c)
 	return d;
 }
 
+static unsigned long get_dma_addr(aal_os_t os, unsigned long phys)
+{
+	/* Assuming that mapping is only conversion of addresses */
+	if (!os) {
+		return aal_mc_map_memory(NULL, phys, 1);
+	} else {
+		return phys;
+	}
+}
+
 /*
  * If callback is used (intr == 1)
  *   On completion, callback is called with priv as the argument
@@ -189,11 +209,11 @@ int aal_mc_dma_request(int channel,
 	
 	desc = __knf_desc_proceed_head(c);
 	desc->desc.memcpy.type = 1;
-	desc->desc.memcpy.sap = req->src_phys;
-	desc->desc.memcpy.dap = req->dest_phys;
+	desc->desc.memcpy.sap = get_dma_addr(req->src_os, req->src_phys);
+	desc->desc.memcpy.dap = get_dma_addr(req->dest_os, req->dest_phys);
 	desc->desc.memcpy.length = req->size >> 6; /* 2^6 = 64 */
 
-	kprintf("COPY : sap = %lx, dap = %lx, len = %lx\n",
+	dprintf("COPY : sap = %lx, dap = %lx, len = %lx\n",
 	        desc->desc.memcpy.sap, desc->desc.memcpy.dap,
 	        desc->desc.memcpy.length);
 	if (ndesc > 1) {
@@ -202,10 +222,12 @@ int aal_mc_dma_request(int channel,
 		if (req->callback) {
 			desc->desc.status.intr = 1;
 		} else {
-			desc->desc.status.dap = (unsigned long)req->notify;
-			desc->desc.status.data = req->priv;
+			desc->desc.status.dap 
+				= get_dma_addr(req->notify_os,
+				               (unsigned long) req->notify);
+			desc->desc.status.data = (unsigned long)req->priv;
 		}
-		kprintf("STATUS : dap = %lx, data = %lx, intr = %lx\n",
+		dprintf("STATUS : dap = %lx, data = %lx, intr = %lx\n",
 		        desc->desc.status.dap, desc->desc.status.data,
 		        desc->desc.status.intr);
 	}

@@ -1,4 +1,4 @@
-KDIR=../target
+KDIR=../target.knf
 
 obj-m += aal_knf.o
 

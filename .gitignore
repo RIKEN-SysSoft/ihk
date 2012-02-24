@@ -6,3 +6,5 @@
 Module.symvers
 *.order
 .tmp_versions
+target
+target.knf

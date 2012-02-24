@@ -17,6 +17,12 @@
 #include "mic/mic_dma.h"
 #include "knf_user.h"
 
+#ifdef DMA_DEBUG
+#define dprintk printk
+#else
+#define dprintk(...)
+#endif
+
 static unsigned int sbox_dma_read(struct knf_dma_channel *c, int index)
 {
 	return knf_read_sbox(c->kdd, index + 0x40 * c->channel);
@@ -174,7 +180,7 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 		return -EBUSY;
 	}
 
-	size = req->size >> 6;
+	size = (req->size + 63) >> 6;
 	
 	for (i = 0; i < cdesc; i++) {
 		desc = __knf_desc_proceed_head(c);
@@ -201,6 +207,9 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 			desc->desc.memcpy.length = size;
 		}
 	}
+	dprintk("COPY: src = %lx, dest = %lx, size = %ld (org = %ld)\n",
+	       desc->desc.memcpy.sap, desc->desc.memcpy.dap,
+	       desc->desc.memcpy.length, req->size);
 
 	if (req->callback || req->notify) {
 		desc = __knf_desc_proceed_head(c);
@@ -218,6 +227,8 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 			}
 			desc->desc.status.data = (unsigned long)req->priv;
 		}
+		dprintk("STATUS: dest = %lx, data = %ld\n",
+		       desc->desc.status.dap, desc->desc.status.data);
 	}
 	rdtscll(st1);
 	sbox_dma_write(c, SBOX_DHPR_0, c->head);

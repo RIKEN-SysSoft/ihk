@@ -32,6 +32,12 @@ struct knf_device_data {
 
 	struct aal_dma_channel aal_channels[KNF_DMA_CHANNELS];
 	struct knf_dma_channel channels[KNF_DMA_CHANNELS];
+
+	struct aal_mem_info mem_info;
+	struct aal_cpu_info cpu_info;
+	struct aal_mem_region mem_region;
+
+	int cpu_hw_ids[128];
 };
 
 #define KNFDD_STATUS_READY          1

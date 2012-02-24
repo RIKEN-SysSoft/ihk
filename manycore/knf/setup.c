@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <string.h>
 #include <registers.h>
+#include <march.h>
 #include "knf.h"
 
 #define KNF_BOOT_MAGIC_BOOTED       0x25470290
@@ -35,7 +36,8 @@ void gtt_write(int index, unsigned long phys, unsigned int enable)
 }
 unsigned int gtt_read(int index)
 {
-	return *(volatile unsigned int *)(MIC_GTT_BASE + (unsigned long)index * 4);
+	return *(volatile unsigned int *)(MIC_GTT_BASE
+	                                  + (unsigned long)index * 4);
 }
 
 static void init_smpt(void)
@@ -85,6 +87,8 @@ void arch_init(void)
 	setup_x86();
 
 	sbox_base = map_fixed_area(SBOX_BASE, SBOX_SIZE, 1);
+
+	asm volatile("spflt %0" : : "r"(0));
 }
 
 void arch_set_mikc_queue(void *rq, void *wq)
@@ -171,21 +175,23 @@ void x86_set_warm_reset(void)
 	/* outb is not implemented; we do nothing */
 }
 
-/* TODO: Change it to the actual value! */
-static unsigned int perf_map_nehalem[] = 
+static unsigned int perf_map_knf[] = 
 {
-	[APT_TYPE_INSTRUCTIONS] = CVAL(0xc0, 0x00),
-	[APT_TYPE_L1D_MISS]     = CVAL(0x51, 0x01),
-	[APT_TYPE_L1I_MISS]     = CVAL(0x80, 0x02),
-	[APT_TYPE_L2_MISS]      = CVAL(0x24, 0xaa),
-	[APT_TYPE_LLC_MISS]     = CVAL(0x2e, 0x41),
+	[APT_TYPE_INSTRUCTIONS] = CVAL(0x16, 0x00),
+	[APT_TYPE_L1D_MISS]     = CVAL(0x03, 0x00),
+	[APT_TYPE_L1I_MISS]     = CVAL(0x0e, 0x00),
+	[APT_TYPE_L2_MISS]      = CVAL(0xf5, 0x10),
 	[PERFCTR_MAX_TYPE] = -1,
 };
 
-unsigned int *x86_march_perfmap = perf_map_nehalem;
+unsigned int *x86_march_perfmap = perf_map_knf;
 
 char *aal_mc_get_kernel_args(void)
 {
 	return "";
 }
 
+void x86_march_perfctr_start(unsigned long counter_mask)
+{
+	wrmsr(MSR_PERF_FLT_MASK, 0);
+}

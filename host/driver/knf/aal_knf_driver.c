@@ -147,8 +147,13 @@ int knf_aal_os_issue_interrupt(aal_os_t aal_os, void *priv, int cpu, int vector)
 	struct knf_device_data *kdd = os->dev;
 
 	/* XXX: cpu to apic id */
-	if (cpu == 0) 
-		cpu = kdd->bsp_apic_id;
+	if (cpu == 0) {
+		cpu = 124;
+	} else if (cpu <= 124) {
+		cpu = cpu - 1;
+	} else {
+		cpu = cpu;
+	}
 	return knf_issue_interrupt(kdd, cpu, vector);
 }
 
@@ -238,6 +243,23 @@ static long knf_aal_os_debug_request(aal_os_t aal_os, void *priv,
 	return -EINVAL;
 }
 
+static struct aal_mem_info *knf_aal_os_get_memory_info(aal_os_t aal_os,
+                                                       void *priv)
+{
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+
+	return &kdd->mem_info;
+}
+
+static struct aal_cpu_info *knf_aal_os_get_cpu_info(aal_os_t aal_os, void *priv)
+{
+	struct knf_os_data *os = priv;
+	struct knf_device_data *kdd = os->dev;
+
+	return &kdd->cpu_info;
+}
+
 static struct aal_os_ops knf_aal_os_ops = {
 	.load_mem = knf_aal_os_load_mem,
 	.load_file = knf_aal_os_load_file,
@@ -259,6 +281,9 @@ static struct aal_os_ops knf_aal_os_ops = {
 	.get_special_addr = knf_aal_os_get_special_addr,
 
 	.debug_request = knf_aal_os_debug_request,
+
+	.get_memory_info = knf_aal_os_get_memory_info,
+	.get_cpu_info = knf_aal_os_get_cpu_info,
 };	
 
 static struct aal_register_os_data knf_os_reg_data = {

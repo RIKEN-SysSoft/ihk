@@ -37,7 +37,7 @@ void __knf_reset_dma_registers(struct knf_device_data *kdd);
 
 int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 {
-	int err = 0;
+	int i, err = 0;
 
 	if ((err = pci_enable_device(dev)) < 0) {
 		return err;
@@ -96,6 +96,20 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	kdd->irq = dev->irq;
 
 	__knf_dma_init(kdd);
+
+	/* XXX: This should be dynamically obtained from the card */
+	kdd->mem_region.start = 0;
+	kdd->mem_region.size = 0x80000000;
+	kdd->mem_info.n_mappable = kdd->mem_info.n_available = 1;
+	kdd->mem_info.n_fixed = 0;
+	kdd->mem_info.available = kdd->mem_info.mappable = &kdd->mem_region;
+	kdd->mem_info.fixed = NULL;
+
+	for (i = 0; i < 128; i++) {
+		kdd->cpu_hw_ids[i] = i;
+	}
+	kdd->cpu_info.n_cpus = sizeof(kdd->cpu_hw_ids) / sizeof(int);
+	kdd->cpu_info.hw_ids = kdd->cpu_hw_ids;
 
 	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
 
