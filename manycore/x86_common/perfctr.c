@@ -63,10 +63,17 @@ int aal_mc_perfctr_init(int counter, enum aal_perfctr_type type, int mode)
 	return set_perfctr_x86_direct(counter, mode, x86_march_perfmap[type]);
 }
 
+#ifdef HAVE_MARCH_PERFCTR_START
+extern void x86_march_perfctr_start(unsigned long counter_mask);
+#endif
+
 int aal_mc_perfctr_start(unsigned long counter_mask)
 {
 	unsigned int value = 0;
 
+#ifdef HAVE_MARCH_PERFCTR_START
+	x86_march_perfctr_start(counter_mask);
+#endif
 	value = counter_mask & ((1 << X86_IA32_NUM_PERF_COUNTERS) - 1);
 
 	wrmsr(MSR_PERF_GLOBAL_CTRL, value);
