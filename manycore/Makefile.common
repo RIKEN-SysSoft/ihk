@@ -18,7 +18,7 @@ endif
 
 cc_cmd = $(call echo_cmd,CC,$<)$(CC) $(CFLAGS) -c -o $@ $<
 ld_cmd = $(call echo_cmd,LD,$@)$(LD) $(LDFLAGS) -r -o $@ $^
-dep_cmd = $(call echo_cmd,DEPEND,)$(CC) $(CFLAGS) -MM $^ > $@
+dep_cmd = $(call echo_cmd,DEPEND,)$(CC) $(CFLAGS) -MM $1 > $@
 rm_cmd = $(call echo_cmd,CLEAN,)$(RM)
 
 define make_implicit_src

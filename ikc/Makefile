@@ -25,8 +25,11 @@ clean:
 
 depend: $(O)/Makefile.dep
 
-$(O)/Makefile.dep: $(DEPSRCS)
-	$(dep_cmd)
+prepare:
+	@$(RM) $(O)/Makefile.dep
+
+$(O)/Makefile.dep:
+	$(call dep_cmd,$(DEPSRCS))
 
 $(O)/%.o: %.c
 	$(cc_cmd)

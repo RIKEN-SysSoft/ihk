@@ -16,7 +16,7 @@ DEPSRCS = $(foreach d,$(AAL_SRCDIRS),$(wildcard $(d)/*.c $(d)/*.S))
 
 $(foreach d,$(AAL_SRCDIRS),$(eval $(call make_implicit_src,$(d))))
 
-.PHONY: all clean depend
+.PHONY: all clean depend prepare
 
 all: depend $(O)/aal.o
 
@@ -26,15 +26,21 @@ $(O)/aal.o: $(DESTOBJS) $(O)/ikc/ikc.o
 $(O)/ikc/ikc.o: FORCE
 	$(call echo_cmd,BUILD IKC,$(TARGET))
 	@mkdir -p $(O)/ikc
+	@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc prepare
 	@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc
 
 clean:
 	@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc clean
-	$(rm_cmd) $(DESTOBJS)
+	$(rm_cmd) $(DESTOBJS) $(O)/Makefile.dep
 
 depend: $(O)/Makefile.dep
 
-$(O)/Makefile.dep: $(DEPSRCS)
-	$(dep_cmd)
+$(O)/Makefile.dep:
+	$(call dep_cmd,$(DEPSRCS))
+
+prepare:
+	@$(RM) $(O)/Makefile.dep
 
 FORCE:
+
+-include $(O)/Makefile.dep
