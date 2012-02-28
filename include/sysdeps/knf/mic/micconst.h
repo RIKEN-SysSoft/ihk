@@ -1,10 +1,17 @@
 #ifndef MICCONST_H
 #define MICCONST_H
 
-#define SBOX_BASE           0x08007D0000ULL     /* PCIE Box Registers */
-#define SBOX_SIZE           0x30000ULL
-#define MIC_GTT_BASE        0x0800800000ULL
-//#define MIC_GTT_BASE        0x007FFC0000ULL
+/* /host/driver/mic_common.h */
+#define DLDR_APT_BAR 0
+#define DLDR_MMIO_BAR 4
+
+#define MMIO_DBOX_BASE_OFFSET       0x00000000
+#define MMIO_SBOX_BASE_OFFSET       0x00010000
+#define MMIO_GTT_BASE_OFFSET        0x00040000
+
+#define SCRATCH2_DOWNLOAD_ADDR(x)   ((x) & 0xfffff000)
+#define SCRATCH2_DOWNLOAD_STATUS(x) ((x) & 0x1)
+#define SCRATCH2_APIC_ID(x)     (((x) >> 1) & 0x1ff)
 
 #define SBOX_SICE0_DBR(x)       ((x) & 0xf)
 #define SBOX_SICE0_DBR_BITS(x)      ((x) & 0xf)
@@ -13,6 +20,11 @@
 
 #define MIC_DBR_ALL_MASK            0xf
 #define MIC_DMA_ALL_MASK            0xff
+
+/* (mic side) */
+#define SBOX_BASE               0x08007D0000ULL
+#define SBOX_SIZE               0x30000ULL
+#define MIC_GTT_BASE            0x0800800000ULL
 
 /* /host/driver/uos_download.c */
 #define MIC_DMA_INTERRUPT_VECTOR 229
@@ -29,5 +41,7 @@
 	(uint32_t)(((((HOST_ADDR)<< 2) & (~0x03)) | ((NO_SNOOP) & (0x01))))
 
 #define MIC_SYSTEM_BASE     0x8000000000ULL
+
+#define KNF_DMA_CHANNELS            8
 
 #endif /* MICCONST_H */

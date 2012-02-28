@@ -2,8 +2,9 @@
 #define __HEADER_AAL_DRIVER_MIC_H
 
 #include "knf.h"
-#include "mic/micconst.h"
-#include "mic/micsboxdefine.h"
+#include <sysdeps/knf/mic/micconst.h>
+#include <sysdeps/knf/mic/micsboxdefine.h>
+#include <sysdeps/knf/mic/mic_dma.h>
 
 static unsigned int knf_read_sbox(struct knf_device_data *kdd, int offset)
 {

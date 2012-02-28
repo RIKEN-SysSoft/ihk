@@ -4,7 +4,7 @@ CFLAGS += -DAAL_OS_MANYCORE
 
 -include $(AALBASE)/$(TARGET)/Makefile.config
 
-CFLAGS += -I$(AALBASE)/generic/include 
+CFLAGS += -I$(AALBASE)/generic/include -I$(AALBASE)/../include
 
 O ?= .
 

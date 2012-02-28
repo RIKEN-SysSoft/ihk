@@ -14,7 +14,6 @@
 #include <aal/misc/debug.h>
 
 #include "mic.h"
-#include "mic/mic_dma.h"
 #include "knf_user.h"
 
 #ifdef DMA_DEBUG
