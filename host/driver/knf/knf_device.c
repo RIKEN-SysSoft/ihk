@@ -213,6 +213,7 @@ void knf_shutdown(struct knf_device_data *kdd)
 	knf_write_sbox(kdd, SBOX_SCRATCH12, 0);
 	knf_write_sbox(kdd, SBOX_SCRATCH13, 0);
 	knf_write_sbox(kdd, SBOX_SCRATCH14, 0);
+	knf_write_sbox(kdd, SBOX_SCRATCH15, 0);
 
 	reset = knf_read_sbox(kdd, SBOX_RGCR);
 	reset = 1;
@@ -356,10 +357,20 @@ int knf_issue_interrupt(struct knf_device_data *kdd, int apicid, int vector)
 	return 0;
 }
 
-int knf_boot_os(struct knf_device_data *kdd)
+int knf_boot_os(struct knf_device_data *kdd, struct knf_boot_param *param)
 {
-	/* Make the state as zero */
+	unsigned int address_high, address_low;
+	unsigned long param_pa;
+
+	param_pa = virt_to_phys(param);
+
+	address_high = (unsigned int)(((unsigned long)param_pa) >> 32L);
+	address_low = (unsigned int)(((unsigned long)param_pa) & 0xffffffff);
+
+	/* Set boot parameter */
 	knf_write_sbox(kdd, SBOX_SCRATCH12, 0);
+	knf_write_sbox(kdd, SBOX_SCRATCH14, address_high);
+	knf_write_sbox(kdd, SBOX_SCRATCH15, address_low);
 
 	knf_issue_interrupt(kdd, kdd->bsp_apic_id, MIC_DMA_INTERRUPT_VECTOR);
 	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);

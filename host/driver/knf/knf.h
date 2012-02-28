@@ -1,6 +1,7 @@
 #ifndef KNF_H
 #define KNF_H
 #include <aal/aal_host_driver.h>
+#include <sysdeps/knf/knf_host.h>
 
 #define KNF_DMA_CHANNELS 8
 
@@ -56,6 +57,8 @@ struct knf_os_data {
 	atomic_t status;
 
 	int bspid;
+
+	struct knf_boot_param boot_param;
 };
 
 #endif

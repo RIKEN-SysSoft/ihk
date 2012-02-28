@@ -8,6 +8,7 @@
 #include <registers.h>
 #include <march.h>
 #include "knf.h"
+#include <sysdeps/knf/knf_host.h>
 
 #define KNF_BOOT_MAGIC_BOOTED       0x25470290
 #define KNF_BOOT_MAGIC_READY        0x25470293
@@ -20,6 +21,7 @@ static unsigned char stack[8192] __attribute__((aligned(4096)));
 extern struct aal_kmsg_buf kmsg_buf;
 
 static void *sbox_base = (void *)SBOX_BASE;
+static struct knf_boot_param *boot_param;
 
 void sbox_write(int offset, unsigned int value)
 {
@@ -55,6 +57,19 @@ unsigned long host_to_pa(unsigned long host, int smptentry)
 		+ ((unsigned long)smptentry << MIC_SYSTEM_PAGE_SHIFT);
 }
 
+static void setup_boot_param(void)
+{
+	unsigned long low, high;
+
+	high = sbox_read(SBOX_SCRATCH14);
+	low = sbox_read(SBOX_SCRATCH15);
+
+	/* Unfortunately, it cannot be accessed because it's not mapped. */
+	boot_param = (struct knf_boot_param *)
+		aal_mc_map_memory(NULL, ((high << 32L) | low),
+		                  sizeof(*boot_param));
+}
+
 unsigned long x86_kernel_phys_base;
 
 void arch_start(unsigned long param, unsigned long phys_address)
@@ -64,8 +79,14 @@ void arch_start(unsigned long param, unsigned long phys_address)
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
 
+	/* Map the host memory to do communication between the host */
+	init_smpt();
+	setup_boot_param();
+
+	/* Enter the main routine (in the manycore kernel) */
 	main();
 
+	/* It can not reach this point. */
 	while (1);
 }
 
@@ -82,17 +103,22 @@ void arch_init(void)
 	sbox_write(SBOX_SCRATCH12, KNF_BOOT_MAGIC_BOOTED);
 
 	init_sfi();
-	init_smpt();
 
 	setup_x86();
 
 	sbox_base = map_fixed_area(SBOX_BASE, SBOX_SIZE, 1);
+	boot_param = map_fixed_area((unsigned long)boot_param,
+	                            sizeof(*boot_param), 0);
+
+	boot_param->status = 1;
 
 	asm volatile("spflt %0" : : "r"(0));
 }
 
 void arch_set_mikc_queue(void *rq, void *wq)
 {
+	boot_param->mikc_recv = virt_to_phys(rq);
+	boot_param->mikc_send = virt_to_phys(wq);
 	sbox_write(SBOX_SCRATCH13, virt_to_phys(wq));
 	sbox_write(SBOX_SCRATCH15, virt_to_phys(rq));
 }
@@ -188,7 +214,7 @@ unsigned int *x86_march_perfmap = perf_map_knf;
 
 char *aal_mc_get_kernel_args(void)
 {
-	return "";
+	return boot_param->kernel_args;
 }
 
 void x86_march_perfctr_start(unsigned long counter_mask)

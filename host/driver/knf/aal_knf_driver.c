@@ -31,7 +31,7 @@ static struct pci_device_id knf_pci_ids[] = {
 /**** OS Section ****/
 extern int __knf_prepare_os_load(struct knf_device_data *kdd);
 extern int __knf_load_os_file(struct knf_device_data *kdd, const char *fn);
-extern int knf_boot_os(struct knf_device_data *kdd);
+extern int knf_boot_os(struct knf_device_data *kdd, struct knf_boot_param *);
 extern void knf_shutdown(struct knf_device_data *kdd);
 extern int __knf_os_get_status(struct knf_device_data *kdd);
 extern int knf_issue_interrupt(struct knf_device_data *kdd,
@@ -54,7 +54,7 @@ static int knf_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 	struct knf_os_data *os = priv;
 	struct knf_device_data *kdd = os->dev;
 
-	return knf_boot_os(kdd);
+	return knf_boot_os(kdd, &os->boot_param);
 }
 
 static int knf_aal_os_load_file(aal_os_t aal_os, void *priv, const char *fn)
@@ -260,6 +260,16 @@ static struct aal_cpu_info *knf_aal_os_get_cpu_info(aal_os_t aal_os, void *priv)
 	return &kdd->cpu_info;
 }
 
+static int knf_aal_os_set_kargs(aal_os_t aal_os, void *priv, char *buf)
+{
+	struct knf_os_data *os = priv;
+
+	strncpy(os->boot_param.kernel_args, buf,
+	        sizeof(os->boot_param.kernel_args));
+
+	return 0;
+}
+
 static struct aal_os_ops knf_aal_os_ops = {
 	.load_mem = knf_aal_os_load_mem,
 	.load_file = knf_aal_os_load_file,
@@ -279,6 +289,7 @@ static struct aal_os_ops knf_aal_os_ops = {
 	.unmap_memory = knf_aal_os_unmap_memory,
 
 	.get_special_addr = knf_aal_os_get_special_addr,
+	.set_kargs = knf_aal_os_set_kargs,
 
 	.debug_request = knf_aal_os_debug_request,
 
