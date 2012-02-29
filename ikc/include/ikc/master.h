@@ -16,6 +16,7 @@ struct aal_ikc_listen_param {
 	int pkt_size;
 	int queue_size;
 	int magic;
+	int recv_cpu;
 };
 
 struct aal_ikc_connect_param {

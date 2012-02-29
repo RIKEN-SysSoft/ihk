@@ -41,6 +41,7 @@ int aal_ikc_listen_port(aal_os_t os, struct aal_ikc_listen_param *param)
 		aal_ikc_spinlock_unlock(lock, flags);
 		return -EBUSY;
 	}
+	param->recv_cpu = aal_ikc_get_processor_id();
 	*p = param;
 	aal_ikc_spinlock_unlock(lock, flags);
 
@@ -90,6 +91,9 @@ int aal_ikc_accept(struct aal_ikc_channel_desc *cm,
 	
 	memset(&ci, 0, sizeof(ci));
 	ci.channel = c;
+	
+	aal_ikc_channel_set_cpu(c, p->recv_cpu);
+
 	if ((r = p->handler(&ci)) != 0) {
 		aal_ikc_free_channel(c);
 		return r;
