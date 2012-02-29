@@ -36,7 +36,7 @@ struct mee_dma_config_struct {
 	unsigned long status; /* core status */
 };
 
-extern struct mee_dma_config_struct mee_dma_config;
+extern struct mee_dma_config_struct *mee_dma_config;
 void mee_dma_issue_interrupt(void);
 
 void mee_dma_desc_init(void);

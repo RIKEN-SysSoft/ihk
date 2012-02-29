@@ -7,7 +7,7 @@
 #include <linux/mm.h>
 #include <aal/aal_host_driver.h>
 
-struct mee_dma_config_struct mee_dma_config;
+struct mee_dma_config_struct *mee_dma_config;
 int mee_dma_intr_status;
 
 int mee_dma_intr_count;
@@ -85,23 +85,24 @@ void shimos_dma_main(void)
 
 	__init_lapic();
 
-	mee_dma_config.status = 1;
+	mee_dma_config->status = 1;
 
 	asm volatile("sti");
 
-	while (!mee_dma_config.doorbell) {
+	while (!mee_dma_config->doorbell) {
 		halt();
 	}
 
-	mee_dma_config.doorbell = 0;
+	mee_dma_config->doorbell = 0;
 	while (1) {
-		while (!mee_dma_config.doorbell) {
+		while (!mee_dma_config->doorbell) {
 			cpu_relax();
 		}
-		mee_dma_config.doorbell = 0;
+		mee_dma_config->doorbell = 0;
 		mb();
 		for (i = 0; i < MEE_DMA_CHANNELS; i++) {
-			shimos_dma_process_channel(mee_dma_config.channels + i);
+			shimos_dma_process_channel(mee_dma_config->channels
+			                           + i);
 		}
 	}
 }
@@ -110,24 +111,14 @@ void shimos_dma_main(void)
  * The functions below are called by Linux
  * (where the codes can be written normally)
  */
-static unsigned long mee_get_pa(void *ptr)
-{
-	unsigned pa;
-
-	pa = vmalloc_to_pfn(ptr) << PAGE_SHIFT;
-	pa |= ((unsigned long)ptr) & (PAGE_SIZE - 1);
-
-	return pa;
-}
 void mee_dma_desc_init(void)
 {
 	int i;
 	struct mee_dma_channel *c;
 
 	for (i = 0; i < MEE_DMA_CHANNELS; i++) {
-		printk("DMA Channels (%d): %lx\n", 
-		       i, mee_get_pa(mee_dma_config.channels + i));
-		c = mee_dma_config.channels + i;
+		c = mee_dma_config->channels + i;
+		printk("DMA Channels (%d): %lx\n", i, virt_to_phys(c));
 		c->desc_ptr = virt_to_phys((void *)__get_free_page(GFP_KERNEL));
 		c->head = c->tail = 0;
 		c->len = PAGE_SIZE / sizeof(struct mee_dma_desc);
@@ -135,7 +126,7 @@ void mee_dma_desc_init(void)
 		printk("Desc Ptr: %lx\n", c->desc_ptr);
 	}
 
-	mee_dma_config.doorbell = 1;
+	mee_dma_config->doorbell = 1;
 	mee_dma_issue_interrupt();
 }
 
@@ -167,7 +158,7 @@ int __mee_dma_request(aal_device_t dev, int channel,
 		return -EINVAL;
 	}
 
-	c = mee_dma_config.channels + channel;
+	c = mee_dma_config->channels + channel;
 	
 	if (req->callback || req->notify) {
 		ndesc++;
@@ -211,7 +202,7 @@ int __mee_dma_request(aal_device_t dev, int channel,
 	c->head = h;
 	spin_unlock_irqrestore(&c->lock, flags);
 
-	mee_dma_config.doorbell = 1;
+	mee_dma_config->doorbell = 1;
 	/*	mee_dma_issue_interrupt(); */
 
 	return 0;

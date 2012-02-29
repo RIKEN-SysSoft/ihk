@@ -71,6 +71,7 @@ struct mee_os_data {
 #define MEE_DEV_STATUS_READY    0
 #define MEE_DEV_STATUS_BOOTING  1
 
+extern struct mee_dma_config_struct *mee_dma_config;
 static unsigned long mee_dma_config_pa;
 
 struct mee_device_data {
@@ -616,8 +617,6 @@ static int mee_aal_unmap_virtual(aal_device_t aal_dev, void *priv,
 	return 0;
 }
 
-static unsigned long mee_get_pa(void *ptr);
-
 static long mee_aal_debug_request(aal_device_t aal_dev, void *priv,
                                   unsigned int req, unsigned long arg)
 {
@@ -695,7 +694,7 @@ MODULE_LICENSE("GPL");
 static int mee_dma_apicid = -1;
 module_param(mee_dma_apicid, int, 0444);
 
-static unsigned long mee_dma_page_table[512] __attribute__((aligned(4096)));
+static unsigned long *mee_dma_page_table;
 static unsigned long mee_dma_stack[512] __attribute__((aligned(4096)));
 static unsigned long mee_dma_pt_pa;
 
@@ -704,7 +703,7 @@ extern void *shimos_get_ident_page_table(void);
 #define MEE_DMA_VECTOR 0xf2
 static struct idt_entry{
 	uint32_t desc[4];
-} dma_idt[256] __attribute__((aligned(16)));
+} *dma_idt;
 
 struct x86_desc_ptr {
         uint16_t size;
@@ -714,16 +713,6 @@ struct x86_desc_ptr {
 static struct x86_desc_ptr dma_idt_ptr;
 
 extern char mee_dma_intr_enter[];
-
-static unsigned long mee_get_pa(void *ptr)
-{
-	unsigned pa;
-
-	pa = vmalloc_to_pfn(ptr) << PAGE_SHIFT;
-	pa |= ((unsigned long)ptr) & (PAGE_SIZE - 1);
-
-	return pa;
-}
 
 static void set_idt_entry(int idx, unsigned long addr)
 {
@@ -735,8 +724,9 @@ static void set_idt_entry(int idx, unsigned long addr)
 
 static void __prepare_idt(void)
 {
-	printk("%lx, %lx\n", sizeof(dma_idt), mee_get_pa(dma_idt));
-	dma_idt_ptr.size = sizeof(dma_idt);
+	dma_idt = (void *)__get_free_page(GFP_KERNEL);
+
+	dma_idt_ptr.size = sizeof(struct idt_entry) * 256;
 	dma_idt_ptr.address = (unsigned long)dma_idt;
 
 	set_idt_entry(MEE_DMA_VECTOR, (unsigned long)mee_dma_intr_enter);
@@ -785,20 +775,25 @@ static int mee_dma_init(void)
 
 	/* XXX: module only */
 	__prepare_idt();
-	mee_dma_pt_pa = mee_get_pa(mee_dma_page_table);
+	mee_dma_page_table = (void *)__get_free_page(GFP_KERNEL);
+	mee_dma_pt_pa = virt_to_phys(mee_dma_page_table);
+	printk("Page table : %p => %lx\n", mee_dma_page_table, mee_dma_pt_pa);
+
+	mee_dma_config = kmalloc(sizeof(struct mee_dma_config_struct),
+	                         GFP_KERNEL);
+	mee_dma_config_pa = virt_to_phys(mee_dma_config);
 
 	shimos_boot_cpu_linux(mee_dma_apicid, (unsigned long)shimos_dma_start);
 
 	/* Wait for dma boot */
-	while (!mee_dma_config.status) {
+
+	while (!mee_dma_config->status) {
 		mb();
 		cpu_relax();
 	}
 	printk("DMA Start Acked : %ld\n", sizeof(struct aal_dma_request));
 
 	mee_dma_desc_init();
-
-	mee_dma_config_pa = mee_get_pa(&mee_dma_config);
 
 	return 0;
 }
@@ -807,6 +802,9 @@ static void mee_dma_exit(void)
 {
 	shimos_reset_cpu(mee_dma_apicid);
 	shimos_free_cpus(1, &mee_dma_apicid);
+
+	free_page((unsigned long)mee_dma_page_table);
+	free_page((unsigned long)dma_idt);
 }
 
 void mee_dma_issue_interrupt(void)
