@@ -1,3 +1,9 @@
+/**
+ * \file knf_device.c
+ * \brief KNF Driver Core
+ *
+ * This file treats the actual procedures for Knights Ferry boards.
+ */
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/kernel.h>
@@ -35,6 +41,12 @@ void __knf_dma_finalize(struct knf_device_data *kdd);
 int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg);
 void __knf_reset_dma_registers(struct knf_device_data *kdd);
 
+/**
+ * \brief Initialize the specified Knights Ferry board.
+ *
+ * \param dev  A pci_dev structure corresponding to the device to initialize
+ * \param kdd An internal data structure in this driver.
+ */
 int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 {
 	int i, err = 0;
@@ -120,6 +132,12 @@ FIN:
 	return err;
 }
 
+/**
+ * \brief Stops the specified device and destroy the related structures.
+ *
+ * \param dev  A pci_dev structure to be destroyed
+ * \param kdd  An internal data structure for the driver.
+ */
 void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *kdd)
 {
 	dprint_func_enter;
@@ -143,12 +161,24 @@ void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *kdd)
 	pci_disable_device(dev);
 }
 
+/** \brief Get an entry in GTT.
+ *
+ * @param kdd  An interal structure for a Knights Ferry device
+ * @param entry Index in the GTT to query (0 to GTT_SIZE / 4)
+ */
 static unsigned int get_gtt_entry(struct knf_device_data *kdd, int entry)
 {
 	return readl((unsigned int *)((char *)(kdd->mmio_va) + 
 	                              MMIO_GTT_BASE_OFFSET + 4 * entry));
 }
 
+/** \brief Set an entry in GTT.
+ *
+ * @param kdd  A Knights Ferry device
+ * @param entry Index in the GTT to set (0 to GTT_SIZE / 4)
+ * @param phys Physical address in Knights Ferry to be mapped to the GTT entry
+ * @param enable Whether the mapping is enabled or not
+ */
 static void set_gtt_entry(struct knf_device_data *kdd, int entry,
                           unsigned long phys, unsigned int enable)
 {
@@ -157,6 +187,13 @@ static void set_gtt_entry(struct knf_device_data *kdd, int entry,
 	                        MMIO_GTT_BASE_OFFSET + 4 * entry));
 }
 
+/** \brief Maps an memory area to the aperture in a Knights Ferry device.
+ *
+ * @param kdd        A Knights Ferry device
+ * @param ap_address Start address in the aperture to be mapped to.
+ * @param phys       Start physical address in Knights Ferry to be mapped.
+ * @param napges     Number of pages to map
+ */
 int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
                      unsigned long phys, int npages)
 {
@@ -182,6 +219,12 @@ int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
 	return 0;
 }
 
+/** \brief Unmaps an memory area to the aperture in a Knights Ferry device.
+ *
+ * @param kdd        A Knights Ferry device
+ * @param ap_address Start address in the aperture to unmap
+ * @param napges     Number of pages to unmap
+ */
 int knf_unmap_aperture(struct knf_device_data *kdd, unsigned long ap_address,
                        int npages)
 {
@@ -203,6 +246,7 @@ int knf_unmap_aperture(struct knf_device_data *kdd, unsigned long ap_address,
 
 int __knf_prepare_os_load(struct knf_device_data *kdd);
 
+/** \brief Shuts down a Knights Ferry device */
 void knf_shutdown(struct knf_device_data *kdd)
 {
 	unsigned int reset;
@@ -224,6 +268,7 @@ void knf_shutdown(struct knf_device_data *kdd)
 	__knf_prepare_os_load(kdd);
 }
 
+/** \brief Sets up scratch values in Knights Ferry for booting */
 static void load_scratch_values(struct knf_device_data *kdd)
 {
 	unsigned long scratch2;
@@ -237,8 +282,10 @@ static void load_scratch_values(struct knf_device_data *kdd)
 	dprint_var_i4(kdd->bsp_apic_id);
 }
 
+/** \brief Timeout for __wait_for_bootstrap_ready in 100-ms unit */
 #define WFBR_TIMEOUT 50
 
+/** \brief Waits for the Knights Ferry device to get ready by spinning */
 static int __wait_for_bootstrap_ready(struct knf_device_data *kdd)
 {
 	unsigned int scratch2;
@@ -257,6 +304,12 @@ static int __wait_for_bootstrap_ready(struct knf_device_data *kdd)
 	return -EBUSY;
 }
 
+/** \brief Initializes the Knights Ferry device to boot
+ *
+ * This function sets up the GTT entries to map straightly starting from
+ * the load offset (where the kernel image should be loaded),
+ * and prepares some registers.
+ */
 int __knf_prepare_os_load(struct knf_device_data *kdd)
 {
 	unsigned long i, phys;
@@ -283,17 +336,24 @@ int __knf_prepare_os_load(struct knf_device_data *kdd)
 
 	return 0;
 }
+/** \brief Sets the size of the "OS reserved area" */
 static void __knf_set_os_reserved_area(struct knf_device_data *kdd,
                                        unsigned long size)
 {
 	knf_write_sbox(kdd, SBOX_SCRATCH3, (unsigned int)size);
 }
 
+/** \brief Sets the size of the kernel image (maybe optional) */
 static void __knf_set_os_size(struct knf_device_data *kdd, unsigned long size)
 {
 	knf_write_sbox(kdd, SBOX_SCRATCH5, (unsigned int)size);
 }
 
+/** \brief Load a kernel image from a file directly
+ *
+ * @param kdd A Knights Ferry device
+ * @param filename A name of the kernel image file to load.
+ */
 int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
 {
 	struct file *file;
@@ -345,6 +405,12 @@ FIN:
 	return ret;
 }
 
+/** \brief Issue an interrupt to a core in a Knights Ferry device.
+ *
+ * @param kdd A Knights Ferry device
+ * @param apicid The APIC ID of a CPU core to trigger an interrupt in.
+ * @param vector The vector number of an interrupt to issue
+ */
 int knf_issue_interrupt(struct knf_device_data *kdd, int apicid, int vector)
 {
 	unsigned int val;
@@ -357,6 +423,11 @@ int knf_issue_interrupt(struct knf_device_data *kdd, int apicid, int vector)
 	return 0;
 }
 
+/** \brief Boot a kernel in a Knights Ferry device.
+ *
+ * @param kdd A Knights Ferry device
+ * @param param The boot parameter for the new kernel.
+ */
 int knf_boot_os(struct knf_device_data *kdd, struct knf_boot_param *param)
 {
 	unsigned int address_high, address_low;
@@ -407,6 +478,12 @@ long __knf_debug_request(struct knf_device_data *kdd,
 	return -EINVAL;
 }
 
+/** \brief Enable interrupts from a Knights Ferry device
+ *
+ * @param kdd       A Knights Ferry device
+ * @param intr_mask Mask of interrupts to enable
+ * @param dma_mask  Mask of DMA interrupts to enable
+ */
 static void knf_enable_interrupts(struct knf_device_data *kdd,
                                   int intr_mask, int dma_mask)
 {
@@ -417,6 +494,13 @@ static void knf_enable_interrupts(struct knf_device_data *kdd,
 	knf_write_sbox(kdd, SBOX_SICE0, reg);
 }
 
+/** \brief Disable interrupts from a Knights Ferry device
+ *
+ * Currently, all the interrupts are disabled (the two masks are ignored).
+ * @param kdd       A Knights Ferry device
+ * @param intr_mask Mask of interrupts to enable
+ * @param dma_mask  Mask of DMA interrupts to enable
+ */
 static void knf_disable_interrupts(struct knf_device_data *kdd,
                                    int intr_mask, int dma_mask)
 {
@@ -426,8 +510,18 @@ static void knf_disable_interrupts(struct knf_device_data *kdd,
 	knf_write_sbox(kdd, SBOX_SICC0, reg);
 }
 
+/** \brief List of handlers that handle interrupts 
+ * from the Knights Ferry device */
 static LIST_HEAD(knf_interrupt_handlers);
 
+/** \brief Add a handler for interrupts from the Knights Ferry device
+ *
+ * @param kdd A Knights Ferry device
+ * @param itype Type of interrupts that the handler handles (ignored)
+ * @param os AAL OS instance
+ * @param os_priv The private structure related to the AAL OS instance.
+ * @param h The descriptor of the handler to register
+ */
 int knf_add_interrupt_handler(struct knf_device_data *kdd, int itype,
                               aal_os_t os, void *os_priv,
                               struct aal_host_interrupt_handler *h)
@@ -439,11 +533,16 @@ int knf_add_interrupt_handler(struct knf_device_data *kdd, int itype,
 	return 0;
 }
 
+/** \brief Remove a handler for interrupts from the Knights Ferry device
+ *
+ * @param h The descriptor of the handler to unregister
+ */
 void knf_del_interrupt_handler(struct aal_host_interrupt_handler *h)
 {
 	list_del(&h->list);
 }
 
+/** \brief IRQ Handler of Knights Ferry */
 irqreturn_t knf_irq_handler(int irq, void *data)
 {
 	struct knf_device_data *kdd = data;
@@ -464,6 +563,12 @@ irqreturn_t knf_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+/** \brief Get a status of the kernel in a Knights Ferry device.
+ *
+ * Since there is only one kernel in a device, the parameter includes
+ * no OS parameter.
+ * @param kdd   A Knights Ferry device
+ */
 int __knf_os_get_status(struct knf_device_data *kdd)
 {
 	unsigned int v;
@@ -479,6 +584,13 @@ int __knf_os_get_status(struct knf_device_data *kdd)
 		return -1;
 	}
 }
+/** \brief Get various special memory areas of a Knights Ferry device.
+ *
+ * @param [in] kdd   A Knights Ferry device
+ * @param [in] type  Type of the address area to query
+ * @param [out] addr Starting address of the area (result)
+ * @param [out] size Size of the memory area
+ */
 int __knf_get_special_addr(struct knf_device_data *kdd, 
                            enum aal_special_addr_type type,
                            unsigned long *addr,

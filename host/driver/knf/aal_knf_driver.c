@@ -1,5 +1,8 @@
-/*
- * AAL Knights Ferry Driver
+/**
+ * \file aal_knf_driver.c
+ * \brief AAL Host Driver for Knights Ferry
+ *
+ * This code includes NDA-related codes at present.
  */
 #include <linux/sched.h>
 #include <linux/mm.h>
@@ -18,6 +21,10 @@
 #include <aal/misc/debug.h>
 #include "knf.h"
 
+/**
+ * \var knf_pci_ids
+ * \brief The PCI IDs of Knights Ferry boards
+ */
 static struct pci_device_id knf_pci_ids[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2240), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2241), },
@@ -89,17 +96,17 @@ static int knf_aal_os_shutdown(aal_os_t aal_os, void *priv, int flag)
 	return 0;
 }
 
+/**
+ * \brief Allocate resources in a Knights Ferry device for an OS
+ *
+ * XXX: Because we assume that only one kernel is running, all the resources
+ * are dedicated to the only kernel.
+ * Therefore, this function returns always 0 (successful)
+ */
 static int knf_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
                                      struct aal_resource *resource)
 {
 /*	struct mee_os_data *os = priv; */
-
-	/*
-	 * XXX: We assume that only one kernel is running.
-	 * So succeeding in creating an OS means allocating all the resource
-	 * on the card.
-	 */
-
 	return 0;
 }
 
@@ -141,7 +148,8 @@ static int knf_aal_os_wait_for_status(aal_os_t aal_os, void *priv,
 	}
 }
 
-int knf_aal_os_issue_interrupt(aal_os_t aal_os, void *priv, int cpu, int vector)
+static int knf_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
+                                      int cpu, int vector)
 {
 	struct knf_os_data *os = priv;
 	struct knf_device_data *kdd = os->dev;
@@ -196,6 +204,7 @@ static int knf_aal_os_unmap_memory(aal_os_t aal_os, void *priv,
 	return 0;
 }
 
+/** \brief Register an interrupt handler for interrupts from Knights Ferry */
 static int knf_aal_os_reg_intr(aal_os_t aal_os, void *priv, int itype,
                                struct aal_host_interrupt_handler *h)
 {
@@ -455,6 +464,10 @@ static struct aal_register_device_data knf_dev_reg_data = {
 	.ops = &knf_aal_device_ops,
 };
 
+/**
+ * \func knf_probe
+ * \brief Checks if the specified device can be handled by this driver.
+ */
 static int knf_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
 	struct knf_device_data *data;

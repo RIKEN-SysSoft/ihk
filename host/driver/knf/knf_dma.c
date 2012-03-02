@@ -1,3 +1,7 @@
+/**
+ * \file knf_dma.c
+ * \brief Knights Ferry DMA Device Driver 
+ */
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/kernel.h>
@@ -22,17 +26,33 @@
 #define dprintk(...)
 #endif
 
+/** \brief Read DMA-related registers in the SBOX MMIO registers.
+ *
+ * @param c     Channel
+ * @param index Base offset in SBOX of the DMA register to read
+ */
 static unsigned int sbox_dma_read(struct knf_dma_channel *c, int index)
 {
 	return knf_read_sbox(c->kdd, index + 0x40 * c->channel);
 }
 
+/** \brief Write DMA-related registers in the SBOX MMIO registers.
+ *
+ * @param c     Channel
+ * @param index Base offset in SBOX of the DMA register to write
+ * @param value Value to write
+ */
 static void sbox_dma_write(struct knf_dma_channel *c,
                            int index, unsigned int value)
 {
 	knf_write_sbox(c->kdd, index + 0x40 * c->channel, value);
 }
 
+/** \brief Check if the DMA ring has enough room of the certain size
+ *
+ * @param c     Channel
+ * @param ndesc Number of the descriptors that you want
+ */
 static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 {
 	int h = c->head, t = c->tail, reg_value = 0;
@@ -56,6 +76,12 @@ static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 	return 0; /* NG */
 }
 
+/** \brief Proceed the head pointer of the DMA channel, and returns the 
+ *  pointer to the descriptor of the original head position.
+ * 
+ * @param c Channel
+ * @return Pointer to the descriptor of the original head position
+ */
 static union md_mic_dma_desc *__knf_desc_proceed_head(struct knf_dma_channel *c)
 {
 	union md_mic_dma_desc *d;
@@ -73,17 +99,36 @@ static union md_mic_dma_desc *__knf_desc_proceed_head(struct knf_dma_channel *c)
 	return d;
 }
 
+/** \brief Convert the host physical address to the physical address in MIC
+ * 
+ * This function converts by very simple calculation, and assumes
+ * the straight-forward mapping of the host memory in MIC.
+ * @param phys "Host" physical address to convert ( must be < 32GB )
+ * @return Physical address in the MIC's address space
+ */
 static unsigned long phys_to_mic_phys(unsigned long phys)
 {
 	/* This is true when phys < 32GB or so. */
 	return phys + MIC_SYSTEM_BASE;
 }
 
+/** \brief Convert the host kernel virtual address to the address in MIC.
+ * 
+ * The assumption and limitation are the same as phys_to_mic_phys.
+ * @param virt "Host" virtual address to convert ( must be < 32GB in physical )
+ * @return Physical address in the MIC's address space
+ */
 static unsigned long virt_to_mic_phys(void *virt)
 {
 	return phys_to_mic_phys(virt_to_phys(virt));
 }
 
+/** \brief Initialize a DMA channel
+ * 
+ * This function initializes DMA-related registers for the specified channel.
+ * It is assumed that the MIC kernel initializes the DCR register.
+ * @param c DMA channel
+ */
 static void __initialize_dma(struct knf_dma_channel *c)
 {
 	/* MIC_OWNED = 0, HOST_OWNED = 1, ENABLED = 2 */
@@ -111,11 +156,23 @@ static void __initialize_dma(struct knf_dma_channel *c)
 	c->head = c->tail = 0;
 }
 
+/** \brief Initialize the DMA registers for host use
+ * 
+ * Currently, this function initializes only the Channel 4 of the DMA engine
+ * of the Knights Ferry device.
+ * @param kdd A Knights Ferry device
+ */
 void __knf_reset_dma_registers(struct knf_device_data *kdd)
 {
 	__initialize_dma(kdd->channels + 4);
 }
 
+/** \brief Initialize the DMA devices for host use.
+ * 
+ * The function initializes the channel descriptor structures, and
+ * DMA registers.
+ * @param kdd A Knights Ferry device
+ */
 void __knf_dma_init(struct knf_device_data *kdd)
 {
 	/* Host only uses channels >= 4 */
@@ -136,6 +193,11 @@ void __knf_dma_init(struct knf_device_data *kdd)
 	__knf_reset_dma_registers(kdd);
 }
 
+/** \brief Deinitialize the DMA devices for host use.
+ * 
+ * The function finalizes the channel descriptor structures.
+ * @param kdd A Knights Ferry device
+ */
 void __knf_dma_finalize(struct knf_device_data *kdd)
 {
 	if (kdd->channels[4].desc) {
@@ -154,6 +216,12 @@ static void __debug_print_dma_reg(struct knf_dma_channel *c)
 	        sbox_dma_read(c, SBOX_DHPR_0));
 }
 
+/** \brief Core function to perform a DMA request
+ * 
+ * @param kdd     A Knights Ferry device
+ * @param channel Channel number
+ * @param req     DMA request descriptor
+ */
 int __knf_dma_request(struct knf_device_data *kdd, int channel,
                       struct aal_dma_request *req)
 {
@@ -298,6 +366,11 @@ int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
 	return ed - st2;
 }
 
+/** \brief Wrapper function of __knf_dma_request
+ * 
+ * @param channel AAL DMA channel structure
+ * @param r       DMA request descriptor
+ */
 static int knf_dma_request(aal_dma_channel_t channel, struct aal_dma_request *r)
 {
 	__knf_dma_request(channel->priv, channel->channel, r);
@@ -309,6 +382,11 @@ struct aal_dma_ops knf_dma_ops = {
 	.request = knf_dma_request,
 };
 
+/** \brief aal_host_get_dma_channel implementation
+ * 
+ *  Note that the "channel" parameter has the offset of 4, that is,
+ *  channel = 0 indicates that Channel 4 in the hardware DMA engine.
+ */
 aal_dma_channel_t knf_aal_get_dma_channel(aal_device_t dev, void *priv,
                                           int channel)
 {
