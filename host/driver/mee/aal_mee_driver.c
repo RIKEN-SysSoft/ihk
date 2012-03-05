@@ -1,5 +1,8 @@
-/*
- * AAL MEE Driver
+/**
+ * \file aal_mee_driver.c
+ * \brief AAL Host Driver for MEE (Manycore Emulation Environemnt)
+ *
+ * Copyright (C) 2011-2012 Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include <linux/sched.h>
 #include <linux/mm.h>
@@ -686,7 +689,7 @@ static void __exit mee_exit(void)
 module_init(mee_init);
 module_exit(mee_exit);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");
 
 /*
  * DMA stuff

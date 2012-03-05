@@ -531,5 +531,6 @@ static void __exit knf_exit(void)
 module_init(knf_init);
 module_exit(knf_exit);
 
-MODULE_LICENSE("GPL");
+/* XXX: LICENSE */
+MODULE_LICENSE("Dual BSD/GPL");
 
