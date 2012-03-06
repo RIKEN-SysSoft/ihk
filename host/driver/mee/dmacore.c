@@ -1,16 +1,22 @@
-/*
+/**
+ * \file dmacore.c
+ * 
  * MEE DMA Core Main Program
- * Copyright (C) 2011 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include "mee_dma.h"
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <aal/aal_host_driver.h>
 
+/** \brief Pointer to the structure that contains information of the DMA core */
 struct mee_dma_config_struct *mee_dma_config;
+/** \brief Status of the current interrupt. (just for debug) */
 int mee_dma_intr_status;
 
+/** \brief Number of DMA interrupts handled. (just for debug) */
 int mee_dma_intr_count;
+/** \brief Number of DMA interrupts issued. (just for debug) */
 int mee_dma_intr_issued;
 
 /*
@@ -19,8 +25,10 @@ int mee_dma_intr_issued;
  * But, please note that this CPU is not recognized by Linux, and calling
  * complex Linux functions might cause unexpected results.
  */
-void shimos_issue_ipi(int apicid, int vector);
+extern void shimos_issue_ipi(int apicid, int vector);
 
+
+/** \brief Interrupt handler of the DMA core */
 void shimos_dma_interrupt_handler(void)
 {
 	ack_APIC_irq();
@@ -28,6 +36,7 @@ void shimos_dma_interrupt_handler(void)
 	mee_dma_intr_count++;
 }
 
+/** \brief Get the next index in a ring buffer of the DMA channel */
 static inline unsigned long __next(struct mee_dma_channel *c, unsigned long t)
 {
 	t++;
@@ -37,12 +46,14 @@ static inline unsigned long __next(struct mee_dma_channel *c, unsigned long t)
 	return t;
 }
 
+/** \brief Issues an interrupt to the host kernel */
 static void __do_interrupt(int flag)
 {
 	mee_dma_intr_status = 1;
 	shimos_issue_ipi(flag & 0xffff, SHIMOS_VECTOR);
 }
 
+/** \brief Processes a DMA request in the DMA channel ring */
 static void shimos_dma_process(struct mee_dma_desc *desc)
 {
 	if (desc->type == 1) {
@@ -55,6 +66,7 @@ static void shimos_dma_process(struct mee_dma_desc *desc)
 	}
 }
 
+/** \brief Enable the local APIC of the DMA core */
 static void __init_lapic(void)
 {
 	unsigned long baseaddr;
@@ -67,6 +79,7 @@ static void __init_lapic(void)
 }
 
 
+/** \brief Process all the descriptors in the ring buffer of the channel */
 static void shimos_dma_process_channel(struct mee_dma_channel *channel)
 {
 	struct mee_dma_desc *desc, *cur;
@@ -79,6 +92,7 @@ static void shimos_dma_process_channel(struct mee_dma_channel *channel)
 	}
 }
 
+/** \brief Main routine of the DMA core */
 void shimos_dma_main(void)
 {
 	int i;
@@ -111,6 +125,7 @@ void shimos_dma_main(void)
  * The functions below are called by Linux
  * (where the codes can be written normally)
  */
+/** \brief Initializes the DMA channels */
 void mee_dma_desc_init(void)
 {
 	int i;
@@ -130,6 +145,8 @@ void mee_dma_desc_init(void)
 	mee_dma_issue_interrupt();
 }
 
+/** \brief Check if there is room enough to put the desired number of
+ * DMA descriptors */
 static char __mee_desc_check_room(struct mee_dma_channel *c, int ndesc)
 {
 	int h = c->head, t = c->tail;
@@ -144,7 +161,7 @@ static char __mee_desc_check_room(struct mee_dma_channel *c, int ndesc)
 	return 0; /* NG */
 }
 
-/* Host uses 0 */
+/** \brief Request the MEE DMA core to perform the DMA request */
 int __mee_dma_request(aal_device_t dev, int channel,
                       struct aal_dma_request *req)
 {

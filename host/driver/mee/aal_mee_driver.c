@@ -37,37 +37,79 @@
 
 #define MEE_COM_VECTOR  0xf1
 
+/** \brief MEE boot parameter structure
+ *
+ * This structure contains vairous parameters both passed to the manycore 
+ * kernel, and passed from the manycore kernel.
+ */
 struct mee_boot_param {
+	/** \brief SHIMOS-specific boot parameters. Memory start, end etc.
+	 * (passed to the manycore) */
 	struct shimos_boot_param bp;
 
+	/** \brief Manycore-physical address of the kernel message buffer
+	 * of the manycore kernel (filled by the manycore) */
 	unsigned long msg_buffer;
-	unsigned long mikc_queue_recv, mikc_queue_send;
+	/** \brief Manycore physical address of the receive queue of 
+	 * the master IKC channel (filled by the manycore) */
+	unsigned long mikc_queue_recv;
+	/** \brief Manycore physical address of the send queue of 
+	 * the master IKC channel (filled by the manycore) */
+	unsigned long mikc_queue_send;
 
+	/** \brief Host physical address of the DMA structure
+	 * (passed to the manycore) */
 	unsigned long dma_address;
+	/** \brief Host physical address of the identity-mapped page table
+	 * (passed to the manycore) */
 	unsigned long ident_table;
 
+	/** \brief Kernel command-line parameter */
 	char kernel_args[256];
 };
 
+/** \brief MEE driver-specific OS structure */
 struct mee_os_data {
+	/** \brief Lock for this structure */
 	spinlock_t lock;
 
+	/** \brief Pointer to the device structure */
 	struct mee_device_data *dev;
+	/** \brief Allocated CPU core mask */
 	unsigned long coremaps;
-	unsigned long mem_start, mem_end;
+	/** \brief Start address of the allocated memory region */
+	unsigned long mem_start;
+	/** \brief End address of the allocated memory region */
+	unsigned long mem_end;
 
+	/** \brief APIC ID of the bsp of this OS instance */
 	int boot_cpu;
+	/** \brief Entry point address of this OS instance */
 	unsigned long boot_rip;
 
+	/** \brief AAL Memory information */
 	struct aal_mem_info mem_info;
+	/** \brief AAL Memory region information */
 	struct aal_mem_region mem_region;
+	/** \brief AAL CPU information */
 	struct aal_cpu_info cpu_info;
+	/** \brief APIC ID map of the CPU cores */
 	int cpu_hw_ids[MEE_MAX_CPUS];
 
-	char kernel_args[256]; /* will be copied to boot_param on boot */
+	/** \brief Kernel command-line parameter.
+	 *
+	 * This will be copied to boot_param just before booting so that
+	 * it does not change while the kernel is running.
+	 */
+	char kernel_args[256];
 
+	/** \brief Boot parameter for the kernel
+	 *
+	 * This structure is directly accessed (read and written)
+	 * by the manycore kernel. */
 	struct mee_boot_param param;
 
+	/** \brief Status of the kernel */
 	int status;
 };
 
@@ -77,6 +119,11 @@ struct mee_os_data {
 extern struct mee_dma_config_struct *mee_dma_config;
 static unsigned long mee_dma_config_pa;
 
+/** \brief Driver-speicific device structure
+ *
+ * This structure is very simple because it is assumed that there is only
+ * one MEE device (because it uses the host machine actually!) in a machine.
+ */
 struct mee_device_data {
 	spinlock_t lock;
 	aal_device_t aal_dev;
@@ -91,6 +138,9 @@ struct aal_dma_ops mee_dma_ops = {
 	.request = mee_dma_request,
 };
 
+/** \brief Implementation of aal_host_get_dma_channel.
+ *
+ * It returns the information of the only channel in the DMA emulating core. */
 static aal_dma_channel_t mee_aal_get_dma_channel(aal_device_t dev, void *priv,
                                                  int channel)
 {
@@ -103,6 +153,7 @@ static aal_dma_channel_t mee_aal_get_dma_channel(aal_device_t dev, void *priv,
 	return &data->mee_host_channel;
 }
 
+/** \brief Set the status member of the OS data with lock */
 static void set_os_status(struct mee_os_data *os, int status)
 {
 	unsigned long flags;
@@ -112,6 +163,7 @@ static void set_os_status(struct mee_os_data *os, int status)
 	spin_unlock_irqrestore(&os->lock, flags);
 }
 
+/** \brief Set the status member of the OS data with lock */
 static void set_dev_status(struct mee_device_data *dev, int status)
 {
 	unsigned long flags;
@@ -121,6 +173,8 @@ static void set_dev_status(struct mee_device_data *dev, int status)
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
+/** \brief Create various information structure that should be provided
+ * via AAL functions. */
 static void __build_os_info(struct mee_os_data *os)
 {
 	int i, c;
@@ -142,6 +196,7 @@ static void __build_os_info(struct mee_os_data *os)
 	os->cpu_info.hw_ids = os->cpu_hw_ids;
 }
 
+/** \brief Boot a kernel. */
 static int mee_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 {
 	struct mee_os_data *os = priv;
@@ -582,6 +637,10 @@ static int mee_aal_create_os(aal_device_t aal_dev, void *priv,
 	return 0;
 }
 
+/** \brief Map a remote physical memory to the local physical memory.
+ *
+ * In MEE, all the kernels including the host kernel are running in the
+ * same physical memory map, thus there is nothing to do. */
 static unsigned long mee_aal_map_memory(aal_device_t aal_dev, void *priv,
                                         unsigned long remote_phys,
                                         unsigned long size)
@@ -641,7 +700,10 @@ static struct aal_device_ops mee_aal_device_ops = {
 	.get_dma_channel = mee_aal_get_dma_channel,
 };	
 
-/* Only one device instance available */
+/** \brief The driver-specific driver structure
+ *
+ * Since there is only one MEE "device" in machine, this structure is
+ * statically allocated. */
 static struct mee_device_data mee_data;
 
 static struct aal_register_device_data mee_dev_reg_data = {
@@ -694,15 +756,23 @@ MODULE_LICENSE("Dual BSD/GPL");
 /*
  * DMA stuff
  */
+/** \brief APIC ID of the CPU core to use as a DMA-emulating core.
+ * (Module parameter) */
 static int mee_dma_apicid = -1;
 module_param(mee_dma_apicid, int, 0444);
 
+/** \brief DMA page table used by the DMA core
+ *
+ * This page table contains the kernel mapping and identity mapping */
 static unsigned long *mee_dma_page_table;
-static unsigned long mee_dma_stack[512] __attribute__((aligned(4096)));
+/** \brief Physical address of mee_dma_page_table */
 static unsigned long mee_dma_pt_pa;
+/** \brief Stack used by the DMA core */
+static unsigned long mee_dma_stack[512] __attribute__((aligned(4096)));
 
 extern void *shimos_get_ident_page_table(void);
 
+/** \brief Vector number that triggers action of the DMA core */
 #define MEE_DMA_VECTOR 0xf2
 static struct idt_entry{
 	uint32_t desc[4];
@@ -713,10 +783,12 @@ struct x86_desc_ptr {
         uint64_t address;
 } __attribute__((packed));
 
+/** \brief IDT used by the DMA core */
 static struct x86_desc_ptr dma_idt_ptr;
 
 extern char mee_dma_intr_enter[];
 
+/** \brief Set an entry in IDT. */
 static void set_idt_entry(int idx, unsigned long addr)
 {
 	dma_idt[idx].desc[0] = (addr & 0xffff) | (__KERNEL_CS << 16);
@@ -725,6 +797,7 @@ static void set_idt_entry(int idx, unsigned long addr)
 	dma_idt[idx].desc[3] = 0;
 }
 
+/** \brief Prepare an IDT that will be used by the DMA core. */
 static void __prepare_idt(void)
 {
 	dma_idt = (void *)__get_free_page(GFP_KERNEL);
@@ -735,6 +808,8 @@ static void __prepare_idt(void)
 	set_idt_entry(MEE_DMA_VECTOR, (unsigned long)mee_dma_intr_enter);
 }
 
+/** \brief Initialization function that is executed by the DMA core
+ * after head_64.S */
 static void shimos_dma_start(void)
 {
 	unsigned long cr3;
@@ -758,6 +833,12 @@ static void shimos_dma_start(void)
 	             "callq shimos_dma_main" : : "r"(mee_dma_stack + 512));
 }
 
+/** \brief Initialization function of the DMA core
+ *
+ * This function allocates a DMA core, and prepares necessary tables
+ * (interrupt tables and memory tables), then boot the DMA core,
+ * and finally waits of the DMA core to boot.
+ */
 static int mee_dma_init(void)
 {
 	int apicid;
@@ -801,6 +882,9 @@ static int mee_dma_init(void)
 	return 0;
 }
 
+/** \brief Finalization function of the DMA core.
+ *
+ * This function resets the DMA core and frees pages. */
 static void mee_dma_exit(void)
 {
 	shimos_reset_cpu(mee_dma_apicid);
@@ -810,6 +894,7 @@ static void mee_dma_exit(void)
 	free_page((unsigned long)dma_idt);
 }
 
+/** \brief Issues an interrupt to the DMA core. */
 void mee_dma_issue_interrupt(void)
 {
 	shimos_issue_ipi(mee_dma_apicid, MEE_DMA_VECTOR);
@@ -817,7 +902,7 @@ void mee_dma_issue_interrupt(void)
 
 extern int __mee_dma_request(aal_device_t dev, int channel,
                              struct aal_dma_request *req);
-
+/** \brief Wrapper function for __mee_dma_request. */
 static int mee_dma_request(aal_dma_channel_t channel, struct aal_dma_request *r)
 {
 	__mee_dma_request(channel->dev, channel->channel, r);
