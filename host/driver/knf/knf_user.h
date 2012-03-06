@@ -1,3 +1,7 @@
+/**
+ * \file knf_user.h
+ * \brief Definitions of KNF-specific ioctl constants
+ */
 #ifndef __KNF_USER_H
 #define __KNF_USER_H
 

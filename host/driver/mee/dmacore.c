@@ -1,7 +1,7 @@
 /**
  * \file dmacore.c
- * 
- * MEE DMA Core Main Program
+ * \brief MEE DMA Core Main Program
+ *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include "mee_dma.h"

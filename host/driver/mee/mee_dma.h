@@ -1,3 +1,7 @@
+/**
+ * \file host/driver/mee/mee_dma.h
+ * \brief Structures used by the MEE DMA core
+ */
 #ifndef __HEADER_MEE_DMA_H
 #define __HEADER_MEE_DMA_H
 
