@@ -1,3 +1,9 @@
+/**
+ * \file aal_host_user.h
+ * \brief AAL-Host: ioctl request numbers
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef __HEADER_AAL_HOST_USER_H
 #define __HEADER_AAL_HOST_USER_H
 
