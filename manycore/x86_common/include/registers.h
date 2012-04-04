@@ -103,6 +103,8 @@ static unsigned long read_perfctr(int counter)
 	return rdpmc(counter);
 }
 
+#define aal_mc_mb()   asm volatile("mfence" : : : "memory");
+
 struct x86_desc_ptr {
         uint16_t size;
         uint64_t address;

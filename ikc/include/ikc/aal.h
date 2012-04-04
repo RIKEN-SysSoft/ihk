@@ -14,6 +14,7 @@
 #define aal_ikc_unmap_virtual(dev, v, n)   aal_mc_unmap_virtual(v, n)
 
 #define aal_ikc_get_processor_id aal_mc_get_processor_id
+#define aal_ikc_mb               aal_mc_mb
 
 #define aal_os_to_dev(os)        NULL
 
@@ -68,6 +69,7 @@ typedef void * aal_wait_t;
 #define aal_ikc_unmap_virtual     aal_device_unmap_virtual
 
 #define aal_ikc_get_processor_id() cpu_physical_id(smp_processor_id())
+#define aal_ikc_mb                mb
 
 #define kprintf                  printk
 
