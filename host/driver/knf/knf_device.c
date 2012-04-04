@@ -1,6 +1,6 @@
 /**
  * \file knf_device.c
- * \brief KNF Driver Core
+ * \brief AAL KNF Driver: KNF Driver Core
  *
  * This file treats the actual procedures for Knights Ferry boards.
  */

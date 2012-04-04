@@ -1,3 +1,9 @@
+/**
+ * \file ikc/linux.c
+ * \brief AAL-IKC: Wrapper functions in AAL-Host in Linux for AAL-IKC
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #include <ikc/aal.h>
 #include <ikc/master.h>
 #include <linux/slab.h>
@@ -16,6 +22,7 @@ void aal_ikc_linux_init_work_data(aal_os_t aal_os,
 void aal_ikc_linux_schedule_work(aal_os_t aal_os);
 aal_os_t aal_ikc_linux_get_os_from_work(struct work_struct *work);
 
+/** \brief Worker thread for IKC interrupts */
 static void ikc_work_func(struct work_struct *work)
 {
 	struct aal_ikc_channel_desc *c;
@@ -33,17 +40,20 @@ static void ikc_work_func(struct work_struct *work)
 	}
 }
 
+/** \brief IKC interrupt handler (interrupt context) */
 static void aal_ikc_interrupt_handler(aal_os_t os, void *os_priv, void *priv)
 {
 	/* This should be done in the software irq... */
 	aal_ikc_linux_schedule_work(priv);
 }
 
+/** \brief Get the master channel for an OS */
 struct aal_ikc_channel_desc *aal_ikc_get_master_channel(aal_os_t os)
 {
 	return aal_os_get_master_channel(os);
 }
 
+/** \brief Initialize the IKC stuffs of an OS */
 void aal_ikc_system_init(aal_os_t os)
 {
 	struct aal_host_interrupt_handler *h;

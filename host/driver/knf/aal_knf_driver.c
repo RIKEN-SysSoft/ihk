@@ -1,6 +1,6 @@
 /**
  * \file aal_knf_driver.c
- * \brief AAL Host Driver for Knights Ferry
+ * \brief AAL KNF Driver: AAL Host Driver for Knights Ferry
  *
  * This code includes NDA-related codes at present.
  */

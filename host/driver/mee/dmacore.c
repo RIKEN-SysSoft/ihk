@@ -1,6 +1,6 @@
 /**
  * \file dmacore.c
- * \brief MEE DMA Core Main Program
+ * \brief AAL MEE Driver: MEE DMA Core Main Program
  *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */

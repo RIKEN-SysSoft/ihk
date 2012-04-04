@@ -1,6 +1,7 @@
 /**
  * \file host/driver/knf/knf.h
- * \brief Header file for miscellaneous structures used in Knights Ferry drivers
+ * \brief AAL KNF Driver: Header file for miscellaneous structures used
+ *                        in Knights Ferry drivers
  */
 #ifndef KNF_H
 #define KNF_H

@@ -1,6 +1,7 @@
 /**
  * \file aal_mee_driver.c
- * \brief AAL Host Driver for MEE (Manycore Emulation Environemnt)
+ * \brief AAL MEE Driver: AAL Host Driver 
+ *                        for MEE (Manycore Emulation Environemnt)
  *
  * Copyright (C) 2011-2012 Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */

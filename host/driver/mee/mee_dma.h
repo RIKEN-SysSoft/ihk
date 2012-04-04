@@ -1,6 +1,8 @@
 /**
  * \file host/driver/mee/mee_dma.h
- * \brief Structures used by the MEE DMA core
+ * \brief AAL MEE Driver: Structures used by the MEE DMA core
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #ifndef __HEADER_MEE_DMA_H
 #define __HEADER_MEE_DMA_H

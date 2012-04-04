@@ -1,6 +1,6 @@
 /**
  * \file knf_dma.c
- * \brief Knights Ferry DMA Device Driver 
+ * \brief AAL KNF Driver: Knights Ferry DMA Device Driver 
  */
 #include <linux/sched.h>
 #include <linux/mm.h>

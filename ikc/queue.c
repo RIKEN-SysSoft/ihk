@@ -1,3 +1,9 @@
+/**
+ * \file ikc/queue.c
+ * \brief AAL-IKC: Queue functions
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #include <ikc/aal.h>
 #include <ikc/queue.h>
 
