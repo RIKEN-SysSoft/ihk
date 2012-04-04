@@ -1,3 +1,12 @@
+/**
+ * \file ops_wrappers.h
+ * \brief AAL-Host:
+ *        Macros to generate static functions that invoke "*_ops" functions.
+ *
+ * All the function is prefixed with "__aal_device_" or "__aal_os_".
+ *
+ * Copyright (c) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef __HEADER_AAL_OPS_WRAPPERS_H
 #define __HEADER_AAL_OPS_WRAPPERS_H
 
@@ -30,6 +39,15 @@
 		return data->ops->name(data, data->priv, __VA_ARGS__); \
 	} else { \
 		return NULL; \
+	} \
+	} while (0)
+
+#define AAL_OPS_BODY_NOARG(name)	  \
+	do { \
+	if (data->ops->name) { \
+		return data->ops->name(data, data->priv); \
+	} else { \
+		return -EINVAL; \
 	} \
 	} while (0)
 
@@ -71,6 +89,11 @@ AAL_OS_OPS_BEGIN(int, unregister_handler, int itype,
 	AAL_OPS_BODY(unregister_handler, itype, h);
 }
 
+AAL_OS_OPS_BEGIN(int, alloc_resource, struct aal_resource *resource)
+{
+	AAL_OPS_BODY(alloc_resource, resource);
+}
+
 AAL_OS_OPS_BEGIN(int, get_special_addr, enum aal_special_addr_type type,
                  unsigned long *address, unsigned long *size)
 {
@@ -96,6 +119,11 @@ AAL_OS_OPS_BEGIN_NOARG(struct aal_mem_info *, get_memory_info)
 AAL_OS_OPS_BEGIN_NOARG(struct aal_cpu_info *, get_cpu_info)
 {
 	AAL_OPS_BODY_PTR_NOARG(get_cpu_info);
+}
+
+AAL_OS_OPS_BEGIN_NOARG(int, query_status)
+{
+	AAL_OPS_BODY_NOARG(query_status);
 }
 
 AAL_DEV_OPS_BEGIN(unsigned long, map_memory,

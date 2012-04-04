@@ -1,3 +1,9 @@
+/**
+ * \file ikc/manycore.c
+ * \brief AAL-IKC: Wrapper functions in AAL-Manycore for AAL-IKC
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #include <ikc/aal.h>
 #include <ikc/queue.h>
 #include <ikc/master.h>

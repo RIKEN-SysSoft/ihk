@@ -1,3 +1,9 @@
+/**
+ * \file host/include/aal/misc/debug.h
+ * \brief AAL-Host: Debug printf functions
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef __HEADER_AAL_MISC_DEBUG_H
 #define __HEADER_AAL_MISC_DEBUG_H
 

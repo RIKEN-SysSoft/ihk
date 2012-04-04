@@ -1,3 +1,9 @@
+/**
+ * \file ikc/include/ikc/aal.h
+ * \brief AAL-IKC: AAL wrapper functions.
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef HEADER_AAL_IKC_AAL_H
 #define HEADER_AAL_IKC_AAL_H
 

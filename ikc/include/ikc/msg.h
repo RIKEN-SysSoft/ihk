@@ -1,3 +1,9 @@
+/**
+ * \file ikc/include/ikc/msg.h
+ * \brief AAL-IKC: Packet structure definition
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef HEADER_AAL_IKC_MSG_H
 #define HEADER_AAL_IKC_MSG_H
 

@@ -1,3 +1,9 @@
+/**
+ * \file ikc/include/ikc/master.h
+ * \brief AAL-IKC: Structures and functions in master channel
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef HEADER_AAL_IKC_MASTER_H
 #define HEADER_AAL_IKC_MASTER_H
 

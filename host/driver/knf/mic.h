@@ -1,3 +1,7 @@
+/**
+ * \file mic.h
+ * \brief AAL KNF Driver: MIC-related functions
+ */
 #ifndef __HEADER_AAL_DRIVER_MIC_H
 #define __HEADER_AAL_DRIVER_MIC_H
 

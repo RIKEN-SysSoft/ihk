@@ -1,3 +1,9 @@
+/**
+ * \file ikc/include/ikc/queue.h
+ * \brief AAL-IKC: Queue structure definition
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef HEADER_AAL_IKC_QUEUE_H
 #define HEADER_AAL_IKC_QUEUE_H
 

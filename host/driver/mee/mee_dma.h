@@ -1,3 +1,9 @@
+/**
+ * \file host/driver/mee/mee_dma.h
+ * \brief AAL MEE Driver: Structures used by the MEE DMA core
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef __HEADER_MEE_DMA_H
 #define __HEADER_MEE_DMA_H
 
@@ -8,7 +14,9 @@
 
 #define MEE_DMA_DESC_PARAM1_INTR  0x10000000
 
+/** \brief Descriptor used by the MEE DMA core */
 struct mee_dma_desc { 
+	/** \brief Type of the request descriptor */
 	int type;
 	int param1;
 	void *param2;
@@ -19,21 +27,30 @@ struct mee_dma_desc {
 
 #define MEE_DMA_CHANNELS  2
 
+/** \brief Structure for a DMA Channel of MEE */
 struct mee_dma_channel {
+	/** \brief Physical address of the descriptor ring */
 	unsigned long desc_ptr;
+	/** \brief Number of descriptors in the ring */
 	unsigned long len;
+	/** \brief Head (writer) index in the descriptor ring */
 	unsigned long head;
+	/** \brief Tail (reader) index in the descriptor ring */
 	unsigned long tail;
 
-	/* Lock for head, not tail (because single r/w for tail) */
+	/** \brief Lock for head, not tail (because single reader and writer
+	 * for tail) */
 	spinlock_t lock;
 };
 
 struct mee_dma_config_struct {
+	/** \brief Array of the DMA channels of MEE */
 	struct mee_dma_channel channels[MEE_DMA_CHANNELS];
 
-	unsigned long doorbell; /* doorbell */
-	unsigned long status; /* core status */
+	/** \brief Doorbell for the DMA core */
+	unsigned long doorbell;
+	/** \brief Status of the DMA core */
+	unsigned long status;
 };
 
 extern struct mee_dma_config_struct *mee_dma_config;

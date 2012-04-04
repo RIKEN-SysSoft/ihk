@@ -1,3 +1,9 @@
+/**
+ * \file aal_host_misc.h
+ * \brief AAL-Host: Miscellaneous Functions
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #ifndef AAL_HOST_MISC_H
 #define AAL_HOST_MISC_H
 

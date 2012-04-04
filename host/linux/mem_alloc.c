@@ -1,8 +1,8 @@
-/*
- * AAL - Generic page allocator
- * (C) Copyright 2011 Taku Shimosawa.
+/** \file mem_alloc.c
+ * \brief AAL-Host: Generic page allocator (not so fast)
+ *
+ * (C) Copyright 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mm.h>
@@ -11,23 +11,46 @@
 
 #include <aal/aal_host_driver.h>
 
+/** \brief Descriptor of an allocator */
 struct aal_page_allocator_desc {
+	/** \brief Start address of the area that the allocator manages */
 	unsigned long start;
+	/** \brief Last index in block */
 	unsigned int last;
+	/** \brief Number of blocks */
 	unsigned int count;
+	/** \brief Order of the pages that are allocated for this structure */
 	unsigned int flag;
+	/** \brief Shift count of a block in this allocator */
 	unsigned int shift;
+	/** \brief Lock for this structure */
 	spinlock_t lock;
+	/** \brief dummy */
 	unsigned int pad;
-	
+	/** \brief Allocation map */
 	unsigned long map[0];
 };
 
+/** Get the index in the map array */
 #define MAP_INDEX(n)    ((n) >> 6)
+/** Get the bit number in a map element */
 #define MAP_BIT(n)      ((n) & 0x3f)
+/** Calculate an address from the map index and map bit index */
 #define ADDRESS(desc, index, bit)    \
 	((desc)->start + (((index) * 64 + (bit)) << ((desc)->shift)))
 
+/**
+ * \brief Initialize a page allocator.
+ *
+ * \param start Start address of the memory area will this allocator will
+ *              manage.
+ * \param size  Size of the memory area which this allocator will manage.
+ * \param unit  Size of a block, which is a minimum memory area that this
+ *              allocator will allocate and free.
+ *              Due to the implementation limit, unit should be a power of 2.
+ * \return Pointer to the allocator descriptor.
+ *         The pointer should be passed to other allocator functions.
+ */
 void *aal_pagealloc_init(unsigned long start, unsigned long size,
                          unsigned long unit)
 {
@@ -84,6 +107,7 @@ void *aal_pagealloc_init(unsigned long start, unsigned long size,
 	return desc;
 }
 
+/** \brief Finalize a page allocator */
 void aal_pagealloc_destroy(void *__desc)
 {
 	struct aal_page_allocator_desc *desc = __desc;
@@ -94,6 +118,16 @@ void aal_pagealloc_destroy(void *__desc)
 	}
 }
 
+/**
+ * \brief Internal function for the allocation of large blocks
+ *
+ * If the size of block to allocate is more than 32, the allocator allocates
+ * by the unit of 64 blocks (because the map uses bitfield, and unsigned long
+ * is 64 bit).
+ * \param desc    Pointer to the allocator descriptor.
+ * \param nblocks Number of large blocks (in 64 blocks)
+ * \return Address of the allocated block. 0 if failed. 
+ */
 static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
                                            int nblocks)
 {
@@ -130,6 +164,13 @@ static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
 	return 0;
 }
 
+/**
+ * \brief Allocates a memory area.
+ *
+ * \param __desc  Pointer to an allocator descriptor.
+ * \param npages  Number of blocks to allocate
+ * \return Address of the allocated block. 0 if failed. 
+ */
 unsigned long aal_pagealloc_alloc(void *__desc, int npages)
 {
 	struct aal_page_allocator_desc *desc = __desc;
@@ -170,6 +211,14 @@ unsigned long aal_pagealloc_alloc(void *__desc, int npages)
 	return 0;
 }
 
+/**
+ * \brief Wrapper function of aal_pagealloc_alloc.
+ *
+ * This function accepts a size in byte, instead of block.
+ * \param __desc  Pointer to an allocator descriptor.
+ * \param size    Number of bytes to allocate
+ * \return Address of the allocated block. 0 if failed. 
+ */
 unsigned long aal_pagealloc_alloc_size(void *__desc, unsigned long size)
 {
 	struct aal_page_allocator_desc *desc = __desc;
@@ -177,6 +226,15 @@ unsigned long aal_pagealloc_alloc_size(void *__desc, unsigned long size)
 	return aal_pagealloc_alloc(desc, size >> desc->shift);
 }
 
+/**
+ * \brief Free one or more memory blocks.
+ *
+ * \param __desc  Pointer to an allocator descriptor.
+ * \param address Start address of the block to free
+ * \param npages  Number of blocks to free
+ *
+ * \note npages should be the same number as used in the allocate function.
+ */
 void aal_pagealloc_free(void *__desc, unsigned long address, int npages)
 {
 	struct aal_page_allocator_desc *desc = __desc;
@@ -194,6 +252,7 @@ void aal_pagealloc_free(void *__desc, unsigned long address, int npages)
 	spin_unlock_irqrestore(&desc->lock, flags);
 }
 
+/** \brief Wrapper function for aal_pagealloc_free in the unit of byte */
 void aal_pagealloc_free_size(void *__desc, unsigned long address,
                                       unsigned long size)
 {

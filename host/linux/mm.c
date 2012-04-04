@@ -1,8 +1,8 @@
-/*
- * AAL - Memory management misc functions
+/** \file mm.c
+ * \brief AAL-Host: Memory management misc functions (not implemented yet)
+ *
  * (C) Copyright 2011 Taku Shimosawa.
  */
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mm.h>

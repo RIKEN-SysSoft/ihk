@@ -1,3 +1,9 @@
+/**
+ * \file ikc/master.c
+ * \brief AAL-IKC: Master channel handlers and connection managements
+ *
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #include <ikc/aal.h>
 #include <ikc/master.h>
 

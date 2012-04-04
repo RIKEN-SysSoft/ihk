@@ -1,8 +1,12 @@
-/*
- * Manycore Abstraction Layer - Drivers for User Process Interaction
- * (C) Copyright 2011 Taku Shimosawa.
+/**
+ * \file host_driver.c
+ * \brief AAL-Host: Character Device Drivers for User Process Interaction
+ *
+ * Character device implementation in Linux of AAL-Host device and OS driver
+ * files.
+ *
+ * Copyright (c) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
-
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/kernel.h>
@@ -46,6 +50,7 @@ extern void ikc_master_finalize(aal_os_t os);
 /*
  * OS character device file operations.
  */
+/** \brief open operation for an OS file */
 static int aal_host_os_open(struct inode *inode, struct file *file)
 {
 	int idx, ret;
@@ -79,6 +84,7 @@ static int aal_host_os_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
+/** \brief close operation for an OS device file */
 static int aal_host_os_release(struct inode *inode, struct file *file)
 {
 	struct aal_host_linux_os_data *data;
@@ -94,6 +100,7 @@ static int aal_host_os_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+/** \brief load_memory operation for an OS device file */
 static int __aal_os_load_memory(struct aal_host_linux_os_data *data,
                                 char *buf, unsigned long size, long offset)
 {
@@ -104,6 +111,13 @@ static int __aal_os_load_memory(struct aal_host_linux_os_data *data,
 	}
 }
 
+/** \brief load_file operation for an OS device file
+ *
+ * This function is called when a user requests to load the kernel image
+ * directly from a file.
+ * If the AAL OS driver does not provide a handler for load_file,
+ * it uses the load_mem handler instead.
+ */
 static int __aal_os_load_file(struct aal_host_linux_os_data *data, char *fn)
 {
 	char *buf;
@@ -167,6 +181,7 @@ static int __aal_os_load_file(struct aal_host_linux_os_data *data, char *fn)
 	return ret;
 }
 
+/** \brief ioctl handler for a load-file request */
 static int __aal_os_ioctl_load(struct aal_host_linux_os_data *data,
                                char * __user filename)
 {
@@ -185,6 +200,7 @@ static int __aal_os_ioctl_load(struct aal_host_linux_os_data *data,
 	return ret;
 }
 
+/** \brief Boot a kernel related to the OS file */
 static int  __aal_os_boot(struct aal_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
@@ -199,6 +215,7 @@ static int  __aal_os_boot(struct aal_host_linux_os_data *data, int flag)
 	return ret;
 }
 
+/** \brief Shutdown the kernel related to the OS file */
 static int  __aal_os_shutdown(struct aal_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
@@ -220,6 +237,7 @@ static int  __aal_os_shutdown(struct aal_host_linux_os_data *data, int flag)
 	return ret;
 }
 
+/** \brief ioctl handler for a debug request to the OS file */
 static int __aal_os_ioctl_debug_request(struct aal_host_linux_os_data *data,
                                         unsigned int request,
                                         unsigned long arg)
@@ -235,16 +253,7 @@ static int __aal_os_ioctl_debug_request(struct aal_host_linux_os_data *data,
 	return ret;
 }
 
-static int __aal_os_alloc_resource(struct aal_host_linux_os_data *data,
-                                   struct aal_resource *resource)
-{
-	if (data->ops->alloc_resource) {
-		return data->ops->alloc_resource(data, data->priv, resource);
-	} else { 
-		return -EINVAL;
-	}
-}
-
+/** \brief Memory allocating wrapper function for an OS kernel */
 static int __aal_os_allocate_mem(struct aal_host_linux_os_data *data,
                                  unsigned long arg)
 {
@@ -256,6 +265,7 @@ static int __aal_os_allocate_mem(struct aal_host_linux_os_data *data,
 	return __aal_os_alloc_resource(data, &resource);
 }
 
+/** \brief Processor allocating wrapper function for an OS kernel */
 static int __aal_os_allocate_cpu(struct aal_host_linux_os_data *data,
                                  unsigned long arg)
 {
@@ -267,6 +277,7 @@ static int __aal_os_allocate_cpu(struct aal_host_linux_os_data *data,
 	return __aal_os_alloc_resource(data, &resource);
 }
 
+/** \brief Processor reserving wrapper function for an OS kernel */
 static int __aal_os_reserve_cpu(struct aal_host_linux_os_data *data,
                                 unsigned long ptr)
 {
@@ -305,6 +316,7 @@ static int __aal_os_reserve_cpu(struct aal_host_linux_os_data *data,
 	return n;
 }
 
+/** \brief Memory reserving wrapper function for an OS kernel */
 static int __aal_os_reserve_mem(struct aal_host_linux_os_data *data,
                                 unsigned long ptr)
 {
@@ -324,15 +336,10 @@ static int __aal_os_reserve_mem(struct aal_host_linux_os_data *data,
 	return __aal_os_alloc_resource(data, &resource);
 }
 
-static int __aal_os_query_status(struct aal_host_linux_os_data *data)
-{
-	if (data->ops->query_status) {
-		return data->ops->query_status(data, data->priv);
-	} else { 
-		return -EINVAL;
-	}
-}
-
+/** \brief Initialize the kernel message buffer of the OS
+ *
+ * This function asks the locations of the buffer and maps it.
+ */
 static void __aal_os_init_kmsg(struct aal_host_linux_os_data *data)
 {
 	unsigned long rpa, pa, size;
@@ -362,6 +369,7 @@ static void __aal_os_init_kmsg(struct aal_host_linux_os_data *data)
 	dprint_var_p(data->kmsg_buf);
 }
 
+/** \brief ioctl handler for reading the kernel message to the buffer */
 static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
                               char __user *buf)
 {
@@ -385,6 +393,9 @@ static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
 	return tail;
 }
 
+/** \brief Set the kernel command-line parameter for the kernel
+ *
+ * This function accepts 1023 letters at most. */
 static int __aal_os_set_kargs(struct aal_host_linux_os_data *data,
                               char __user *buf)
 {
@@ -407,6 +418,7 @@ static int __aal_os_set_kargs(struct aal_host_linux_os_data *data,
 	}
 }
 
+/** \brief Clear the kernel message buffer. */
 static int __aal_os_clear_kmsg(struct aal_host_linux_os_data *data)
 {
 	if (!data->kmsg_buf) {
@@ -419,6 +431,7 @@ static int __aal_os_clear_kmsg(struct aal_host_linux_os_data *data)
 	return 0;
 }
 
+/** \brief Handles ioctl calls with the additional request number */
 static long __aal_os_ioctl_call_aux(struct aal_host_linux_os_data *os,
                                     unsigned int request, unsigned long arg)
 {
@@ -439,6 +452,7 @@ static long __aal_os_ioctl_call_aux(struct aal_host_linux_os_data *os,
 	return -ENOSYS;
 }
 
+/** \brief ioctl handling for a OS file */
 static long aal_host_os_ioctl(struct file *file, unsigned int request,
                               unsigned long arg)
 {
@@ -509,6 +523,7 @@ static long aal_host_os_ioctl(struct file *file, unsigned int request,
 	return ret;
 }
 
+/** \brief write handling for a OS file */
 static long aal_host_os_write(struct file *file, const char __user *buf,
                               size_t size, loff_t *off)
 {
@@ -553,6 +568,7 @@ static struct file_operations mcos_cdev_ops = {
 /*
  * Device character device file operations.
  */
+/** \brief open handler for a device file */
 static int aal_host_device_open(struct inode *inode, struct file *file)
 {
 	int idx, ret;
@@ -586,6 +602,7 @@ static int aal_host_device_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
+/** \brief release handler for a device file */
 static int aal_host_device_release(struct inode *inode, struct file *file)
 {
 	struct aal_host_linux_device_data *data;
@@ -601,6 +618,7 @@ static int aal_host_device_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+/** \brief release handler for a device file */
 static int __aal_device_ioctl_debug_request(struct aal_host_linux_device_data *
                                             data,
                                             unsigned int request,
@@ -617,6 +635,7 @@ static int __aal_device_ioctl_debug_request(struct aal_host_linux_device_data *
 	return ret;
 }
 
+/** \brief Initialize a newly created OS structure */
 static int __aal_device_create_os_init(struct aal_host_linux_device_data *data,
                                        struct aal_host_linux_os_data **os_ptr,
                                        unsigned long arg)
@@ -669,6 +688,9 @@ ERR:
 	return ret;
 }
 
+/** \brief Create a OS file in the kernel
+ *
+ * @return minor number */
 static int __aal_device_create_os(struct aal_host_linux_device_data *data,
                                   unsigned long arg)
 {
@@ -727,6 +749,7 @@ static int __aal_device_create_os(struct aal_host_linux_device_data *data,
 	return minor;
 }
 
+/** \brief Destroy an OS structure, and also the corresponding device file */
 static int __aal_device_destroy_os(struct aal_host_linux_device_data *data,
                                    struct aal_host_linux_os_data *os)
 {
@@ -761,6 +784,7 @@ static int __aal_device_destroy_os(struct aal_host_linux_device_data *data,
 	return 0;
 }
 
+/** \brief Destroy all the OS kernel stuffs of the specified device */
 static int __destroy_all_os(struct aal_host_linux_device_data *data)
 {
 	unsigned long flags;
@@ -795,6 +819,7 @@ static int __destroy_all_os(struct aal_host_linux_device_data *data)
 	return 0;
 }
 
+/** \brief ioctl handler for the device file */
 static long aal_host_device_ioctl(struct file *file, unsigned int request,
                                   unsigned long arg)
 {
@@ -820,6 +845,7 @@ static long aal_host_device_ioctl(struct file *file, unsigned int request,
 	return ret;
 }
 
+/** \brief read handler for the device file */
 static long aal_host_device_read(struct file *file, char __user *buf,
                                  size_t size, loff_t *off)
 {
@@ -850,6 +876,7 @@ static long aal_host_device_read(struct file *file, char __user *buf,
 	return s;
 }
 
+/** \brief write handler for the device file */
 static long aal_host_device_write(struct file *file, const char __user *buf,
                                   size_t size, loff_t *off)
 {
@@ -916,6 +943,7 @@ static struct vm_operations_struct aal_host_mmap_ops = {
 	.close = aal_host_device_mmap_close,
 };
 
+/** \brief mmap handler for the device file */
 int aal_host_device_mmap(struct file *file, struct vm_area_struct *vma)
 {
 	unsigned long pa;
@@ -958,11 +986,10 @@ static struct file_operations mcd_cdev_ops = {
 	.release = aal_host_device_release,
 };
 
-/*
- * Initialization function for AAL Host Driver.
- * It prepares character devices, but does not create actual device files.
- * (It pends creating until the hardware driver is registered)
- */
+/** \brief Initialization function of the AAL-Host drivers.
+ *
+ * This function registers character device classes, and gets prepared to
+ * create new device files. */
 static int __init aal_host_driver_init(void)
 {
 	if (alloc_chrdev_region(&mcd_dev_num, 0, DEV_MAX_MINOR, 

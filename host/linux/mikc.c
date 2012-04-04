@@ -1,3 +1,10 @@
+/** 
+ * \file host/linux/mikc.c
+ * \brief AAL-Host: Establishes a master channel, and also defines functions
+ *        used in AAL-IKC.
+ *
+ * (C) Copyright 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/kernel.h>
@@ -20,7 +27,11 @@
 
 static int arch_master_handler(struct aal_ikc_channel_desc *c,
                                void *__packet, void *__os);
-
+/**
+ * \brief Core function of initialization of a master channel.
+ * It waits for the kernel to become ready, maps the queues,
+ * and allocates a channel descriptor strcuture for the master channel.
+ */
 struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
                                                      aal_ikc_ph_t handler)
 {
@@ -69,6 +80,7 @@ struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
 	}
 }
 
+/** \brief Initializes a master channel */
 int ikc_master_init(aal_os_t __os)
 {
 	struct aal_host_linux_os_data *os = __os;
@@ -94,6 +106,7 @@ int ikc_master_init(aal_os_t __os)
 	}
 }
 
+/** \brief Destroys an IKC channel */
 void aal_ikc_destroy_channel(aal_os_t __os, struct aal_ikc_channel_desc *c)
 {
 	if (!c) {
@@ -103,6 +116,8 @@ void aal_ikc_destroy_channel(aal_os_t __os, struct aal_ikc_channel_desc *c)
 	aal_ikc_free_channel(c);
 }
 
+/** \brief Called when the kernel is going to shutdown. It finalizes
+ * the master channel. */
 void ikc_master_finalize(aal_os_t __os)
 {
 	struct aal_host_linux_os_data *os = __os;
@@ -121,6 +136,7 @@ void ikc_master_finalize(aal_os_t __os)
 	os->ikc_initialized = 0;
 }
 
+/** \brief Get the list of channel (called from AAL-IKC) */
 struct list_head *aal_os_get_ikc_channel_list(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
@@ -128,6 +144,7 @@ struct list_head *aal_os_get_ikc_channel_list(aal_os_t aal_os)
 	return &os->ikc_channels;
 }
 
+/** \brief Get the lock for the channel list (called from AAL-IKC) */
 spinlock_t *aal_os_get_ikc_channel_lock(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
@@ -135,6 +152,7 @@ spinlock_t *aal_os_get_ikc_channel_lock(aal_os_t aal_os)
 	return &os->ikc_channel_lock;
 }
 
+/** \brief Get the interrupt handler of the IKC (called from AAL-IKC) */
 struct aal_host_interrupt_handler *aal_host_os_get_ikc_handler(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
@@ -142,6 +160,8 @@ struct aal_host_interrupt_handler *aal_host_os_get_ikc_handler(aal_os_t aal_os)
 	return &os->ikc_handler;
 }
 
+/** \brief Issue an interrupt to the receiver of the channel
+ *  (called from AAL-IKC) */
 int aal_ikc_send_interrupt(struct aal_ikc_channel_desc *channel)
 {
 	return aal_os_issue_interrupt(channel->remote_os, 
@@ -149,6 +169,7 @@ int aal_ikc_send_interrupt(struct aal_ikc_channel_desc *channel)
 	                              0xd1);
 }
 
+/** \brief Get the lock for the list of listeners (called from AAL-IKC) */
 aal_spinlock_t *aal_ikc_get_listener_lock(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
@@ -156,6 +177,8 @@ aal_spinlock_t *aal_ikc_get_listener_lock(aal_os_t aal_os)
 	return &os->listener_lock;
 }
 
+/** \brief Get the pointer of the specified port in the list of listeners
+ * (called from AAL-IKC) */
 struct aal_ikc_listen_param **aal_ikc_get_listener_entry(aal_os_t aal_os,
                                                          int port)
 {
@@ -164,6 +187,8 @@ struct aal_ikc_listen_param **aal_ikc_get_listener_entry(aal_os_t aal_os,
 	return &(os->listeners[port]);
 }
 
+/** \brief Invokes the master packet handler of the specified kernel
+ * (called from AAL-IKC) */
 int aal_ikc_call_master_packet_handler(aal_os_t aal_os,
                                        struct aal_ikc_channel_desc *c,
                                        void *packet)
@@ -176,6 +201,8 @@ int aal_ikc_call_master_packet_handler(aal_os_t aal_os,
 	return 0;
 }
 
+/** \brief Invokes the master packet handler of the specified kernel
+ * (called from AAL-IKC) */
 static int arch_master_handler(struct aal_ikc_channel_desc *c,
                                void *__packet, void *__os)
 {
@@ -186,12 +213,15 @@ static int arch_master_handler(struct aal_ikc_channel_desc *c,
 	return 0;
 }
 
+/** \brief Get the wait list for the master channel (Called from AAL-IKC) */
 struct list_head *aal_ikc_get_master_wait_list(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
 
 	return &os->wait_list;
 }
+/** \brief Get the lock for the wait list for the master channel (called from
+ *         AAL-IKC) */
 aal_spinlock_t *aal_ikc_get_master_wait_lock(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
@@ -199,6 +229,8 @@ aal_spinlock_t *aal_ikc_get_master_wait_lock(aal_os_t aal_os)
 	return &os->wait_lock;
 }
 
+/** \brief Get the master channel of the specified kernel
+ *         (Called from AAL-IKC) */
 struct aal_ikc_channel_desc *aal_os_get_master_channel(aal_os_t __os)
 {
 	struct aal_host_linux_os_data *os = __os;
@@ -207,6 +239,8 @@ struct aal_ikc_channel_desc *aal_os_get_master_channel(aal_os_t __os)
 	return os->mchannel;
 }
 
+/** \brief Generate a unique ID for a channel
+ *         (Called from AAL-IKC) */
 int aal_os_get_unique_channel_id(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
@@ -214,6 +248,8 @@ int aal_os_get_unique_channel_id(aal_os_t aal_os)
 	return atomic_inc_return(&os->channel_id);
 }
 
+/** \brief Initialize the work thread structure
+ *         (Called from AAL-IKC) */
 void aal_ikc_linux_init_work_data(aal_os_t aal_os,
                                   void (*f)(struct work_struct *))
 {
@@ -222,6 +258,7 @@ void aal_ikc_linux_init_work_data(aal_os_t aal_os,
 	INIT_WORK(&os->ikc_work, f);
 }
 
+/** \brief Schedule the work thread (Called from AAL-IKC) */
 void aal_ikc_linux_schedule_work(aal_os_t aal_os)
 {
 	struct aal_host_linux_os_data *os = aal_os;
@@ -229,6 +266,7 @@ void aal_ikc_linux_schedule_work(aal_os_t aal_os)
 	schedule_work(&os->ikc_work);
 }
 
+/** \brief Get aal_os_t from the work struct */
 aal_os_t aal_ikc_linux_get_os_from_work(struct work_struct *work)
 {
 	return container_of(work, struct aal_host_linux_os_data, ikc_work);
