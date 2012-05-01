@@ -154,14 +154,16 @@ static int knf_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
 	struct knf_os_data *os = priv;
 	struct knf_device_data *kdd = os->dev;
 
-	/* XXX: cpu to apic id */
+	/* cpu to apic id based on bsp */
 	if (cpu == 0) {
-		cpu = 124;
-	} else if (cpu <= 124) {
+		/* BSP processor is the first */
+		cpu = kdd->bsp_apic_id;
+	} else if (cpu <= kdd->bsp_apic_id) {
 		cpu = cpu - 1;
 	} else {
 		cpu = cpu;
 	}
+	printk("knf_aal_os_issue_interrupt, cpu: %d\n", cpu);
 	return knf_issue_interrupt(kdd, cpu, vector);
 }
 

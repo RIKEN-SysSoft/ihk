@@ -117,10 +117,13 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	kdd->mem_info.available = kdd->mem_info.mappable = &kdd->mem_region;
 	kdd->mem_info.fixed = NULL;
 
+	/* TODO: do this in a more generic way! */
 	for (i = 0; i < 128; i++) {
 		kdd->cpu_hw_ids[i] = i;
 	}
-	kdd->cpu_info.n_cpus = sizeof(kdd->cpu_hw_ids) / sizeof(int);
+
+	/* Currently BSP id + 4 is number of cores */
+	kdd->cpu_info.n_cpus = kdd->bsp_apic_id + 4; 
 	kdd->cpu_info.hw_ids = kdd->cpu_hw_ids;
 
 	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
