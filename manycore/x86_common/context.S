@@ -2,12 +2,12 @@
 .globl aal_mc_switch_context
 aal_mc_switch_context:
 		pushfq
-		popq	%rbp
+		popq	%rax
 		testq	%rdi, %rdi
 		jz		1f				/* skip saving if "old_ctx" is null. */
 		movq	%rbp, 8(%rdi)
 		movq	%rbx, 16(%rdi)
-		movq	%rbp, 72(%rdi)	/* rflags */
+		movq	%rax, 72(%rdi)	/* rflags */
 		movq	%rsi, 24(%rdi)
 		movq	%rdi, 32(%rdi)
 		movq	%r12, 40(%rdi)
@@ -25,8 +25,8 @@ aal_mc_switch_context:
 		movq	40(%rsi), %r12
 		movq	32(%rsi), %rdi
 		movq	16(%rsi), %rbx
-		movq	72(%rsi), %rbp
-		pushq	%rbp
+		movq	72(%rsi), %rax
+		pushq	%rax
 		popfq
 		movq	8(%rsi), %rbp
 		movq	24(%rsi), %rsi
