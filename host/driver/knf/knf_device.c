@@ -602,7 +602,7 @@ int __knf_get_special_addr(struct knf_device_data *kdd,
 	switch (type) {
 	case AAL_SPADDR_KMSG:
 		*addr = knf_read_sbox(kdd, SBOX_SCRATCH14);
-		*size = 8192; /* XXX: Magic Number */
+		*size = knf_read_sbox(kdd, SBOX_SCRATCH11); // AAL_KMSG_SIZE
 
 		if (*addr < PAGE_SIZE) { /* null or almost null pointer */
 			return -EIO;

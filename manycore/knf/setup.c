@@ -99,6 +99,8 @@ void arch_init(void)
 {
 	/* Notify the address of the kmsg */
 	sbox_write(SBOX_SCRATCH14, (unsigned int)virt_to_phys(&kmsg_buf));
+	sbox_write(SBOX_SCRATCH11, AAL_KMSG_SIZE);
+
 	/* Ack boot (trampoline code shall be free'd) */
 	sbox_write(SBOX_SCRATCH12, KNF_BOOT_MAGIC_BOOTED);
 
