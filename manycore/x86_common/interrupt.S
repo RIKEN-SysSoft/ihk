@@ -64,6 +64,7 @@ page_fault:
 		PUSH_ALL_REGS
 		movq	%cr2, %rdi
 		movq	%rsp, %rsi
+		movq	%rbp, %rdx
 		movq	__page_fault_handler_address(%rip), %rax
 		andq	%rax, %rax
 		jz		1f
@@ -71,7 +72,7 @@ page_fault:
 		POP_ALL_REGS
 		addq	$8, %rsp
 		iretq
-1:		
+1:
 		jmp		1b
 
 .globl general_protection_exception

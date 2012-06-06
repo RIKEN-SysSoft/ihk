@@ -52,7 +52,7 @@ struct aal_mc_pa_ops {
 };
 
 void aal_mc_set_page_allocator(struct aal_mc_pa_ops *);
-void aal_mc_set_page_fault_handler(void (*h)(unsigned long, void *));
+void aal_mc_set_page_fault_handler(void (*h)(unsigned long, void *, unsigned long));
 
 unsigned long aal_mc_map_memory(void *os, unsigned long phys, 
                                 unsigned long size);
@@ -60,7 +60,7 @@ void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size);
 
 void *aal_mc_map_virtual(unsigned long phys, int npages,
                          enum aal_mc_pt_attribute attr);
-void aal_mc_unmap_virtual(void *va, int npages);
+void aal_mc_unmap_virtual(void *va, int npages, int free_physical);
 
 void *aal_mc_alloc_pages(int npages, enum aal_mc_ap_flag flag);
 void aal_mc_free_pages(void *p, int npages);
