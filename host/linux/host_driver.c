@@ -373,7 +373,7 @@ static void __aal_os_init_kmsg(struct aal_host_linux_os_data *data)
 static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
                               char __user *buf)
 {
-	int tail;
+	int tail, len, len_end;
 
 	if (!data->kmsg_buf) {
 		mutex_lock(&data->kmsg_mutex);
@@ -386,11 +386,19 @@ static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
 
 	/* XXX: How to share the structure definition with manycore aal? */
 	tail = *(int *)data->kmsg_buf;
+	len = *(((int *)data->kmsg_buf) + 1);
+	len_end = strnlen((char *)((data->kmsg_buf) + sizeof(int) * 2) + tail + 1,
+	                  len - tail);
+kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
 
-	copy_to_user(buf, (char *)(data->kmsg_buf) + sizeof(int) * 2,
+	/* Print the end of the buffer */
+	copy_to_user(buf, (char *)(data->kmsg_buf) + sizeof(int) * 2 + tail + 1,
+	             len_end);
+	/* Then the front of it */
+	copy_to_user(buf + len_end, (char *)(data->kmsg_buf) + sizeof(int) * 2,
 	             tail);
 
-	return tail;
+	return tail + len_end;
 }
 
 /** \brief Set the kernel command-line parameter for the kernel
