@@ -358,6 +358,46 @@ int aal_mc_pt_virt_to_phys(struct page_table *pt,
 	return 0;
 }
 
+int aal_mc_pt_print_pte(struct page_table *pt, void *virt)
+{
+	int l4idx, l3idx, l2idx, l1idx;
+	unsigned long v = (unsigned long)virt;
+
+	if (!pt) {
+		pt = init_pt;
+	}
+
+	GET_VIRT_INDICES(v, l4idx, l3idx, l2idx, l1idx);
+
+	if (!(pt->entry[l4idx] & PFL4_PRESENT)) {
+		__kprintf("0x%lX l4idx not present! \n", (unsigned long)virt);
+		return -EFAULT;
+	}
+	pt = phys_to_virt(pt->entry[l4idx] & PAGE_MASK);
+
+	if (!(pt->entry[l3idx] & PFL3_PRESENT)) {
+		__kprintf("0x%lX l3idx not present! \n", (unsigned long)virt);
+		return -EFAULT;
+	}
+	pt = phys_to_virt(pt->entry[l3idx] & PAGE_MASK);
+
+	if (!(pt->entry[l2idx] & PFL2_PRESENT)) {
+		__kprintf("0x%lX l2idx not present! \n", (unsigned long)virt);
+		return -EFAULT;
+	}
+	if ((pt->entry[l2idx] & PFL2_SIZE)) {
+		return 0;
+	}
+	pt = phys_to_virt(pt->entry[l2idx] & PAGE_MASK);
+
+	if (!(pt->entry[l1idx] & PFL1_PRESENT)) {
+		__kprintf("0x%lX PTE (l1) not present! \n", (unsigned long)virt);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 int set_pt_large_page(struct page_table *pt, void *virt, unsigned long phys,
                       enum aal_mc_pt_attribute attr)
 {
