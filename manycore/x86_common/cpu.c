@@ -29,6 +29,16 @@
 #define APIC_DM_INIT            0x00500
 #define APIC_DM_STARTUP         0x00600
 
+
+//#define DEBUG_PRINT_CPU
+
+#ifdef DEBUG_PRINT_CPU
+#define dkprintf kprintf
+#else
+#define dkprintf(...)
+#endif
+
+
 struct x86_cpu_local_variables *get_x86_this_cpu_local(void);
 void *get_x86_this_cpu_kstack(void);
 void init_processors_local(int max_id);
@@ -336,16 +346,19 @@ void handle_interrupt(int vector, struct x86_regs *regs)
 {
 	struct aal_mc_interrupt_handler *h;
 
+	dkprintf("CPU[%d] got interrupt: %d, RIP: 0x%lX\n", 
+	         aal_mc_get_processor_id(), vector, regs->rip);
+
 	if (vector < 0 || vector > 255) {
 		panic("Invalid interrupt vector.");
 	} else if (vector < 32) {
 		if (vector == 8 || 
 		    (vector >= 10 && vector <= 15) || vector == 17) {
-			kprintf("Exception %d at %lx:%lx\n",
-			        vector, regs->rflags, regs->cs);
+			kprintf("Exception %d, rflags: 0x%lX CS: 0x%lX, RIP: 0x%lX\n",
+			        vector, regs->rflags, regs->cs, regs->rip);
 		} else {
-			kprintf("Exception %d at %lx:%lx\n",
-			        vector, regs->cs, regs->rip);
+			kprintf("Exception %d, rflags: 0x%lX CS: 0x%lX, RIP: 0x%lX\n",
+			        vector, regs->rflags, regs->cs, regs->rip);
 		}
 		arch_show_interrupt_context(regs);
 		panic("Unhandled exception");
@@ -595,15 +608,25 @@ void aal_mc_delay_us(int us)
 void arch_show_interrupt_context(const void *reg)
 {
 	const struct x86_regs *regs = reg;
+	int irqflags;
 
-	kprintf("CS:EIP = %4lx:%16lx\n", regs->cs, regs->rip);
-	kprintf("RAX RBX RCX RDX RSI RDI RSP RBP\n");
-	kprintf("%16lx %16lx %16lx %16lx\n",
+	irqflags = kprintf_lock();
+
+	__kprintf("CS:EIP = %4lX:%16lX\n", regs->cs, regs->rip);
+	__kprintf("             RAX              RBX              RCX              RDX\n");
+	__kprintf("%16lX %16lX %16lX %16lX\n",
 	        regs->rax, regs->rbx, regs->rcx, regs->rdx);
-	kprintf("%16lx %16lx %16lx\n",
+	__kprintf("             RSI              RDI              RSP\n");
+	__kprintf("%16lX %16lX %16lX\n",
 	        regs->rsi, regs->rdi, regs->rsp);
-	kprintf("%16lx %16lx %16lx %16lx\n",
+	__kprintf("              R8               R9              R10              R11\n");
+	__kprintf("%16lX %16lX %16lX %16lX\n",
 	        regs->r8, regs->r9, regs->r10, regs->r11);
+	__kprintf("              CS               SS        \n");
+	__kprintf("%16lX %16lX\n",
+	        regs->cs, regs->ss);
+	
+	kprintf_unlock(irqflags);
 }
 
 int aal_mc_arch_set_special_register(enum aal_asr_type type,
@@ -634,6 +657,8 @@ int aal_mc_arch_get_special_register(enum aal_asr_type type,
 
 int aal_mc_interrupt_cpu(int cpu, int vector)
 {
+	kprintf("[%d] aal_mc_interrupt_cpu: %d\n", aal_mc_get_processor_id(), cpu);
+
 	x86_issue_ipi(cpu, vector);
 	return 0;
 }
