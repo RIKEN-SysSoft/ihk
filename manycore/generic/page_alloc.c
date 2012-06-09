@@ -221,3 +221,33 @@ unsigned long aal_pagealloc_count(void *__desc)
 	
 	return n;
 }
+
+void __aal_pagealloc_zero_free_pages(void *__desc)
+{
+	struct aal_page_allocator_desc *desc = __desc;
+	unsigned int mi;
+	int j;
+	unsigned long v, flags;
+
+kprintf("zeroing free memory... ");
+
+	flags = aal_mc_spinlock_lock(&desc->lock);
+	for (mi = 0; mi < desc->count; mi++) {
+		
+		v = desc->map[mi];
+		if (v == (unsigned long)-1)
+			continue;
+		
+		for (j = 0; j < 64; j++) {
+			if (!(v & ((unsigned long)1 << j))) { /* free */
+
+				memset(phys_to_virt(ADDRESS(desc, mi, j)), 0, PAGE_SIZE); 
+			}
+		}
+	}
+	aal_mc_spinlock_unlock(&desc->lock, flags);
+
+kprintf("\nzeroing done\n");
+}
+
+
