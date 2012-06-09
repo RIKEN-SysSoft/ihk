@@ -248,7 +248,7 @@ static long knf_aal_os_debug_request(aal_os_t aal_os, void *priv,
 
 	switch (req) {
 	case AAL_OS_DEBUG_START:
-		knf_aal_os_issue_interrupt(aal_os, priv, kdd->bsp_apic_id, arg);
+		knf_aal_os_issue_interrupt(aal_os, priv, 0, arg);
 		return 0;
 	}
 	return -EINVAL;
