@@ -43,7 +43,7 @@ struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
 	aal_ikc_system_init(aal_os);
 	os->ikc_initialized = 1;
 
-	if (aal_os_wait_for_status(aal_os, AAL_OS_STATUS_READY, 0, 30) == 0) {
+	if (aal_os_wait_for_status(aal_os, AAL_OS_STATUS_READY, 0, 1000) == 0) {
 		/* XXX: 
 		 * We assume this address is remote, 
 		 * but the local is possible... */
@@ -95,7 +95,7 @@ int ikc_master_init(aal_os_t __os)
 		return -EINVAL;
 	} else {
 		aal_ikc_enable_channel(os->mchannel);
-
+		
 		printk("ikc_master_init done.\n");
 
 		/* ack send */
