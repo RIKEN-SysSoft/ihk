@@ -375,12 +375,14 @@ int aal_mc_pt_print_pte(struct page_table *pt, void *virt)
 	}
 	pt = phys_to_virt(pt->entry[l4idx] & PAGE_MASK);
 
+	__kprintf("l3 table: 0x%lX l3idx: %d \n", virt_to_phys(pt), l3idx);
 	if (!(pt->entry[l3idx] & PFL3_PRESENT)) {
 		__kprintf("0x%lX l3idx not present! \n", (unsigned long)virt);
 		return -EFAULT;
 	}
 	pt = phys_to_virt(pt->entry[l3idx] & PAGE_MASK);
-
+	
+	__kprintf("l2 table: 0x%lX l2idx: %d \n", virt_to_phys(pt), l2idx);
 	if (!(pt->entry[l2idx] & PFL2_PRESENT)) {
 		__kprintf("0x%lX l2idx not present! \n", (unsigned long)virt);
 		return -EFAULT;
@@ -390,8 +392,10 @@ int aal_mc_pt_print_pte(struct page_table *pt, void *virt)
 	}
 	pt = phys_to_virt(pt->entry[l2idx] & PAGE_MASK);
 
+	__kprintf("l1 table: 0x%lX l1idx: %d \n", virt_to_phys(pt), l1idx);
 	if (!(pt->entry[l1idx] & PFL1_PRESENT)) {
-		__kprintf("0x%lX PTE (l1) not present! \n", (unsigned long)virt);
+		__kprintf("0x%lX PTE (l1) not present! entry: 0x%lX\n", 
+		          (unsigned long)virt, pt->entry[l1idx]);
 		return -EFAULT;
 	}
 
