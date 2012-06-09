@@ -17,7 +17,7 @@ void init_processors_local(int max_id)
 	kprintf("locals = %p\n", locals);
 }
 
-static struct x86_cpu_local_variables *get_x86_cpu_local_variable(int id)
+struct x86_cpu_local_variables *get_x86_cpu_local_variable(int id)
 {
 	return (struct x86_cpu_local_variables *)
 		((char *)locals + (id << PAGE_SHIFT));
