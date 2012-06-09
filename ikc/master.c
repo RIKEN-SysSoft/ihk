@@ -7,6 +7,14 @@
 #include <ikc/aal.h>
 #include <ikc/master.h>
 
+//#define DEBUG_PRINT_IKC
+
+#ifdef DEBUG_PRINT_IKC
+#define dkprintf kprintf
+#else
+#define dkprintf(...)
+#endif
+
 #ifdef AAL_OS_MANYCORE
 static aal_spinlock_t listener_lock;
 static struct aal_ikc_listen_param *listeners[AAL_IKC_MAX_PORT];
@@ -296,7 +304,7 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 			aal_ikc_free_channel(c);
 			return -wq.res.param[0];
 		} else {
-			kprintf("response = %llx, %llx, %llx\n",
+			dkprintf("response = %llx, %llx, %llx\n",
 			        wq.res.param[0], wq.res.param[1],
 			        wq.res.param[2]);
 			aal_ikc_set_remote_queue(&c->send, os, wq.res.param[1],
@@ -304,7 +312,7 @@ int aal_ikc_connect(aal_os_t os, struct aal_ikc_connect_param *p)
 			c->remote_channel_id = c->send.cache.channel_id;
 			c->handler = p->handler;
 			c->send.queue->write_cpu = c->recv.queue->read_cpu;
-			kprintf("(Connected) Remote channeld id = %x\n",
+			dkprintf("(Connected) Remote channeld id = %x\n",
 			        c->remote_channel_id);
 			aal_ikc_enable_channel(c);
 		}
