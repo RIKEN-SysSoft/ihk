@@ -10,6 +10,9 @@ struct aal_kmsg_buf {
 };
 
 extern int kprintf(const char *format, ...);
+extern int kprintf_lock();
+extern void kprintf_unlock(int irqflags);
+extern int __kprintf(const char *format, ...);
 
 extern void panic(const char *msg);
 
