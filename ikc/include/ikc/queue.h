@@ -108,7 +108,7 @@ void aal_ikc_init_desc(struct aal_ikc_channel_desc *c,
                        aal_ikc_ph_t packet_handler);
 struct aal_ikc_channel_desc *aal_ikc_find_channel(aal_os_t os, int id);
 
-static int aal_ikc_channel_enabled(struct aal_ikc_channel_desc *c)
+static inline int aal_ikc_channel_enabled(struct aal_ikc_channel_desc *c)
 {
 	return (c->flag & IKC_FLAG_STATUS_MASK) == IKC_FLAG_ENABLED;
 }

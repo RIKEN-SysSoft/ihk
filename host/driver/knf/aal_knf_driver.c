@@ -243,9 +243,6 @@ static int knf_aal_os_get_special_addr(aal_os_t aal_os, void *priv,
 static long knf_aal_os_debug_request(aal_os_t aal_os, void *priv,
                                      unsigned int req, unsigned long arg)
 {
-	struct knf_os_data *os = priv;
-	struct knf_device_data *kdd = os->dev;
-
 	switch (req) {
 	case AAL_OS_DEBUG_START:
 		knf_aal_os_issue_interrupt(aal_os, priv, 0, arg);
