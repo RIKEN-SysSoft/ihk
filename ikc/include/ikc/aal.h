@@ -17,7 +17,7 @@
 #define aal_ikc_unmap_memory     aal_mc_unmap_memory
 
 #define aal_ikc_map_virtual(dev, p, n, a)  aal_mc_map_virtual(p, n, a)
-#define aal_ikc_unmap_virtual(dev, v, n)   aal_mc_unmap_virtual(v, n)
+#define aal_ikc_unmap_virtual(dev, v, n)   aal_mc_unmap_virtual(v, n, 1)
 
 #define aal_ikc_get_processor_id aal_mc_get_processor_id
 #define aal_ikc_mb               aal_mc_mb

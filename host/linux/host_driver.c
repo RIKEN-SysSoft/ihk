@@ -392,11 +392,18 @@ static int __aal_os_read_kmsg(struct aal_host_linux_os_data *data,
 kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
 
 	/* Print the end of the buffer */
-	copy_to_user(buf, (char *)(data->kmsg_buf) + sizeof(int) * 2 + tail + 1,
-	             len_end);
+	if (copy_to_user(buf, (char *)(data->kmsg_buf) + sizeof(int) * 2 + tail + 1,
+	             len_end)) {
+		dprintf("error: copying string to user-space\n");
+		return -EINVAL;
+	}
+
 	/* Then the front of it */
-	copy_to_user(buf + len_end, (char *)(data->kmsg_buf) + sizeof(int) * 2,
-	             tail);
+	if (copy_to_user(buf + len_end, (char *)(data->kmsg_buf) + sizeof(int) * 2,
+	             tail)) {
+		dprintf("error: copying string to user-space\n");
+		return -EINVAL;
+	}
 
 	return tail + len_end;
 }
