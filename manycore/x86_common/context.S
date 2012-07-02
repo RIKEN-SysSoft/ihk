@@ -1,3 +1,8 @@
+#define X86_CPU_LOCAL_OFFSET_TSS    128
+#define X86_TSS_OFFSET_SP0          4
+#define X86_CPU_LOCAL_OFFSET_SP0 \
+		(X86_CPU_LOCAL_OFFSET_TSS + X86_TSS_OFFSET_SP0)
+
 .text
 .globl aal_mc_switch_context
 aal_mc_switch_context:
@@ -18,7 +23,7 @@ aal_mc_switch_context:
 1:
 		movq	0(%rsi), %rsp
 		movq	80(%rsi), %rbp
-		movq	%rbp, %gs:16
+		movq	%rbp, %gs:(X86_CPU_LOCAL_OFFSET_SP0)
 		movq	64(%rsi), %r15
 		movq	56(%rsi), %r14
 		movq	48(%rsi), %r13
