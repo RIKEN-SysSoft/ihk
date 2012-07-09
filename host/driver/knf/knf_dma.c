@@ -20,6 +20,8 @@
 #include "mic.h"
 #include "knf_user.h"
 
+//#define DMA_DEBUG
+
 #ifdef DMA_DEBUG
 #define dprintk printk
 #else

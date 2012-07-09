@@ -87,8 +87,16 @@ enum aal_mc_pt_attribute {
 	PTATTR_UNCACHABLE = 0x10000,
 };
 
+typedef unsigned long pte_t;
+
+struct page_table;
+void set_pte(pte_t *ppte, unsigned long phys, int attr);
+pte_t *get_pte(struct page_table *pt, void *virt, int attr);
+
 void *early_alloc_page(void);
 void *get_last_early_heap(void);
+void flush_tlb(void);
+void flush_tlb_single(unsigned long addr);
 
 void *map_fixed_area(unsigned long phys, unsigned long size, int uncachable);
 

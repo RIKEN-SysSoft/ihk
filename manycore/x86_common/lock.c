@@ -1,5 +1,7 @@
 #include <aal/lock.h>
 
+#if 0
+
 void aal_mc_spinlock_init(aal_spinlock_t *lock)
 {
 	*lock = 0;
@@ -30,3 +32,4 @@ void aal_mc_spinlock_unlock(aal_spinlock_t *lock, unsigned long *flags)
 	cpu_restore_interrupt(*flags);
 }
 
+#endif
