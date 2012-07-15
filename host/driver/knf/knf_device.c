@@ -49,7 +49,8 @@ void __knf_reset_dma_registers(struct knf_device_data *kdd);
  */
 int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 {
-	int i, err = 0;
+	int i;
+	int err = 0;
 
 	if ((err = pci_enable_device(dev)) < 0) {
 		return err;
@@ -66,7 +67,7 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	kdd->aperture_len = pci_resource_len(dev, DLDR_APT_BAR);
 	kdd->mmio_pa = pci_resource_start(dev, DLDR_MMIO_BAR);
 	kdd->mmio_len = pci_resource_len(dev, DLDR_MMIO_BAR);
-	
+
 	if (!request_mem_region(kdd->aperture_pa, kdd->aperture_len, "knf")) {
 		err = -ENOMEM;
 		goto FIN;
@@ -109,6 +110,7 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 
 	__knf_dma_init(kdd);
 
+#ifdef CONFIG_KNF
 	/* XXX: This should be dynamically obtained from the card */
 	kdd->mem_region.start = 0;
 	kdd->mem_region.size = 0x80000000;
@@ -116,15 +118,16 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	kdd->mem_info.n_fixed = 0;
 	kdd->mem_info.available = kdd->mem_info.mappable = &kdd->mem_region;
 	kdd->mem_info.fixed = NULL;
-
-	/* TODO: do this in a more generic way! */
-	for (i = 0; i < 128; i++) {
-		kdd->cpu_hw_ids[i] = i;
-	}
-
+#endif
+	
 	/* Currently BSP id + 4 is number of cores */
 	kdd->cpu_info.n_cpus = kdd->bsp_apic_id + 4; 
 	kdd->cpu_info.hw_ids = kdd->cpu_hw_ids;
+
+	/* TODO: do this in a more generic way! */
+	for (i = 0; i < kdd->cpu_info.n_cpus; i++) {
+		kdd->cpu_hw_ids[i] = i;
+	}
 
 	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
 
@@ -164,6 +167,7 @@ void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *kdd)
 	pci_disable_device(dev);
 }
 
+#ifdef CONFIG_KNF
 /** \brief Get an entry in GTT.
  *
  * @param kdd  An interal structure for a Knights Ferry device
@@ -189,6 +193,7 @@ static void set_gtt_entry(struct knf_device_data *kdd, int entry,
 	       (unsigned int *)((char *)(kdd->mmio_va) + 
 	                        MMIO_GTT_BASE_OFFSET + 4 * entry));
 }
+#endif
 
 /** \brief Maps an memory area to the aperture in a Knights Ferry device.
  *
@@ -200,6 +205,7 @@ static void set_gtt_entry(struct knf_device_data *kdd, int entry,
 int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
                      unsigned long phys, int npages)
 {
+#ifdef CONFIG_KNF
 	int i = (int)((ap_address - kdd->aperture_pa) >> PAGE_SHIFT);
 	int e = i + npages;
 	unsigned long flags;
@@ -213,6 +219,7 @@ int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
 		phys += PAGE_SIZE;
 	}
 	spin_unlock_irqrestore(&kdd->lock, flags);
+#endif
 
 	smp_mb();
 
@@ -231,6 +238,7 @@ int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
 int knf_unmap_aperture(struct knf_device_data *kdd, unsigned long ap_address,
                        int npages)
 {
+#ifdef CONFIG_KNF
 	int i = (int)((ap_address - kdd->aperture_pa) >> PAGE_SHIFT);
 	int e = i + npages;
 	unsigned long flags;
@@ -243,6 +251,7 @@ int knf_unmap_aperture(struct knf_device_data *kdd, unsigned long ap_address,
 		set_gtt_entry(kdd, i, 0, 0);
 	}
 	spin_unlock_irqrestore(&kdd->lock, flags);
+#endif	
 
 	return 0;
 }
@@ -260,7 +269,9 @@ void knf_shutdown(struct knf_device_data *kdd)
 	knf_write_sbox(kdd, SBOX_SCRATCH12, 0);
 	knf_write_sbox(kdd, SBOX_SCRATCH13, 0);
 	knf_write_sbox(kdd, SBOX_SCRATCH14, 0);
+#ifdef CONFIG_KNF
 	knf_write_sbox(kdd, SBOX_SCRATCH15, 0);
+#endif
 
 	reset = knf_read_sbox(kdd, SBOX_RGCR);
 	reset = 1;
@@ -315,12 +326,15 @@ static int __wait_for_bootstrap_ready(struct knf_device_data *kdd)
  */
 int __knf_prepare_os_load(struct knf_device_data *kdd)
 {
+#ifdef CONFIG_KNF
 	unsigned long i, phys;
+#endif
 
 	if (__wait_for_bootstrap_ready(kdd) < 0) {
 		return -EBUSY;
 	}
 
+#ifdef CONFIG_KNF
 	dprint_var_x8(kdd->os_load_offset);
 	phys = kdd->os_load_offset;
 
@@ -329,9 +343,11 @@ int __knf_prepare_os_load(struct knf_device_data *kdd)
 
 		phys += PAGE_SIZE;
 	}
+#endif	
 
 	smp_mb();
 
+	//knf_write_sbox(kdd, SBOX_PCIE_BAR_ENABLE, 3);
 	knf_write_sbox(kdd, SBOX_TLB_FLUSH, 1);
 	
 	/* DMA init */
@@ -384,7 +400,11 @@ int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
 	fs = get_fs();
 	set_fs(get_ds());
 
+#ifdef CONFIG_KNF
 	r = vfs_read(file, kdd->aperture_va, size, &pos);
+#else
+	r = vfs_read(file, kdd->aperture_va + kdd->os_load_offset, size, &pos);
+#endif
 	if (r != (long)size) {
 		dprintf("knf_load_os_file: vfs_read(%lld) failed : %ld\n",
 		        size, r);
@@ -418,7 +438,11 @@ int knf_issue_interrupt(struct knf_device_data *kdd, int apicid, int vector)
 {
 	unsigned int val;
 
+#ifdef CONFIG_KNF
 	val = (vector << MIC_ICR_INTVEC_SHIFT) | 0;
+#else
+	val = (vector << MIC_ICR_INTVEC_SHIFT) | (1 << 13);
+#endif
 	
 	knf_write_sbox(kdd, SBOX_APICICR0 + 4, apicid);
 	knf_write_sbox(kdd, SBOX_APICICR0 + 0, val);

@@ -20,7 +20,7 @@
 #include "mic.h"
 #include "knf_user.h"
 
-//#define DMA_DEBUG
+#define DMA_DEBUG
 
 #ifdef DMA_DEBUG
 #define dprintk printk
@@ -59,6 +59,7 @@ static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 {
 	int h = c->head, t = c->tail, reg_value = 0;
 
+#ifdef CONFIG_KNF
 	for (;;) {
 		if (h <= t) {
 			t += c->desc_count;
@@ -76,6 +77,25 @@ static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 	}
 
 	return 0; /* NG */
+#else
+	for (;;) {
+		if (h == t && ndesc < c->desc_count)
+			return 1;
+		else if (h < t && ((t - h) > ndesc)) 
+			return 1;
+		else if (h > t && (c->desc_count - h + t) > ndesc)
+			return 1;
+		
+		if (!reg_value) {
+			t = c->tail = sbox_dma_read(c, SBOX_DTPR_0);
+			reg_value = 1;
+		} else {
+			break;
+		}
+	}
+
+	return 0;
+#endif
 }
 
 /** \brief Proceed the head pointer of the DMA channel, and returns the 
@@ -152,10 +172,16 @@ static void __initialize_dma(struct knf_dma_channel *c)
 	sbox_dma_write(c, SBOX_DRAR_LO_0, drarl);
 	sbox_dma_write(c, SBOX_DRAR_HI_0, drarh);
 	
+#ifdef CONFIG_KNF
 	sbox_dma_write(c, SBOX_DTPR_0, 0);
 	sbox_dma_write(c, SBOX_DHPR_0, 0);
 
 	c->head = c->tail = 0;
+#else
+	c->tail = sbox_dma_read(c, SBOX_DTPR_0);
+	c->head = c->tail;
+	sbox_dma_write(c, SBOX_DHPR_0, c->head);	
+#endif
 }
 
 /** \brief Initialize the DMA registers for host use
@@ -236,6 +262,9 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 	if (!c->desc) {
 		return -EINVAL;
 	}
+
+	//c->tail = c->head;
+
 	/* 64K per one desc */
 	cdesc = (req->size + 65535) >> 16;
 	ndesc = cdesc;
@@ -300,6 +329,7 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 		       desc->desc.status.dap, desc->desc.status.data);
 	}
 	rdtscll(st1);
+	sbox_dma_write(c, SBOX_DTPR_0, c->tail);
 	sbox_dma_write(c, SBOX_DHPR_0, c->head);
 	
 	spin_unlock_irqrestore(&c->lock, flags);

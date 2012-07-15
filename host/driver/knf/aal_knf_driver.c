@@ -32,6 +32,8 @@ static struct pci_device_id knf_pci_ids[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2243), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2249), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x224a), },
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2250), },
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2259), },
 	{ 0, }
 };
 
@@ -173,11 +175,13 @@ static unsigned long knf_aal_os_map_memory(aal_os_t aal_os, void *priv,
 {
 	struct knf_os_data *os = priv;
 	struct knf_device_data *kdd = os->dev;
+#ifdef CONFIG_KNF	
 	unsigned long phys;
+#endif
 
 	dprint_func_enter;
 	dprint_var_x8(size);
-
+#ifdef CONFIG_KNF	
 	size >>= PAGE_SHIFT;
 
 	if (!(phys = aal_pagealloc_alloc(kdd->alloc_desc, size))) {
@@ -190,6 +194,8 @@ static unsigned long knf_aal_os_map_memory(aal_os_t aal_os, void *priv,
 	}
 
 	return phys;
+#endif
+	return kdd->aperture_pa + remote_phys;
 }
 
 static int knf_aal_os_unmap_memory(aal_os_t aal_os, void *priv,
@@ -386,11 +392,14 @@ static unsigned long knf_aal_map_memory(aal_os_t aal_os, void *priv,
                                         unsigned long size)
 {
 	struct knf_device_data *kdd = priv;
+#ifdef CONFIG_KNF	
 	unsigned long phys;
+#endif
 
 	dprint_func_enter;
 	dprint_var_x8(size);
 
+#ifdef CONFIG_KNF
 	size >>= PAGE_SHIFT;
 
 	if (!(phys = aal_pagealloc_alloc(kdd->alloc_desc, size))) {
@@ -403,17 +412,22 @@ static unsigned long knf_aal_map_memory(aal_os_t aal_os, void *priv,
 	}
 
 	return phys;
+#else
+	return kdd->aperture_pa + remote_phys;
+#endif
 }
 
 static int knf_aal_unmap_memory(aal_device_t aal_dev, void *priv,
                                 unsigned long phys, unsigned long size)
 {
+#ifdef CONFIG_KNF
 	struct knf_device_data *kdd = priv;
 
 	size >>= PAGE_SHIFT;
 
 	knf_unmap_aperture(kdd, phys, size);
 	aal_pagealloc_free(kdd->alloc_desc, phys, size);
+#endif
 
 	return 0;
 }

@@ -77,7 +77,7 @@ struct knf_device_data {
 	struct aal_mem_region mem_region;
 
 	/** \brief List of the APIC IDs of the cores in the device */
-	int cpu_hw_ids[128];
+	int cpu_hw_ids[512];
 };
 
 #define KNFDD_STATUS_READY          1

@@ -43,7 +43,7 @@ struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
 	aal_ikc_system_init(aal_os);
 	os->ikc_initialized = 1;
 
-	if (aal_os_wait_for_status(aal_os, AAL_OS_STATUS_READY, 0, 1000) == 0) {
+	if (aal_os_wait_for_status(aal_os, AAL_OS_STATUS_READY, 0, 150) == 0) {
 		/* XXX: 
 		 * We assume this address is remote, 
 		 * but the local is possible... */
@@ -54,12 +54,14 @@ struct aal_ikc_channel_desc *aal_host_ikc_init_first(aal_os_t aal_os,
 		aal_os_get_special_address(aal_os, AAL_SPADDR_MIKC_QUEUE_SEND,
 		                           &w, &wsz);
 
+		printk("MIKC rq: 0x%lX, wq: 0x%lX\n", r, w);
+
 		rp = aal_device_map_memory(os->dev_data, r, rsz);
 		wp = aal_device_map_memory(os->dev_data, w, wsz);
 		
 		rq = aal_device_map_virtual(os->dev_data, rp, rsz, NULL, 0);
 		wq = aal_device_map_virtual(os->dev_data, wp, wsz, NULL, 0);
-
+		
 		c = kzalloc(sizeof(struct aal_ikc_channel_desc)
 		            + sizeof(struct aal_ikc_master_packet), GFP_KERNEL);
 		aal_ikc_init_desc(c, aal_os, 0, rq, wq,

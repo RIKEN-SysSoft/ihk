@@ -44,11 +44,29 @@ unsigned int gtt_read(int index)
 
 static void init_smpt(void)
 {
+#ifdef CONFIG_KNF
 	/* 0 - 32 GB */
 	sbox_write(SBOX_SMPT00, BUILD_SMPT(SNOOP_ON, 0));
 	sbox_write(SBOX_SMPT01, BUILD_SMPT(SNOOP_ON, 1));
 	sbox_write(SBOX_SMPT02, BUILD_SMPT(SNOOP_OFF, 0));
 	sbox_write(SBOX_SMPT03, BUILD_SMPT(SNOOP_OFF, 1));
+#else
+	uint64_t host_physaddr = 0;
+	uint32_t smpt_reg_offset = SBOX_SMPT00;
+	uint32_t smpt_reg_val;
+	int i;
+
+	for (i = 0; i < NUM_SMPT_ENTRIES_IN_USE; i++) {
+
+		smpt_reg_val = BUILD_SMPT(SNOOP_ON, host_physaddr >> 
+		                          MIC_SYSTEM_PAGE_SHIFT);
+
+		sbox_write(smpt_reg_offset, smpt_reg_val);
+		//writel(smpt_reg_val, (uint8_t*)mm_sbox + smpt_reg_offset);
+		smpt_reg_offset += 4;
+		host_physaddr += MIC_SYSTEM_PAGE_SIZE;
+	}
+#endif
 }
 
 unsigned long host_to_pa(unsigned long host, int smptentry)
@@ -114,7 +132,7 @@ void arch_init(void)
 
 	boot_param->status = 1;
 
-	asm volatile("spflt %0" : : "r"(0));
+	//asm volatile("spflt %0" : : "r"(0));
 }
 
 void arch_set_mikc_queue(void *rq, void *wq)
@@ -123,6 +141,7 @@ void arch_set_mikc_queue(void *rq, void *wq)
 	boot_param->mikc_send = virt_to_phys(wq);
 	sbox_write(SBOX_SCRATCH13, virt_to_phys(wq));
 	sbox_write(SBOX_SCRATCH15, virt_to_phys(rq));
+	kprintf("MIKC rq: 0x%lX, wq: 0x%lX\n", virt_to_phys(rq), virt_to_phys(wq));
 }
 
 int aal_mc_interrupt_host(int cpu, int vector)
