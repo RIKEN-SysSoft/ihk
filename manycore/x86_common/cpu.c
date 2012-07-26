@@ -30,7 +30,7 @@
 #define APIC_DM_STARTUP         0x00600
 
 
-//#define DEBUG_PRINT_CPU
+#define DEBUG_PRINT_CPU
 
 #ifdef DEBUG_PRINT_CPU
 #define dkprintf kprintf
@@ -346,7 +346,7 @@ void handle_interrupt(int vector, struct x86_regs *regs)
 {
 	struct aal_mc_interrupt_handler *h;
 
-	dkprintf("CPU[%d] got interrupt: %d, RIP: 0x%lX\n", 
+	dkprintf("CPU[%d] got interrupt, vector: %d, RIP: 0x%lX\n", 
 	         aal_mc_get_processor_id(), vector, regs->rip);
 
 	if (vector < 0 || vector > 255) {
