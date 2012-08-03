@@ -33,9 +33,18 @@ static struct pci_device_id knf_pci_ids[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2249), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x224a), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2250), },
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x225c), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2259), },
 	{ 0, }
 };
+
+//#define DEBUG_PRINT_AAL_KNF
+
+#ifdef DEBUG_PRINT_AAL_KNF
+#define dprintk printk
+#else
+#define dprintk(...)
+#endif
 
 /**** OS Section ****/
 extern int __knf_prepare_os_load(struct knf_device_data *kdd);
@@ -165,7 +174,7 @@ static int knf_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
 	} else {
 		cpu = cpu;
 	}
-	printk("knf_aal_os_issue_interrupt, cpu: %d\n", cpu);
+	dprintk("knf_aal_os_issue_interrupt, cpu: %d, vector: %d\n", cpu, vector);
 	return knf_issue_interrupt(kdd, cpu, vector);
 }
 

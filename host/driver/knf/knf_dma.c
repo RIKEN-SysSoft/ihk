@@ -20,7 +20,7 @@
 #include "mic.h"
 #include "knf_user.h"
 
-#define DMA_DEBUG
+//#define DMA_DEBUG
 
 #ifdef DMA_DEBUG
 #define dprintk printk
@@ -57,9 +57,10 @@ static void sbox_dma_write(struct knf_dma_channel *c,
  */
 static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 {
-	int h = c->head, t = c->tail, reg_value = 0;
+	int h = c->head, t = c->tail; 
 
 #ifdef CONFIG_KNF
+	int reg_value = 0;
 	for (;;) {
 		if (h <= t) {
 			t += c->desc_count;
@@ -78,21 +79,14 @@ static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 
 	return 0; /* NG */
 #else
-	for (;;) {
-		if (h == t && ndesc < c->desc_count)
-			return 1;
-		else if (h < t && ((t - h) > ndesc)) 
-			return 1;
-		else if (h > t && (c->desc_count - h + t) > ndesc)
-			return 1;
-		
-		if (!reg_value) {
-			t = c->tail = sbox_dma_read(c, SBOX_DTPR_0);
-			reg_value = 1;
-		} else {
-			break;
-		}
-	}
+	t = c->tail = sbox_dma_read(c, SBOX_DTPR_0);
+	
+	if (h == t && ndesc < c->desc_count)
+		return 1;
+	else if (h < t && ((t - h) > ndesc)) 
+		return 1;
+	else if (h > t && (c->desc_count - h + t) > ndesc)
+		return 1;
 
 	return 0;
 #endif
@@ -256,14 +250,12 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 	unsigned long flags;
 	struct knf_dma_channel *c;
 	int i, cdesc, ndesc = 1, size;
-	union md_mic_dma_desc *desc;
+	union md_mic_dma_desc *desc = NULL;
 
 	c = &kdd->channels[channel + 4];
 	if (!c->desc) {
 		return -EINVAL;
 	}
-
-	//c->tail = c->head;
 
 	/* 64K per one desc */
 	cdesc = (req->size + 65535) >> 16;
@@ -305,8 +297,9 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 			desc->desc.memcpy.length = size;
 		}
 	}
-	dprintk("COPY: src = %lx, dest = %lx, size = %ld (org = %ld)\n",
-	       desc->desc.memcpy.sap, desc->desc.memcpy.dap,
+	dprintk("COPY: src = %lx, dest = %lx, size = %d (org = %ld)\n",
+	       (unsigned long)desc->desc.memcpy.sap, 
+		   (unsigned long)desc->desc.memcpy.dap,
 	       desc->desc.memcpy.length, req->size);
 
 	if (req->callback || req->notify) {
@@ -326,10 +319,11 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 			desc->desc.status.data = (unsigned long)req->priv;
 		}
 		dprintk("STATUS: dest = %lx, data = %ld\n",
-		       desc->desc.status.dap, desc->desc.status.data);
+		       (unsigned long)desc->desc.status.dap, 
+			   (unsigned long)desc->desc.status.data);
 	}
+	
 	rdtscll(st1);
-	sbox_dma_write(c, SBOX_DTPR_0, c->tail);
 	sbox_dma_write(c, SBOX_DHPR_0, c->head);
 	
 	spin_unlock_irqrestore(&c->lock, flags);

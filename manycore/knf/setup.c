@@ -51,6 +51,16 @@ static void init_smpt(void)
 	sbox_write(SBOX_SMPT02, BUILD_SMPT(SNOOP_OFF, 0));
 	sbox_write(SBOX_SMPT03, BUILD_SMPT(SNOOP_OFF, 1));
 #else
+	int i;
+	unsigned int smpt_reg_offset = SBOX_SMPT00;
+
+	/* 0 - 512GB */
+	for(i = 0; i < NUM_SMPT_ENTRIES_IN_USE; i++) {
+		sbox_write(smpt_reg_offset, BUILD_SMPT(SNOOP_ON, i));
+		smpt_reg_offset += 4;
+	}
+#endif
+#if 0
 	uint64_t host_physaddr = 0;
 	uint32_t smpt_reg_offset = SBOX_SMPT00;
 	uint32_t smpt_reg_val;

@@ -68,6 +68,9 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	kdd->mmio_pa = pci_resource_start(dev, DLDR_MMIO_BAR);
 	kdd->mmio_len = pci_resource_len(dev, DLDR_MMIO_BAR);
 
+	printk("MIC aperture len: %lu, mmio lenght: %lu\n", 
+	       kdd->aperture_len, kdd->mmio_len);
+
 	if (!request_mem_region(kdd->aperture_pa, kdd->aperture_len, "knf")) {
 		err = -ENOMEM;
 		goto FIN;
@@ -579,6 +582,10 @@ irqreturn_t knf_irq_handler(int irq, void *data)
 	/* ack */
 	reg = knf_read_sbox(kdd, SBOX_SICR0);
 	knf_write_sbox(kdd, SBOX_SICR0, reg);
+
+#ifndef CONFIG_KNF	
+	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
+#endif
 
 	/* XXX: Linear search? */
 	list_for_each_entry(h, &knf_interrupt_handlers, list) {
