@@ -1,6 +1,8 @@
 #ifndef MICCONST_H
 #define MICCONST_H
 
+#include "mic_type.h"
+
 /* /host/driver/mic_common.h */
 #define DLDR_APT_BAR 0
 #define DLDR_MMIO_BAR 4

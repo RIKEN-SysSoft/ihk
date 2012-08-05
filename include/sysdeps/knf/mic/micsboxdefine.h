@@ -39,6 +39,8 @@
 #ifndef	_MIC_SBOXDEFINE_REGISTERS_H_
 #define	_MIC_SBOXDEFINE_REGISTERS_H_
 
+#include "mic_type.h"
+
 #define	SBOX_OC_I2C_ICR				0x00001000
 #define	SBOX_OC_I2C_ISR				0x00001004
 #define	SBOX_OC_I2C_ISAR			0x00001008

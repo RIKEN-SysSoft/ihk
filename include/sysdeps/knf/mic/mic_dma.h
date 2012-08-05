@@ -1,6 +1,8 @@
 #ifndef HEADER_MIC_MIC_DMA_H
 #define HEADER_MIC_MIC_DMA_H
 
+#include "mic_type.h"
+
 union md_mic_dma_desc {
     union {
         struct {

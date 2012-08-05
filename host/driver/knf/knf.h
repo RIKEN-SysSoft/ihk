@@ -6,6 +6,7 @@
 #ifndef KNF_H
 #define KNF_H
 #include <aal/aal_host_driver.h>
+#include <sysdeps/knf/mic/mic_type.h>
 #include <sysdeps/knf/knf_host.h>
 
 #define KNF_DMA_CHANNELS 8

@@ -25,6 +25,8 @@
 #include "host_linux.h"
 #include "ops_wrappers.h"
 
+#include <sysdeps/knf/mic/mic_type.h>
+
 #define DEV_MAX_MINOR 64
 #define OS_MAX_MINOR 64
 #define DEV_DEV_NAME "mcd"
