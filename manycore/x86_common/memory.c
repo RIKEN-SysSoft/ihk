@@ -87,8 +87,13 @@ void flush_tlb(void)
 	asm volatile("movq %%cr3, %0; movq %0, %%cr3" : "=r"(cr3) : : "memory");
 }
 
+void flush_tlb_single(unsigned long addr)
+{
+   asm volatile("invlpg (%0)" :: "r" (addr) : "memory");
+}
+
 struct page_table {
-	uint64_t entry[PT_ENTRIES];
+	pte_t entry[PT_ENTRIES];
 };
 
 static struct page_table *init_pt;
@@ -208,6 +213,81 @@ static unsigned long attr_to_l1attr(enum aal_mc_pt_attribute attr)
 	l1i = ((virt) >> PTL1_SHIFT) & (PT_ENTRIES - 1)
 
 
+void set_pte(pte_t *ppte, unsigned long phys, int attr)
+{
+	if (attr & PTATTR_LARGEPAGE) {
+		*ppte = phys | attr_to_l2attr(attr) | PFL2_SIZE;
+	}
+	else {
+		*ppte = phys | attr_to_l1attr(attr);
+	}
+}
+
+
+/* 
+ * get_pte() 
+ *
+ * Descripton: walks the page tables (creates tables if not existing)
+ *             and returns a pointer to the PTE corresponding to the
+ *             virtual address.
+ */
+pte_t *get_pte(struct page_table *pt, void *virt, int attr)
+{
+	int l4idx, l3idx, l2idx, l1idx;
+	unsigned long v = (unsigned long)virt;
+	struct page_table *newpt;
+
+	if (!pt) {
+		pt = init_pt;
+	}
+
+	GET_VIRT_INDICES(v, l4idx, l3idx, l2idx, l1idx);
+
+    /* TODO: more detailed attribute check */
+	if (pt->entry[l4idx] & PFL4_PRESENT) {
+		pt = phys_to_virt(pt->entry[l4idx] & PAGE_MASK);
+	} else {
+		newpt = __alloc_new_pt();
+		pt->entry[l4idx] = virt_to_phys(newpt) | attr_to_l4attr(attr);
+		pt = newpt;
+	}
+
+	if (pt->entry[l3idx] & PFL3_PRESENT) {
+		pt = phys_to_virt(pt->entry[l3idx] & PAGE_MASK);
+	} else {
+		newpt = __alloc_new_pt();
+		pt->entry[l3idx] = virt_to_phys(newpt) | attr_to_l3attr(attr);
+		pt = newpt;
+	}
+
+	/* TODO: PTATTR_LARGEPAGE 
+	if (attr & PTATTR_LARGEPAGE) {
+		if (pt->entry[l2idx] & PFL2_PRESENT) {
+			if ((pt->entry[l2idx] & PAGE_MASK) != phys) {
+				return -EBUSY;
+			} else {
+				return 0;
+			}
+		} else {
+			pt->entry[l2idx] = phys | attr_to_l2attr(attr)
+				| PFL2_SIZE;
+			return 0;
+		}
+	}
+	*/
+
+	if (pt->entry[l2idx] & PFL2_PRESENT) {
+		pt = phys_to_virt(pt->entry[l2idx] & PAGE_MASK);
+	} else {
+		newpt = __alloc_new_pt();
+		pt->entry[l2idx] = virt_to_phys(newpt) | attr_to_l2attr(attr)
+			| PFL2_PRESENT;
+		pt = newpt;
+	}
+
+	return &(pt->entry[l1idx]);
+}
+
 static int __set_pt_page(struct page_table *pt, void *virt, unsigned long phys,
                          int attr)
 {
@@ -226,7 +306,7 @@ static int __set_pt_page(struct page_table *pt, void *virt, unsigned long phys,
 
 	GET_VIRT_INDICES(v, l4idx, l3idx, l2idx, l1idx);
 
-/* TODO: more detailed attribute check */
+	/* TODO: more detailed attribute check */
 	if (pt->entry[l4idx] & PFL4_PRESENT) {
 		pt = phys_to_virt(pt->entry[l4idx] & PAGE_MASK);
 	} else {

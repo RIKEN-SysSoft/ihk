@@ -5,7 +5,7 @@ obj-m += aal.o
 aal-y = host_driver.o mem_alloc.o mm.o mikc.o
 aal-y += ikc/linux.o ikc/master.o ikc/queue.o
 
-EXTRA_CFLAGS := -I$(src)/../include -I$(src)/../../ikc/include
+EXTRA_CFLAGS := -I$(src)/../include -I$(src)/../../ikc/include -I$(src)/../../include 
 
 .PHONY: clean install modules
 

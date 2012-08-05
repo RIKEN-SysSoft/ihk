@@ -8,6 +8,8 @@
 #include <string.h>
 #include "knf.h"
 
+//#define DEBUG_DMA
+
 #ifdef DEBUG_DMA
 #define dprintf kprintf
 #else
@@ -131,8 +133,10 @@ void aal_mc_dma_init(void)
 
 static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 {
-	int h = c->head, t = c->tail, reg_value = 0;
+	int h = c->head, t = c->tail; 
 
+#ifdef CONFIG_KNF
+	int reg_value = 0;
 	for (;;) {
 		if (h <= t) {
 			t += c->desc_count;
@@ -150,6 +154,18 @@ static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 	}
 
 	return 0; /* NG */
+#else
+	t = c->tail = sbox_dma_read(c, SBOX_DTPR_0);
+	
+	if (h == t && ndesc < c->desc_count)
+		return 1;
+	else if (h < t && ((t - h) > ndesc)) 
+		return 1;
+	else if (h > t && (c->desc_count - h + t) > ndesc)
+		return 1;
+
+	return 0;
+#endif
 }
 
 static union md_mic_dma_desc *__knf_desc_proceed_head(struct knf_dma_channel *c)
@@ -195,8 +211,10 @@ int aal_mc_dma_request(int channel,
 
 	c = &channels[channel];
 	if (!c->desc) {
+		dprintf("!c->desc\n");
 		return -EINVAL;
 	}
+	
 	if (req->callback || req->notify) {
 		ndesc++;
 	}
@@ -204,6 +222,8 @@ int aal_mc_dma_request(int channel,
 	flags = aal_mc_spinlock_lock(&c->lock);
 	if (!__knf_desc_check_room(c, ndesc)) {
 		aal_mc_spinlock_unlock(&c->lock, flags);
+		dprintf("!__knf_desc_check_room()\n");
+		__debug_print_dma_reg(c);
 		return -EBUSY;
 	}
 	
@@ -231,11 +251,12 @@ int aal_mc_dma_request(int channel,
 		        desc->desc.status.dap, desc->desc.status.data,
 		        desc->desc.status.intr);
 	}
+		
 	sbox_dma_write(c, SBOX_DHPR_0, c->head);
-	
 	aal_mc_spinlock_unlock(&c->lock, flags);
 
 	__debug_print_dma_reg(c);
 
 	return 0;
 }
+

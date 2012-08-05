@@ -25,6 +25,8 @@
 #include "host_linux.h"
 #include "ops_wrappers.h"
 
+#include <sysdeps/knf/mic/mic_type.h>
+
 #define DEV_MAX_MINOR 64
 #define OS_MAX_MINOR 64
 #define DEV_DEV_NAME "mcd"
@@ -359,13 +361,18 @@ static void __aal_os_init_kmsg(struct aal_host_linux_os_data *data)
 
 	pa = __aal_os_map_memory(data, rpa, size);
 	dprint_var_x8(pa);
+
+#ifdef CONFIG_KNF
 	if ((long)pa <= 0) {
 		return;
 	}
 	
+	data->kmsg_buf = ioremap_nocache(pa, size);
+#else
+	data->kmsg_buf = aal_device_map_virtual(data->dev_data, pa, size, NULL, 0);
+#endif
 	data->kmsg_pa = pa;
 	data->kmsg_len = size;
-	data->kmsg_buf = ioremap_nocache(pa, size);
 	dprint_var_p(data->kmsg_buf);
 }
 
@@ -1429,6 +1436,8 @@ EXPORT_SYMBOL(aal_os_wait_for_status);
 EXPORT_SYMBOL(aal_host_find_dev);
 EXPORT_SYMBOL(aal_host_find_os);
 EXPORT_SYMBOL(aal_os_to_dev);
+EXPORT_SYMBOL(aal_device_map_virtual);
+EXPORT_SYMBOL(aal_device_unmap_virtual);
 EXPORT_SYMBOL(aal_device_map_memory);
 EXPORT_SYMBOL(aal_device_unmap_memory);
 EXPORT_SYMBOL(aal_os_issue_interrupt);

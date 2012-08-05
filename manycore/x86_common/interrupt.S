@@ -1,4 +1,7 @@
 #define X86_CPU_LOCAL_OFFSET_TSS    128
+#define X86_TSS_OFFSET_SP0          4
+#define X86_CPU_LOCAL_OFFSET_SP0 \
+		(X86_CPU_LOCAL_OFFSET_TSS + X86_TSS_OFFSET_SP0)
 #define X86_CPU_LOCAL_OFFSET_KSTACK 16
 #define X86_CPU_LOCAL_OFFSET_USTACK 24
 #define KERNEL_CS                   32
@@ -64,7 +67,7 @@ page_fault:
 		PUSH_ALL_REGS
 		movq	%cr2, %rdi
 		movq	%rsp, %rsi
-		movq	%rbp, %rdx
+		movq    %rbp, %rdx
 		movq	__page_fault_handler_address(%rip), %rax
 		andq	%rax, %rax
 		jz		1f
@@ -72,7 +75,7 @@ page_fault:
 		POP_ALL_REGS
 		addq	$8, %rsp
 		iretq
-1:
+1:		
 		jmp		1b
 
 .globl general_protection_exception
@@ -89,7 +92,7 @@ general_protection_exception:
 x86_syscall:
 		cld
 		movq	%rsp, %gs:24
-		movq	%gs:16, %rsp
+		movq	%gs:(X86_CPU_LOCAL_OFFSET_SP0), %rsp
 
 		pushq	$(USER_DS)
 		pushq	$0
