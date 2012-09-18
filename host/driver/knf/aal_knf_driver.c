@@ -34,6 +34,7 @@ static struct pci_device_id knf_pci_ids[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x224a), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2250), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x225c), },
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x225d), },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x2259), },
 	{ 0, }
 };
