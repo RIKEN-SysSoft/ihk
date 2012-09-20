@@ -20,17 +20,8 @@ extern void init_sfi(void);
 static unsigned char stack[8192] __attribute__((aligned(4096)));
 extern struct aal_kmsg_buf kmsg_buf;
 
-static void *sbox_base = (void *)SBOX_BASE;
 static struct knf_boot_param *boot_param;
 
-void sbox_write(int offset, unsigned int value)
-{
-	*(volatile unsigned int *)(sbox_base + offset) = value;
-}
-unsigned int sbox_read(int offset)
-{
-	return *(volatile unsigned int *)(sbox_base + offset);
-}
 void gtt_write(int index, unsigned long phys, unsigned int enable)
 {
 	*(volatile unsigned int *)(MIC_GTT_BASE + (unsigned long)index * 4)
@@ -41,6 +32,12 @@ unsigned int gtt_read(int index)
 	return *(volatile unsigned int *)(MIC_GTT_BASE
 	                                  + (unsigned long)index * 4);
 }
+
+#define KNC_MAP_TEST
+#ifdef KNC_MAP_TEST
+#define SMTP_ADDR(phys) (phys >> 34)
+unsigned long db_smtp_phys;
+#endif
 
 static void init_smpt(void)
 {
@@ -54,12 +51,29 @@ static void init_smpt(void)
 	int i;
 	unsigned int smpt_reg_offset = SBOX_SMPT00;
 
+#ifdef KNC_MAP_MICPA
+    /* spare some pages for map MIC phys addr to PCI addr */
+	for(i = 0; i < NUM_SMPT_ENTRIES_IN_USE - NUM_SMPT_ENTRIES_MICPA; i++) {
+        sbox_write(smpt_reg_offset, BUILD_SMPT(SNOOP_ON, i));
+		smpt_reg_offset += 4;
+    }
+#else
 	/* 0 - 512GB */
 	for(i = 0; i < NUM_SMPT_ENTRIES_IN_USE; i++) {
-		sbox_write(smpt_reg_offset, BUILD_SMPT(SNOOP_ON, i));
+#ifdef KNC_MAP_TEST
+		if(i == NUM_SMPT_ENTRIES_IN_USE - 1 ) {
+			db_smtp_phys = SMTP_ADDR(0xec00000000ULL);
+			sbox_write(smpt_reg_offset, BUILD_SMPT(SNOOP_ON, db_smtp_phys)); /* 0xfc0000 0000 -> 0xec 0000 0000 */
+		} else
+#endif
+		{
+			sbox_write(smpt_reg_offset, BUILD_SMPT(SNOOP_ON, i));
+		}
 		smpt_reg_offset += 4;
 	}
-#endif
+#endif /* KNC_MAP_MICPA */
+#endif /* CONFIG_KNF */
+
 #if 0
 	uint64_t host_physaddr = 0;
 	uint32_t smpt_reg_offset = SBOX_SMPT00;
