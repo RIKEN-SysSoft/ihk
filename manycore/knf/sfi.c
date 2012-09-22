@@ -32,6 +32,8 @@ struct sfi_mem_entry {
 
 static struct sfi_table_simple *sfi_table;
 static struct sfi_table_header *sfi_cpus, *sfi_mems;
+static unsigned int sfi_mem_entries = 0;
+static unsigned int sfi_reserved_mem_entries = 0;
 
 static int __sfi_table_num_entry(struct sfi_table_header *hdr, size_t s)
 {
@@ -67,15 +69,17 @@ static unsigned long sfi_mem_begin = (unsigned long)-1, sfi_mem_end = 0;
 
 static void parse_sfi_mems(struct sfi_table_header *hdr)
 {
-	int i, nentry;
+	int i;
 	struct sfi_mem_entry *me;
 	unsigned long end;
 
-	nentry = __sfi_table_num_entry(hdr, 36);
-	kprintf("# of MEMs : %d\n", nentry);
+	sfi_mem_entries = __sfi_table_num_entry(hdr, 36);
+	kprintf("# of MEMs : %d\n", sfi_mem_entries);
 	
 	me = (struct sfi_mem_entry *)(hdr + 1);
-	for (i = 0; i < nentry; i++) {
+	for (i = 0; i < sfi_mem_entries; i++) {
+		kprintf("mem section 0x%lX - 0x%lX, type: %d\n", 
+        me[i].phys_start, me[i].phys_start + (me[i].pages << 12), me[i].type);
 		if (me[i].type == 7) { /* CONVENTIONAL */
 			if (sfi_mem_begin > me[i].phys_start) {
 				sfi_mem_begin = me[i].phys_start;
@@ -85,8 +89,47 @@ static void parse_sfi_mems(struct sfi_table_header *hdr)
 				sfi_mem_end = end;
 			}
 		}
+
+		if (me[i].type == 8) { /* reserved */
+			++sfi_reserved_mem_entries;
+		}
 	}
 }
+
+static unsigned long sfi_reserved_entry(struct sfi_table_header *hdr, int ind, 
+                                        enum aal_mc_gma_type type)
+{
+
+	switch (type) {
+
+	case AAL_MC_NR_RESERVED_AREAS:
+		return sfi_reserved_mem_entries;
+
+	case AAL_MC_RESERVED_AREA_START:
+	case AAL_MC_RESERVED_AREA_END: {
+			int i;
+			struct sfi_mem_entry *me;
+
+			me = (struct sfi_mem_entry *)(hdr + 1);
+			for (i = 0; i < sfi_mem_entries; i++) {
+				if (me[i].type != 8) {
+					continue;
+				}
+
+				if (--ind == 0) {
+					return (type == AAL_MC_RESERVED_AREA_START) ? 
+						me[i].phys_start : 
+						(me[i].phys_start + (me[i].pages << 12));
+				}
+			}
+		}
+	
+	default:
+		
+		return 0;
+	}
+}
+
 
 void init_sfi(void)
 {
@@ -135,6 +178,11 @@ unsigned long sfi_get_memory_address(enum aal_mc_gma_type type, int opt)
 	case AAL_MC_GMA_MAP_END:
 	case AAL_MC_GMA_AVAIL_END:
 		return sfi_mem_end;
+	case AAL_MC_NR_RESERVED_AREAS:
+		return sfi_reserved_mem_entries;
+	case AAL_MC_RESERVED_AREA_START:
+	case AAL_MC_RESERVED_AREA_END:
+		return sfi_reserved_entry(sfi_mems, opt, type);
 	default:
 		break;
 	}

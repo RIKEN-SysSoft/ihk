@@ -178,6 +178,10 @@ unsigned long aal_mc_get_memory_address(enum aal_mc_gma_type type, int opt)
 		return sfi_get_memory_address(type, opt);
 	case AAL_MC_GMA_HEAP_START:
 		return virt_to_phys(get_last_early_heap());
+	case AAL_MC_NR_RESERVED_AREAS:
+	case AAL_MC_RESERVED_AREA_START:
+	case AAL_MC_RESERVED_AREA_END:
+		return sfi_get_memory_address(type, opt);
 	}
 
 	return -ENOENT;
