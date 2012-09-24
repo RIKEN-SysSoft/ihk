@@ -42,6 +42,7 @@
 	(uint32_t)(((((HOST_ADDR)<< 2) & (~0x03)) | ((NO_SNOOP) & (0x01))))
 #else
 #define	NUM_SMPT_ENTRIES_IN_USE		32
+#define	NUM_SMPT_ENTRIES_MICPA	4 /* used by aal_mc_map_micpa */
 #define MIC_SYSTEM_PAGE_SIZE	0x0400000000ULL
 #define BUILD_SMPT(NO_SNOOP, HOST_ADDR)  \
 	(uint32_t)(((((HOST_ADDR)<< 2) & (~0x03)) | ((NO_SNOOP) & (0x01))))
