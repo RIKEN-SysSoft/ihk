@@ -692,7 +692,7 @@ static int __aal_device_create_os_init(struct aal_host_linux_device_data *data,
 	}
 
 	os->name = drv_data.name;
-	os->flag = drv_data.flag;
+	os->flag = AAL_OS_FLAG_SHARABLE;
 	os->ops = drv_data.ops;
 	os->priv = drv_data.priv;
 	os->dev_data = data;
