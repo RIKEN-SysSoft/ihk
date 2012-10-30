@@ -93,12 +93,19 @@ static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
 	unsigned long flags;
 	unsigned int i, j, mi;
 
+#if 1
+    // aligned mmap tries to obtain 2*size memory region and cut the extra
+    unsigned int align_mask = (nblocks & 1) ? 0 : (nblocks/2-1);
+    //    kprintf("page_alloc.c,nblocks=%d,desc->last=%d,align_mask=%d,desc->start=%lx\n", nblocks, desc->last, align_mask,desc->start);
+#endif
+
 	flags = aal_mc_spinlock_lock(&desc->lock);
 	for (i = 0, mi = desc->last; i < desc->count; i++, mi++) {
 		if (mi >= desc->count) {
 			mi = 0;
 		}
-		if (mi + nblocks >= desc->count) {
+		if (mi + nblocks >= desc->count || (((desc->start >> desc->shift) / 64 + mi) & align_mask)) {
+            //		if (mi + nblocks >= desc->count) {
 			continue;
 		}
 		for (j = mi; j < mi + nblocks; j++) {
