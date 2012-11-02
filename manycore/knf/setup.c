@@ -252,10 +252,21 @@ void x86_set_warm_reset(void)
 
 static unsigned int perf_map_knf[] = 
 {
-	[APT_TYPE_INSTRUCTIONS] = CVAL(0x16, 0x00),
-	[APT_TYPE_L1D_MISS]     = CVAL(0x03, 0x00),
-	[APT_TYPE_L1I_MISS]     = CVAL(0x0e, 0x00),
-	[APT_TYPE_L2_MISS]      = CVAL(0xf5, 0x10),
+	[APT_TYPE_DATA_PAGE_WALK]                  = CVAL(0x02, 0x00),
+	[APT_TYPE_DATA_READ_MISS]                  = CVAL(0x03, 0x00),
+	[APT_TYPE_DATA_WRITE_MISS]                 = CVAL(0x04, 0x00),
+	[APT_TYPE_BANK_CONFLICTS]                  = CVAL(0x0a, 0x00),
+
+	[APT_TYPE_CODE_CACHE_MISS]                 = CVAL(0x0e, 0x00),
+	[APT_TYPE_INSTRUCTIONS_EXECUTED]           = CVAL(0x16, 0x00),
+	[APT_TYPE_INSTRUCTIONS_EXECUTED_V_PIPE]    = CVAL(0x17, 0x00),
+
+	[APT_TYPE_L2_READ_MISS]                    = CVAL(0xcb, 0x10),
+	[APT_TYPE_L2_CODE_READ_MISS_CACHE_FILL]    = CVAL(0xf0, 0x10),
+	[APT_TYPE_L2_DATA_READ_MISS_CACHE_FILL]    = CVAL(0xf1, 0x10),
+	[APT_TYPE_L2_CODE_READ_MISS_MEM_FILL]      = CVAL(0xf5, 0x10),
+	[APT_TYPE_L2_DATA_READ_MISS_MEM_FILL]      = CVAL(0xf6, 0x10),
+
 	[PERFCTR_MAX_TYPE] = -1,
 };
 

@@ -30,7 +30,7 @@ static int set_perfctr_x86_direct(int counter, int mode, unsigned int value)
 	if (mode & PERFCTR_KERNEL_MODE) {
 		value |= 1 << 17;
 	}
-	wrmsr(MSR_PERF_GLOBAL_CTRL, 0);
+    //	wrmsr(MSR_PERF_GLOBAL_CTRL, 0);
 
 	value |= (1 << 22) | (1 << 18); /* EN */
 
@@ -74,8 +74,9 @@ int aal_mc_perfctr_start(unsigned long counter_mask)
 #ifdef HAVE_MARCH_PERFCTR_START
 	x86_march_perfctr_start(counter_mask);
 #endif
-	value = counter_mask & ((1 << X86_IA32_NUM_PERF_COUNTERS) - 1);
-
+	counter_mask &= ((1 << X86_IA32_NUM_PERF_COUNTERS) - 1);
+	value = rdmsr(MSR_PERF_GLOBAL_CTRL);
+    value |= counter_mask;
 	wrmsr(MSR_PERF_GLOBAL_CTRL, value);
 
 	return 0;
