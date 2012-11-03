@@ -489,6 +489,13 @@ int set_pt_large_page(struct page_table *pt, void *virt, unsigned long phys,
 	                     | PTATTR_ACTIVE);
 }
 
+int aal_mc_pt_set_large_page(page_table_t pt, void *virt,
+                       unsigned long phys, enum aal_mc_pt_attribute attr)
+{
+	return __set_pt_page(pt, virt, phys, attr | PTATTR_LARGEPAGE
+	                     | PTATTR_ACTIVE);
+}
+
 int aal_mc_pt_set_page(page_table_t pt, void *virt,
                        unsigned long phys, enum aal_mc_pt_attribute attr)
 {

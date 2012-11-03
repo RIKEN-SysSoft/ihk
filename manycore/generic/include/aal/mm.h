@@ -81,6 +81,8 @@ typedef void *page_table_t;
 
 int aal_mc_pt_set_page(page_table_t pt, void *virt, unsigned long phys,
                        enum aal_mc_pt_attribute attr);
+int aal_mc_pt_set_large_page(page_table_t pt, void *virt,
+                       unsigned long phys, enum aal_mc_pt_attribute attr);
 int aal_mc_pt_change_page(page_table_t pt, void *virt,
                           enum aal_mc_pt_attribute);
 int aal_mc_pt_clear_page(page_table_t pt, void *virt);
