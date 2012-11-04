@@ -68,6 +68,7 @@ void aal_mc_unmap_virtual(void *va, int npages, int free_physical);
 extern void *sbox_base;
 extern unsigned int free_bitmap_micpa;
 void aal_mc_map_micpa(unsigned long host_pa, unsigned long* mic_pa);
+void aal_mc_free_micpa(unsigned long* mic_pa);
 
 void *aal_mc_alloc_pages(int npages, enum aal_mc_ap_flag flag);
 void aal_mc_free_pages(void *p, int npages);
