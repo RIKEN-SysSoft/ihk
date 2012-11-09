@@ -659,6 +659,7 @@ int aal_mc_interrupt_cpu(int cpu, int vector)
 {
 	kprintf("[%d] aal_mc_interrupt_cpu: %d\n", aal_mc_get_processor_id(), cpu);
 
+	wait_icr_idle();
 	x86_issue_ipi(cpu, vector);
 	return 0;
 }
