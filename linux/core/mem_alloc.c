@@ -1,5 +1,5 @@
 /** \file mem_alloc.c
- * \brief AAL-Host: Generic page allocator (not so fast)
+ * \brief IHK-Host: Generic page allocator (not so fast)
  *
  * (C) Copyright 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
@@ -12,7 +12,7 @@
 #include <ihk/ihk_host_driver.h>
 
 /** \brief Descriptor of an allocator */
-struct aal_page_allocator_desc {
+struct ihk_page_allocator_desc {
 	/** \brief Start address of the area that the allocator manages */
 	unsigned long start;
 	/** \brief Last index in block */
@@ -51,11 +51,11 @@ struct aal_page_allocator_desc {
  * \return Pointer to the allocator descriptor.
  *         The pointer should be passed to other allocator functions.
  */
-void *aal_pagealloc_init(unsigned long start, unsigned long size,
+void *ihk_pagealloc_init(unsigned long start, unsigned long size,
                          unsigned long unit)
 {
 	/* Unit must be power of 2, and size and start must be unit-aligned */
-	struct aal_page_allocator_desc *desc;
+	struct ihk_page_allocator_desc *desc;
 	int i, page_shift, descsize, descorder, mapsize, mapaligned;
 	int flag = 0;
 
@@ -87,7 +87,7 @@ void *aal_pagealloc_init(unsigned long start, unsigned long size,
 		desc = kzalloc(descsize, GFP_KERNEL);
 	}
 	if (!desc) {
-		printk("AAL: failed to allocate page-allocator-desc "\
+		printk("IHK: failed to allocate page-allocator-desc "\
 		       "(%lx, %lx, %lx)\n", start, size, unit);
 		return NULL;
 	}
@@ -108,9 +108,9 @@ void *aal_pagealloc_init(unsigned long start, unsigned long size,
 }
 
 /** \brief Finalize a page allocator */
-void aal_pagealloc_destroy(void *__desc)
+void ihk_pagealloc_destroy(void *__desc)
 {
-	struct aal_page_allocator_desc *desc = __desc;
+	struct ihk_page_allocator_desc *desc = __desc;
 	if (desc->flag) {
 		free_pages((unsigned long)desc, desc->flag);
 	} else {
@@ -128,7 +128,7 @@ void aal_pagealloc_destroy(void *__desc)
  * \param nblocks Number of large blocks (in 64 blocks)
  * \return Address of the allocated block. 0 if failed. 
  */
-static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
+static unsigned long __ihk_pagealloc_large(struct ihk_page_allocator_desc *desc,
                                            int nblocks)
 {
 	unsigned long flags;
@@ -171,9 +171,9 @@ static unsigned long __aal_pagealloc_large(struct aal_page_allocator_desc *desc,
  * \param npages  Number of blocks to allocate
  * \return Address of the allocated block. 0 if failed. 
  */
-unsigned long aal_pagealloc_alloc(void *__desc, int npages)
+unsigned long ihk_pagealloc_alloc(void *__desc, int npages)
 {
-	struct aal_page_allocator_desc *desc = __desc;
+	struct ihk_page_allocator_desc *desc = __desc;
 	unsigned int i, mi;
 	int j;
 	unsigned long v, mask, flags;
@@ -181,7 +181,7 @@ unsigned long aal_pagealloc_alloc(void *__desc, int npages)
 	/* If requested page is more than the half of the element,
 	 * we allocate the whole element (ulong) */
 	if (npages >= 32) {
-		return __aal_pagealloc_large(desc, (npages + 63) >> 6);
+		return __ihk_pagealloc_large(desc, (npages + 63) >> 6);
 	}
 
 	mask = (1 << npages) - 1;
@@ -212,18 +212,18 @@ unsigned long aal_pagealloc_alloc(void *__desc, int npages)
 }
 
 /**
- * \brief Wrapper function of aal_pagealloc_alloc.
+ * \brief Wrapper function of ihk_pagealloc_alloc.
  *
  * This function accepts a size in byte, instead of block.
  * \param __desc  Pointer to an allocator descriptor.
  * \param size    Number of bytes to allocate
  * \return Address of the allocated block. 0 if failed. 
  */
-unsigned long aal_pagealloc_alloc_size(void *__desc, unsigned long size)
+unsigned long ihk_pagealloc_alloc_size(void *__desc, unsigned long size)
 {
-	struct aal_page_allocator_desc *desc = __desc;
+	struct ihk_page_allocator_desc *desc = __desc;
 
-	return aal_pagealloc_alloc(desc, size >> desc->shift);
+	return ihk_pagealloc_alloc(desc, size >> desc->shift);
 }
 
 /**
@@ -235,9 +235,9 @@ unsigned long aal_pagealloc_alloc_size(void *__desc, unsigned long size)
  *
  * \note npages should be the same number as used in the allocate function.
  */
-void aal_pagealloc_free(void *__desc, unsigned long address, int npages)
+void ihk_pagealloc_free(void *__desc, unsigned long address, int npages)
 {
-	struct aal_page_allocator_desc *desc = __desc;
+	struct ihk_page_allocator_desc *desc = __desc;
 	int i;
 	unsigned mi;
 	unsigned long flags;
@@ -252,19 +252,19 @@ void aal_pagealloc_free(void *__desc, unsigned long address, int npages)
 	spin_unlock_irqrestore(&desc->lock, flags);
 }
 
-/** \brief Wrapper function for aal_pagealloc_free in the unit of byte */
-void aal_pagealloc_free_size(void *__desc, unsigned long address,
+/** \brief Wrapper function for ihk_pagealloc_free in the unit of byte */
+void ihk_pagealloc_free_size(void *__desc, unsigned long address,
                                       unsigned long size)
 {
-	struct aal_page_allocator_desc *desc = __desc;
+	struct ihk_page_allocator_desc *desc = __desc;
 
-	aal_pagealloc_free(desc, address, size >> desc->shift);
+	ihk_pagealloc_free(desc, address, size >> desc->shift);
 }
 
-EXPORT_SYMBOL(aal_pagealloc_init);
-EXPORT_SYMBOL(aal_pagealloc_destroy);
-EXPORT_SYMBOL(aal_pagealloc_alloc);
-EXPORT_SYMBOL(aal_pagealloc_free);
-EXPORT_SYMBOL(aal_pagealloc_alloc_size);
-EXPORT_SYMBOL(aal_pagealloc_free_size);
+EXPORT_SYMBOL(ihk_pagealloc_init);
+EXPORT_SYMBOL(ihk_pagealloc_destroy);
+EXPORT_SYMBOL(ihk_pagealloc_alloc);
+EXPORT_SYMBOL(ihk_pagealloc_free);
+EXPORT_SYMBOL(ihk_pagealloc_alloc_size);
+EXPORT_SYMBOL(ihk_pagealloc_free_size);
 

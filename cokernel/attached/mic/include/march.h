@@ -1,5 +1,5 @@
-#ifndef __HEADER_AAL_KNF_MARCH
-#define __HEADER_AAL_KNF_MARCH
+#ifndef __HEADER_IHK_MIC_MARCH
+#define __HEADER_IHK_MIC_MARCH
 
 #define LAPIC_ID_SHIFT     23
 #define LAPIC_ICR_ID_SHIFT 16

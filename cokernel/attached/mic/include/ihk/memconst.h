@@ -1,14 +1,14 @@
-#ifndef KNF_AAL_MEMCONST_H
-#define KNF_AAL_MEMCONST_H
+#ifndef MIC_IHK_MEMCONST_H
+#define MIC_IHK_MEMCONST_H
 
 #include <memory.h>
 
-#define AAL_KMSG_SIZE	   (12 * 1024)
-#define AAL_KMSG_ALIGN     __attribute__((aligned(4096)))
+#define IHK_KMSG_SIZE	   (12 * 1024)
+#define IHK_KMSG_ALIGN     __attribute__((aligned(4096)))
 
-#define AAL_DMA_ALIGN      __attribute__((aligned(64)))
+#define IHK_DMA_ALIGN      __attribute__((aligned(64)))
 
-#define AAL_PTA_REMOTE     PTATTR_UNCACHABLE
+#define IHK_PTA_REMOTE     PTATTR_UNCACHABLE
 
 #endif
 

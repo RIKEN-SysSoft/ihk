@@ -1,35 +1,35 @@
 /**
- * \file ikc/include/ikc/aal.h
- * \brief AAL-IKC: AAL wrapper functions.
+ * \file ikc/include/ikc/ihk.h
+ * \brief IHK-IKC: IHK wrapper functions.
  *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
-#ifndef HEADER_AAL_IKC_AAL_H
-#define HEADER_AAL_IKC_AAL_H
+#ifndef HEADER_IHK_IKC_IHK_H
+#define HEADER_IHK_IKC_IHK_H
 
 /* Support for both manycore and host side */
-#ifdef AAL_OS_MANYCORE
-#define aal_ikc_spinlock_lock    aal_mc_spinlock_lock
-#define aal_ikc_spinlock_unlock  aal_mc_spinlock_unlock
-#define aal_ikc_spinlock_init    aal_mc_spinlock_init
+#ifdef IHK_OS_MANYCORE
+#define ihk_ikc_spinlock_lock    ihk_mc_spinlock_lock
+#define ihk_ikc_spinlock_unlock  ihk_mc_spinlock_unlock
+#define ihk_ikc_spinlock_init    ihk_mc_spinlock_init
 
-#define aal_ikc_map_memory       aal_mc_map_memory
-#define aal_ikc_unmap_memory     aal_mc_unmap_memory
+#define ihk_ikc_map_memory       ihk_mc_map_memory
+#define ihk_ikc_unmap_memory     ihk_mc_unmap_memory
 
-#define aal_ikc_map_virtual(dev, p, n, a)  aal_mc_map_virtual(p, n, a)
-#define aal_ikc_unmap_virtual(dev, v, n)   aal_mc_unmap_virtual(v, n, 1)
+#define ihk_ikc_map_virtual(dev, p, n, a)  ihk_mc_map_virtual(p, n, a)
+#define ihk_ikc_unmap_virtual(dev, v, n)   ihk_mc_unmap_virtual(v, n, 1)
 
-#define aal_ikc_get_processor_id aal_mc_get_processor_id
-#define aal_ikc_mb               aal_mc_mb
+#define ihk_ikc_get_processor_id ihk_mc_get_processor_id
+#define ihk_ikc_mb               ihk_mc_mb
 
-#define aal_os_to_dev(os)        NULL
+#define ihk_os_to_dev(os)        NULL
 
-typedef void * aal_os_t;
-typedef void * aal_device_t;
+typedef void * ihk_os_t;
+typedef void * ihk_device_t;
 
-typedef void * aal_wait_t;
+typedef void * ihk_wait_t;
 
-#define AAL_THIS_OS  ((aal_os_t)-1L)
+#define IHK_THIS_OS  ((ihk_os_t)-1L)
 
 #include <types.h>
 #include <list.h>
@@ -40,9 +40,9 @@ typedef void * aal_wait_t;
 #include <ihk/mm.h>
 #include <errno.h>
 
-#define AAL_EXPORT_SYMBOL(x)
+#define IHK_EXPORT_SYMBOL(x)
 
-#else /* !AAL_OS_MANYCORE */
+#else /* !IHK_OS_MANYCORE */
 
 #include <linux/kernel.h>
 #include <linux/types.h>
@@ -57,62 +57,62 @@ typedef void * aal_wait_t;
 #include <asm/io.h>
 #include <ihk/ihk_host_driver.h>
 
-#define AAL_EXPORT_SYMBOL        EXPORT_SYMBOL
+#define IHK_EXPORT_SYMBOL        EXPORT_SYMBOL
 
-#define aal_spinlock_t           spinlock_t
-#define aal_ikc_spinlock_lock(lock) \
+#define ihk_spinlock_t           spinlock_t
+#define ihk_ikc_spinlock_lock(lock) \
 	({ unsigned long __flags; spin_lock_irqsave(lock, __flags); __flags; })
-#define aal_ikc_spinlock_unlock  spin_unlock_irqrestore
-#define aal_ikc_spinlock_init    spin_lock_init
+#define ihk_ikc_spinlock_unlock  spin_unlock_irqrestore
+#define ihk_ikc_spinlock_init    spin_lock_init
 
-#define aal_atomic_t             atomic_t
-#define aal_atomic_inc_return    atomic_inc_return
+#define ihk_atomic_t             atomic_t
+#define ihk_atomic_inc_return    atomic_inc_return
 
-#define aal_ikc_map_memory       aal_os_map_memory
-#define aal_ikc_unmap_memory     aal_os_unmap_memory
+#define ihk_ikc_map_memory       ihk_os_map_memory
+#define ihk_ikc_unmap_memory     ihk_os_unmap_memory
 
-#define aal_ikc_map_virtual(d, p, z, f) aal_device_map_virtual(d, p, z, NULL, f)
-#define aal_ikc_unmap_virtual     aal_device_unmap_virtual
+#define ihk_ikc_map_virtual(d, p, z, f) ihk_device_map_virtual(d, p, z, NULL, f)
+#define ihk_ikc_unmap_virtual     ihk_device_unmap_virtual
 
-#define aal_ikc_get_processor_id() cpu_physical_id(smp_processor_id())
-#define aal_ikc_mb                mb
+#define ihk_ikc_get_processor_id() cpu_physical_id(smp_processor_id())
+#define ihk_ikc_mb                mb
 
 #define kprintf                  printk
 
-typedef wait_queue_head_t        aal_wait_t;
+typedef wait_queue_head_t        ihk_wait_t;
 
-aal_device_t aal_os_to_dev(aal_os_t);
+ihk_device_t ihk_os_to_dev(ihk_os_t);
 
-#define aal_ikc_get_unique_channel_id aal_os_get_unique_channel_id
-#define aal_ikc_get_channel_list_lock aal_os_get_ikc_channel_lock
-#define aal_ikc_get_channel_list      aal_os_get_ikc_channel_list
+#define ihk_ikc_get_unique_channel_id ihk_os_get_unique_channel_id
+#define ihk_ikc_get_channel_list_lock ihk_os_get_ikc_channel_lock
+#define ihk_ikc_get_channel_list      ihk_os_get_ikc_channel_list
 
 #endif
 
 #include <ikc/queue.h>
 
-struct aal_ikc_queue_head;
-struct aal_ikc_channel_desc;
-struct aal_ikc_master_wait_struct;
+struct ihk_ikc_queue_head;
+struct ihk_ikc_channel_desc;
+struct ihk_ikc_master_wait_struct;
 
-int aal_ikc_send_interrupt(struct aal_ikc_channel_desc *c);
+int ihk_ikc_send_interrupt(struct ihk_ikc_channel_desc *c);
 
-struct aal_ikc_queue_head *aal_ikc_alloc_queue(int qpages);
-void aal_ikc_free_queue(struct aal_ikc_queue_head *q);
+struct ihk_ikc_queue_head *ihk_ikc_alloc_queue(int qpages);
+void ihk_ikc_free_queue(struct ihk_ikc_queue_head *q);
 
-void *aal_ikc_malloc(int size);
-void aal_ikc_free(void *);
+void *ihk_ikc_malloc(int size);
+void ihk_ikc_free(void *);
 
-int call_arch_master_packet_handler(void *os, struct aal_ikc_channel_desc *c,
+int call_arch_master_packet_handler(void *os, struct ihk_ikc_channel_desc *c,
                                     void *__packet);
 
-void aal_ikc_wait_init(aal_wait_t *wait);
-int aal_ikc_wait_master(struct aal_ikc_master_wait_struct *wq);
-void aal_ikc_wake_master(struct aal_ikc_master_wait_struct *wq);
+void ihk_ikc_wait_init(ihk_wait_t *wait);
+int ihk_ikc_wait_master(struct ihk_ikc_master_wait_struct *wq);
+void ihk_ikc_wake_master(struct ihk_ikc_master_wait_struct *wq);
 
-struct aal_ikc_channel_desc *aal_ikc_get_master_channel(aal_os_t os);
-struct list_head *aal_ikc_get_channel_list(aal_os_t os);
-aal_spinlock_t *aal_ikc_get_channel_list_lock(aal_os_t aal_os);
-int aal_ikc_get_unique_channel_id(aal_os_t aal_os);
+struct ihk_ikc_channel_desc *ihk_ikc_get_master_channel(ihk_os_t os);
+struct list_head *ihk_ikc_get_channel_list(ihk_os_t os);
+ihk_spinlock_t *ihk_ikc_get_channel_list_lock(ihk_os_t ihk_os);
+int ihk_ikc_get_unique_channel_id(ihk_os_t ihk_os);
 
 #endif

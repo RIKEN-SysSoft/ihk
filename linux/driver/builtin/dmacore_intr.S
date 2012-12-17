@@ -1,6 +1,6 @@
 .text
-.globl mee_dma_intr_enter
-mee_dma_intr_enter:
+.globl builtin_dma_intr_enter
+builtin_dma_intr_enter:
 		cld
 		pushq $0xf2
         pushq %rax

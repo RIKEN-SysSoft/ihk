@@ -2,8 +2,8 @@
 #ifndef MIC_TYPE_H
 #define MIC_TYPE_H
 
-/* Enable this if you use KNF */
-//#define CONFIG_KNF
+/* Enable this if you use MIC */
+//#define CONFIG_MIC
 
 
 

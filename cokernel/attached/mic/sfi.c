@@ -40,7 +40,7 @@ static int __sfi_table_num_entry(struct sfi_table_header *hdr, size_t s)
 	return (int)((hdr->len - sizeof(*hdr)) / s);
 }
 
-static struct aal_mc_cpu_info *aal_cpu_info;
+static struct ihk_mc_cpu_info *ihk_cpu_info;
 
 static void parse_sfi_cpus(struct sfi_table_header *hdr)
 {
@@ -53,15 +53,15 @@ static void parse_sfi_cpus(struct sfi_table_header *hdr)
 	apicids = (uint32_t *)(hdr + 1);
 
 	/* XXX: if nentry > 510, there will be problem! */
-	aal_cpu_info = early_alloc_page();
-	aal_cpu_info->hw_ids = (int *)(aal_cpu_info + 1);
-	aal_cpu_info->nodes = (int *)(aal_cpu_info + 1) + nentry;
+	ihk_cpu_info = early_alloc_page();
+	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
+	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + nentry;
 
 	for (i = 0; i < nentry; i++) {
-		aal_cpu_info->hw_ids[i] = apicids[i];
-		aal_cpu_info->nodes = 0;
+		ihk_cpu_info->hw_ids[i] = apicids[i];
+		ihk_cpu_info->nodes = 0;
 	}
-	aal_cpu_info->ncpus = nentry;
+	ihk_cpu_info->ncpus = nentry;
 	kprintf("\n");
 }
 
@@ -97,16 +97,16 @@ static void parse_sfi_mems(struct sfi_table_header *hdr)
 }
 
 static unsigned long sfi_reserved_entry(struct sfi_table_header *hdr, int ind, 
-                                        enum aal_mc_gma_type type)
+                                        enum ihk_mc_gma_type type)
 {
 
 	switch (type) {
 
-	case AAL_MC_NR_RESERVED_AREAS:
+	case IHK_MC_NR_RESERVED_AREAS:
 		return sfi_reserved_mem_entries;
 
-	case AAL_MC_RESERVED_AREA_START:
-	case AAL_MC_RESERVED_AREA_END: {
+	case IHK_MC_RESERVED_AREA_START:
+	case IHK_MC_RESERVED_AREA_END: {
 			int i;
 			struct sfi_mem_entry *me;
 
@@ -117,7 +117,7 @@ static unsigned long sfi_reserved_entry(struct sfi_table_header *hdr, int ind,
 				}
 
 				if (--ind == 0) {
-					return (type == AAL_MC_RESERVED_AREA_START) ? 
+					return (type == IHK_MC_RESERVED_AREA_START) ? 
 						me[i].phys_start : 
 						(me[i].phys_start + (me[i].pages << 12));
 				}
@@ -169,19 +169,19 @@ void init_sfi(void)
 	}
 }
 
-unsigned long sfi_get_memory_address(enum aal_mc_gma_type type, int opt)
+unsigned long sfi_get_memory_address(enum ihk_mc_gma_type type, int opt)
 {
 	switch (type) {
-	case AAL_MC_GMA_MAP_START:
-	case AAL_MC_GMA_AVAIL_START:
+	case IHK_MC_GMA_MAP_START:
+	case IHK_MC_GMA_AVAIL_START:
 		return sfi_mem_begin;
-	case AAL_MC_GMA_MAP_END:
-	case AAL_MC_GMA_AVAIL_END:
+	case IHK_MC_GMA_MAP_END:
+	case IHK_MC_GMA_AVAIL_END:
 		return sfi_mem_end;
-	case AAL_MC_NR_RESERVED_AREAS:
+	case IHK_MC_NR_RESERVED_AREAS:
 		return sfi_reserved_mem_entries;
-	case AAL_MC_RESERVED_AREA_START:
-	case AAL_MC_RESERVED_AREA_END:
+	case IHK_MC_RESERVED_AREA_START:
+	case IHK_MC_RESERVED_AREA_END:
 		return sfi_reserved_entry(sfi_mems, opt, type);
 	default:
 		break;
@@ -190,9 +190,9 @@ unsigned long sfi_get_memory_address(enum aal_mc_gma_type type, int opt)
 	return -ENOENT;
 }
 
-struct aal_mc_cpu_info *sfi_get_cpu_info(void)
+struct ihk_mc_cpu_info *sfi_get_cpu_info(void)
 {
-	return aal_cpu_info;
+	return ihk_cpu_info;
 }
 
 void __reserve_arch_pages(unsigned long start, unsigned long end,

@@ -4,9 +4,9 @@
 #include <errno.h>
 #include "builtin_dma.h"
 
-static struct mee_dma_config_struct *mee_mc_dma_config;
+static struct builtin_dma_config_struct *builtin_mc_dma_config;
 
-static inline unsigned long __next(struct mee_dma_channel *c, unsigned long t)
+static inline unsigned long __next(struct builtin_dma_channel *c, unsigned long t)
 {
 	t++;
 	if (t >= c->len) {
@@ -15,7 +15,7 @@ static inline unsigned long __next(struct mee_dma_channel *c, unsigned long t)
 	return t;
 }
 
-static char __mee_desc_check_room(struct mee_dma_channel *c, int ndesc)
+static char __builtin_desc_check_room(struct builtin_dma_channel *c, int ndesc)
 {
 	int h = c->head, t = c->tail;
  
@@ -29,44 +29,44 @@ static char __mee_desc_check_room(struct mee_dma_channel *c, int ndesc)
 	return 0; /* NG */
 }
 
-static struct mee_dma_desc *desc_ptrs[MEE_DMA_CHANNELS];
+static struct builtin_dma_desc *desc_ptrs[BUILTIN_DMA_CHANNELS];
 
-void mee_mc_dma_init(unsigned long cfg_addr)
+void builtin_mc_dma_init(unsigned long cfg_addr)
 {
 	int i;
 
-	mee_mc_dma_config = 
-		map_fixed_area(cfg_addr, sizeof(struct mee_dma_config_struct),
+	builtin_mc_dma_config = 
+		map_fixed_area(cfg_addr, sizeof(struct builtin_dma_config_struct),
 		               0);
 
 	kprintf("DMA Config: %lx", cfg_addr);
-	for (i = 0; i < MEE_DMA_CHANNELS; i++) {
+	for (i = 0; i < BUILTIN_DMA_CHANNELS; i++) {
 		desc_ptrs[i] =
-			map_fixed_area(mee_mc_dma_config->channels[i].desc_ptr,
+			map_fixed_area(builtin_mc_dma_config->channels[i].desc_ptr,
 			               PAGE_SIZE, 0);
-		kprintf(" (%lx)", mee_mc_dma_config->channels[i].desc_ptr);
+		kprintf(" (%lx)", builtin_mc_dma_config->channels[i].desc_ptr);
 	}
 	kprintf("\n");
 }
 
-int aal_mc_dma_request(int channel, struct aal_dma_request *req)
+int ihk_mc_dma_request(int channel, struct ihk_dma_request *req)
 {
 	unsigned long flags;
 	int ndesc = 1;
-	struct mee_dma_desc *desc, *desc_head;
+	struct builtin_dma_desc *desc, *desc_head;
 	unsigned long h;
-	struct mee_dma_channel *c;
+	struct builtin_dma_channel *c;
 
-	c = &mee_mc_dma_config->channels[1];
+	c = &builtin_mc_dma_config->channels[1];
 
 	if (req->callback || req->notify) {
 		ndesc++;
 	}
 
-	flags = aal_mc_spinlock_lock(&c->lock);
+	flags = ihk_mc_spinlock_lock(&c->lock);
 
-	if (!__mee_desc_check_room(c, ndesc)) {
-		aal_mc_spinlock_unlock(&c->lock, flags);
+	if (!__builtin_desc_check_room(c, ndesc)) {
+		ihk_mc_spinlock_unlock(&c->lock, flags);
 		return -EBUSY;
 	}
 
@@ -89,8 +89,8 @@ int aal_mc_dma_request(int channel, struct aal_dma_request *req)
 		desc->param1 = 0;
 
 		if (req->callback) {
-			desc->param1 = aal_mc_get_hardware_processor_id() |
-				MEE_DMA_DESC_PARAM1_INTR;
+			desc->param1 = ihk_mc_get_hardware_processor_id() |
+				BUILTIN_DMA_DESC_PARAM1_INTR;
 		} else if(req->notify) {
 			desc->param2 = (void *)req->notify;
 			desc->param4 = (unsigned long)req->priv;
@@ -99,10 +99,10 @@ int aal_mc_dma_request(int channel, struct aal_dma_request *req)
 	}
 
 	c->head = h;
-	aal_mc_spinlock_unlock(&c->lock, flags);
+	ihk_mc_spinlock_unlock(&c->lock, flags);
 
-	mee_mc_dma_config->doorbell = 1;
-	/*	mee_dma_issue_interrupt(); */
+	builtin_mc_dma_config->doorbell = 1;
+	/*	builtin_dma_issue_interrupt(); */
 
 	return 0;
 }

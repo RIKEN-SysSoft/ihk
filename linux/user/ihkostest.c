@@ -12,7 +12,7 @@ char **__argv;
 
 static void do_boot(int fd)
 {
-	int r = ioctl(fd, AAL_OS_BOOT, 0);
+	int r = ioctl(fd, IHK_OS_BOOT, 0);
 	printf("ret = %d\n", r);
 }
 
@@ -24,23 +24,23 @@ static void do_load(int fd)
 	} else {
 		fn = "/home/shimosawa/mcos/mcos.image";
 	}
-	int r = ioctl(fd, AAL_OS_LOAD, (unsigned long)fn);
+	int r = ioctl(fd, IHK_OS_LOAD, (unsigned long)fn);
 
 	printf("ret = %d\n", r);
 }
 
 static void do_shutdown(int fd)
 {
-	int r = ioctl(fd, AAL_OS_SHUTDOWN, 0);
+	int r = ioctl(fd, IHK_OS_SHUTDOWN, 0);
 	printf("ret = %d\n", r);
 }
 
 static void do_alloc(int fd)
 {
-	int r = ioctl(fd, AAL_OS_ALLOC_CPU, 3);
+	int r = ioctl(fd, IHK_OS_ALLOC_CPU, 3);
 	printf("ret[cpu] = %d\n", r);
 
-	r = ioctl(fd, AAL_OS_ALLOC_MEM, 0x10000000);
+	r = ioctl(fd, IHK_OS_ALLOC_MEM, 0x10000000);
 	printf("ret[mem] = %d\n", r);
 }
 
@@ -60,7 +60,7 @@ static void do_reserve_cpu(int fd)
 		param[i + 1] = atoi(__argv[i + 3]);
 	}
 
-	r = ioctl(fd, AAL_OS_RESERVE_CPU, (unsigned long)param);
+	r = ioctl(fd, IHK_OS_RESERVE_CPU, (unsigned long)param);
 	printf("ret[cpu] = %d\n", r);
 }
 
@@ -76,13 +76,13 @@ static void do_reserve_mem(int fd)
 	arg[0] = strtol(__argv[3], NULL, 16);
 	arg[1] = strtoll(__argv[4], NULL, 16);
 
-	r = ioctl(fd, AAL_OS_RESERVE_MEM, (unsigned long)arg);
+	r = ioctl(fd, IHK_OS_RESERVE_MEM, (unsigned long)arg);
 	printf("ret[mem] = %d\n", r);
 }
 
 static void do_query(int fd)
 {
-	int r = ioctl(fd, AAL_OS_QUERY_STATUS);
+	int r = ioctl(fd, IHK_OS_QUERY_STATUS);
 	printf("status = %d\n", r);
 }
 
@@ -93,7 +93,7 @@ static void do_intr(int fd)
 	if (__argc > 3) {
 		v = atoi(__argv[3]);
 	}
-	r = ioctl(fd, AAL_OS_DEBUG_START, v);
+	r = ioctl(fd, IHK_OS_DEBUG_START, v);
 	printf("ret = %d\n", r);
 }
 
@@ -106,7 +106,7 @@ static void do_kargs(int fd)
 		printf("No arg specified.\n");
 		return;
 	} else {
-		r = ioctl(fd, AAL_OS_SET_KARGS, (char *)__argv[3]);
+		r = ioctl(fd, IHK_OS_SET_KARGS, (char *)__argv[3]);
 		printf("ret = %d\n", r);
 	}
 }
@@ -114,7 +114,7 @@ static void do_kargs(int fd)
 static void do_kmsg(int fd)
 {
 	char buf[16384];
-	int r = ioctl(fd, AAL_OS_READ_KMSG, (unsigned long)buf);
+	int r = ioctl(fd, IHK_OS_READ_KMSG, (unsigned long)buf);
 	if (r >= 0) {
 		buf[r] = 0;
 		printf("%s\n", buf);
@@ -125,7 +125,7 @@ static void do_kmsg(int fd)
 
 static void do_clear_kmsg(int fd)
 {
-	int r = ioctl(fd, AAL_OS_CLEAR_KMSG, 0);
+	int r = ioctl(fd, IHK_OS_CLEAR_KMSG, 0);
 
 	printf("ret = %d\n", r >= 0 ? r : -errno);
 }

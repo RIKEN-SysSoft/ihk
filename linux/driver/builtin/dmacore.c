@@ -1,6 +1,6 @@
 /**
  * \file dmacore.c
- * \brief AAL MEE Driver: MEE DMA Core Main Program
+ * \brief IHK BUILTIN Driver: BUILTIN DMA Core Main Program
  *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
@@ -10,14 +10,14 @@
 #include <ihk/ihk_host_driver.h>
 
 /** \brief Pointer to the structure that contains information of the DMA core */
-struct mee_dma_config_struct *mee_dma_config;
+struct builtin_dma_config_struct *builtin_dma_config;
 /** \brief Status of the current interrupt. (just for debug) */
-int mee_dma_intr_status;
+int builtin_dma_intr_status;
 
 /** \brief Number of DMA interrupts handled. (just for debug) */
-int mee_dma_intr_count;
+int builtin_dma_intr_count;
 /** \brief Number of DMA interrupts issued. (just for debug) */
-int mee_dma_intr_issued;
+int builtin_dma_intr_issued;
 
 /*
  * The functions below run in the same memory space as Linux kernel.
@@ -33,11 +33,11 @@ void shimos_dma_interrupt_handler(void)
 {
 	ack_APIC_irq();
 
-	mee_dma_intr_count++;
+	builtin_dma_intr_count++;
 }
 
 /** \brief Get the next index in a ring buffer of the DMA channel */
-static inline unsigned long __next(struct mee_dma_channel *c, unsigned long t)
+static inline unsigned long __next(struct builtin_dma_channel *c, unsigned long t)
 {
 	t++;
 	if (t >= c->len) {
@@ -49,19 +49,19 @@ static inline unsigned long __next(struct mee_dma_channel *c, unsigned long t)
 /** \brief Issues an interrupt to the host kernel */
 static void __do_interrupt(int flag)
 {
-	mee_dma_intr_status = 1;
+	builtin_dma_intr_status = 1;
 	shimos_issue_ipi(flag & 0xffff, SHIMOS_VECTOR);
 }
 
 /** \brief Processes a DMA request in the DMA channel ring */
-static void shimos_dma_process(struct mee_dma_desc *desc)
+static void shimos_dma_process(struct builtin_dma_desc *desc)
 {
 	if (desc->type == 1) {
 		memcpy(desc->param3, desc->param2, desc->param4);
 	} else if (desc->type == 2) {
 		*(unsigned long *)(desc->param2) = desc->param4;
 	}
-	if (desc->param1 & MEE_DMA_DESC_PARAM1_INTR) {
+	if (desc->param1 & BUILTIN_DMA_DESC_PARAM1_INTR) {
  		__do_interrupt(desc->param1);
 	}
 }
@@ -80,11 +80,11 @@ static void __init_lapic(void)
 
 
 /** \brief Process all the descriptors in the ring buffer of the channel */
-static void shimos_dma_process_channel(struct mee_dma_channel *channel)
+static void shimos_dma_process_channel(struct builtin_dma_channel *channel)
 {
-	struct mee_dma_desc *desc, *cur;
+	struct builtin_dma_desc *desc, *cur;
 
-	desc = (struct mee_dma_desc *)channel->desc_ptr;
+	desc = (struct builtin_dma_desc *)channel->desc_ptr;
 	for (; channel->head != channel->tail;
 	     channel->tail = __next(channel, channel->tail)) {
 		cur = desc + channel->tail;
@@ -99,23 +99,23 @@ void shimos_dma_main(void)
 
 	__init_lapic();
 
-	mee_dma_config->status = 1;
+	builtin_dma_config->status = 1;
 
 	asm volatile("sti");
 
-	while (!mee_dma_config->doorbell) {
+	while (!builtin_dma_config->doorbell) {
 		halt();
 	}
 
-	mee_dma_config->doorbell = 0;
+	builtin_dma_config->doorbell = 0;
 	while (1) {
-		while (!mee_dma_config->doorbell) {
+		while (!builtin_dma_config->doorbell) {
 			cpu_relax();
 		}
-		mee_dma_config->doorbell = 0;
+		builtin_dma_config->doorbell = 0;
 		mb();
-		for (i = 0; i < MEE_DMA_CHANNELS; i++) {
-			shimos_dma_process_channel(mee_dma_config->channels
+		for (i = 0; i < BUILTIN_DMA_CHANNELS; i++) {
+			shimos_dma_process_channel(builtin_dma_config->channels
 			                           + i);
 		}
 	}
@@ -126,28 +126,28 @@ void shimos_dma_main(void)
  * (where the codes can be written normally)
  */
 /** \brief Initializes the DMA channels */
-void mee_dma_desc_init(void)
+void builtin_dma_desc_init(void)
 {
 	int i;
-	struct mee_dma_channel *c;
+	struct builtin_dma_channel *c;
 
-	for (i = 0; i < MEE_DMA_CHANNELS; i++) {
-		c = mee_dma_config->channels + i;
+	for (i = 0; i < BUILTIN_DMA_CHANNELS; i++) {
+		c = builtin_dma_config->channels + i;
 		printk("DMA Channels (%d): %lx\n", i, virt_to_phys(c));
 		c->desc_ptr = virt_to_phys((void *)__get_free_page(GFP_KERNEL));
 		c->head = c->tail = 0;
-		c->len = PAGE_SIZE / sizeof(struct mee_dma_desc);
+		c->len = PAGE_SIZE / sizeof(struct builtin_dma_desc);
 		spin_lock_init(&c->lock);
 		printk("Desc Ptr: %lx\n", c->desc_ptr);
 	}
 
-	mee_dma_config->doorbell = 1;
-	mee_dma_issue_interrupt();
+	builtin_dma_config->doorbell = 1;
+	builtin_dma_issue_interrupt();
 }
 
 /** \brief Check if there is room enough to put the desired number of
  * DMA descriptors */
-static char __mee_desc_check_room(struct mee_dma_channel *c, int ndesc)
+static char __builtin_desc_check_room(struct builtin_dma_channel *c, int ndesc)
 {
 	int h = c->head, t = c->tail;
  
@@ -161,21 +161,21 @@ static char __mee_desc_check_room(struct mee_dma_channel *c, int ndesc)
 	return 0; /* NG */
 }
 
-/** \brief Request the MEE DMA core to perform the DMA request */
-int __mee_dma_request(aal_device_t dev, int channel,
-                      struct aal_dma_request *req)
+/** \brief Request the BUILTIN DMA core to perform the DMA request */
+int __builtin_dma_request(ihk_device_t dev, int channel,
+                      struct ihk_dma_request *req)
 {
 	unsigned long flags;
-	struct mee_dma_channel *c;
+	struct builtin_dma_channel *c;
 	int ndesc = 1;
-	struct mee_dma_desc *desc, *desc_head;
+	struct builtin_dma_desc *desc, *desc_head;
 	unsigned long h;
 
-	if (channel < 0 || channel >= MEE_DMA_CHANNELS) {
+	if (channel < 0 || channel >= BUILTIN_DMA_CHANNELS) {
 		return -EINVAL;
 	}
 
-	c = mee_dma_config->channels + channel;
+	c = builtin_dma_config->channels + channel;
 	
 	if (req->callback || req->notify) {
 		ndesc++;
@@ -183,7 +183,7 @@ int __mee_dma_request(aal_device_t dev, int channel,
 
 	spin_lock_irqsave(&c->lock, flags);
 
-	if (!__mee_desc_check_room(c, ndesc)) {
+	if (!__builtin_desc_check_room(c, ndesc)) {
 		spin_unlock_irqrestore(&c->lock, flags);
 		return -EBUSY;
 	}
@@ -208,7 +208,7 @@ int __mee_dma_request(aal_device_t dev, int channel,
 
 		if (req->callback) {
 			desc->param1 = cpu_physical_id(smp_processor_id()) |
-				MEE_DMA_DESC_PARAM1_INTR;
+				BUILTIN_DMA_DESC_PARAM1_INTR;
 		} else if(req->notify) {
 			desc->param2 = (void *)req->notify;
 			desc->param4 = (unsigned long)req->priv;
@@ -219,8 +219,8 @@ int __mee_dma_request(aal_device_t dev, int channel,
 	c->head = h;
 	spin_unlock_irqrestore(&c->lock, flags);
 
-	mee_dma_config->doorbell = 1;
-	/*	mee_dma_issue_interrupt(); */
+	builtin_dma_config->doorbell = 1;
+	/*	builtin_dma_issue_interrupt(); */
 
 	return 0;
 }

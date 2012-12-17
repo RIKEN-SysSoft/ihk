@@ -1,6 +1,6 @@
 /**
- * \file knf_device.c
- * \brief AAL KNF Driver: KNF Driver Core
+ * \file mic_device.c
+ * \brief IHK MIC Driver: MIC Driver Core
  *
  * This file treats the actual procedures for Knights Ferry boards.
  */
@@ -23,23 +23,23 @@
 #include "mic_user.h"
 #include "mic_mmio.h"
 
-void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *data);
+void mic_device_destroy(struct pci_dev *dev, struct mic_device_data *data);
 
-static void load_scratch_values(struct knf_device_data *kdd);
-void knf_shutdown(struct knf_device_data *kdd);
-static irqreturn_t knf_irq_handler(int irq, void *data);
+static void load_scratch_values(struct mic_device_data *kdd);
+void mic_shutdown(struct mic_device_data *kdd);
+static irqreturn_t mic_irq_handler(int irq, void *data);
 
-static void knf_enable_interrupts(struct knf_device_data *kdd,
+static void mic_enable_interrupts(struct mic_device_data *kdd,
                                   int intr_mask, int dma_mask);
-static void knf_disable_interrupts(struct knf_device_data *kdd,
+static void mic_disable_interrupts(struct mic_device_data *kdd,
                                    int intr_mask, int dma_mask);
-static void knf_write_sbox(struct knf_device_data *kdd, int offset,
+static void mic_write_sbox(struct mic_device_data *kdd, int offset,
                            unsigned int value);
 
-void __knf_dma_init(struct knf_device_data *kdd);
-void __knf_dma_finalize(struct knf_device_data *kdd);
-int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg);
-void __knf_reset_dma_registers(struct knf_device_data *kdd);
+void __mic_dma_init(struct mic_device_data *kdd);
+void __mic_dma_finalize(struct mic_device_data *kdd);
+int __mic_dma_test(struct mic_device_data *kdd, unsigned long arg);
+void __mic_reset_dma_registers(struct mic_device_data *kdd);
 
 /**
  * \brief Initialize the specified Knights Ferry board.
@@ -47,7 +47,7 @@ void __knf_reset_dma_registers(struct knf_device_data *kdd);
  * \param dev  A pci_dev structure corresponding to the device to initialize
  * \param kdd An internal data structure in this driver.
  */
-int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
+int mic_device_init(struct pci_dev *dev, struct mic_device_data *kdd)
 {
 	int i;
 	int err = 0;
@@ -71,25 +71,25 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	printk("MIC aperture len: %lu, mmio lenght: %lu\n", 
 	       kdd->aperture_len, kdd->mmio_len);
 
-	if (!request_mem_region(kdd->aperture_pa, kdd->aperture_len, "knf")) {
+	if (!request_mem_region(kdd->aperture_pa, kdd->aperture_len, "mic")) {
 		err = -ENOMEM;
 		goto FIN;
 	}
 
-	if (!request_mem_region(kdd->mmio_pa, kdd->mmio_len, "knf")) {
+	if (!request_mem_region(kdd->mmio_pa, kdd->mmio_len, "mic")) {
 		release_mem_region(kdd->aperture_pa, kdd->aperture_len);
 		err = -ENOMEM;
 		goto FIN;
 	}
 
 	if (!(kdd->mmio_va = ioremap_nocache(kdd->mmio_pa, kdd->mmio_len))) {
-		knf_device_destroy(dev, kdd);
+		mic_device_destroy(dev, kdd);
 		return -ENOMEM;
 	}	
 	                                   
 	if (!(kdd->aperture_va = ioremap_wc(kdd->aperture_pa,
 	                                    kdd->aperture_len))) {
-		knf_device_destroy(dev, kdd);
+		mic_device_destroy(dev, kdd);
 		return -ENOMEM;
 	}
 
@@ -103,17 +103,17 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 	dprint_var_p(kdd->aperture_va);
 	dprint_var_p(kdd);
 
-	if (request_irq(dev->irq, knf_irq_handler, IRQF_SHARED, "knf", kdd)
+	if (request_irq(dev->irq, mic_irq_handler, IRQF_SHARED, "mic", kdd)
 	    != 0) {
 		dprintf("Failed to request irq");
-		knf_device_destroy(dev, kdd);
+		mic_device_destroy(dev, kdd);
 		return -ENOMEM;
 	}
 	kdd->irq = dev->irq;
 
-	__knf_dma_init(kdd);
+	__mic_dma_init(kdd);
 
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	/* XXX: This should be dynamically obtained from the card */
 	kdd->mem_region.start = 0;
 	kdd->mem_region.size = 0x80000000;
@@ -132,7 +132,7 @@ int knf_device_init(struct pci_dev *dev, struct knf_device_data *kdd)
 		kdd->cpu_hw_ids[i] = i;
 	}
 
-	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
+	mic_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
 
 	return 0;
 
@@ -147,18 +147,18 @@ FIN:
  * \param dev  A pci_dev structure to be destroyed
  * \param kdd  An internal data structure for the driver.
  */
-void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *kdd)
+void mic_device_destroy(struct pci_dev *dev, struct mic_device_data *kdd)
 {
 	dprint_func_enter;
 	dprint_var_p(dev);
 	dprint_var_p(kdd);
 
-	knf_disable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
+	mic_disable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
 	if (kdd->irq) {
 		free_irq(kdd->irq, kdd);
 	}
 
-	__knf_dma_finalize(kdd);
+	__mic_dma_finalize(kdd);
 
 	if (kdd->aperture_va)
 		iounmap(kdd->aperture_va);
@@ -170,13 +170,13 @@ void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *kdd)
 	pci_disable_device(dev);
 }
 
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 /** \brief Get an entry in GTT.
  *
  * @param kdd  An interal structure for a Knights Ferry device
  * @param entry Index in the GTT to query (0 to GTT_SIZE / 4)
  */
-static unsigned int get_gtt_entry(struct knf_device_data *kdd, int entry)
+static unsigned int get_gtt_entry(struct mic_device_data *kdd, int entry)
 {
 	return readl((unsigned int *)((char *)(kdd->mmio_va) + 
 	                              MMIO_GTT_BASE_OFFSET + 4 * entry));
@@ -189,7 +189,7 @@ static unsigned int get_gtt_entry(struct knf_device_data *kdd, int entry)
  * @param phys Physical address in Knights Ferry to be mapped to the GTT entry
  * @param enable Whether the mapping is enabled or not
  */
-static void set_gtt_entry(struct knf_device_data *kdd, int entry,
+static void set_gtt_entry(struct mic_device_data *kdd, int entry,
                           unsigned long phys, unsigned int enable)
 {
 	writel((unsigned int)((phys >> PAGE_SHIFT) << 1) | enable,
@@ -205,15 +205,15 @@ static void set_gtt_entry(struct knf_device_data *kdd, int entry,
  * @param phys       Start physical address in Knights Ferry to be mapped.
  * @param napges     Number of pages to map
  */
-int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
+int mic_map_aperture(struct mic_device_data *kdd, unsigned long ap_address,
                      unsigned long phys, int npages)
 {
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	int i = (int)((ap_address - kdd->aperture_pa) >> PAGE_SHIFT);
 	int e = i + npages;
 	unsigned long flags;
 
-	dprintf("knf: map_aperture %lx - %lx => %lx\n", ap_address,
+	dprintf("mic: map_aperture %lx - %lx => %lx\n", ap_address,
 	        ap_address + (npages << PAGE_SHIFT), phys);
 
 	spin_lock_irqsave(&kdd->lock, flags);
@@ -226,8 +226,8 @@ int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
 
 	smp_mb();
 
-	knf_write_sbox(kdd, SBOX_SBQ_FLUSH, 1);
-	knf_write_sbox(kdd, SBOX_TLB_FLUSH, 1);
+	mic_write_sbox(kdd, SBOX_SBQ_FLUSH, 1);
+	mic_write_sbox(kdd, SBOX_TLB_FLUSH, 1);
 
 	return 0;
 }
@@ -238,15 +238,15 @@ int knf_map_aperture(struct knf_device_data *kdd, unsigned long ap_address,
  * @param ap_address Start address in the aperture to unmap
  * @param napges     Number of pages to unmap
  */
-int knf_unmap_aperture(struct knf_device_data *kdd, unsigned long ap_address,
+int mic_unmap_aperture(struct mic_device_data *kdd, unsigned long ap_address,
                        int npages)
 {
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	int i = (int)((ap_address - kdd->aperture_pa) >> PAGE_SHIFT);
 	int e = i + npages;
 	unsigned long flags;
 
-	dprintf("knf: unmap_aperture %lx - %lx\n", ap_address,
+	dprintf("mic: unmap_aperture %lx - %lx\n", ap_address,
 	        ap_address + (npages << PAGE_SHIFT));
 
 	spin_lock_irqsave(&kdd->lock, flags);
@@ -259,38 +259,38 @@ int knf_unmap_aperture(struct knf_device_data *kdd, unsigned long ap_address,
 	return 0;
 }
 
-int __knf_prepare_os_load(struct knf_device_data *kdd);
+int __mic_prepare_os_load(struct mic_device_data *kdd);
 
 /** \brief Shuts down a Knights Ferry device */
-void knf_shutdown(struct knf_device_data *kdd)
+void mic_shutdown(struct mic_device_data *kdd)
 {
 	unsigned int reset;
 
 	dprint_func_enter;
 
-	knf_write_sbox(kdd, SBOX_SCRATCH2, 0);	
-	knf_write_sbox(kdd, SBOX_SCRATCH12, 0);
-	knf_write_sbox(kdd, SBOX_SCRATCH13, 0);
-	knf_write_sbox(kdd, SBOX_SCRATCH14, 0);
-#ifdef CONFIG_KNF
-	knf_write_sbox(kdd, SBOX_SCRATCH15, 0);
+	mic_write_sbox(kdd, SBOX_SCRATCH2, 0);	
+	mic_write_sbox(kdd, SBOX_SCRATCH12, 0);
+	mic_write_sbox(kdd, SBOX_SCRATCH13, 0);
+	mic_write_sbox(kdd, SBOX_SCRATCH14, 0);
+#ifdef CONFIG_MIC
+	mic_write_sbox(kdd, SBOX_SCRATCH15, 0);
 #endif
 
-	reset = knf_read_sbox(kdd, SBOX_RGCR);
+	reset = mic_read_sbox(kdd, SBOX_RGCR);
 	reset = 1;
-	knf_write_sbox(kdd, SBOX_RGCR, reset);
+	mic_write_sbox(kdd, SBOX_RGCR, reset);
 
 	msleep(1000);
 
-	__knf_prepare_os_load(kdd);
+	__mic_prepare_os_load(kdd);
 }
 
 /** \brief Sets up scratch values in Knights Ferry for booting */
-static void load_scratch_values(struct knf_device_data *kdd)
+static void load_scratch_values(struct mic_device_data *kdd)
 {
 	unsigned long scratch2;
 
-	scratch2 = knf_read_sbox(kdd, SBOX_SCRATCH2);
+	scratch2 = mic_read_sbox(kdd, SBOX_SCRATCH2);
 
 	kdd->os_load_offset = SCRATCH2_DOWNLOAD_ADDR(scratch2);
 	kdd->bsp_apic_id = SCRATCH2_APIC_ID(scratch2);
@@ -303,13 +303,13 @@ static void load_scratch_values(struct knf_device_data *kdd)
 #define WFBR_TIMEOUT 50
 
 /** \brief Waits for the Knights Ferry device to get ready by spinning */
-static int __wait_for_bootstrap_ready(struct knf_device_data *kdd)
+static int __wait_for_bootstrap_ready(struct mic_device_data *kdd)
 {
 	unsigned int scratch2;
 	int count;
 
 	for (count = 0; count < WFBR_TIMEOUT; count++) {
-		scratch2 = knf_read_sbox(kdd, SBOX_SCRATCH2);
+		scratch2 = mic_read_sbox(kdd, SBOX_SCRATCH2);
 		
 		if (SCRATCH2_DOWNLOAD_STATUS(scratch2)) 
 			return 0;
@@ -327,9 +327,9 @@ static int __wait_for_bootstrap_ready(struct knf_device_data *kdd)
  * the load offset (where the kernel image should be loaded),
  * and prepares some registers.
  */
-int __knf_prepare_os_load(struct knf_device_data *kdd)
+int __mic_prepare_os_load(struct mic_device_data *kdd)
 {
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	unsigned long i, phys;
 #endif
 
@@ -337,7 +337,7 @@ int __knf_prepare_os_load(struct knf_device_data *kdd)
 		return -EBUSY;
 	}
 
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	dprint_var_x8(kdd->os_load_offset);
 	phys = kdd->os_load_offset;
 
@@ -350,25 +350,25 @@ int __knf_prepare_os_load(struct knf_device_data *kdd)
 
 	smp_mb();
 
-	//knf_write_sbox(kdd, SBOX_PCIE_BAR_ENABLE, 3);
-	knf_write_sbox(kdd, SBOX_TLB_FLUSH, 1);
+	//mic_write_sbox(kdd, SBOX_PCIE_BAR_ENABLE, 3);
+	mic_write_sbox(kdd, SBOX_TLB_FLUSH, 1);
 	
 	/* DMA init */
-	__knf_reset_dma_registers(kdd);
+	__mic_reset_dma_registers(kdd);
 
 	return 0;
 }
 /** \brief Sets the size of the "OS reserved area" */
-static void __knf_set_os_reserved_area(struct knf_device_data *kdd,
+static void __mic_set_os_reserved_area(struct mic_device_data *kdd,
                                        unsigned long size)
 {
-	knf_write_sbox(kdd, SBOX_SCRATCH3, (unsigned int)size);
+	mic_write_sbox(kdd, SBOX_SCRATCH3, (unsigned int)size);
 }
 
 /** \brief Sets the size of the kernel image (maybe optional) */
-static void __knf_set_os_size(struct knf_device_data *kdd, unsigned long size)
+static void __mic_set_os_size(struct mic_device_data *kdd, unsigned long size)
 {
-	knf_write_sbox(kdd, SBOX_SCRATCH5, (unsigned int)size);
+	mic_write_sbox(kdd, SBOX_SCRATCH5, (unsigned int)size);
 }
 
 /** \brief Load a kernel image from a file directly
@@ -376,7 +376,7 @@ static void __knf_set_os_size(struct knf_device_data *kdd, unsigned long size)
  * @param kdd A Knights Ferry device
  * @param filename A name of the kernel image file to load.
  */
-int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
+int __mic_load_os_file(struct mic_device_data *kdd, const char *filename)
 {
 	struct file *file;
 	loff_t size, pos = 0;
@@ -389,11 +389,11 @@ int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
 		return -ENOENT;
 	}
 
-	dprintf("knf_load_os_file: File %s opened.\n", filename);
+	dprintf("mic_load_os_file: File %s opened.\n", filename);
 	
 	size = i_size_read(file->f_path.dentry->d_inode);
 	if (size <= 0 || size > kdd->aperture_len) {
-		dprintf("knf_load_os_file: File size %lld invalid.\n",
+		dprintf("mic_load_os_file: File size %lld invalid.\n",
 		        size);
 		ret = -EINVAL;
 		goto FIN;
@@ -403,13 +403,13 @@ int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
 	fs = get_fs();
 	set_fs(get_ds());
 
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	r = vfs_read(file, kdd->aperture_va, size, &pos);
 #else
 	r = vfs_read(file, kdd->aperture_va + kdd->os_load_offset, size, &pos);
 #endif
 	if (r != (long)size) {
-		dprintf("knf_load_os_file: vfs_read(%lld) failed : %ld\n",
+		dprintf("mic_load_os_file: vfs_read(%lld) failed : %ld\n",
 		        size, r);
 		ret = -EINVAL;
 	}
@@ -422,8 +422,8 @@ int __knf_load_os_file(struct knf_device_data *kdd, const char *filename)
 	 *         (it seems that we can ignore this)
 	 *         Is this reserve size adequate?
 	 */
-	__knf_set_os_reserved_area(kdd, PAGE_SIZE);
-	__knf_set_os_size(kdd, size);
+	__mic_set_os_reserved_area(kdd, PAGE_SIZE);
+	__mic_set_os_size(kdd, size);
 
 FIN:
 	fput(file);
@@ -437,18 +437,18 @@ FIN:
  * @param apicid The APIC ID of a CPU core to trigger an interrupt in.
  * @param vector The vector number of an interrupt to issue
  */
-int knf_issue_interrupt(struct knf_device_data *kdd, int apicid, int vector)
+int mic_issue_interrupt(struct mic_device_data *kdd, int apicid, int vector)
 {
 	unsigned int val;
 
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	val = (vector << MIC_ICR_INTVEC_SHIFT) | 0;
 #else
 	val = (vector << MIC_ICR_INTVEC_SHIFT) | (1 << 13);
 #endif
 	
-	knf_write_sbox(kdd, SBOX_APICICR0 + 4, apicid);
-	knf_write_sbox(kdd, SBOX_APICICR0 + 0, val);
+	mic_write_sbox(kdd, SBOX_APICICR0 + 4, apicid);
+	mic_write_sbox(kdd, SBOX_APICICR0 + 0, val);
 
 	return 0;
 }
@@ -458,7 +458,7 @@ int knf_issue_interrupt(struct knf_device_data *kdd, int apicid, int vector)
  * @param kdd A Knights Ferry device
  * @param param The boot parameter for the new kernel.
  */
-int knf_boot_os(struct knf_device_data *kdd, struct knf_boot_param *param)
+int mic_boot_os(struct mic_device_data *kdd, struct mic_boot_param *param)
 {
 	unsigned int address_high, address_low;
 	unsigned long param_pa;
@@ -469,40 +469,40 @@ int knf_boot_os(struct knf_device_data *kdd, struct knf_boot_param *param)
 	address_low = (unsigned int)(((unsigned long)param_pa) & 0xffffffff);
 
 	/* Set boot parameter */
-	knf_write_sbox(kdd, SBOX_SCRATCH12, 0);
-	knf_write_sbox(kdd, SBOX_SCRATCH14, address_high);
-	knf_write_sbox(kdd, SBOX_SCRATCH15, address_low);
+	mic_write_sbox(kdd, SBOX_SCRATCH12, 0);
+	mic_write_sbox(kdd, SBOX_SCRATCH14, address_high);
+	mic_write_sbox(kdd, SBOX_SCRATCH15, address_low);
 
-	knf_issue_interrupt(kdd, kdd->bsp_apic_id, MIC_DMA_INTERRUPT_VECTOR);
-	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
+	mic_issue_interrupt(kdd, kdd->bsp_apic_id, MIC_DMA_INTERRUPT_VECTOR);
+	mic_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
 
 	return 0;
 }
 
-long __knf_debug_request(struct knf_device_data *kdd, 
+long __mic_debug_request(struct mic_device_data *kdd, 
                              int r, unsigned long arg)
 {
 	unsigned int u;
 
 	switch (r) {
 
-	case KNF_DEBUG_READ_SCRATCH:
+	case MIC_DEBUG_READ_SCRATCH:
 		if (arg >= 0 && arg < 16) {
-			u = knf_read_sbox(kdd, SBOX_SCRATCH0 + arg * 4);
+			u = mic_read_sbox(kdd, SBOX_SCRATCH0 + arg * 4);
 			return (unsigned long)u;
 		}
 		break;
 
-	case KNF_DEBUG_READ_SBOX:
+	case MIC_DEBUG_READ_SBOX:
 		if (arg >= 0 && arg < SBOX_TLB_DATIN0) {
-			u = knf_read_sbox(kdd, arg);
+			u = mic_read_sbox(kdd, arg);
 			
 			return (unsigned long)u;
 		}
 		break;
 
-	case KNF_DEBUG_DMA_TEST:
-		return __knf_dma_test(kdd, arg);
+	case MIC_DEBUG_DMA_TEST:
+		return __mic_dma_test(kdd, arg);
 
 	}
 	return -EINVAL;
@@ -514,14 +514,14 @@ long __knf_debug_request(struct knf_device_data *kdd,
  * @param intr_mask Mask of interrupts to enable
  * @param dma_mask  Mask of DMA interrupts to enable
  */
-static void knf_enable_interrupts(struct knf_device_data *kdd,
+static void mic_enable_interrupts(struct mic_device_data *kdd,
                                   int intr_mask, int dma_mask)
 {
 	unsigned int reg;
 
-	reg = knf_read_sbox(kdd, SBOX_SICE0);
+	reg = mic_read_sbox(kdd, SBOX_SICE0);
 	reg |= SBOX_SICE0_DBR_BITS(intr_mask) | SBOX_SICE0_DMA_BITS(dma_mask);
-	knf_write_sbox(kdd, SBOX_SICE0, reg);
+	mic_write_sbox(kdd, SBOX_SICE0, reg);
 }
 
 /** \brief Disable interrupts from a Knights Ferry device
@@ -531,34 +531,34 @@ static void knf_enable_interrupts(struct knf_device_data *kdd,
  * @param intr_mask Mask of interrupts to enable
  * @param dma_mask  Mask of DMA interrupts to enable
  */
-static void knf_disable_interrupts(struct knf_device_data *kdd,
+static void mic_disable_interrupts(struct mic_device_data *kdd,
                                    int intr_mask, int dma_mask)
 {
 	unsigned int reg;
 	/* TODO: masking */
-	reg = knf_read_sbox(kdd, SBOX_SICE0);
-	knf_write_sbox(kdd, SBOX_SICC0, reg);
+	reg = mic_read_sbox(kdd, SBOX_SICE0);
+	mic_write_sbox(kdd, SBOX_SICC0, reg);
 }
 
 /** \brief List of handlers that handle interrupts 
  * from the Knights Ferry device */
-static LIST_HEAD(knf_interrupt_handlers);
+static LIST_HEAD(mic_interrupt_handlers);
 
 /** \brief Add a handler for interrupts from the Knights Ferry device
  *
  * @param kdd A Knights Ferry device
  * @param itype Type of interrupts that the handler handles (ignored)
- * @param os AAL OS instance
- * @param os_priv The private structure related to the AAL OS instance.
+ * @param os IHK OS instance
+ * @param os_priv The private structure related to the IHK OS instance.
  * @param h The descriptor of the handler to register
  */
-int knf_add_interrupt_handler(struct knf_device_data *kdd, int itype,
-                              aal_os_t os, void *os_priv,
-                              struct aal_host_interrupt_handler *h)
+int mic_add_interrupt_handler(struct mic_device_data *kdd, int itype,
+                              ihk_os_t os, void *os_priv,
+                              struct ihk_host_interrupt_handler *h)
 {
 	h->os = os;
 	h->os_priv = os_priv;
-	list_add_tail(&h->list, &knf_interrupt_handlers);
+	list_add_tail(&h->list, &mic_interrupt_handlers);
 
 	return 0;
 }
@@ -567,28 +567,28 @@ int knf_add_interrupt_handler(struct knf_device_data *kdd, int itype,
  *
  * @param h The descriptor of the handler to unregister
  */
-void knf_del_interrupt_handler(struct aal_host_interrupt_handler *h)
+void mic_del_interrupt_handler(struct ihk_host_interrupt_handler *h)
 {
 	list_del(&h->list);
 }
 
 /** \brief IRQ Handler of Knights Ferry */
-irqreturn_t knf_irq_handler(int irq, void *data)
+irqreturn_t mic_irq_handler(int irq, void *data)
 {
-	struct knf_device_data *kdd = data;
+	struct mic_device_data *kdd = data;
 	unsigned int reg;
-	struct aal_host_interrupt_handler *h;
+	struct ihk_host_interrupt_handler *h;
 
 	/* ack */
-	reg = knf_read_sbox(kdd, SBOX_SICR0);
-	knf_write_sbox(kdd, SBOX_SICR0, reg);
+	reg = mic_read_sbox(kdd, SBOX_SICR0);
+	mic_write_sbox(kdd, SBOX_SICR0, reg);
 
-#ifndef CONFIG_KNF	
-	knf_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
+#ifndef CONFIG_MIC	
+	mic_enable_interrupts(kdd, MIC_DBR_ALL_MASK, MIC_DMA_ALL_MASK);
 #endif
 
 	/* XXX: Linear search? */
-	list_for_each_entry(h, &knf_interrupt_handlers, list) {
+	list_for_each_entry(h, &mic_interrupt_handlers, list) {
 		if (h->func) {
 			h->func(h->os, h->os_priv, h->priv);
 		}
@@ -603,11 +603,11 @@ irqreturn_t knf_irq_handler(int irq, void *data)
  * no OS parameter.
  * @param kdd   A Knights Ferry device
  */
-int __knf_os_get_status(struct knf_device_data *kdd)
+int __mic_os_get_status(struct mic_device_data *kdd)
 {
 	unsigned int v;
 
-	v = knf_read_sbox(kdd, SBOX_SCRATCH12);
+	v = mic_read_sbox(kdd, SBOX_SCRATCH12);
 	if (v == 0) {
 		return 0;
 	} else if (v == 0x25470290) {
@@ -625,31 +625,31 @@ int __knf_os_get_status(struct knf_device_data *kdd)
  * @param [out] addr Starting address of the area (result)
  * @param [out] size Size of the memory area
  */
-int __knf_get_special_addr(struct knf_device_data *kdd, 
-                           enum aal_special_addr_type type,
+int __mic_get_special_addr(struct mic_device_data *kdd, 
+                           enum ihk_special_addr_type type,
                            unsigned long *addr,
                            unsigned long *size)
 {
 	switch (type) {
-	case AAL_SPADDR_KMSG:
-		*addr = knf_read_sbox(kdd, SBOX_SCRATCH14);
-		*size = knf_read_sbox(kdd, SBOX_SCRATCH11); // AAL_KMSG_SIZE
+	case IHK_SPADDR_KMSG:
+		*addr = mic_read_sbox(kdd, SBOX_SCRATCH14);
+		*size = mic_read_sbox(kdd, SBOX_SCRATCH11); // IHK_KMSG_SIZE
 
 		if (*addr < PAGE_SIZE) { /* null or almost null pointer */
 			return -EIO;
 		}
 		return 0;
 
-	case AAL_SPADDR_MIKC_QUEUE_RECV:
-		*addr = knf_read_sbox(kdd, SBOX_SCRATCH13);
+	case IHK_SPADDR_MIKC_QUEUE_RECV:
+		*addr = mic_read_sbox(kdd, SBOX_SCRATCH13);
 		*size = MASTER_IKCQ_SIZE;
 		if (*addr < PAGE_SIZE) {
 			return -EIO;
 		}
 		return 0;
 
-	case AAL_SPADDR_MIKC_QUEUE_SEND:
-		*addr = knf_read_sbox(kdd, SBOX_SCRATCH15);
+	case IHK_SPADDR_MIKC_QUEUE_SEND:
+		*addr = mic_read_sbox(kdd, SBOX_SCRATCH15);
 		*size = MASTER_IKCQ_SIZE;
 		if (*addr < PAGE_SIZE) {
 			return -EIO;

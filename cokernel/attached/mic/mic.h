@@ -1,5 +1,5 @@
-#ifndef HEADER_KNF_H
-#define HEADER_KNF_H
+#ifndef HEADER_MIC_H
+#define HEADER_MIC_H
 
 #include <sysdeps/mic/mic/micconst.h>
 #include <sysdeps/mic/mic/micsboxdefine.h>

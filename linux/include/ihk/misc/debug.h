@@ -1,13 +1,13 @@
 /**
- * \file host/include/aal/misc/debug.h
- * \brief AAL-Host: Debug printf functions
+ * \file host/include/ihk/misc/debug.h
+ * \brief IHK-Host: Debug printf functions
  *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
-#ifndef __HEADER_AAL_MISC_DEBUG_H
-#define __HEADER_AAL_MISC_DEBUG_H
+#ifndef __HEADER_IHK_MISC_DEBUG_H
+#define __HEADER_IHK_MISC_DEBUG_H
 
-#if defined(AAL_DEBUG) || defined(CONFIG_AAL_DEBUG)
+#if defined(IHK_DEBUG) || defined(CONFIG_IHK_DEBUG)
 #ifdef __KERNEL__
 #define dprintf(...)         printk(__VA_ARGS__)
 #else
@@ -15,7 +15,7 @@
 #endif /* KERNEL */
 #else
 #define dprintf(...)         do { } while(0)
-#endif /* AAL_DEBUG || CONFIG_AAL_DEBUG */
+#endif /* IHK_DEBUG || CONFIG_IHK_DEBUG */
 
 #define tprintf(format, ...) dprintf("%s Line %d : " format, __FILE__,  \
                                      __LINE__, __VA_ARGS__)

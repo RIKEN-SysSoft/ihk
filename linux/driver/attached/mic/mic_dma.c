@@ -1,6 +1,6 @@
 /**
- * \file knf_dma.c
- * \brief AAL KNF Driver: Knights Ferry DMA Device Driver 
+ * \file mic_dma.c
+ * \brief IHK MIC Driver: Knights Ferry DMA Device Driver 
  */
 #include <linux/sched.h>
 #include <linux/mm.h>
@@ -33,9 +33,9 @@
  * @param c     Channel
  * @param index Base offset in SBOX of the DMA register to read
  */
-static unsigned int sbox_dma_read(struct knf_dma_channel *c, int index)
+static unsigned int sbox_dma_read(struct mic_dma_channel *c, int index)
 {
-	return knf_read_sbox(c->kdd, index + 0x40 * c->channel);
+	return mic_read_sbox(c->kdd, index + 0x40 * c->channel);
 }
 
 /** \brief Write DMA-related registers in the SBOX MMIO registers.
@@ -44,10 +44,10 @@ static unsigned int sbox_dma_read(struct knf_dma_channel *c, int index)
  * @param index Base offset in SBOX of the DMA register to write
  * @param value Value to write
  */
-static void sbox_dma_write(struct knf_dma_channel *c,
+static void sbox_dma_write(struct mic_dma_channel *c,
                            int index, unsigned int value)
 {
-	knf_write_sbox(c->kdd, index + 0x40 * c->channel, value);
+	mic_write_sbox(c->kdd, index + 0x40 * c->channel, value);
 }
 
 /** \brief Check if the DMA ring has enough room of the certain size
@@ -55,11 +55,11 @@ static void sbox_dma_write(struct knf_dma_channel *c,
  * @param c     Channel
  * @param ndesc Number of the descriptors that you want
  */
-static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
+static char __mic_desc_check_room(struct mic_dma_channel *c, int ndesc)
 {
 	int h = c->head, t = c->tail; 
 
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	int reg_value = 0;
 	for (;;) {
 		if (h <= t) {
@@ -98,7 +98,7 @@ static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
  * @param c Channel
  * @return Pointer to the descriptor of the original head position
  */
-static union md_mic_dma_desc *__knf_desc_proceed_head(struct knf_dma_channel *c)
+static union md_mic_dma_desc *__mic_desc_proceed_head(struct mic_dma_channel *c)
 {
 	union md_mic_dma_desc *d;
 
@@ -145,7 +145,7 @@ static unsigned long virt_to_mic_phys(void *virt)
  * It is assumed that the MIC kernel initializes the DCR register.
  * @param c DMA channel
  */
-static void __initialize_dma(struct knf_dma_channel *c)
+static void __initialize_dma(struct mic_dma_channel *c)
 {
 	/* MIC_OWNED = 0, HOST_OWNED = 1, ENABLED = 2 */
 	unsigned long drarh, drarl;
@@ -166,7 +166,7 @@ static void __initialize_dma(struct knf_dma_channel *c)
 	sbox_dma_write(c, SBOX_DRAR_LO_0, drarl);
 	sbox_dma_write(c, SBOX_DRAR_HI_0, drarh);
 	
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	sbox_dma_write(c, SBOX_DTPR_0, 0);
 	sbox_dma_write(c, SBOX_DHPR_0, 0);
 
@@ -184,7 +184,7 @@ static void __initialize_dma(struct knf_dma_channel *c)
  * of the Knights Ferry device.
  * @param kdd A Knights Ferry device
  */
-void __knf_reset_dma_registers(struct knf_device_data *kdd)
+void __mic_reset_dma_registers(struct mic_device_data *kdd)
 {
 	__initialize_dma(kdd->channels + 4);
 }
@@ -195,10 +195,10 @@ void __knf_reset_dma_registers(struct knf_device_data *kdd)
  * DMA registers.
  * @param kdd A Knights Ferry device
  */
-void __knf_dma_init(struct knf_device_data *kdd)
+void __mic_dma_init(struct mic_device_data *kdd)
 {
 	/* Host only uses channels >= 4 */
-	struct knf_dma_channel *channels = kdd->channels;
+	struct mic_dma_channel *channels = kdd->channels;
 	void *ring;
 
 	memset(kdd->channels, 0, sizeof(kdd->channels));
@@ -212,7 +212,7 @@ void __knf_dma_init(struct knf_device_data *kdd)
 	channels[4].desc = ring;
 	channels[4].desc_count = PAGE_SIZE / sizeof(union md_mic_dma_desc);
 
-	__knf_reset_dma_registers(kdd);
+	__mic_reset_dma_registers(kdd);
 }
 
 /** \brief Deinitialize the DMA devices for host use.
@@ -220,7 +220,7 @@ void __knf_dma_init(struct knf_device_data *kdd)
  * The function finalizes the channel descriptor structures.
  * @param kdd A Knights Ferry device
  */
-void __knf_dma_finalize(struct knf_device_data *kdd)
+void __mic_dma_finalize(struct mic_device_data *kdd)
 {
 	if (kdd->channels[4].desc) {
 		free_page((unsigned long)kdd->channels[4].desc);
@@ -229,7 +229,7 @@ void __knf_dma_finalize(struct knf_device_data *kdd)
 
 unsigned long long st0, st1, st2, ed;
 
-static void __debug_print_dma_reg(struct knf_dma_channel *c)
+static void __debug_print_dma_reg(struct mic_dma_channel *c)
 {
 	printk("Channel %d:\n", c->channel);
 	printk("DRAR-HI : %x, LO : %x\n", sbox_dma_read(c, SBOX_DRAR_HI_0),
@@ -244,11 +244,11 @@ static void __debug_print_dma_reg(struct knf_dma_channel *c)
  * @param channel Channel number
  * @param req     DMA request descriptor
  */
-int __knf_dma_request(struct knf_device_data *kdd, int channel,
-                      struct aal_dma_request *req)
+int __mic_dma_request(struct mic_device_data *kdd, int channel,
+                      struct ihk_dma_request *req)
 {
 	unsigned long flags;
-	struct knf_dma_channel *c;
+	struct mic_dma_channel *c;
 	int i, cdesc, ndesc = 1, size;
 	union md_mic_dma_desc *desc = NULL;
 
@@ -265,7 +265,7 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 	}
 	
 	spin_lock_irqsave(&c->lock, flags);
-	if (!__knf_desc_check_room(c, ndesc)) {
+	if (!__mic_desc_check_room(c, ndesc)) {
 		spin_unlock_irqrestore(&c->lock, flags);
 		return -EBUSY;
 	}
@@ -273,7 +273,7 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 	size = (req->size + 63) >> 6;
 	
 	for (i = 0; i < cdesc; i++) {
-		desc = __knf_desc_proceed_head(c);
+		desc = __mic_desc_proceed_head(c);
 		desc->desc.memcpy.type = 1;
 		if (req->src_os) {
 			desc->desc.memcpy.sap = req->src_phys;
@@ -303,7 +303,7 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 	       desc->desc.memcpy.length, req->size);
 
 	if (req->callback || req->notify) {
-		desc = __knf_desc_proceed_head(c);
+		desc = __mic_desc_proceed_head(c);
 		desc->desc.status.type = 2;
 		if (req->callback) {
 			desc->desc.status.intr = 1;
@@ -331,19 +331,19 @@ int __knf_dma_request(struct knf_device_data *kdd, int channel,
 	return 0;
 }
 
-int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
+int __mic_dma_test(struct mic_device_data *kdd, unsigned long arg)
 {
 	unsigned long fin = 0;
-	struct aal_dma_request req;
+	struct ihk_dma_request req;
 	unsigned long to;
 	int loop = 0;
 	unsigned long *buf;
-	aal_dma_channel_t dma_channel;
+	ihk_dma_channel_t dma_channel;
 
 	if (arg > 4 * 1048576) {
 		return -ENOMEM;
 	}
-	dma_channel = aal_device_get_dma_channel(kdd->aal_dev, 0);
+	dma_channel = ihk_device_get_dma_channel(kdd->ihk_dev, 0);
 	if (!dma_channel) {
 		return -EINVAL;
 	}
@@ -364,7 +364,7 @@ int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
 	req.notify = (void *)virt_to_phys(&fin);
 	req.priv = (void *)29;
 
-	aal_dma_request(dma_channel, &req);
+	ihk_dma_request(dma_channel, &req);
 	rdtscll(st2);
 
 	to = st2 + 1024UL * 1024 * 1024 * 3;
@@ -392,41 +392,41 @@ int __knf_dma_test(struct knf_device_data *kdd, unsigned long arg)
 	return ed - st2;
 }
 
-/** \brief Wrapper function of __knf_dma_request
+/** \brief Wrapper function of __mic_dma_request
  * 
- * @param channel AAL DMA channel structure
+ * @param channel IHK DMA channel structure
  * @param r       DMA request descriptor
  */
-static int knf_dma_request(aal_dma_channel_t channel, struct aal_dma_request *r)
+static int mic_dma_request(ihk_dma_channel_t channel, struct ihk_dma_request *r)
 {
-	__knf_dma_request(channel->priv, channel->channel, r);
+	__mic_dma_request(channel->priv, channel->channel, r);
 
 	return 0;
 }
 
-struct aal_dma_ops knf_dma_ops = {
-	.request = knf_dma_request,
+struct ihk_dma_ops mic_dma_ops = {
+	.request = mic_dma_request,
 };
 
-/** \brief aal_host_get_dma_channel implementation
+/** \brief ihk_host_get_dma_channel implementation
  * 
  *  Note that the "channel" parameter has the offset of 4, that is,
  *  channel = 0 indicates that Channel 4 in the hardware DMA engine.
  */
-aal_dma_channel_t knf_aal_get_dma_channel(aal_device_t dev, void *priv,
+ihk_dma_channel_t mic_ihk_get_dma_channel(ihk_device_t dev, void *priv,
                                           int channel)
 {
-	struct knf_device_data *data = priv;
+	struct mic_device_data *data = priv;
 
-	if (channel < 0 || channel >= KNF_DMA_CHANNELS - 4) {
+	if (channel < 0 || channel >= MIC_DMA_CHANNELS - 4) {
 		return NULL;
 	}
 
-	data->aal_channels[channel].dev = dev;
-	data->aal_channels[channel].priv = priv;
-	data->aal_channels[channel].channel = channel;
-	data->aal_channels[channel].ops = &knf_dma_ops;
+	data->ihk_channels[channel].dev = dev;
+	data->ihk_channels[channel].priv = priv;
+	data->ihk_channels[channel].channel = channel;
+	data->ihk_channels[channel].ops = &mic_dma_ops;
 
-	return &data->aal_channels[channel];
+	return &data->ihk_channels[channel];
 }
 

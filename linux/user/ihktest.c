@@ -113,7 +113,7 @@ static void do_clear_kmsg_write(int fd)
 
 static void do_create(int fd)
 {
-	int r = ioctl(fd, AAL_DEVICE_CREATE_OS, 0);
+	int r = ioctl(fd, IHK_DEVICE_CREATE_OS, 0);
 	printf("ret = %d\n", r);
 }
 static void do_scratch(int fd)
@@ -122,7 +122,7 @@ static void do_scratch(int fd)
 	long r;
 
 	for (i = 0; i < 16; i++) {
-		r = ioctl(fd, AAL_DEVICE_DEBUG_START + 0, i);
+		r = ioctl(fd, IHK_DEVICE_DEBUG_START + 0, i);
 		printf("Scratch %2d = %08lx\n", i, r);
 	}
 }
@@ -137,7 +137,7 @@ static void do_sbox(int fd)
 		idx = 0x1030;
 	}
 
-	r = ioctl(fd, AAL_DEVICE_DEBUG_START + 1, idx);
+	r = ioctl(fd, IHK_DEVICE_DEBUG_START + 1, idx);
 	printf("SBOX %04x = %08lx\n", idx, r);
 }
 

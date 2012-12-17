@@ -1,5 +1,5 @@
-#ifndef HEADER_MEE_BOOTPARAM_H
-#define HEADER_MEE_BOOTPARAM_H
+#ifndef HEADER_BUILTIN_BOOTPARAM_H
+#define HEADER_BUILTIN_BOOTPARAM_H
 
 struct shimos_boot_param {
 	unsigned long start, end;

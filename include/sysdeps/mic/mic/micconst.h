@@ -36,13 +36,13 @@
 #define SNOOP_ON  (0 << 0)
 #define SNOOP_OFF (1 << 0)
 
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 #define NUM_SMPT_REGISTERS 32
 #define BUILD_SMPT(NO_SNOOP, HOST_ADDR)  \
 	(uint32_t)(((((HOST_ADDR)<< 2) & (~0x03)) | ((NO_SNOOP) & (0x01))))
 #else
 #define	NUM_SMPT_ENTRIES_IN_USE		32
-#define	NUM_SMPT_ENTRIES_MICPA	4 /* used by aal_mc_map_micpa */
+#define	NUM_SMPT_ENTRIES_MICPA	4 /* used by ihk_mc_map_micpa */
 #define MIC_SYSTEM_PAGE_SIZE	0x0400000000ULL
 #define BUILD_SMPT(NO_SNOOP, HOST_ADDR)  \
 	(uint32_t)(((((HOST_ADDR)<< 2) & (~0x03)) | ((NO_SNOOP) & (0x01))))
@@ -54,6 +54,6 @@
 
 #define MIC_SYSTEM_BASE     0x8000000000ULL
 
-#define KNF_DMA_CHANNELS            8
+#define MIC_DMA_CHANNELS            8
 
 #endif /* MICCONST_H */

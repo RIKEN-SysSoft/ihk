@@ -1,18 +1,18 @@
 /**
- * \file host/driver/knf/knf.h
- * \brief AAL KNF Driver: Header file for miscellaneous structures used
+ * \file host/driver/mic/mic.h
+ * \brief IHK MIC Driver: Header file for miscellaneous structures used
  *                        in Knights Ferry drivers
  */
-#ifndef KNF_H
-#define KNF_H
+#ifndef MIC_H
+#define MIC_H
 #include <ihk/ihk_host_driver.h>
 #include <sysdeps/mic/mic_host.h>
 
-#define KNF_DMA_CHANNELS 8
+#define MIC_DMA_CHANNELS 8
 
 /** \brief Descriptor for DMA channels of Knights Ferry */
-struct knf_dma_channel {
-	struct knf_device_data *kdd;
+struct mic_dma_channel {
+	struct mic_device_data *kdd;
  	/** \brief Lock of this structure */  
 	spinlock_t lock;
 	/** \brief Head index of the DMA ring */  
@@ -29,10 +29,10 @@ struct knf_dma_channel {
 	union md_mic_dma_desc *desc;
 };
 
-/** \brief KNF driver-private data structure for Knights Ferry devices */
-struct knf_device_data {
-	/** \brief AAL Device Structure */
-	aal_device_t aal_dev;
+/** \brief MIC driver-private data structure for Knights Ferry devices */
+struct mic_device_data {
+	/** \brief IHK Device Structure */
+	ihk_device_t ihk_dev;
 	/** \brief PCI Device */
 	struct pci_dev *dev;
 	/** \brief Lock */
@@ -64,34 +64,34 @@ struct knf_device_data {
 	/** \brief APIC ID of the BSP of the Knights Ferry device */
 	unsigned int bsp_apic_id;
 
-	/** \brief AAL-version of the descriptors of DMA channels */
-	struct aal_dma_channel aal_channels[KNF_DMA_CHANNELS];
+	/** \brief IHK-version of the descriptors of DMA channels */
+	struct ihk_dma_channel ihk_channels[MIC_DMA_CHANNELS];
 	/** \brief Driver-private version of the descriptors of DMA channels */
-	struct knf_dma_channel channels[KNF_DMA_CHANNELS];
+	struct mic_dma_channel channels[MIC_DMA_CHANNELS];
 
-	/** \brief AAL Memory information structure */
-	struct aal_mem_info mem_info;
-	/** \brief AAL CPU information structure */
-	struct aal_cpu_info cpu_info;
-	/** \brief AAL Memory region information structure */
-	struct aal_mem_region mem_region;
+	/** \brief IHK Memory information structure */
+	struct ihk_mem_info mem_info;
+	/** \brief IHK CPU information structure */
+	struct ihk_cpu_info cpu_info;
+	/** \brief IHK Memory region information structure */
+	struct ihk_mem_region mem_region;
 
 	/** \brief List of the APIC IDs of the cores in the device */
 	int cpu_hw_ids[512];
 };
 
-#define KNFDD_STATUS_READY          1
-#define KNFDD_STATUS_LOADING        2
-#define KNFDD_STATUS_BOOTING        3
-#define KNFDD_STATUS_RUNNING        4
+#define MICDD_STATUS_READY          1
+#define MICDD_STATUS_LOADING        2
+#define MICDD_STATUS_BOOTING        3
+#define MICDD_STATUS_RUNNING        4
 
-#define KNFDD_OS_STATUS_NONE        0
-#define KNFDD_OS_STATUS_LOADED      1
+#define MICDD_OS_STATUS_NONE        0
+#define MICDD_OS_STATUS_LOADED      1
 
-/** \brief KNF driver-private data structure for OS instances */
-struct knf_os_data {
+/** \brief MIC driver-private data structure for OS instances */
+struct mic_os_data {
 	/** \brief Pointer to the structure of the device */
-	struct knf_device_data *dev;
+	struct mic_device_data *dev;
 	/** \brief Lock for this structure */
 	spinlock_t lock;
 
@@ -101,7 +101,7 @@ struct knf_os_data {
 	int bspid;
 
 	/** \brief Boot parameter for the OS instance */
-	struct knf_boot_param boot_param;
+	struct mic_boot_param boot_param;
 };
 
 #endif

@@ -1,6 +1,6 @@
 /**/
 /** \file mm.c
- * \brief AAL-Host: Memory management misc functions (not implemented yet)
+ * \brief IHK-Host: Memory management misc functions (not implemented yet)
  *
  * (C) Copyright 2011 Taku Shimosawa.
  */
@@ -13,7 +13,7 @@
 
 #include <ihk/ihk_host_driver.h>
 
-void *aal_host_map_generic(aal_device_t dev, unsigned long phys,
+void *ihk_host_map_generic(ihk_device_t dev, unsigned long phys,
                            void *virt, unsigned long size, int flags)
 {
 	printk("%s: not implemented -> %lx, %p, %lx, %x\n",
@@ -22,12 +22,12 @@ void *aal_host_map_generic(aal_device_t dev, unsigned long phys,
 	return NULL;
 }
 
-int aal_host_unmap_generic(aal_device_t dev, void *virt, unsigned long size)
+int ihk_host_unmap_generic(ihk_device_t dev, void *virt, unsigned long size)
 {
 	printk("%s: not implemented -> %p, %lx\n", __FUNCTION__, virt, size);
 
 	return -ENOSYS;
 }
 
-EXPORT_SYMBOL(aal_host_map_generic);
-EXPORT_SYMBOL(aal_host_unmap_generic);
+EXPORT_SYMBOL(ihk_host_map_generic);
+EXPORT_SYMBOL(ihk_host_unmap_generic);

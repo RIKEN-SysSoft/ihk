@@ -16,8 +16,8 @@
 #define dprintf(...)
 #endif
 
-struct knf_dma_channel {
-	aal_spinlock_t lock;
+struct mic_dma_channel {
+	ihk_spinlock_t lock;
 	int head, tail;
 	int channel;
 	int desc_count;
@@ -25,18 +25,18 @@ struct knf_dma_channel {
 	union md_mic_dma_desc *desc;
 };
 
-static unsigned int sbox_dma_read(struct knf_dma_channel *c, int index)
+static unsigned int sbox_dma_read(struct mic_dma_channel *c, int index)
 {
 	return sbox_read(index + 0x40 * c->channel);
 }
 
-static void sbox_dma_write(struct knf_dma_channel *c,
+static void sbox_dma_write(struct mic_dma_channel *c,
                            int index, unsigned int value)
 {
 	sbox_write(index + 0x40 * c->channel, value);
 }
 
-void aal_mc_dma_enable_channel(int channel)
+void ihk_mc_dma_enable_channel(int channel)
 {
 	unsigned int dcr;
 
@@ -45,7 +45,7 @@ void aal_mc_dma_enable_channel(int channel)
 	sbox_write(SBOX_DCR, dcr);
 }
 
-void aal_mc_dma_disable_channel(int channel)
+void ihk_mc_dma_disable_channel(int channel)
 {
 	unsigned int dcr;
 
@@ -54,9 +54,9 @@ void aal_mc_dma_disable_channel(int channel)
 	sbox_write(SBOX_DCR, dcr);
 }
 
-struct knf_dma_channel channels[8];
+struct mic_dma_channel channels[8];
 
-static void __debug_print_dma_reg(struct knf_dma_channel *c)
+static void __debug_print_dma_reg(struct mic_dma_channel *c)
 {
 	dprintf("Channel %d:\n", c->channel);
 	dprintf("DCR : %x\n", sbox_read(SBOX_DCR));
@@ -66,7 +66,7 @@ static void __debug_print_dma_reg(struct knf_dma_channel *c)
 	        sbox_dma_read(c, SBOX_DHPR_0));
 }
 
-static void __initialize_dma(struct knf_dma_channel *c)
+static void __initialize_dma(struct mic_dma_channel *c)
 {
 	/* MIC_OWNED = 0, HOST_OWNED = 1, ENABLED = 2 */
 	unsigned long dcr, drarh, drarl;
@@ -94,7 +94,7 @@ static void __initialize_dma(struct knf_dma_channel *c)
 	kprintf("DMA Channel %d initialized.\n", c->channel);
 }
 
-static void __initialize_host_dma(struct knf_dma_channel *c)
+static void __initialize_host_dma(struct mic_dma_channel *c)
 {
 	/* MIC_OWNED = 0, HOST_OWNED = 1, ENABLED = 2 */
 	unsigned long dcr;
@@ -110,15 +110,15 @@ static void __initialize_host_dma(struct knf_dma_channel *c)
 	kprintf("DMA Channel %d initialized.\n", c->channel);
 }
 
-void aal_mc_dma_init(void)
+void ihk_mc_dma_init(void)
 {
 	/* Initialize only channels #0 and #4 */
 	channels[0].channel = 0;
 	channels[0].owner = 0;
-	channels[0].desc = aal_mc_alloc_pages(1, 0);
+	channels[0].desc = ihk_mc_alloc_pages(1, 0);
 	channels[0].desc_count = PAGE_SIZE / sizeof(union md_mic_dma_desc);
 	__initialize_dma(channels + 0);
-	aal_mc_dma_enable_channel(0);
+	ihk_mc_dma_enable_channel(0);
 	__debug_print_dma_reg(channels + 0);
 
 	channels[4].channel = 4;
@@ -126,16 +126,16 @@ void aal_mc_dma_init(void)
 	channels[4].desc = 0;
 	channels[4].desc_count = 0;
 	__initialize_host_dma(channels + 4);
-	aal_mc_dma_enable_channel(4);
+	ihk_mc_dma_enable_channel(4);
 	__debug_print_dma_reg(channels + 4);
 }
 
 
-static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
+static char __mic_desc_check_room(struct mic_dma_channel *c, int ndesc)
 {
 	int h = c->head, t = c->tail; 
 
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	int reg_value = 0;
 	for (;;) {
 		if (h <= t) {
@@ -168,7 +168,7 @@ static char __knf_desc_check_room(struct knf_dma_channel *c, int ndesc)
 #endif
 }
 
-static union md_mic_dma_desc *__knf_desc_proceed_head(struct knf_dma_channel *c)
+static union md_mic_dma_desc *__mic_desc_proceed_head(struct mic_dma_channel *c)
 {
 	union md_mic_dma_desc *d;
 
@@ -185,11 +185,11 @@ static union md_mic_dma_desc *__knf_desc_proceed_head(struct knf_dma_channel *c)
 	return d;
 }
 
-static unsigned long get_dma_addr(aal_os_t os, unsigned long phys)
+static unsigned long get_dma_addr(ihk_os_t os, unsigned long phys)
 {
 	/* Assuming that mapping is only conversion of addresses */
 	if (!os) {
-		return aal_mc_map_memory(NULL, phys, 1);
+		return ihk_mc_map_memory(NULL, phys, 1);
 	} else {
 		return phys;
 	}
@@ -201,11 +201,11 @@ static unsigned long get_dma_addr(aal_os_t os, unsigned long phys)
  * If non-callback is used (intr == 0)
  *   On completion, value is written to the priv
  */
-int aal_mc_dma_request(int channel,
-                       struct aal_dma_request *req)
+int ihk_mc_dma_request(int channel,
+                       struct ihk_dma_request *req)
 {
 	unsigned long flags;
-	struct knf_dma_channel *c;
+	struct mic_dma_channel *c;
 	int ndesc = 1;
 	union md_mic_dma_desc *desc;
 
@@ -219,15 +219,15 @@ int aal_mc_dma_request(int channel,
 		ndesc++;
 	}
 
-	flags = aal_mc_spinlock_lock(&c->lock);
-	if (!__knf_desc_check_room(c, ndesc)) {
-		aal_mc_spinlock_unlock(&c->lock, flags);
-		dprintf("!__knf_desc_check_room()\n");
+	flags = ihk_mc_spinlock_lock(&c->lock);
+	if (!__mic_desc_check_room(c, ndesc)) {
+		ihk_mc_spinlock_unlock(&c->lock, flags);
+		dprintf("!__mic_desc_check_room()\n");
 		__debug_print_dma_reg(c);
 		return -EBUSY;
 	}
 	
-	desc = __knf_desc_proceed_head(c);
+	desc = __mic_desc_proceed_head(c);
 	desc->desc.memcpy.type = 1;
 	desc->desc.memcpy.sap = get_dma_addr(req->src_os, req->src_phys);
 	desc->desc.memcpy.dap = get_dma_addr(req->dest_os, req->dest_phys);
@@ -237,7 +237,7 @@ int aal_mc_dma_request(int channel,
 	        desc->desc.memcpy.sap, desc->desc.memcpy.dap,
 	        desc->desc.memcpy.length);
 	if (ndesc > 1) {
-		desc = __knf_desc_proceed_head(c);
+		desc = __mic_desc_proceed_head(c);
 		desc->desc.status.type = 2;
 		if (req->callback) {
 			desc->desc.status.intr = 1;
@@ -253,7 +253,7 @@ int aal_mc_dma_request(int channel,
 	}
 		
 	sbox_dma_write(c, SBOX_DHPR_0, c->head);
-	aal_mc_spinlock_unlock(&c->lock, flags);
+	ihk_mc_spinlock_unlock(&c->lock, flags);
 
 	__debug_print_dma_reg(c);
 

@@ -1,11 +1,11 @@
-#ifndef __HEADER_MEE_DMA_H
-#define __HEADER_MEE_DMA_H
+#ifndef __HEADER_BUILTIN_DMA_H
+#define __HEADER_BUILTIN_DMA_H
 
 #include <ihk/lock.h>
 
-#define MEE_DMA_DESC_PARAM1_INTR  0x10000000
+#define BUILTIN_DMA_DESC_PARAM1_INTR  0x10000000
 
-struct mee_dma_desc { 
+struct builtin_dma_desc { 
 	int type;
 	int param1;
 	void *param2;
@@ -13,20 +13,20 @@ struct mee_dma_desc {
 	unsigned long param4;
 };
 
-#define MEE_DMA_CHANNELS  2
+#define BUILTIN_DMA_CHANNELS  2
 
-struct mee_dma_channel {
+struct builtin_dma_channel {
 	unsigned long desc_ptr;
 	unsigned long len;
 	unsigned long head;
 	unsigned long tail;
 
 	/* Lock for head, not tail (because single r/w for tail) */
-	aal_spinlock_t lock;
+	ihk_spinlock_t lock;
 };
 
-struct mee_dma_config_struct {
-	struct mee_dma_channel channels[MEE_DMA_CHANNELS];
+struct builtin_dma_config_struct {
+	struct builtin_dma_channel channels[BUILTIN_DMA_CHANNELS];
 
 	unsigned long doorbell; /* doorbell */
 	unsigned long status; /* core status */

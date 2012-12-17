@@ -6,7 +6,7 @@
 #include <registers.h>
 #include "bootparam.h"
 
-/* MEE Setup.c */
+/* BUILTIN Setup.c */
 static unsigned char stack[8192] __attribute__((aligned(4096)));
 
 unsigned long boot_param_pa;
@@ -14,7 +14,7 @@ struct shimos_boot_param *boot_param;
 
 extern void main(void);
 extern void setup_x86(void);
-extern struct aal_kmsg_buf kmsg_buf;
+extern struct ihk_kmsg_buf kmsg_buf;
 
 unsigned long x86_kernel_phys_base;
 
@@ -32,29 +32,29 @@ void arch_start(unsigned long param_addr, unsigned long phys_address)
 	while (1);
 }
 
-static struct aal_mc_cpu_info *aal_cpu_info;
+static struct ihk_mc_cpu_info *ihk_cpu_info;
 
-static void build_aal_cpu_info(void)
+static void build_ihk_cpu_info(void)
 {
 	int i, n = 0;
 
-	aal_cpu_info = early_alloc_page();
-	aal_cpu_info->hw_ids = (int *)(aal_cpu_info + 1);
-	aal_cpu_info->nodes = (int *)(aal_cpu_info + 1) + 64;
+	ihk_cpu_info = early_alloc_page();
+	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
+	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + 64;
 
 	kprintf("CPU: ");
 	for (i = 0; i < sizeof(unsigned long) * 8; i++) {
 		if (boot_param->cores & (1UL << i)) {
-			aal_cpu_info->hw_ids[n] = i;
-			aal_cpu_info->nodes[n] = 0;
+			ihk_cpu_info->hw_ids[n] = i;
+			ihk_cpu_info->nodes[n] = 0;
 
-			kprintf("%d ", aal_cpu_info->hw_ids[n]);
+			kprintf("%d ", ihk_cpu_info->hw_ids[n]);
 			n++;
 		}
 	}
 	kprintf("\n");
 
-	aal_cpu_info->ncpus = n;
+	ihk_cpu_info->ncpus = n;
 }
 
 void arch_init(void)
@@ -63,7 +63,7 @@ void arch_init(void)
 	boot_param->msg_buffer = virt_to_phys(&kmsg_buf);
 	boot_param->status = 1;
 
-	build_aal_cpu_info();
+	build_ihk_cpu_info();
 
 	setup_x86();
 	boot_param = map_fixed_area(boot_param_pa, sizeof(*boot_param), 0);
@@ -81,26 +81,26 @@ void arch_set_mikc_queue(void *rq, void *wq)
 	boot_param->mikc_queue_send = virt_to_phys(rq);
 }
 
-unsigned long aal_mc_get_memory_address(enum aal_mc_gma_type type, int opt)
+unsigned long ihk_mc_get_memory_address(enum ihk_mc_gma_type type, int opt)
 {
 	switch (type) {
-	case AAL_MC_GMA_MAP_START:
-	case AAL_MC_GMA_AVAIL_START:
+	case IHK_MC_GMA_MAP_START:
+	case IHK_MC_GMA_AVAIL_START:
 		return boot_param->start;
-	case AAL_MC_GMA_MAP_END:
-	case AAL_MC_GMA_AVAIL_END:
+	case IHK_MC_GMA_MAP_END:
+	case IHK_MC_GMA_AVAIL_END:
 		return boot_param->end;
 
-	case AAL_MC_GMA_HEAP_START:
+	case IHK_MC_GMA_HEAP_START:
 		return virt_to_phys(get_last_early_heap());
 	}
 
 	return -ENOENT;
 }
 
-struct aal_mc_cpu_info *aal_mc_get_cpu_info(void)
+struct ihk_mc_cpu_info *ihk_mc_get_cpu_info(void)
 {
-	return aal_cpu_info;
+	return ihk_cpu_info;
 }
 
 unsigned long get_transit_page_table(void)
@@ -115,41 +115,41 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 }
 
 extern void x86_issue_ipi(int, int);
-int aal_mc_interrupt_host(int cpu, int vector)
+int ihk_mc_interrupt_host(int cpu, int vector)
 {
 	x86_issue_ipi(cpu, 0xf1);
 	return 0;
 }
 
-int aal_mc_get_vector(enum aal_mc_gv_type type)
+int ihk_mc_get_vector(enum ihk_mc_gv_type type)
 {
 
 	switch (type) {
-	case AAL_GV_IKC:
+	case IHK_GV_IKC:
 		return 0xd1;
 	default:
 		return -ENOENT;
 	}
 }
 
-char *aal_mc_get_kernel_args(void)
+char *ihk_mc_get_kernel_args(void)
 {
 	return boot_param->kernel_args;
 }
 
-unsigned long aal_mc_map_memory(void *os, unsigned long phys,
+unsigned long ihk_mc_map_memory(void *os, unsigned long phys,
                                 unsigned long size)
 {
 	/* TODO: os support (currently, os is ignored and assumed to be Host) */
 	return phys;
 }
 
-void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
+void ihk_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
 {
 	return;
 }
 
-void aal_mc_setup_dma(void)
+void ihk_mc_setup_dma(void)
 {
 }
 
@@ -170,11 +170,11 @@ void x86_set_warm_reset(void)
 	asm volatile("outb %0, $0x71" : : "a"((char)0xa));
 }
 
-void mee_mc_dma_init(unsigned long cfg_addr);
+void builtin_mc_dma_init(unsigned long cfg_addr);
 
-void aal_mc_dma_init(void)
+void ihk_mc_dma_init(void)
 {
-	mee_mc_dma_init(boot_param->dma_address);
+	builtin_mc_dma_init(boot_param->dma_address);
 }
 
 static unsigned int perf_map_nehalem[] = 

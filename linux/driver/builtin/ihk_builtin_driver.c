@@ -1,7 +1,7 @@
 /**
- * \file aal_mee_driver.c
- * \brief AAL MEE Driver: AAL Host Driver 
- *                        for MEE (Manycore Emulation Environemnt)
+ * \file ihk_builtin_driver.c
+ * \brief IHK BUILTIN Driver: IHK Host Driver 
+ *                        for BUILTIN (Manycore Emulation Environemnt)
  *
  * Copyright (C) 2011-2012 Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */
@@ -26,24 +26,24 @@
 #include "builtin_dma.h"
 
 #ifndef CONFIG_SHIMOS
-#error "SHIMOS is required to build MEE!"
+#error "SHIMOS is required to build BUILTIN!"
 #endif
 
-#define MEE_OS_STATUS_INITIAL  0
-#define MEE_OS_STATUS_LOADING  1
-#define MEE_OS_STATUS_LOADED   2
-#define MEE_OS_STATUS_BOOTING  3
+#define BUILTIN_OS_STATUS_INITIAL  0
+#define BUILTIN_OS_STATUS_LOADING  1
+#define BUILTIN_OS_STATUS_LOADED   2
+#define BUILTIN_OS_STATUS_BOOTING  3
 
-#define MEE_MAX_CPUS 64
+#define BUILTIN_MAX_CPUS 64
 
-#define MEE_COM_VECTOR  0xf1
+#define BUILTIN_COM_VECTOR  0xf1
 
-/** \brief MEE boot parameter structure
+/** \brief BUILTIN boot parameter structure
  *
  * This structure contains vairous parameters both passed to the manycore 
  * kernel, and passed from the manycore kernel.
  */
-struct mee_boot_param {
+struct builtin_boot_param {
 	/** \brief SHIMOS-specific boot parameters. Memory start, end etc.
 	 * (passed to the manycore) */
 	struct shimos_boot_param bp;
@@ -69,13 +69,13 @@ struct mee_boot_param {
 	char kernel_args[256];
 };
 
-/** \brief MEE driver-specific OS structure */
-struct mee_os_data {
+/** \brief BUILTIN driver-specific OS structure */
+struct builtin_os_data {
 	/** \brief Lock for this structure */
 	spinlock_t lock;
 
 	/** \brief Pointer to the device structure */
-	struct mee_device_data *dev;
+	struct builtin_device_data *dev;
 	/** \brief Allocated CPU core mask */
 	unsigned long coremaps;
 	/** \brief Start address of the allocated memory region */
@@ -88,14 +88,14 @@ struct mee_os_data {
 	/** \brief Entry point address of this OS instance */
 	unsigned long boot_rip;
 
-	/** \brief AAL Memory information */
-	struct aal_mem_info mem_info;
-	/** \brief AAL Memory region information */
-	struct aal_mem_region mem_region;
-	/** \brief AAL CPU information */
-	struct aal_cpu_info cpu_info;
+	/** \brief IHK Memory information */
+	struct ihk_mem_info mem_info;
+	/** \brief IHK Memory region information */
+	struct ihk_mem_region mem_region;
+	/** \brief IHK CPU information */
+	struct ihk_cpu_info cpu_info;
 	/** \brief APIC ID map of the CPU cores */
-	int cpu_hw_ids[MEE_MAX_CPUS];
+	int cpu_hw_ids[BUILTIN_MAX_CPUS];
 
 	/** \brief Kernel command-line parameter.
 	 *
@@ -108,54 +108,54 @@ struct mee_os_data {
 	 *
 	 * This structure is directly accessed (read and written)
 	 * by the manycore kernel. */
-	struct mee_boot_param param;
+	struct builtin_boot_param param;
 
 	/** \brief Status of the kernel */
 	int status;
 };
 
-#define MEE_DEV_STATUS_READY    0
-#define MEE_DEV_STATUS_BOOTING  1
+#define BUILTIN_DEV_STATUS_READY    0
+#define BUILTIN_DEV_STATUS_BOOTING  1
 
-extern struct mee_dma_config_struct *mee_dma_config;
-static unsigned long mee_dma_config_pa;
+extern struct builtin_dma_config_struct *builtin_dma_config;
+static unsigned long builtin_dma_config_pa;
 
 /** \brief Driver-speicific device structure
  *
  * This structure is very simple because it is assumed that there is only
- * one MEE device (because it uses the host machine actually!) in a machine.
+ * one BUILTIN device (because it uses the host machine actually!) in a machine.
  */
-struct mee_device_data {
+struct builtin_device_data {
 	spinlock_t lock;
-	aal_device_t aal_dev;
+	ihk_device_t ihk_dev;
 	int status;
 
-	struct aal_dma_channel mee_host_channel;
+	struct ihk_dma_channel builtin_host_channel;
 };
 
-static int mee_dma_request(aal_dma_channel_t, struct aal_dma_request *);
+static int builtin_dma_request(ihk_dma_channel_t, struct ihk_dma_request *);
 
-struct aal_dma_ops mee_dma_ops = {
-	.request = mee_dma_request,
+struct ihk_dma_ops builtin_dma_ops = {
+	.request = builtin_dma_request,
 };
 
-/** \brief Implementation of aal_host_get_dma_channel.
+/** \brief Implementation of ihk_host_get_dma_channel.
  *
  * It returns the information of the only channel in the DMA emulating core. */
-static aal_dma_channel_t mee_aal_get_dma_channel(aal_device_t dev, void *priv,
+static ihk_dma_channel_t builtin_ihk_get_dma_channel(ihk_device_t dev, void *priv,
                                                  int channel)
 {
-	struct mee_device_data *data = priv;
+	struct builtin_device_data *data = priv;
 
-	data->mee_host_channel.dev = dev;
-	data->mee_host_channel.channel = 0;
-	data->mee_host_channel.ops = &mee_dma_ops;
+	data->builtin_host_channel.dev = dev;
+	data->builtin_host_channel.channel = 0;
+	data->builtin_host_channel.ops = &builtin_dma_ops;
 
-	return &data->mee_host_channel;
+	return &data->builtin_host_channel;
 }
 
 /** \brief Set the status member of the OS data with lock */
-static void set_os_status(struct mee_os_data *os, int status)
+static void set_os_status(struct builtin_os_data *os, int status)
 {
 	unsigned long flags;
 
@@ -165,7 +165,7 @@ static void set_os_status(struct mee_os_data *os, int status)
 }
 
 /** \brief Set the status member of the OS data with lock */
-static void set_dev_status(struct mee_device_data *dev, int status)
+static void set_dev_status(struct builtin_device_data *dev, int status)
 {
 	unsigned long flags;
 
@@ -175,8 +175,8 @@ static void set_dev_status(struct mee_device_data *dev, int status)
 }
 
 /** \brief Create various information structure that should be provided
- * via AAL functions. */
-static void __build_os_info(struct mee_os_data *os)
+ * via IHK functions. */
+static void __build_os_info(struct builtin_os_data *os)
 {
 	int i, c;
 
@@ -187,7 +187,7 @@ static void __build_os_info(struct mee_os_data *os)
 	os->mem_region.start = os->mem_start;
 	os->mem_region.size = os->mem_end - os->mem_start;
 	
-	for (i = 0, c = 0; i < MEE_MAX_CPUS; i++) {
+	for (i = 0, c = 0; i < BUILTIN_MAX_CPUS; i++) {
 		if (os->coremaps & (1ULL << i)) {
 			os->cpu_hw_ids[c] = i;
 			c++;
@@ -198,31 +198,31 @@ static void __build_os_info(struct mee_os_data *os)
 }
 
 /** \brief Boot a kernel. */
-static int mee_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
+static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
-	struct mee_os_data *os = priv;
-	struct mee_device_data *dev = os->dev;
+	struct builtin_os_data *os = priv;
+	struct builtin_device_data *dev = os->dev;
 	unsigned long flags;
 
 	spin_lock_irqsave(&dev->lock, flags);
-	if (dev->status != MEE_DEV_STATUS_READY) {
+	if (dev->status != BUILTIN_DEV_STATUS_READY) {
 		spin_unlock_irqrestore(&dev->lock, flags);
-		printk("mee: Device is busy booting another OS.\n");
+		printk("builtin: Device is busy booting another OS.\n");
 		return -EINVAL;
 	}
-	dev->status = MEE_DEV_STATUS_BOOTING;
+	dev->status = BUILTIN_DEV_STATUS_BOOTING;
 	spin_unlock_irqrestore(&dev->lock, flags);
 	
 	__build_os_info(os);
 	if (os->cpu_info.n_cpus < 1) {
-		dprintf("mee: There are no CPU to boot!\n");
-		set_dev_status(dev, MEE_DEV_STATUS_READY);
+		dprintf("builtin: There are no CPU to boot!\n");
+		set_dev_status(dev, BUILTIN_DEV_STATUS_READY);
 
 		return -EINVAL;
 	}
 	os->boot_cpu = os->cpu_info.hw_ids[0];
 
-	set_os_status(os, MEE_OS_STATUS_BOOTING);
+	set_os_status(os, BUILTIN_OS_STATUS_BOOTING);
 
 	dprint_var_x4(os->boot_cpu);
 	dprint_var_x8(os->boot_rip);
@@ -231,23 +231,23 @@ static int mee_aal_os_boot(aal_os_t aal_os, void *priv, int flag)
 	os->param.bp.start = os->mem_start;
 	os->param.bp.end = os->mem_end;
 	os->param.bp.cores = os->coremaps;
-	os->param.dma_address = mee_dma_config_pa;
+	os->param.dma_address = builtin_dma_config_pa;
 	os->param.ident_table = __pa(shimos_get_ident_page_table());
 	strncpy(os->param.kernel_args, os->kernel_args,
 	        sizeof(os->param.kernel_args));
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps,
-	        mee_dma_config_pa);
+	        builtin_dma_config_pa);
 
 	return shimos_boot_cpu_kloader(os->boot_cpu, os->boot_rip,
 	                               &os->param.bp);
 }
 
-static int mee_aal_os_load_mem(aal_os_t aal_os, void *priv, const char *buf,
+static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
                                unsigned long size, long offset)
 {
-	struct mee_os_data *os = priv;
+	struct builtin_os_data *os = priv;
 	unsigned long phys, to_read, flags;
 	void *virt;
 
@@ -255,21 +255,21 @@ static int mee_aal_os_load_mem(aal_os_t aal_os, void *priv, const char *buf,
 
 	/* We just load from the lowest address of the private memory */
 	if (!os->coremaps || os->mem_end - os->mem_start < 0) {
-		printk("mee: OS is not ready to boot.\n");
+		printk("builtin: OS is not ready to boot.\n");
 		return -EINVAL;
 	}
 	if (os->mem_start + size > os->mem_end) {
-		printk("mee: OS is too big to load.\n");
+		printk("builtin: OS is too big to load.\n");
 		return -E2BIG;
 	}
 
 	spin_lock_irqsave(&os->lock, flags);
-	if (os->status != MEE_OS_STATUS_INITIAL) {
-		printk("mee: OS status is not initial.\n");
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		printk("builtin: OS status is not initial.\n");
 		spin_unlock_irqrestore(&os->lock, flags);
 		return -EBUSY;
 	}
-	os->status = MEE_OS_STATUS_LOADING;
+	os->status = BUILTIN_OS_STATUS_LOADING;
 	spin_unlock_irqrestore(&os->lock, flags);
 
 	offset += os->mem_start;
@@ -279,9 +279,9 @@ static int mee_aal_os_load_mem(aal_os_t aal_os, void *priv, const char *buf,
 	for (; size > 0; ) {
 		virt = ioremap_cache(phys, PAGE_SIZE);
 		if (!virt) {
-			dprintf("mee: Failed to map %lx\n", phys);
+			dprintf("builtin: Failed to map %lx\n", phys);
 
-			set_os_status(os, MEE_OS_STATUS_INITIAL);
+			set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 
 			return -ENOMEM;
 		}
@@ -304,18 +304,18 @@ static int mee_aal_os_load_mem(aal_os_t aal_os, void *priv, const char *buf,
 
 	os->boot_rip = os->mem_start;
 
-	set_os_status(os, MEE_OS_STATUS_INITIAL);
+	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 	
 	return 0;
 }
 
-static int mee_aal_os_shutdown(aal_os_t aal_os, void *priv, int flag)
+static int builtin_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 {
-	struct mee_os_data *os = priv;
+	struct builtin_os_data *os = priv;
 	int i, apicid;
 	unsigned long flags, st, ed;
 
-	for (i = MEE_MAX_CPUS - 1; i >= 0; i--) {
+	for (i = BUILTIN_MAX_CPUS - 1; i >= 0; i--) {
 		if (os->coremaps & (1ULL << i)) {
 			shimos_reset_cpu(i);
 
@@ -329,7 +329,7 @@ static int mee_aal_os_shutdown(aal_os_t aal_os, void *priv, int flag)
 	st = os->mem_start;
 	ed = os->mem_end;
 	os->mem_start = os->mem_end = 0;
-	os->status = MEE_OS_STATUS_INITIAL;
+	os->status = BUILTIN_OS_STATUS_INITIAL;
 	spin_unlock_irqrestore(&os->lock, flags);
 
 	shimos_free_memory(st, ed - st);
@@ -337,26 +337,26 @@ static int mee_aal_os_shutdown(aal_os_t aal_os, void *priv, int flag)
 	return 0;
 }
 
-static int mee_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
-                                     struct aal_resource *resource)
+static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
+                                     struct ihk_resource *resource)
 {
-	struct mee_os_data *os = priv;
-	int apicids[MEE_MAX_CPUS];
+	struct builtin_os_data *os = priv;
+	int apicids[BUILTIN_MAX_CPUS];
 	int i, n, ret = 0;
 	unsigned long flags;
 
 	spin_lock_irqsave(&os->lock, flags);
-	if (os->status != MEE_OS_STATUS_INITIAL) {
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
 		spin_unlock_irqrestore(&os->lock, flags);
 		return -EBUSY;
 	}
-	os->status = MEE_OS_STATUS_LOADING;
+	os->status = BUILTIN_OS_STATUS_LOADING;
 	spin_unlock_irqrestore(&os->lock, flags);
 
 	if (resource->cpu_cores) {
-		if (resource->cpu_cores > MEE_MAX_CPUS) {
+		if (resource->cpu_cores > BUILTIN_MAX_CPUS) {
 			ret = -EINVAL;
-		} else if (resource->flags & AAL_RESOURCE_FLAG_CPU_SPECIFIED) {
+		} else if (resource->flags & IHK_RESOURCE_FLAG_CPU_SPECIFIED) {
 			n = resource->cpu_cores;
 			if (shimos_reserve_cpus(resource->cpu_cores, 
 			                        resource->cores) == 0) {
@@ -370,8 +370,8 @@ static int mee_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
 		} else {
 			n = shimos_allocate_cpus(resource->cpu_cores, apicids);
 			for (i = 0; i < n; i++) {
-				if (apicids[i] < MEE_MAX_CPUS) {
-					dprintf("MEE: Core %d allocated.\n",
+				if (apicids[i] < BUILTIN_MAX_CPUS) {
+					dprintf("BUILTIN: Core %d allocated.\n",
 					        apicids[i]);
 					os->coremaps |= (1ULL << apicids[i]);
 				}
@@ -384,7 +384,7 @@ static int mee_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
 
 	/* TODO: When we allocate more than an area... */
 	if (!ret && resource->mem_size) {
-		if (resource->flags & AAL_RESOURCE_FLAG_MEM_SPECIFIED) {
+		if (resource->flags & IHK_RESOURCE_FLAG_MEM_SPECIFIED) {
 			if (shimos_reserve_memory(resource->mem_start,
 			                          resource->mem_size)) {
 				ret = -ENOMEM;
@@ -398,68 +398,68 @@ static int mee_aal_os_alloc_resource(aal_os_t aal_os, void *priv,
 			os->mem_start = resource->mem_start;
 			os->mem_end = os->mem_start + resource->mem_size;
 
-			dprintf("MEE: Memory %lx - %lx allocated.\n",
+			dprintf("BUILTIN: Memory %lx - %lx allocated.\n",
 			        os->mem_start, os->mem_end);
 		}
 	}
 
-	set_os_status(os, MEE_OS_STATUS_INITIAL);
+	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 	return ret;
 }
 
-static enum aal_os_status mee_aal_os_query_status(aal_os_t aal_os, void *priv)
+static enum ihk_os_status builtin_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 {
-	struct mee_os_data *os = priv;
+	struct builtin_os_data *os = priv;
 	int status;
 
 	status = os->status;
 
-	if (status == MEE_OS_STATUS_BOOTING) {
+	if (status == BUILTIN_OS_STATUS_BOOTING) {
 		if (os->param.bp.status == 1) {
-			return AAL_OS_STATUS_BOOTED;
+			return IHK_OS_STATUS_BOOTED;
 		} else if(os->param.bp.status == 2) {
-			return AAL_OS_STATUS_READY;
+			return IHK_OS_STATUS_READY;
 		} else {
-			return AAL_OS_STATUS_BOOTING;
+			return IHK_OS_STATUS_BOOTING;
 		}
 	} else {
-		return AAL_OS_STATUS_NOT_BOOTED;
+		return IHK_OS_STATUS_NOT_BOOTED;
 	}
 }
 
-static int mee_aal_os_set_kargs(aal_os_t aal_os, void *priv, char *buf)
+static int builtin_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 {
 	unsigned long flags;
-	struct mee_os_data *os = priv;
+	struct builtin_os_data *os = priv;
 
 	spin_lock_irqsave(&os->lock, flags);
-	if (os->status != MEE_OS_STATUS_INITIAL) {
-		printk("mee: OS status is not initial.\n");
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		printk("builtin: OS status is not initial.\n");
 		spin_unlock_irqrestore(&os->lock, flags);
 		return -EBUSY;
 	}
-	os->status = MEE_OS_STATUS_LOADING;
+	os->status = BUILTIN_OS_STATUS_LOADING;
 	spin_unlock_irqrestore(&os->lock, flags);
 
 	strncpy(os->kernel_args, buf, sizeof(os->kernel_args));
 
-	set_os_status(os, MEE_OS_STATUS_INITIAL);
+	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 
 	return 0;
 }
 
-static int mee_aal_os_wait_for_status(aal_os_t aal_os, void *priv,
-                                      enum aal_os_status status, 
+static int builtin_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
+                                      enum ihk_os_status status, 
                                       int sleepable, int timeout)
 {
-	enum aal_os_status s;
+	enum ihk_os_status s;
 	if (sleepable) {
 		/* TODO: Enable notification of status change, and wait */
 		return -1;
 	} else {
 		/* Polling */
-		while ((s = mee_aal_os_query_status(aal_os, priv)),
-		       s != status && s < AAL_OS_STATUS_SHUTDOWN 
+		while ((s = builtin_ihk_os_query_status(ihk_os, priv)),
+		       s != status && s < IHK_OS_STATUS_SHUTDOWN 
 		       && timeout > 0) {
 			mdelay(100);
 			timeout--;
@@ -468,10 +468,10 @@ static int mee_aal_os_wait_for_status(aal_os_t aal_os, void *priv,
 	}
 }
 
-static int mee_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
+static int builtin_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
                                       int cpu, int v)
 {
-	struct mee_os_data *os = priv;
+	struct builtin_os_data *os = priv;
 
 	/* better calcuation or make map */
 	if (cpu < 0 || cpu >= os->cpu_info.n_cpus) {
@@ -482,7 +482,7 @@ static int mee_aal_os_issue_interrupt(aal_os_t aal_os, void *priv,
 	return -EINVAL;
 }
 
-static unsigned long mee_aal_os_map_memory(aal_os_t aal_os, void *priv,
+static unsigned long builtin_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
                                            unsigned long remote_phys,
                                            unsigned long size)
 {
@@ -490,22 +490,22 @@ static unsigned long mee_aal_os_map_memory(aal_os_t aal_os, void *priv,
 	return remote_phys;
 }
 
-static int mee_aal_os_unmap_memory(aal_os_t aal_os, void *priv,
+static int builtin_ihk_os_unmap_memory(ihk_os_t ihk_os, void *priv,
                                     unsigned long local_phys,
                                     unsigned long size)
 {
 	return 0;
 }
 
-static int mee_aal_os_get_special_addr(aal_os_t aal_os, void *priv,
-                                       enum aal_special_addr_type type,
+static int builtin_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
+                                       enum ihk_special_addr_type type,
                                        unsigned long *addr,
                                        unsigned long *size)
 {
-	struct mee_os_data *os = priv;
+	struct builtin_os_data *os = priv;
 
 	switch (type) {
-	case AAL_SPADDR_KMSG:
+	case IHK_SPADDR_KMSG:
 		if (os->param.msg_buffer) {
 			*addr = os->param.msg_buffer;
 			*size = 8192;
@@ -513,14 +513,14 @@ static int mee_aal_os_get_special_addr(aal_os_t aal_os, void *priv,
 		}
 		break;
 
-	case AAL_SPADDR_MIKC_QUEUE_RECV:
+	case IHK_SPADDR_MIKC_QUEUE_RECV:
 		if (os->param.mikc_queue_recv) {
 			*addr = os->param.mikc_queue_recv;
 			*size = MASTER_IKCQ_SIZE;
 			return 0;
 		}
 		break;
-	case AAL_SPADDR_MIKC_QUEUE_SEND:
+	case IHK_SPADDR_MIKC_QUEUE_SEND:
 		if (os->param.mikc_queue_send) {
 			*addr = os->param.mikc_queue_send;
 			*size = MASTER_IKCQ_SIZE;
@@ -532,43 +532,43 @@ static int mee_aal_os_get_special_addr(aal_os_t aal_os, void *priv,
 	return -EINVAL;
 }
 
-static long mee_aal_os_debug_request(aal_os_t aal_os, void *priv,
+static long builtin_ihk_os_debug_request(ihk_os_t ihk_os, void *priv,
                                      unsigned int req, unsigned long arg)
 {
 	switch (req) {
-	case AAL_OS_DEBUG_START:
-		mee_aal_os_issue_interrupt(aal_os, priv, (arg >> 8),
+	case IHK_OS_DEBUG_START:
+		builtin_ihk_os_issue_interrupt(ihk_os, priv, (arg >> 8),
 		                           (arg & 0xff));
 		return 0;
 	}
 	return -EINVAL;
 }
 
-static LIST_HEAD(mee_interrupt_handlers);
+static LIST_HEAD(builtin_interrupt_handlers);
 
-static int mee_aal_os_register_handler(aal_os_t os, void *os_priv, int itype,
-                                       struct aal_host_interrupt_handler *h)
+static int builtin_ihk_os_register_handler(ihk_os_t os, void *os_priv, int itype,
+                                       struct ihk_host_interrupt_handler *h)
 {
 	h->os = os;
 	h->os_priv = os_priv;
-	list_add_tail(&h->list, &mee_interrupt_handlers);
+	list_add_tail(&h->list, &builtin_interrupt_handlers);
 
 	return 0;
 }
 
-static int mee_aal_os_unregister_handler(aal_os_t os, void *os_priv, int itype,
-                                         struct aal_host_interrupt_handler *h)
+static int builtin_ihk_os_unregister_handler(ihk_os_t os, void *os_priv, int itype,
+                                         struct ihk_host_interrupt_handler *h)
 {
 	list_del(&h->list);
 	return 0;
 }
 
-static irqreturn_t mee_irq_handler(int irq, void *data)
+static irqreturn_t builtin_irq_handler(int irq, void *data)
 {
-	struct aal_host_interrupt_handler *h;
+	struct ihk_host_interrupt_handler *h;
 
 	/* XXX: Linear search? */
-	list_for_each_entry(h, &mee_interrupt_handlers, list) {
+	list_for_each_entry(h, &builtin_interrupt_handlers, list) {
 		if (h->func) {
 			h->func(h->os, h->os_priv, h->priv);
 		}
@@ -577,56 +577,56 @@ static irqreturn_t mee_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static struct aal_mem_info *mee_aal_os_get_memory_info(aal_os_t aal_os,
+static struct ihk_mem_info *builtin_ihk_os_get_memory_info(ihk_os_t ihk_os,
                                                        void *priv)
 {
-	struct mee_os_data *os = priv;
+	struct builtin_os_data *os = priv;
 
 	return &os->mem_info;
 }
 
-static struct aal_cpu_info *mee_aal_os_get_cpu_info(aal_os_t aal_os, void *priv)
+static struct ihk_cpu_info *builtin_ihk_os_get_cpu_info(ihk_os_t ihk_os, void *priv)
 {
-	struct mee_os_data *os = priv;
+	struct builtin_os_data *os = priv;
 
 	return &os->cpu_info;
 }
 
-static struct aal_os_ops mee_aal_os_ops = {
-	.load_mem = mee_aal_os_load_mem,
-	.boot = mee_aal_os_boot,
-	.shutdown = mee_aal_os_shutdown,
-	.alloc_resource = mee_aal_os_alloc_resource,
-	.query_status = mee_aal_os_query_status,
-	.wait_for_status = mee_aal_os_wait_for_status,
-	.set_kargs = mee_aal_os_set_kargs,
-	.issue_interrupt = mee_aal_os_issue_interrupt,
-	.map_memory = mee_aal_os_map_memory,
-	.unmap_memory = mee_aal_os_unmap_memory,
-	.register_handler = mee_aal_os_register_handler,
-	.unregister_handler = mee_aal_os_unregister_handler,
-	.get_special_addr = mee_aal_os_get_special_addr,
-	.debug_request = mee_aal_os_debug_request,
-	.get_memory_info = mee_aal_os_get_memory_info,
-	.get_cpu_info = mee_aal_os_get_cpu_info,
+static struct ihk_os_ops builtin_ihk_os_ops = {
+	.load_mem = builtin_ihk_os_load_mem,
+	.boot = builtin_ihk_os_boot,
+	.shutdown = builtin_ihk_os_shutdown,
+	.alloc_resource = builtin_ihk_os_alloc_resource,
+	.query_status = builtin_ihk_os_query_status,
+	.wait_for_status = builtin_ihk_os_wait_for_status,
+	.set_kargs = builtin_ihk_os_set_kargs,
+	.issue_interrupt = builtin_ihk_os_issue_interrupt,
+	.map_memory = builtin_ihk_os_map_memory,
+	.unmap_memory = builtin_ihk_os_unmap_memory,
+	.register_handler = builtin_ihk_os_register_handler,
+	.unregister_handler = builtin_ihk_os_unregister_handler,
+	.get_special_addr = builtin_ihk_os_get_special_addr,
+	.debug_request = builtin_ihk_os_debug_request,
+	.get_memory_info = builtin_ihk_os_get_memory_info,
+	.get_cpu_info = builtin_ihk_os_get_cpu_info,
 };	
 
-static struct aal_register_os_data mee_os_reg_data = {
-	.name = "meeos",
+static struct ihk_register_os_data builtin_os_reg_data = {
+	.name = "builtinos",
 	.flag = 0,
-	.ops = &mee_aal_os_ops,
+	.ops = &builtin_ihk_os_ops,
 };
 
-static int mee_aal_create_os(aal_device_t aal_dev, void *priv,
-                             unsigned long arg, aal_os_t aal_os,
-                             struct aal_register_os_data *regdata)
+static int builtin_ihk_create_os(ihk_device_t ihk_dev, void *priv,
+                             unsigned long arg, ihk_os_t ihk_os,
+                             struct ihk_register_os_data *regdata)
 {
-	struct mee_device_data *data = priv;
-	struct mee_os_data *os;
+	struct builtin_device_data *data = priv;
+	struct builtin_os_data *os;
 
-	*regdata = mee_os_reg_data;
+	*regdata = builtin_os_reg_data;
 
-	os = kzalloc(sizeof(struct mee_os_data), GFP_KERNEL);
+	os = kzalloc(sizeof(struct builtin_os_data), GFP_KERNEL);
 	if (!os) {
 		data->status = 0; /* No other one should reach here */
 		return -ENOMEM;
@@ -640,9 +640,9 @@ static int mee_aal_create_os(aal_device_t aal_dev, void *priv,
 
 /** \brief Map a remote physical memory to the local physical memory.
  *
- * In MEE, all the kernels including the host kernel are running in the
+ * In BUILTIN, all the kernels including the host kernel are running in the
  * same physical memory map, thus there is nothing to do. */
-static unsigned long mee_aal_map_memory(aal_device_t aal_dev, void *priv,
+static unsigned long builtin_ihk_map_memory(ihk_device_t ihk_dev, void *priv,
                                         unsigned long remote_phys,
                                         unsigned long size)
 {
@@ -650,107 +650,107 @@ static unsigned long mee_aal_map_memory(aal_device_t aal_dev, void *priv,
 	return remote_phys;
 }
 
-static int mee_aal_unmap_memory(aal_device_t aal_dev, void *priv,
+static int builtin_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
                                 unsigned long local_phys,
                                 unsigned long size)
 {
 	return 0;
 }
 
-static void *mee_aal_map_virtual(aal_device_t aal_dev, void *priv,
+static void *builtin_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
                                  unsigned long phys, unsigned long size,
                                  void *virt, int flags)
 {
 	if (!virt) {
 		return ioremap_cache(phys, size);
 	} else {
-		return aal_host_map_generic(aal_dev, phys, virt, size, flags);
+		return ihk_host_map_generic(ihk_dev, phys, virt, size, flags);
 	}
 }
 
-static int mee_aal_unmap_virtual(aal_device_t aal_dev, void *priv,
+static int builtin_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
                                   void *virt, unsigned long size)
 {
 	if ((unsigned long)virt >= PAGE_OFFSET) {
 		iounmap(virt);
 		return 0;
 	} else {
-		return aal_host_unmap_generic(aal_dev, virt, size);
+		return ihk_host_unmap_generic(ihk_dev, virt, size);
 	}
 	return 0;
 }
 
-static long mee_aal_debug_request(aal_device_t aal_dev, void *priv,
+static long builtin_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
                                   unsigned int req, unsigned long arg)
 {
 	switch (req) {
-	case AAL_DEVICE_DEBUG_START + 0x10:
-		mee_dma_issue_interrupt();
+	case IHK_DEVICE_DEBUG_START + 0x10:
+		builtin_dma_issue_interrupt();
 		return 0;
 	}
 	return -EINVAL;
 }
 
-static struct aal_device_ops mee_aal_device_ops = {
-	.create_os = mee_aal_create_os,
-	.map_memory = mee_aal_map_memory,
-	.unmap_memory = mee_aal_unmap_memory,
-	.map_virtual = mee_aal_map_virtual,
-	.unmap_virtual = mee_aal_unmap_virtual,
-	.debug_request = mee_aal_debug_request,
-	.get_dma_channel = mee_aal_get_dma_channel,
+static struct ihk_device_ops builtin_ihk_device_ops = {
+	.create_os = builtin_ihk_create_os,
+	.map_memory = builtin_ihk_map_memory,
+	.unmap_memory = builtin_ihk_unmap_memory,
+	.map_virtual = builtin_ihk_map_virtual,
+	.unmap_virtual = builtin_ihk_unmap_virtual,
+	.debug_request = builtin_ihk_debug_request,
+	.get_dma_channel = builtin_ihk_get_dma_channel,
 };	
 
 /** \brief The driver-specific driver structure
  *
- * Since there is only one MEE "device" in machine, this structure is
+ * Since there is only one BUILTIN "device" in machine, this structure is
  * statically allocated. */
-static struct mee_device_data mee_data;
+static struct builtin_device_data builtin_data;
 
-static struct aal_register_device_data mee_dev_reg_data = {
-	.name = "mee",
+static struct ihk_register_device_data builtin_dev_reg_data = {
+	.name = "builtin",
 	.flag = 0,
-	.priv = &mee_data,
-	.ops = &mee_aal_device_ops,
+	.priv = &builtin_data,
+	.ops = &builtin_ihk_device_ops,
 };
 
-static int mee_dma_init(void);
-static void mee_dma_exit(void);
+static int builtin_dma_init(void);
+static void builtin_dma_exit(void);
 
-static int __init mee_init(void)
+static int __init builtin_init(void)
 {
-	aal_device_t aald;
+	ihk_device_t ihkd;
 
-	printk(KERN_INFO "mee: MEE initializing...\n");
+	printk(KERN_INFO "builtin: BUILTIN initializing...\n");
 
-	spin_lock_init(&mee_data.lock);
+	spin_lock_init(&builtin_data.lock);
 
-	if (!(aald = aal_register_device(&mee_dev_reg_data))) {
-		printk(KERN_INFO "mee: Failed to register aal driver.\n");
+	if (!(ihkd = ihk_register_device(&builtin_dev_reg_data))) {
+		printk(KERN_INFO "builtin: Failed to register ihk driver.\n");
 		return -ENOMEM;
 	}
 
-	mee_data.aal_dev = aald;
+	builtin_data.ihk_dev = ihkd;
 
-	shimos_set_irq_handler(mee_irq_handler);
+	shimos_set_irq_handler(builtin_irq_handler);
 
-	mee_dma_init();
+	builtin_dma_init();
 
 	return 0;
 }
 
-static void __exit mee_exit(void)
+static void __exit builtin_exit(void)
 {
-	printk(KERN_INFO "mee: MEE finalizing...\n");
-	aal_unregister_device(mee_data.aal_dev);
+	printk(KERN_INFO "builtin: BUILTIN finalizing...\n");
+	ihk_unregister_device(builtin_data.ihk_dev);
 
 	shimos_set_irq_handler(NULL);
 
-	mee_dma_exit();
+	builtin_dma_exit();
 }
 
-module_init(mee_init);
-module_exit(mee_exit);
+module_init(builtin_init);
+module_exit(builtin_exit);
 
 MODULE_LICENSE("Dual BSD/GPL");
 
@@ -759,22 +759,22 @@ MODULE_LICENSE("Dual BSD/GPL");
  */
 /** \brief APIC ID of the CPU core to use as a DMA-emulating core.
  * (Module parameter) */
-static int mee_dma_apicid = -1;
-module_param(mee_dma_apicid, int, 0444);
+static int builtin_dma_apicid = -1;
+module_param(builtin_dma_apicid, int, 0444);
 
 /** \brief DMA page table used by the DMA core
  *
  * This page table contains the kernel mapping and identity mapping */
-static unsigned long *mee_dma_page_table;
-/** \brief Physical address of mee_dma_page_table */
-static unsigned long mee_dma_pt_pa;
+static unsigned long *builtin_dma_page_table;
+/** \brief Physical address of builtin_dma_page_table */
+static unsigned long builtin_dma_pt_pa;
 /** \brief Stack used by the DMA core */
-static unsigned long mee_dma_stack[512] __attribute__((aligned(4096)));
+static unsigned long builtin_dma_stack[512] __attribute__((aligned(4096)));
 
 extern void *shimos_get_ident_page_table(void);
 
 /** \brief Vector number that triggers action of the DMA core */
-#define MEE_DMA_VECTOR 0xf2
+#define BUILTIN_DMA_VECTOR 0xf2
 static struct idt_entry{
 	uint32_t desc[4];
 } *dma_idt;
@@ -787,7 +787,7 @@ struct x86_desc_ptr {
 /** \brief IDT used by the DMA core */
 static struct x86_desc_ptr dma_idt_ptr;
 
-extern char mee_dma_intr_enter[];
+extern char builtin_dma_intr_enter[];
 
 /** \brief Set an entry in IDT. */
 static void set_idt_entry(int idx, unsigned long addr)
@@ -806,7 +806,7 @@ static void __prepare_idt(void)
 	dma_idt_ptr.size = sizeof(struct idt_entry) * 256;
 	dma_idt_ptr.address = (unsigned long)dma_idt;
 
-	set_idt_entry(MEE_DMA_VECTOR, (unsigned long)mee_dma_intr_enter);
+	set_idt_entry(BUILTIN_DMA_VECTOR, (unsigned long)builtin_dma_intr_enter);
 }
 
 /** \brief Initialization function that is executed by the DMA core
@@ -818,20 +818,20 @@ static void shimos_dma_start(void)
 	asm volatile("movq %%cr3, %0" : "=r"(cr3));
 
 	/* Copy the ident area */
-	memcpy(mee_dma_page_table,
+	memcpy(builtin_dma_page_table,
 	       shimos_get_ident_page_table(),
 	       PAGE_SIZE);
 
 	/* Copy the kernel area */
-	memcpy(mee_dma_page_table + 256,
+	memcpy(builtin_dma_page_table + 256,
 	       phys_to_virt(cr3 + (PAGE_SIZE >> 1)),
 	       PAGE_SIZE >> 1);
 
 	asm volatile("lidt %0" : : "m"(dma_idt_ptr));
 
-	asm volatile("movq %0, %%cr3" : : "r"(mee_dma_pt_pa));
+	asm volatile("movq %0, %%cr3" : : "r"(builtin_dma_pt_pa));
 	asm volatile("movq %0, %%rsp\n"
-	             "callq shimos_dma_main" : : "r"(mee_dma_stack + 512));
+	             "callq shimos_dma_main" : : "r"(builtin_dma_stack + 512));
 }
 
 /** \brief Initialization function of the DMA core
@@ -840,45 +840,45 @@ static void shimos_dma_start(void)
  * (interrupt tables and memory tables), then boot the DMA core,
  * and finally waits of the DMA core to boot.
  */
-static int mee_dma_init(void)
+static int builtin_dma_init(void)
 {
 	int apicid;
 
-	if (mee_dma_apicid >= 0) {
-		if (shimos_reserve_cpus(1, &mee_dma_apicid)) {
-			printk("MEE: Failed to reserve CPU core for DMA!\n");
+	if (builtin_dma_apicid >= 0) {
+		if (shimos_reserve_cpus(1, &builtin_dma_apicid)) {
+			printk("BUILTIN: Failed to reserve CPU core for DMA!\n");
 			return -ENOMEM;
 		}
 	} else { 
 		if (shimos_allocate_cpus(1, &apicid) != 1) {
-			printk("MEE: Failed to allocate CPU core for DMA!\n");
+			printk("BUILTIN: Failed to allocate CPU core for DMA!\n");
 			return -ENOMEM;
 		}
-		mee_dma_apicid = apicid;
+		builtin_dma_apicid = apicid;
 	}
-	printk("MEE: DMA Core APIC ID = %d\n", mee_dma_apicid);
+	printk("BUILTIN: DMA Core APIC ID = %d\n", builtin_dma_apicid);
 
 	/* XXX: module only */
 	__prepare_idt();
-	mee_dma_page_table = (void *)__get_free_page(GFP_KERNEL);
-	mee_dma_pt_pa = virt_to_phys(mee_dma_page_table);
-	printk("Page table : %p => %lx\n", mee_dma_page_table, mee_dma_pt_pa);
+	builtin_dma_page_table = (void *)__get_free_page(GFP_KERNEL);
+	builtin_dma_pt_pa = virt_to_phys(builtin_dma_page_table);
+	printk("Page table : %p => %lx\n", builtin_dma_page_table, builtin_dma_pt_pa);
 
-	mee_dma_config = kmalloc(sizeof(struct mee_dma_config_struct),
+	builtin_dma_config = kmalloc(sizeof(struct builtin_dma_config_struct),
 	                         GFP_KERNEL);
-	mee_dma_config_pa = virt_to_phys(mee_dma_config);
+	builtin_dma_config_pa = virt_to_phys(builtin_dma_config);
 
-	shimos_boot_cpu_linux(mee_dma_apicid, (unsigned long)shimos_dma_start);
+	shimos_boot_cpu_linux(builtin_dma_apicid, (unsigned long)shimos_dma_start);
 
 	/* Wait for dma boot */
 
-	while (!mee_dma_config->status) {
+	while (!builtin_dma_config->status) {
 		mb();
 		cpu_relax();
 	}
-	printk("DMA Start Acked : %ld\n", sizeof(struct aal_dma_request));
+	printk("DMA Start Acked : %ld\n", sizeof(struct ihk_dma_request));
 
-	mee_dma_desc_init();
+	builtin_dma_desc_init();
 
 	return 0;
 }
@@ -886,27 +886,27 @@ static int mee_dma_init(void)
 /** \brief Finalization function of the DMA core.
  *
  * This function resets the DMA core and frees pages. */
-static void mee_dma_exit(void)
+static void builtin_dma_exit(void)
 {
-	shimos_reset_cpu(mee_dma_apicid);
-	shimos_free_cpus(1, &mee_dma_apicid);
+	shimos_reset_cpu(builtin_dma_apicid);
+	shimos_free_cpus(1, &builtin_dma_apicid);
 
-	free_page((unsigned long)mee_dma_page_table);
+	free_page((unsigned long)builtin_dma_page_table);
 	free_page((unsigned long)dma_idt);
 }
 
 /** \brief Issues an interrupt to the DMA core. */
-void mee_dma_issue_interrupt(void)
+void builtin_dma_issue_interrupt(void)
 {
-	shimos_issue_ipi(mee_dma_apicid, MEE_DMA_VECTOR);
+	shimos_issue_ipi(builtin_dma_apicid, BUILTIN_DMA_VECTOR);
 }
 
-extern int __mee_dma_request(aal_device_t dev, int channel,
-                             struct aal_dma_request *req);
-/** \brief Wrapper function for __mee_dma_request. */
-static int mee_dma_request(aal_dma_channel_t channel, struct aal_dma_request *r)
+extern int __builtin_dma_request(ihk_device_t dev, int channel,
+                             struct ihk_dma_request *req);
+/** \brief Wrapper function for __builtin_dma_request. */
+static int builtin_dma_request(ihk_dma_channel_t channel, struct ihk_dma_request *r)
 {
-	__mee_dma_request(channel->dev, channel->channel, r);
+	__builtin_dma_request(channel->dev, channel->channel, r);
 
 	return 0;
 }

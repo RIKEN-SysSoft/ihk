@@ -10,17 +10,17 @@
 #include "mic_mmio.h"
 #include <sysdeps/mic/mic_host.h>
 
-#define KNF_BOOT_MAGIC_BOOTED       0x25470290
-#define KNF_BOOT_MAGIC_READY        0x25470293
+#define MIC_BOOT_MAGIC_BOOTED       0x25470290
+#define MIC_BOOT_MAGIC_READY        0x25470293
 
 extern void main(void);
 extern void setup_x86(void);
 extern void init_sfi(void);
 
 static unsigned char stack[8192] __attribute__((aligned(4096)));
-extern struct aal_kmsg_buf kmsg_buf;
+extern struct ihk_kmsg_buf kmsg_buf;
 
-static struct knf_boot_param *boot_param;
+static struct mic_boot_param *boot_param;
 
 void gtt_write(int index, unsigned long phys, unsigned int enable)
 {
@@ -41,7 +41,7 @@ unsigned long db_smtp_phys;
 
 static void init_smpt(void)
 {
-#ifdef CONFIG_KNF
+#ifdef CONFIG_MIC
 	/* 0 - 32 GB */
 	sbox_write(SBOX_SMPT00, BUILD_SMPT(SNOOP_ON, 0));
 	sbox_write(SBOX_SMPT01, BUILD_SMPT(SNOOP_ON, 1));
@@ -72,7 +72,7 @@ static void init_smpt(void)
 		smpt_reg_offset += 4;
 	}
 #endif /* KNC_MAP_MICPA */
-#endif /* CONFIG_KNF */
+#endif /* CONFIG_MIC */
 
 #if 0
 	uint64_t host_physaddr = 0;
@@ -107,8 +107,8 @@ static void setup_boot_param(void)
 	low = sbox_read(SBOX_SCRATCH15);
 
 	/* Unfortunately, it cannot be accessed because it's not mapped. */
-	boot_param = (struct knf_boot_param *)
-		aal_mc_map_memory(NULL, ((high << 32L) | low),
+	boot_param = (struct mic_boot_param *)
+		ihk_mc_map_memory(NULL, ((high << 32L) | low),
 		                  sizeof(*boot_param));
 }
 
@@ -134,17 +134,17 @@ void arch_start(unsigned long param, unsigned long phys_address)
 
 void arch_ready(void)
 {
-	sbox_write(SBOX_SCRATCH12, KNF_BOOT_MAGIC_READY);
+	sbox_write(SBOX_SCRATCH12, MIC_BOOT_MAGIC_READY);
 }
 
 void arch_init(void)
 {
 	/* Notify the address of the kmsg */
 	sbox_write(SBOX_SCRATCH14, (unsigned int)virt_to_phys(&kmsg_buf));
-	sbox_write(SBOX_SCRATCH11, AAL_KMSG_SIZE);
+	sbox_write(SBOX_SCRATCH11, IHK_KMSG_SIZE);
 
 	/* Ack boot (trampoline code shall be free'd) */
-	sbox_write(SBOX_SCRATCH12, KNF_BOOT_MAGIC_BOOTED);
+	sbox_write(SBOX_SCRATCH12, MIC_BOOT_MAGIC_BOOTED);
 
 	init_sfi();
 
@@ -168,7 +168,7 @@ void arch_set_mikc_queue(void *rq, void *wq)
 	kprintf("MIKC rq: 0x%lX, wq: 0x%lX\n", virt_to_phys(rq), virt_to_phys(wq));
 }
 
-int aal_mc_interrupt_host(int cpu, int vector)
+int ihk_mc_interrupt_host(int cpu, int vector)
 {
 	unsigned int reg;
 	/* Vector is virtual vector, and we use interrupt 0 anyway */
@@ -179,44 +179,44 @@ int aal_mc_interrupt_host(int cpu, int vector)
 	return 0;
 }
 
-extern unsigned long sfi_get_memory_address(enum aal_mc_gma_type type, int opt);
-extern struct aal_mc_cpu_info *sfi_get_cpu_info(void);
+extern unsigned long sfi_get_memory_address(enum ihk_mc_gma_type type, int opt);
+extern struct ihk_mc_cpu_info *sfi_get_cpu_info(void);
 
-unsigned long aal_mc_get_memory_address(enum aal_mc_gma_type type, int opt)
+unsigned long ihk_mc_get_memory_address(enum ihk_mc_gma_type type, int opt)
 {
 	switch (type) {
-	case AAL_MC_GMA_MAP_START:
-	case AAL_MC_GMA_MAP_END:
-	case AAL_MC_GMA_AVAIL_START:
-	case AAL_MC_GMA_AVAIL_END:
+	case IHK_MC_GMA_MAP_START:
+	case IHK_MC_GMA_MAP_END:
+	case IHK_MC_GMA_AVAIL_START:
+	case IHK_MC_GMA_AVAIL_END:
 		return sfi_get_memory_address(type, opt);
-	case AAL_MC_GMA_HEAP_START:
+	case IHK_MC_GMA_HEAP_START:
 		return virt_to_phys(get_last_early_heap());
-	case AAL_MC_NR_RESERVED_AREAS:
-	case AAL_MC_RESERVED_AREA_START:
-	case AAL_MC_RESERVED_AREA_END:
+	case IHK_MC_NR_RESERVED_AREAS:
+	case IHK_MC_RESERVED_AREA_START:
+	case IHK_MC_RESERVED_AREA_END:
 		return sfi_get_memory_address(type, opt);
 	}
 
 	return -ENOENT;
 }
 
-struct aal_mc_cpu_info *aal_mc_get_cpu_info(void)
+struct ihk_mc_cpu_info *ihk_mc_get_cpu_info(void)
 {
 	return sfi_get_cpu_info();
 }
 
-int aal_mc_get_vector(enum aal_mc_gv_type type)
+int ihk_mc_get_vector(enum ihk_mc_gv_type type)
 {
 	switch (type) {
-	case AAL_GV_IKC:
+	case IHK_GV_IKC:
 		return 0xd1;
 	default:
 		return -ENOENT;
 	}
 }
 
-unsigned long aal_mc_map_memory(void *os, unsigned long phys,
+unsigned long ihk_mc_map_memory(void *os, unsigned long phys,
                                 unsigned long size)
 {
 	/* TODO: os support (currently, os is ignored and assumed to be Host) */
@@ -224,7 +224,7 @@ unsigned long aal_mc_map_memory(void *os, unsigned long phys,
 	                  phys >> MIC_SYSTEM_PAGE_SHIFT);
 }
 
-void aal_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
+void ihk_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
 {
 	return;
 }
@@ -250,7 +250,7 @@ void x86_set_warm_reset(void)
 	/* outb is not implemented; we do nothing */
 }
 
-static unsigned int perf_map_knf[] = 
+static unsigned int perf_map_mic[] = 
 {
 	[APT_TYPE_DATA_PAGE_WALK]                  = CVAL(0x02, 0x00),
 	[APT_TYPE_DATA_READ_MISS]                  = CVAL(0x03, 0x00),
@@ -270,9 +270,9 @@ static unsigned int perf_map_knf[] =
 	[PERFCTR_MAX_TYPE] = -1,
 };
 
-unsigned int *x86_march_perfmap = perf_map_knf;
+unsigned int *x86_march_perfmap = perf_map_mic;
 
-char *aal_mc_get_kernel_args(void)
+char *ihk_mc_get_kernel_args(void)
 {
 	return boot_param->kernel_args;
 }

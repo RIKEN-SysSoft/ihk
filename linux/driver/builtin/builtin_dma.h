@@ -1,21 +1,21 @@
 /**
- * \file host/driver/mee/mee_dma.h
- * \brief AAL MEE Driver: Structures used by the MEE DMA core
+ * \file host/driver/builtin/builtin_dma.h
+ * \brief IHK BUILTIN Driver: Structures used by the BUILTIN DMA core
  *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
-#ifndef __HEADER_MEE_DMA_H
-#define __HEADER_MEE_DMA_H
+#ifndef __HEADER_BUILTIN_DMA_H
+#define __HEADER_BUILTIN_DMA_H
 
 #include <linux/spinlock.h>
 
 /* 32 byte */
 /* MEMCPY: param2 (src), param3 (dest), param4 (len) */
 
-#define MEE_DMA_DESC_PARAM1_INTR  0x10000000
+#define BUILTIN_DMA_DESC_PARAM1_INTR  0x10000000
 
-/** \brief Descriptor used by the MEE DMA core */
-struct mee_dma_desc { 
+/** \brief Descriptor used by the BUILTIN DMA core */
+struct builtin_dma_desc { 
 	/** \brief Type of the request descriptor */
 	int type;
 	int param1;
@@ -25,10 +25,10 @@ struct mee_dma_desc {
 };
 
 
-#define MEE_DMA_CHANNELS  2
+#define BUILTIN_DMA_CHANNELS  2
 
-/** \brief Structure for a DMA Channel of MEE */
-struct mee_dma_channel {
+/** \brief Structure for a DMA Channel of BUILTIN */
+struct builtin_dma_channel {
 	/** \brief Physical address of the descriptor ring */
 	unsigned long desc_ptr;
 	/** \brief Number of descriptors in the ring */
@@ -43,9 +43,9 @@ struct mee_dma_channel {
 	spinlock_t lock;
 };
 
-struct mee_dma_config_struct {
-	/** \brief Array of the DMA channels of MEE */
-	struct mee_dma_channel channels[MEE_DMA_CHANNELS];
+struct builtin_dma_config_struct {
+	/** \brief Array of the DMA channels of BUILTIN */
+	struct builtin_dma_channel channels[BUILTIN_DMA_CHANNELS];
 
 	/** \brief Doorbell for the DMA core */
 	unsigned long doorbell;
@@ -53,9 +53,9 @@ struct mee_dma_config_struct {
 	unsigned long status;
 };
 
-extern struct mee_dma_config_struct *mee_dma_config;
-void mee_dma_issue_interrupt(void);
+extern struct builtin_dma_config_struct *builtin_dma_config;
+void builtin_dma_issue_interrupt(void);
 
-void mee_dma_desc_init(void);
+void builtin_dma_desc_init(void);
 
 #endif
