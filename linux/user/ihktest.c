@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "aal/aal_host_user.h"
+#include "ihk/ihk_host_user.h"
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <string.h>

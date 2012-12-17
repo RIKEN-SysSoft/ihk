@@ -11,7 +11,7 @@
 #include <linux/slab.h>
 #include <asm/bitops.h>
 
-#include <aal/aal_host_driver.h>
+#include <ihk/ihk_host_driver.h>
 
 void *aal_host_map_generic(aal_device_t dev, unsigned long phys,
                            void *virt, unsigned long size, int flags)

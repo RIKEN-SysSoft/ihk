@@ -1,7 +1,7 @@
-#include <aal/debug.h>
-#include <aal/types.h>
-#include <aal/mm.h>
-#include <aal/cpu.h>
+#include <ihk/debug.h>
+#include <ihk/types.h>
+#include <ihk/mm.h>
+#include <ihk/cpu.h>
 #include <errno.h>
 #include <string.h>
 

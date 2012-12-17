@@ -9,7 +9,7 @@
 #include <linux/slab.h>
 #include <asm/bitops.h>
 
-#include <aal/aal_host_driver.h>
+#include <ihk/ihk_host_driver.h>
 
 /** \brief Descriptor of an allocator */
 struct aal_page_allocator_desc {

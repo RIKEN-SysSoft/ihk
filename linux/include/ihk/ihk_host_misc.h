@@ -7,7 +7,7 @@
 #ifndef AAL_HOST_MISC_H
 #define AAL_HOST_MISC_H
 
-#include <aal/aal_host_driver.h>
+#include <ihk/ihk_host_driver.h>
 
 /* mem_alloc.c */
 void *aal_pagealloc_init(unsigned long start, unsigned long size,

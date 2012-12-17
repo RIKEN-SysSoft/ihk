@@ -7,7 +7,7 @@
 #ifndef HEADER_AAL_IKC_QUEUE_H
 #define HEADER_AAL_IKC_QUEUE_H
 
-#include <ikc/aal.h>
+#include <ikc/ihk.h>
 
 #define IKC_OS_HOST      ((aal_os_t)NULL)
 

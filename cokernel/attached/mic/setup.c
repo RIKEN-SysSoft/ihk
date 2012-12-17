@@ -1,14 +1,14 @@
-#include <aal/debug.h>
-#include <aal/mm.h>
-#include <aal/cpu.h>
-#include <aal/perfctr.h>
+#include <ihk/debug.h>
+#include <ihk/mm.h>
+#include <ihk/cpu.h>
+#include <ihk/perfctr.h>
 #include <types.h>
 #include <errno.h>
 #include <string.h>
 #include <registers.h>
 #include <march.h>
-#include "knf.h"
-#include <sysdeps/knf/knf_host.h>
+#include "mic_mmio.h"
+#include <sysdeps/mic/mic_host.h>
 
 #define KNF_BOOT_MAGIC_BOOTED       0x25470290
 #define KNF_BOOT_MAGIC_READY        0x25470293

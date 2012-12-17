@@ -7,7 +7,7 @@
 #ifndef HEADER_AAL_IKC_MSG_H
 #define HEADER_AAL_IKC_MSG_H
 
-#include <ikc/aal.h>
+#include <ikc/ihk.h>
 
 #define AAL_IKC_MASTER_MSG_INIT_ACK      0x10203010
 #define AAL_IKC_MASTER_MSG_CONNECT       0x20000001

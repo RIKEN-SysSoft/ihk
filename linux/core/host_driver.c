@@ -19,13 +19,12 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/file.h>
-#include <aal/aal_host_user.h>
-#include <aal/aal_host_driver.h>
-#include <aal/misc/debug.h>
+#include <ihk/ihk_host_user.h>
+#include <ihk/ihk_host_driver.h>
+#include <ihk/misc/debug.h>
 #include "host_linux.h"
 #include "ops_wrappers.h"
 
-#include <sysdeps/knf/mic/mic_type.h>
 
 #define DEV_MAX_MINOR 64
 #define OS_MAX_MINOR 64

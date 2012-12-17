@@ -15,10 +15,10 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/interrupt.h>
-#include <aal/misc/debug.h>
+#include <ihk/misc/debug.h>
 
-#include "mic.h"
-#include "knf_user.h"
+#include "mic_mmio.h"
+#include "mic_user.h"
 
 //#define DMA_DEBUG
 

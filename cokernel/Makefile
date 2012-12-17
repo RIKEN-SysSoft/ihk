@@ -1,26 +1,26 @@
-AALBASE = $(CURDIR)
-ECHO_SUFFIX = [AAL]
+IHKBASE = $(CURDIR)
+ECHO_SUFFIX = [IHK]
 
-AAL_OBJS += string.o vsprintf.o abort.o page_alloc.o mikc.o ikc.o
+IHK_OBJS += string.o vsprintf.o abort.o page_alloc.o mikc.o ikc.o
 
-DESTOBJS = $(addprefix $O/,$(AAL_OBJS))
-SUBOPTS = CC=$(CC) LD=$(LD) V=$(V) TARGET=$(TARGET) AALBASE=$(AALBASE)
+DESTOBJS = $(addprefix $O/,$(IHK_OBJS))
+SUBOPTS = CC=$(CC) LD=$(LD) V=$(V) TARGET=$(TARGET) IHKBASE=$(IHKBASE)
 
-$(if $(O),,$(error AAL Output directory is not specified))
+$(if $(O),,$(error IHK Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
 
 include Makefile.common
 
-AAL_SRCDIRS += generic $(TARGET)
-DEPSRCS = $(foreach d,$(AAL_SRCDIRS),$(wildcard $(d)/*.c $(d)/*.S))
+IHK_SRCDIRS += $(SRC)/../lib $(TARGETDIR)
+DEPSRCS = $(foreach d,$(IHK_SRCDIRS),$(wildcard $(d)/*.c $(d)/*.S))
 
-$(foreach d,$(AAL_SRCDIRS),$(eval $(call make_implicit_src,$(d))))
+$(foreach d,$(IHK_SRCDIRS),$(eval $(call make_implicit_src,$(d))))
 
 .PHONY: all clean depend prepare
 
-all: depend $(O)/aal.o
+all: depend $(O)/ihk.o
 
-$(O)/aal.o: $(DESTOBJS) $(O)/ikc/ikc.o
+$(O)/ihk.o: $(DESTOBJS) $(O)/ikc/ikc.o
 	$(ld_cmd)
 
 $(O)/ikc/ikc.o: FORCE

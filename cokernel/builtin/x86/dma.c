@@ -1,8 +1,8 @@
-#include <aal/mm.h>
-#include <aal/lock.h>
-#include <aal/dma.h>
+#include <ihk/mm.h>
+#include <ihk/lock.h>
+#include <ihk/dma.h>
 #include <errno.h>
-#include "mee_dma.h"
+#include "builtin_dma.h"
 
 static struct mee_dma_config_struct *mee_mc_dma_config;
 

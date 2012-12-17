@@ -1,10 +1,15 @@
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O3
-CFLAGS += -I$(AALBASE)/$(TARGET)/include -Wno-unused-function -I$(AALBASE)/../ikc/include
+CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include -Wno-unused-function -I$(IHKBASE)/../ikc/include
 CFLAGS += -DAAL_OS_MANYCORE
 
--include $(AALBASE)/$(TARGET)/Makefile.config
+TARGETDIR = $(shell echo $(TARGET) | sed "s/-/\//")
 
-CFLAGS += -I$(AALBASE)/generic/include -I$(AALBASE)/../include
+-include $(IHKBASE)/$(TARGETDIR)/Makefile.config
+
+IHKARCH ?= x86
+
+CFLAGS += -I$(SRC)/../lib/include -I$(SRC)/../arch/$(IHKARCH)/kernel/include
+CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include
 
 O ?= .
 

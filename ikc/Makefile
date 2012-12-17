@@ -1,6 +1,6 @@
 IKC_OBJS += queue.o master.o
 
-ifeq ($(CONFIG_AAL),)
+ifeq ($(CONFIG_IHK),)
 DESTOBJS = $(addprefix $O/,$(IKC_OBJS))
 IKCBASE = $(CURDIR)
 DEPSRCS = $(wildcard $(IKCBASE)/*.c)
@@ -8,10 +8,10 @@ ECHO_SUFFIX = [IKC]
 
 IKC_OBJS += manycore.o
 
-$(if $(O),,$(error AAL-IKC Output directory is not specified))
+$(if $(O),,$(error IHK-IKC Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
 
-include $(AALBASE)/Makefile.common
+include $(IHKBASE)/Makefile.common
 
 .PHONY: all clean depend
 

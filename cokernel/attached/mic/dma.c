@@ -1,12 +1,12 @@
-#include <aal/debug.h>
-#include <aal/mm.h>
-#include <aal/cpu.h>
-#include <aal/lock.h>
-#include <aal/dma.h>
+#include <ihk/debug.h>
+#include <ihk/mm.h>
+#include <ihk/cpu.h>
+#include <ihk/lock.h>
+#include <ihk/dma.h>
 #include <types.h>
 #include <errno.h>
 #include <string.h>
-#include "knf.h"
+#include "mic_mmio.h"
 
 //#define DEBUG_DMA
 

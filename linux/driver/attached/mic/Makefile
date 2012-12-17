@@ -1,11 +1,13 @@
-KDIR=../target.knf
+KDIR ?= /lib/modules/`uname -r`/build
+src ?= $(shell pwd)
 
-obj-m += aal_knf.o
+obj-m += ihk_mic.o
 
-aal_knf-objs = aal_knf_driver.o knf_device.o knf_dma.o
+ihk_mic-objs = ihk_mic_driver.o mic_device.o mic_dma.o
 
-EXTRA_CFLAGS = -I$(src)/../../include  -I$(src)/../../../ikc/include
-EXTRA_CFLAGS += -I$(src)/../../../include
+EXTRA_CFLAGS = -I$(src)/../../../include -I$(src)/../../../../include -I$(src)/../../../../ikc/include -I$(src)/include
+
+KBUILD_EXTRA_SYMBOLS=$(src)/../../../core/Module.symvers
 
 .PHONY: clean install
 

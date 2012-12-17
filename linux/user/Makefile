@@ -1,12 +1,14 @@
+#CC=/usr/linux-k1om-4.7/bin/x86_64-k1om-linux-gcc
+CC=gcc
 CFLAGS=-Wall -O
-TARGET=aaltest aalostest memdump pagetable maccess memdump-mic knf_ctrl
+TARGET=ihktest ihkostest memdump pagetable maccess memdump-mic
 
-AALBASE ?= ../../aal
+IHKBASE ?= ../../../ihk
 
-all: aal $(TARGET)
+all: ihk $(TARGET)
 
-aal:
-	rm -f aal; ln -s $(AALBASE)/host/include/aal aal
+ihk:
+	rm -f ihk; ln -s $(IHKBASE)/linux/include/ihk ihk
 
 clean:
 	$(RM) $(TARGET) *.o

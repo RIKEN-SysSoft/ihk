@@ -4,7 +4,7 @@
  *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
-#include <ikc/aal.h>
+#include <ikc/ihk.h>
 #include <ikc/queue.h>
 
 void aal_ikc_notify_remote_read(struct aal_ikc_channel_desc *c);

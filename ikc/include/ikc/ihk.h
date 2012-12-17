@@ -33,11 +33,11 @@ typedef void * aal_wait_t;
 
 #include <types.h>
 #include <list.h>
-#include <aal/debug.h>
+#include <ihk/debug.h>
 #include <string.h>
-#include <aal/atomic.h>
-#include <aal/lock.h>
-#include <aal/mm.h>
+#include <ihk/atomic.h>
+#include <ihk/lock.h>
+#include <ihk/mm.h>
 #include <errno.h>
 
 #define AAL_EXPORT_SYMBOL(x)
@@ -55,7 +55,7 @@ typedef void * aal_wait_t;
 #include <asm/atomic.h>
 #include <asm/errno.h>
 #include <asm/io.h>
-#include <aal/aal_host_driver.h>
+#include <ihk/ihk_host_driver.h>
 
 #define AAL_EXPORT_SYMBOL        EXPORT_SYMBOL
 

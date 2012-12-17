@@ -1,4 +1,6 @@
-ifeq ($(CONFIG_AAL),y)
+src ?= $(shell pwd)
+
+ifeq ($(CONFIG_IHK),y)
 
 include $(src)/Makefile.builtin
 

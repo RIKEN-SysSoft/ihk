@@ -1,7 +1,7 @@
-#include <aal/debug.h>
-#include <aal/mm.h>
-#include <aal/cpu.h>
-#include <aal/perfctr.h>
+#include <ihk/debug.h>
+#include <ihk/mm.h>
+#include <ihk/cpu.h>
+#include <ihk/perfctr.h>
 #include <errno.h>
 #include <registers.h>
 #include "bootparam.h"

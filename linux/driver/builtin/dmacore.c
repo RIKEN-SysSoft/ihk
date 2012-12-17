@@ -4,10 +4,10 @@
  *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
-#include "mee_dma.h"
+#include "builtin_dma.h"
 #include <linux/sched.h>
 #include <linux/mm.h>
-#include <aal/aal_host_driver.h>
+#include <ihk/ihk_host_driver.h>
 
 /** \brief Pointer to the structure that contains information of the DMA core */
 struct mee_dma_config_struct *mee_dma_config;

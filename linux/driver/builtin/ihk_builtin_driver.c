@@ -17,13 +17,13 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/interrupt.h>
-#include <aal/aal_host_driver.h>
-#include <aal/aal_host_misc.h>
-#include <aal/aal_host_user.h>
-#include <aal/misc/debug.h>
+#include <ihk/ihk_host_driver.h>
+#include <ihk/ihk_host_misc.h>
+#include <ihk/ihk_host_user.h>
+#include <ihk/misc/debug.h>
 #include <ikc/msg.h>
 #include <linux/shimos.h>
-#include "mee_dma.h"
+#include "builtin_dma.h"
 
 #ifndef CONFIG_SHIMOS
 #error "SHIMOS is required to build MEE!"

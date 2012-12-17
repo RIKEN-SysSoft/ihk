@@ -17,11 +17,11 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/interrupt.h>
-#include <aal/misc/debug.h>
+#include <ihk/misc/debug.h>
 #include <ikc/msg.h>
 
-#include "knf_user.h"
-#include "mic.h"
+#include "mic_user.h"
+#include "mic_mmio.h"
 
 void knf_device_destroy(struct pci_dev *dev, struct knf_device_data *data);
 

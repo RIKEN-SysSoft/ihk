@@ -18,9 +18,9 @@
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <asm/spinlock.h>
-#include <aal/aal_host_user.h>
-#include <aal/aal_host_driver.h>
-#include <aal/misc/debug.h>
+#include <ihk/ihk_host_user.h>
+#include <ihk/ihk_host_driver.h>
+#include <ihk/misc/debug.h>
 #include <ikc/queue.h>
 #include <ikc/msg.h>
 #include "host_linux.h"

@@ -1,7 +1,7 @@
 #ifndef __HEADER_MEE_DMA_H
 #define __HEADER_MEE_DMA_H
 
-#include <aal/lock.h>
+#include <ihk/lock.h>
 
 #define MEE_DMA_DESC_PARAM1_INTR  0x10000000
 

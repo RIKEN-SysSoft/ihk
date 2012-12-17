@@ -15,11 +15,11 @@
 #include <linux/miscdevice.h>
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
-#include <aal/aal_host_driver.h>
-#include <aal/aal_host_misc.h>
-#include <aal/aal_host_user.h>
-#include <aal/misc/debug.h>
-#include "knf.h"
+#include <ihk/ihk_host_driver.h>
+#include <ihk/ihk_host_misc.h>
+#include <ihk/ihk_host_user.h>
+#include <ihk/misc/debug.h>
+#include "mic_mmio.h"
 
 /**
  * \var knf_pci_ids
