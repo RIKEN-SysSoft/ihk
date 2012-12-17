@@ -1,6 +1,6 @@
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O3
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include -Wno-unused-function -I$(IHKBASE)/../ikc/include
-CFLAGS += -DAAL_OS_MANYCORE
+CFLAGS += -DIHK_OS_MANYCORE
 
 TARGETDIR = $(shell echo $(TARGET) | sed "s/-/\//")
 

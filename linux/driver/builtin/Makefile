@@ -1,8 +1,8 @@
 KDIR=../target
 
-obj-m += aal_mee.o
+obj-m += ihk_builtin.o
 
-aal_mee-objs = aal_mee_driver.o dmacore.o dmacore_intr.o
+ihk_builtin-objs = ihk_builtin_driver.o dmacore.o dmacore_intr.o
 
 EXTRA_CFLAGS = -I$(src)/../../include -I$(src)/../../../ikc/include
 

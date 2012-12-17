@@ -19,7 +19,7 @@
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/misc/debug.h>
-#include "mic_mmio.h"
+#include "mic.h"
 
 /**
  * \var mic_pci_ids

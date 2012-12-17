@@ -1,4 +1,3 @@
-/**/
 /** \file mm.c
  * \brief IHK-Host: Memory management misc functions (not implemented yet)
  *

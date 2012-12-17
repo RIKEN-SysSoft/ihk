@@ -5,7 +5,7 @@
 #ifndef __HEADER_IHK_DRIVER_MIC_H
 #define __HEADER_IHK_DRIVER_MIC_H
 
-#include "mic_mmio.h"
+#include "mic.h"
 #include <sysdeps/mic/mic/micconst.h>
 #include <sysdeps/mic/mic/micsboxdefine.h>
 #include <sysdeps/mic/mic/mic_dma.h>

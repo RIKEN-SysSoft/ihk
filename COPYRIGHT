@@ -1,12 +1,12 @@
-License for AAL-Host and Common Parts
+License for IHK-Host and Common Parts
 -------------------------------------
-AAL-Host (the files under host/) and the common parts (the files under ikc/ and 
+IHK-Host (the files under host/) and the common parts (the files under ikc/ and 
 include/) are distributed under the dual license of GPLv2 and BSD 2-Clause
 License.
 
-License for AAL-Manycore
+License for IHK-Manycore
 ------------------------
-AAL-Manycore (files under manycore/) is distributed under the GPLv2 license.
+IHK-Manycore (files under manycore/) is distributed under the GPLv2 license.
 
 
 Copyright Notice for GPLv2

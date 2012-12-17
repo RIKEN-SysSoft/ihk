@@ -1,5 +1,5 @@
 ----
-AAL: Accelerator Abstraction Layer
+IHK: Accelerator Abstraction Layer
 ----
 
 - For copyright, see COPYRIGHT.
@@ -8,10 +8,10 @@ AAL: Accelerator Abstraction Layer
 
 (Linux)
 
-There are two choices to compile the AAL from source: one is integrating 
-the AAL into the kernel source, and the other is building 
+There are two choices to compile the IHK from source: one is integrating 
+the IHK into the kernel source, and the other is building 
 as kernel modules.
-The former is required when you use MEE because MEE requires kernel integration.
+The former is required when you use BUILTIN because BUILTIN requires kernel integration.
 Otherwise, the latter is sufficient.
 
 1) Build as modules
@@ -19,23 +19,23 @@ Otherwise, the latter is sufficient.
 (e.g.)
 $ cd host
 $ make -f Makefile.linux
-make -C /lib/modules/`uname -r`/build M=/work/aal/host
+make -C /lib/modules/`uname -r`/build M=/work/ihk/host
 make[1]: Entering directory `/usr/src/linux-headers-2.6.38-11-generic'
-  LD      /work/aal/host/driver/knf/built-in.o
-  CC [M]  /work/aal/host/driver/knf/aal_knf_driver.o
-  CC [M]  /work/aal/host/driver/knf/knf_device.o
+  LD      /work/ihk/host/driver/mic/built-in.o
+  CC [M]  /work/ihk/host/driver/mic/ihk_mic_driver.o
+  CC [M]  /work/ihk/host/driver/mic/mic_device.o
 ...
-  LD [M]  /work/aal/host/driver/knf/aal_knf.ko
-  CC      /work/aal/host/linux/aal.mod.o
-  LD [M]  /work/aal/host/linux/aal.ko
+  LD [M]  /work/ihk/host/driver/mic/ihk_mic.ko
+  CC      /work/ihk/host/linux/ihk.mod.o
+  LD [M]  /work/ihk/host/linux/ihk.ko
 make[1]: Leaving directory `/usr/src/linux-headers-2.6.38-11-generic'
 
-Then, aal.ko (the base module) and aal_*.ko (device drivers for each device)
+Then, ihk.ko (the base module) and ihk_*.ko (device drivers for each device)
 are made.
 
 
 (Manycore Kernel)
 
-AAL for manycore side should be made along with the manycore kernel.
+IHK for manycore side should be made along with the manycore kernel.
 Therefore, the build script for the manycore kernel is responsible for calling
-Makefile in AAL.
+Makefile in IHK.

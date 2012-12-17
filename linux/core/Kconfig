@@ -1,8 +1,8 @@
-config AAL
+config IHK
 	bool "Enable Accelerator Abstraction Layer"
 	default y
 
-config AAL_DEBUG
-	bool "Enable debug output for AAL"
-    depends on AAL
+config IHK_DEBUG
+	bool "Enable debug output for IHK"
+    depends on IHK
 	default n

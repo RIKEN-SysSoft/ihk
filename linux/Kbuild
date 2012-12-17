@@ -1,2 +1,2 @@
-obj-y += linux/ driver/knf/
-obj-$(CONFIG_MEE) += driver/mee/
+obj-y += linux/ driver/mic/
+obj-$(CONFIG_BUILTIN) += driver/builtin/

@@ -6,7 +6,7 @@
 #include <types.h>
 #include <errno.h>
 #include <string.h>
-#include "mic_mmio.h"
+#include "mic.h"
 
 //#define DEBUG_DMA
 

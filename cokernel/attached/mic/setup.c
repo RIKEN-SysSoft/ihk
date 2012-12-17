@@ -7,7 +7,7 @@
 #include <string.h>
 #include <registers.h>
 #include <march.h>
-#include "mic_mmio.h"
+#include "mic.h"
 #include <sysdeps/mic/mic_host.h>
 
 #define MIC_BOOT_MAGIC_BOOTED       0x25470290
