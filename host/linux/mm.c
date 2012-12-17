@@ -1,3 +1,4 @@
+/**/
 /** \file mm.c
  * \brief AAL-Host: Memory management misc functions (not implemented yet)
  *
