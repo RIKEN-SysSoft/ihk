@@ -4,6 +4,7 @@
 #include <ihk/perfctr.h>
 #include <errno.h>
 #include <registers.h>
+#include <march.h>
 #include "bootparam.h"
 
 /* BUILTIN Setup.c */
@@ -43,8 +44,8 @@ static void build_ihk_cpu_info(void)
 	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + 64;
 
 	kprintf("CPU: ");
-	for (i = 0; i < sizeof(unsigned long) * 8; i++) {
-		if (boot_param->cores & (1UL << i)) {
+	for (i = 0; i < SHIMOS_MAX_CORES; i++) {
+		if (CORE_ISSET(i, boot_param->coreset)) {
 			ihk_cpu_info->hw_ids[n] = i;
 			ihk_cpu_info->nodes[n] = 0;
 
@@ -159,8 +160,8 @@ void arch_delay(int us)
 {
 	unsigned long tsc;
 
-	/* XXX: 3GHz */
-	tsc = rdtsc() + 333 * us;
+	/* XXX: 1.2 */
+	tsc = rdtsc() + 833 * us;
 	while (rdtsc() < tsc) {
 		cpu_pause();
 	}
@@ -168,8 +169,8 @@ void arch_delay(int us)
 
 void x86_set_warm_reset(void)
 {
-	asm volatile("outb %0, $0x70" : : "a"((char)0xf));
-	asm volatile("outb %0, $0x71" : : "a"((char)0xa));
+//	asm volatile("outb %0, $0x70" : : "a"((char)0xf));
+//	asm volatile("outb %0, $0x71" : : "a"((char)0xa));
 }
 
 void builtin_mc_dma_init(unsigned long cfg_addr);
@@ -179,21 +180,29 @@ void ihk_mc_dma_init(void)
 	builtin_mc_dma_init(boot_param->dma_address);
 }
 
-static unsigned int perf_map_nehalem[] = 
+static unsigned int perf_map_mic[] = 
 {
-	[APT_TYPE_INSTRUCTIONS]  = CVAL(0xc0, 0x00),
-	[APT_TYPE_L1D_REQUEST]   = CVAL(0x43, 0x01),
-	[APT_TYPE_L1I_REQUEST]   = CVAL(0x80, 0x03),
-	[APT_TYPE_L1D_MISS]      = CVAL(0x51, 0x01),
-	[APT_TYPE_L1I_MISS]      = CVAL(0x80, 0x02),
-	[APT_TYPE_L2_MISS]       = CVAL(0x24, 0xaa),
-	[APT_TYPE_LLC_MISS]      = CVAL(0x2e, 0x41),
-	[APT_TYPE_DTLB_MISS]     = CVAL(0x49, 0x01),
-	[APT_TYPE_ITLB_MISS]     = CVAL(0x85, 0x01),
-	[APT_TYPE_STALL]         = CVAL2(0x0e, 0x01, 1, 1),
-	[APT_TYPE_CYCLE]         = CVAL(0x3c, 0x00),
+	[APT_TYPE_DATA_PAGE_WALK]                  = CVAL(0x02, 0x00),
+	[APT_TYPE_DATA_READ_MISS]                  = CVAL(0x03, 0x00),
+	[APT_TYPE_DATA_WRITE_MISS]                 = CVAL(0x04, 0x00),
+	[APT_TYPE_BANK_CONFLICTS]                  = CVAL(0x0a, 0x00),
+
+	[APT_TYPE_CODE_CACHE_MISS]                 = CVAL(0x0e, 0x00),
+	[APT_TYPE_INSTRUCTIONS_EXECUTED]           = CVAL(0x16, 0x00),
+	[APT_TYPE_INSTRUCTIONS_EXECUTED_V_PIPE]    = CVAL(0x17, 0x00),
+
+	[APT_TYPE_L2_READ_MISS]                    = CVAL(0xcb, 0x10),
+	[APT_TYPE_L2_CODE_READ_MISS_CACHE_FILL]    = CVAL(0xf0, 0x10),
+	[APT_TYPE_L2_DATA_READ_MISS_CACHE_FILL]    = CVAL(0xf1, 0x10),
+	[APT_TYPE_L2_CODE_READ_MISS_MEM_FILL]      = CVAL(0xf5, 0x10),
+	[APT_TYPE_L2_DATA_READ_MISS_MEM_FILL]      = CVAL(0xf6, 0x10),
+
 	[PERFCTR_MAX_TYPE] = -1,
 };
 
-unsigned int *x86_march_perfmap = perf_map_nehalem;
+unsigned int *x86_march_perfmap = perf_map_mic;
 
+void x86_march_perfctr_start(unsigned long counter_mask)
+{
+	wrmsr(MSR_PERF_FLT_MASK, 0);
+}

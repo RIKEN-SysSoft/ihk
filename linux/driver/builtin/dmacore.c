@@ -7,6 +7,7 @@
 #include "builtin_dma.h"
 #include <linux/sched.h>
 #include <linux/mm.h>
+#include <asm/io.h>
 #include <ihk/ihk_host_driver.h>
 
 /** \brief Pointer to the structure that contains information of the DMA core */
@@ -133,7 +134,7 @@ void builtin_dma_desc_init(void)
 
 	for (i = 0; i < BUILTIN_DMA_CHANNELS; i++) {
 		c = builtin_dma_config->channels + i;
-		printk("DMA Channels (%d): %lx\n", i, virt_to_phys(c));
+		printk("DMA Channels (%d): %lx\n", i, (long)virt_to_phys(c));
 		c->desc_ptr = virt_to_phys((void *)__get_free_page(GFP_KERNEL));
 		c->head = c->tail = 0;
 		c->len = PAGE_SIZE / sizeof(struct builtin_dma_desc);

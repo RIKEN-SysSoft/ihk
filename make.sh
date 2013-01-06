@@ -1,7 +1,16 @@
 #!/bin/sh
+MOPT=
+OPT=
 installdir=
 kerneldir=
-target=attached-mic
+if [ -f kerneldir ]; then
+	kerneldir="`cat kerneldir`"
+fi
+if [ -f target ]; then
+	target="`cat target`"
+else
+	target=attached-mic
+fi
 cleanflag=
 while [ "X$1" != X ]; do
 	case "$1" in
@@ -27,29 +36,36 @@ done
 
 if [ "X$cleanflag" != X ]; then
 	(cd linux/core; make clean)
-	for tgt in $target; do
-		case "$tgt" in
-		    attached-mic)
-			(cd linux/driver/attached/mic; make clean)
-			;;
-		    builtin*)
-			(cd linux/driver/builtin; make clean)
-			;;
-		    *)
-			echo "unknown target $tgt" >&2
-			exit 1
-			;;
-		esac
-	done
+	case "$target" in
+	    attached-mic)
+		(cd linux/driver/attached/mic; make clean)
+		;;
+	    builtin*)
+		(cd linux/driver/builtin; make clean)
+		;;
+	    *)
+		echo "unknown target $target" >&2
+		exit 1
+		;;
+	esac
 	rm -f target
+	rm -f kerneldir
 	(cd linux/user; make clean)
 	exit 0
+fi
+
+if [ "X$kerneldir" != X ]; then
+	MOPT="KDIR=$kerneldir"
+fi
+if [ "X$target" = "Xbuiltin-mic" ]; then
+	MOPT="$MOPT ARCH=k1om"
+	OPT="CC=x86_64-k1om-linux-gcc"
 fi
 
 if [ "X$installdir" != X ]; then
 	mkdir -p "$installdir"
 fi
-(cd linux/core; make modules)
+(cd linux/core; make $MOPT modules)
 if [ -f linux/core/ihk.ko ]; then
 	if [ "X$installdir" != X ]; then
 		cp linux/core/ihk.ko "$installdir"
@@ -58,33 +74,34 @@ else
 	echo "linux/core/ihk.ko could not be built" >&2
 	exit 1
 fi
-for tgt in $target; do
-	case "$tgt" in
-	    attached-mic)
-		(cd linux/driver/attached/mic; make modules)
-		mod=linux/driver/attached/mic/ihk_mic.ko
-		;;
-	    builtin*)
-		(cd linux/driver/builtin; make modules)
-		mod=linux/driver/builtin/ihk_builtin.ko
-		;;
-	    *)
-		echo "unknown target $tgt" >&2
-		exit 1
-		;;
-	esac
-	if [ -f $mod ]; then
-		if [ "X$installdir" != X ]; then
-			cp $mod "$installdir"
-		fi
-	else
-		echo "$mod could not be built" >&2
-		exit 1
+case "$target" in
+    attached-mic)
+	(cd linux/driver/attached/mic; make $MOPT modules)
+	mod=linux/driver/attached/mic/ihk_mic.ko
+	;;
+    builtin*)
+	(cd linux/driver/builtin; make $MOPT modules)
+	mod=linux/driver/builtin/ihk_builtin.ko
+	;;
+    *)
+	echo "unknown target $target" >&2
+	exit 1
+	;;
+esac
+if [ -f $mod ]; then
+	if [ "X$installdir" != X ]; then
+		cp $mod "$installdir"
 	fi
-done
+else
+	echo "$mod could not be built" >&2
+	exit 1
+fi
 echo "$target" > target
+if [ "X$kerneldir" != X ]; then
+	echo "$kerneldir" > kerneldir
+fi
 
-(cd linux/user; make)
+(cd linux/user; make $OPT)
 if [ -f linux/user/ihktest ]; then
 	if [ "X$installdir" != X ]; then
 		cp linux/user/ihktest "$installdir"

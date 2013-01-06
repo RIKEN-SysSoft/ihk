@@ -37,7 +37,13 @@ static void do_shutdown(int fd)
 
 static void do_alloc(int fd)
 {
-	int r = ioctl(fd, IHK_OS_ALLOC_CPU, 3);
+	int r;
+	int n = 3;
+
+	if (__argc > 3)
+		n = atoi(__argv[3]);
+
+	r = ioctl(fd, IHK_OS_ALLOC_CPU, n);
 	printf("ret[cpu] = %d\n", r);
 
 	r = ioctl(fd, IHK_OS_ALLOC_MEM, 0x10000000);

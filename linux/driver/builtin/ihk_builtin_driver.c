@@ -34,7 +34,7 @@
 #define BUILTIN_OS_STATUS_LOADED   2
 #define BUILTIN_OS_STATUS_BOOTING  3
 
-#define BUILTIN_MAX_CPUS 64
+#define BUILTIN_MAX_CPUS SHIMOS_MAX_CORES
 
 #define BUILTIN_COM_VECTOR  0xf1
 
@@ -77,7 +77,7 @@ struct builtin_os_data {
 	/** \brief Pointer to the device structure */
 	struct builtin_device_data *dev;
 	/** \brief Allocated CPU core mask */
-	unsigned long coremaps;
+	shimos_coreset coremaps;
 	/** \brief Start address of the allocated memory region */
 	unsigned long mem_start;
 	/** \brief End address of the allocated memory region */
@@ -188,7 +188,7 @@ static void __build_os_info(struct builtin_os_data *os)
 	os->mem_region.size = os->mem_end - os->mem_start;
 	
 	for (i = 0, c = 0; i < BUILTIN_MAX_CPUS; i++) {
-		if (os->coremaps & (1ULL << i)) {
+		if (CORE_ISSET(i, os->coremaps)) {
 			os->cpu_hw_ids[c] = i;
 			c++;
 		}
@@ -205,11 +205,13 @@ static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	unsigned long flags;
 
 	spin_lock_irqsave(&dev->lock, flags);
+#if 0
 	if (dev->status != BUILTIN_DEV_STATUS_READY) {
 		spin_unlock_irqrestore(&dev->lock, flags);
 		printk("builtin: Device is busy booting another OS.\n");
 		return -EINVAL;
 	}
+#endif
 	dev->status = BUILTIN_DEV_STATUS_BOOTING;
 	spin_unlock_irqrestore(&dev->lock, flags);
 	
@@ -222,6 +224,11 @@ static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	}
 	os->boot_cpu = os->cpu_info.hw_ids[0];
 
+	if(os->status == BUILTIN_OS_STATUS_BOOTING) {
+		printk("IHK: Device is busy booting another OS.\n");
+		return -EINVAL;
+	}
+
 	set_os_status(os, BUILTIN_OS_STATUS_BOOTING);
 
 	dprint_var_x4(os->boot_cpu);
@@ -230,14 +237,14 @@ static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	memset(&os->param, 0, sizeof(os->param));
 	os->param.bp.start = os->mem_start;
 	os->param.bp.end = os->mem_end;
-	os->param.bp.cores = os->coremaps;
+	os->param.bp.coreset = os->coremaps;
 	os->param.dma_address = builtin_dma_config_pa;
 	os->param.ident_table = __pa(shimos_get_ident_page_table());
 	strncpy(os->param.kernel_args, os->kernel_args,
 	        sizeof(os->param.kernel_args));
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
-	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps,
+	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps[0],
 	        builtin_dma_config_pa);
 
 	return shimos_boot_cpu_kloader(os->boot_cpu, os->boot_rip,
@@ -254,7 +261,7 @@ static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 	dprint_func_enter;
 
 	/* We just load from the lowest address of the private memory */
-	if (!os->coremaps || os->mem_end - os->mem_start < 0) {
+	if (!CORE_ISSET_ANY(&os->coremaps) || os->mem_end - os->mem_start < 0) {
 		printk("builtin: OS is not ready to boot.\n");
 		return -EINVAL;
 	}
@@ -316,7 +323,7 @@ static int builtin_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	unsigned long flags, st, ed;
 
 	for (i = BUILTIN_MAX_CPUS - 1; i >= 0; i--) {
-		if (os->coremaps & (1ULL << i)) {
+		if (CORE_ISSET(i, os->coremaps)) {
 			shimos_reset_cpu(i);
 
 			apicid = i;
@@ -325,7 +332,7 @@ static int builtin_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	spin_lock_irqsave(&os->lock, flags);
-	os->coremaps = 0;
+	CORE_ZERO(os->coremaps);
 	st = os->mem_start;
 	ed = os->mem_end;
 	os->mem_start = os->mem_end = 0;
@@ -361,8 +368,7 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 			if (shimos_reserve_cpus(resource->cpu_cores, 
 			                        resource->cores) == 0) {
 				for (i = 0; i < n; i++) {
-					os->coremaps |= 
-						(1ULL << resource->cores[i]);
+					CORE_SET(resource->cores[i], os->coremaps);
 				}
  			} else {
 				ret = -ENOMEM;
@@ -373,7 +379,7 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 				if (apicids[i] < BUILTIN_MAX_CPUS) {
 					dprintf("BUILTIN: Core %d allocated.\n",
 					        apicids[i]);
-					os->coremaps |= (1ULL << apicids[i]);
+					CORE_SET(apicids[i], os->coremaps);
 				}
 			}
 			if (n <= 0) {

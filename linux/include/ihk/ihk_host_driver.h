@@ -631,6 +631,21 @@ ihk_device_t ihk_host_find_dev(int index);
 ihk_os_t ihk_host_find_os(int index, ihk_device_t dev);
 
 /**
+ * \brief Set the user data to a OS instance.
+ *
+ * \param os     OS instance
+ * \param data   user data
+ */
+void ihk_host_os_set_usrdata(ihk_os_t os, void *data);
+
+/**
+ * \brief Get the user data from a OS instance.
+ *
+ * \param os     OS instance
+ */
+void *ihk_host_os_get_usrdata(ihk_os_t);
+
+/**
  * \brief Descriptor of the handler for a ioctl request to the OS device file.
  */
 struct ihk_os_user_call_handler {

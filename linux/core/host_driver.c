@@ -343,6 +343,7 @@ static int __ihk_os_reserve_mem(struct ihk_host_linux_os_data *data,
  */
 static void __ihk_os_init_kmsg(struct ihk_host_linux_os_data *data)
 {
+#if 0
 	unsigned long rpa, pa, size;
 
 	dprint_func_enter;
@@ -373,12 +374,14 @@ static void __ihk_os_init_kmsg(struct ihk_host_linux_os_data *data)
 	data->kmsg_pa = pa;
 	data->kmsg_len = size;
 	dprint_var_p(data->kmsg_buf);
+#endif
 }
 
 /** \brief ioctl handler for reading the kernel message to the buffer */
 static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
                               char __user *buf)
 {
+#if 0
 	int tail, len, len_end;
 
 	if (!data->kmsg_buf) {
@@ -412,6 +415,45 @@ kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
 	}
 
 	return tail + len_end;
+#endif
+	int size1, size2;
+	unsigned long rpa, pa, size;
+	void *kmsg_buf;
+	unsigned long offset, maxsize, rest, size0;
+
+	mutex_lock(&data->kmsg_mutex);
+
+	if (__ihk_os_get_special_addr(data, IHK_SPADDR_KMSG, &rpa, &size)) {
+		dprintf("get_special_addr: failed.\n");
+		return -EINVAL;
+	}
+	pa = __ihk_os_map_memory(data, rpa, size);
+	kmsg_buf = ioremap_nocache(pa, PAGE_SIZE);
+	if(!kmsg_buf){
+		dprint_var_p(kmsg_buf);
+		return -EINVAL;
+	}
+
+	size1 = size2 = *(int *)kmsg_buf;
+	offset = 8;
+	maxsize = PAGE_SIZE - offset;
+	rest = size;
+	for(;;){
+		size0 = size2 > maxsize? maxsize: size2;
+		copy_to_user(buf, (char *)(kmsg_buf) + offset, size0);
+		iounmap(kmsg_buf);
+		buf += size0;
+		size2 -= size0;
+		if(size2 == 0)
+			break;
+		offset = 0;
+		maxsize = PAGE_SIZE;
+		pa += PAGE_SIZE;
+		kmsg_buf = ioremap_nocache(pa, PAGE_SIZE);
+	}
+	mutex_unlock(&data->kmsg_mutex);
+
+	return size1;
 }
 
 /** \brief Set the kernel command-line parameter for the kernel
@@ -1377,6 +1419,18 @@ ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
 	}
 }
 
+void ihk_host_os_set_usrdata(ihk_os_t ihk_os, void *data)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	os -> usrdata = data;
+}
+
+void *ihk_host_os_get_usrdata(ihk_os_t ihk_os)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	return os -> usrdata;
+}
+
 int ihk_os_register_user_call_handlers(ihk_os_t ihk_os,
                                        struct ihk_os_user_call *clist)
 {
@@ -1434,6 +1488,8 @@ EXPORT_SYMBOL(ihk_os_get_special_address);
 EXPORT_SYMBOL(ihk_os_wait_for_status);
 EXPORT_SYMBOL(ihk_host_find_dev);
 EXPORT_SYMBOL(ihk_host_find_os);
+EXPORT_SYMBOL(ihk_host_os_set_usrdata);
+EXPORT_SYMBOL(ihk_host_os_get_usrdata);
 EXPORT_SYMBOL(ihk_os_to_dev);
 EXPORT_SYMBOL(ihk_device_map_virtual);
 EXPORT_SYMBOL(ihk_device_unmap_virtual);

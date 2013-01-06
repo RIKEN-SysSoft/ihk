@@ -101,6 +101,9 @@ struct ihk_host_linux_os_data {
 
 	/** \brief List of the additional ioctl handlers */
 	struct list_head aux_call_list;
+
+	/** \brief user data */
+	void *usrdata;
 };
 
 #endif
