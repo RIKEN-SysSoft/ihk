@@ -17,6 +17,8 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/interrupt.h>
+#include <linux/file.h>
+#include <linux/elf.h>
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
@@ -37,6 +39,16 @@
 #define BUILTIN_MAX_CPUS SHIMOS_MAX_CORES
 
 #define BUILTIN_COM_VECTOR  0xf1
+
+#define LARGE_PAGE_SIZE	(1UL << 21)
+#define LARGE_PAGE_MASK	(~((unsigned long)LARGE_PAGE_SIZE - 1))
+
+#define MAP_ST_START	0xffff800000000000UL
+#define MAP_KERNEL_START	0xffffffff80000000UL
+
+#define PTL4_SHIFT	39
+#define PTL3_SHIFT	30
+#define PTL2_SHIFT	21
 
 /** \brief BUILTIN boot parameter structure
  *
@@ -249,6 +261,187 @@ static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	return shimos_boot_cpu_kloader(os->boot_cpu, os->boot_rip,
 	                               &os->param.bp);
+}
+
+static int
+builtin_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
+{
+	struct builtin_os_data *os = priv;
+	struct file *file;
+	loff_t pos = 0;
+	long r;
+	mm_segment_t fs;
+	unsigned long phys;
+	unsigned long offset;
+	unsigned long maxoffset;
+	unsigned long flags;
+	Elf64_Ehdr *elf64;
+	Elf64_Phdr *elf64p;
+	int i;
+	unsigned long entry;
+	unsigned long pml4_p;
+	unsigned long pdp_p;
+	unsigned long pde_p;
+	unsigned long *pml4;
+	unsigned long *pdp;
+	unsigned long *pde;
+	unsigned long *cr3;
+	int n;
+	extern char startup_data[];
+	extern char startup_data_end[];
+	unsigned long startup_p;
+	unsigned long *startup;
+
+	if (!CORE_ISSET_ANY(&os->coremaps) || os->mem_end - os->mem_start < 0) {
+		printk("builtin: OS is not ready to boot.\n");
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		printk("builtin: OS status is not initial.\n");
+		spin_unlock_irqrestore(&os->lock, flags);
+		return -EBUSY;
+	}
+	os->status = BUILTIN_OS_STATUS_LOADING;
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	file = filp_open(fn, O_RDONLY, 0);
+	if (IS_ERR(file)) {
+		printk("open failed: %s\n", fn);
+		return -ENOENT;
+	}
+	elf64 = ioremap_cache(os->mem_end - PAGE_SIZE, PAGE_SIZE); 
+	fs = get_fs();
+	set_fs(get_ds());
+printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
+	r = vfs_read(file, (char *)elf64, PAGE_SIZE, &pos);
+	set_fs(fs);
+	if (r <= 0) {
+		printk("vfs_read failed: %ld\n", r);
+		iounmap(elf64);
+		fput(file);
+		return (int)r;
+	}
+	if(elf64->e_ident[0] != 0x7f ||
+	   elf64->e_ident[1] != 'E' ||
+	   elf64->e_ident[2] != 'L' ||
+	   elf64->e_ident[3] != 'F' ||
+	   elf64->e_phoff + sizeof(Elf64_Phdr) * elf64->e_phnum > PAGE_SIZE){
+		printk("kernel: BAD ELF\n");
+		iounmap(elf64);
+		fput(file);
+		return (int)-EINVAL;
+	}
+	entry = elf64->e_entry;
+	elf64p = (Elf64_Phdr *)(((char *)elf64) + elf64->e_phoff);
+	phys = (os->mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
+	maxoffset = phys;
+
+	for(i = 0; i < elf64->e_phnum; i++){
+		unsigned long end;
+		unsigned long size;
+		char *buf;
+		unsigned long pphys;
+		unsigned long psize;
+
+		if (elf64p[i].p_type != PT_LOAD)
+			continue;
+		if (elf64p[i].p_vaddr == 0)
+			continue;
+
+		offset = elf64p[i].p_vaddr - (MAP_KERNEL_START - phys);
+		pphys = offset;
+		psize = (elf64p[i].p_memsz + PAGE_SIZE - 1) & PAGE_MASK;
+		size = elf64p[i].p_filesz;
+		pos = elf64p[i].p_offset;
+		end = pos + size;
+		while(pos < end){
+			long l = end - pos;
+
+			if(l > PAGE_SIZE)
+				l = PAGE_SIZE;
+			if (offset + PAGE_SIZE > os->mem_end) {
+				printk("builtin: OS is too big to load.\n");
+				return -E2BIG;
+			}
+			buf = ioremap_cache(offset, PAGE_SIZE); 
+			fs = get_fs();
+			set_fs(get_ds());
+			r = vfs_read(file, buf, l, &pos);
+			set_fs(fs);
+			if(r != PAGE_SIZE){
+				memset(buf + r, '\0', PAGE_SIZE - r);
+			}
+			iounmap(buf);
+			if (r <= 0) {
+				printk("vfs_read failed: %ld\n", r);
+				iounmap(elf64);
+				fput(file);
+				return (int)r;
+			}
+			offset += PAGE_SIZE;
+		}
+		for(size = (size + PAGE_SIZE - 1) & PAGE_MASK; size < psize; size += PAGE_SIZE){
+
+			if (offset + PAGE_SIZE > os->mem_end) {
+				printk("builtin: OS is too big to load.\n");
+				return -E2BIG;
+			}
+			buf = ioremap_cache(offset, PAGE_SIZE); 
+			memset(buf, '\0', PAGE_SIZE);
+			iounmap(buf);
+			offset += PAGE_SIZE;
+		}
+		if(offset > maxoffset)
+			maxoffset = offset;
+	}
+	fput(file);
+	iounmap(elf64);
+
+	pml4_p = os->mem_end - PAGE_SIZE;
+	pdp_p = pml4_p - PAGE_SIZE;
+	pde_p = pdp_p - PAGE_SIZE;
+
+
+	cr3 = shimos_get_ident_page_table();
+	pml4 = ioremap_cache(pml4_p, PAGE_SIZE); 
+	pdp = ioremap_cache(pdp_p, PAGE_SIZE); 
+	pde = ioremap_cache(pde_p, PAGE_SIZE); 
+
+	memset(pml4, '\0', PAGE_SIZE);
+	memset(pdp, '\0', PAGE_SIZE);
+	memset(pde, '\0', PAGE_SIZE);
+
+	pml4[0] = cr3[0];
+	pml4[(MAP_ST_START >> PTL4_SHIFT) & 511] = cr3[0];
+	pml4[(MAP_KERNEL_START >> PTL4_SHIFT) & 511] = pdp_p | 3;
+	pdp[(MAP_KERNEL_START >> PTL3_SHIFT) & 511] = pde_p | 3;
+	n = (os->mem_end - os->mem_start) >> PTL2_SHIFT;
+	if(n > 511)
+		n = 511;
+
+	for (i = 0; i < n; i++) {
+		pde[i] = (phys + (i << PTL2_SHIFT)) | 0x83;
+	}
+	pde[511] = (os->mem_end - (2 << PTL2_SHIFT)) | 0x83;
+
+	iounmap(pde);
+	iounmap(pdp);
+	iounmap(pml4);
+
+	startup_p = os->mem_end - (2 << PTL2_SHIFT);
+	startup = ioremap_cache(startup_p, PAGE_SIZE);
+	memcpy(startup, startup_data, startup_data_end - startup_data);
+	startup[2] = pml4_p;
+	startup[3] = 0xffffffffc0000000;
+	startup[4] = phys;
+	startup[5] = entry;
+	iounmap(startup);
+	os->boot_rip = startup_p;
+
+	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+	return 0;
 }
 
 static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
@@ -600,6 +793,7 @@ static struct ihk_cpu_info *builtin_ihk_os_get_cpu_info(ihk_os_t ihk_os, void *p
 
 static struct ihk_os_ops builtin_ihk_os_ops = {
 	.load_mem = builtin_ihk_os_load_mem,
+	.load_file = builtin_ihk_os_load_file,
 	.boot = builtin_ihk_os_boot,
 	.shutdown = builtin_ihk_os_shutdown,
 	.alloc_resource = builtin_ihk_os_alloc_resource,

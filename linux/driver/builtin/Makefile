@@ -6,7 +6,7 @@ src ?= $(PWD)
 
 obj-m += ihk_builtin.o
 
-ihk_builtin-objs = ihk_builtin_driver.o dmacore.o dmacore_intr.o
+ihk_builtin-objs = ihk_builtin_driver.o dmacore.o dmacore_intr.o startup.o
 
 EXTRA_CFLAGS = -I$(src)/../../include -I$(src)/../../../ikc/include
 KBUILD_EXTRA_SYMBOLS=$(src)/../../core/Module.symvers
