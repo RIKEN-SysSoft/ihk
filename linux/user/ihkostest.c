@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <ctype.h>
 #include "ihk/ihk_host_user.h"
 #include <sys/ioctl.h>
 #include <string.h>
@@ -39,14 +40,28 @@ static void do_alloc(int fd)
 {
 	int r;
 	int n = 3;
+	unsigned long size = 0x10000000;
 
 	if (__argc > 3)
 		n = atoi(__argv[3]);
 
+	if (__argc > 4){
+		char	*t;
+		size = strtoul(__argv[4], &t, 0);
+		switch(tolower(*t)){
+		    case 'g':
+			size *= 1024;
+		    case 'm':
+			size *= 1024;
+		    case 'k':
+			size *= 1024;
+		}
+	}
+
 	r = ioctl(fd, IHK_OS_ALLOC_CPU, n);
 	printf("ret[cpu] = %d\n", r);
 
-	r = ioctl(fd, IHK_OS_ALLOC_MEM, 0x10000000);
+	r = ioctl(fd, IHK_OS_ALLOC_MEM, size);
 	printf("ret[mem] = %d\n", r);
 }
 
@@ -72,7 +87,7 @@ static void do_reserve_cpu(int fd)
 
 static void do_reserve_mem(int fd)
 {
-	int n = __argc - 4, r;
+	int r;
 	unsigned long arg[2];
 
 	if (__argc <= 4) {
@@ -106,7 +121,6 @@ static void do_intr(int fd)
 static void do_kargs(int fd)
 {
 	int r;
-	int v = 0xf1;
 
 	if (__argc <= 3) {
 		printf("No arg specified.\n");
