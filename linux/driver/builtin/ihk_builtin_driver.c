@@ -959,8 +959,11 @@ MODULE_LICENSE("Dual BSD/GPL");
  */
 /** \brief APIC ID of the CPU core to use as a DMA-emulating core.
  * (Module parameter) */
-static int builtin_dma_apicid = -1;
-module_param(builtin_dma_apicid, int, 0444);
+static int dma_apicid = -1;
+module_param(dma_apicid, int, 0444);
+
+static int dmacpus = 1;
+module_param(dmacpus, int, 0444);
 
 /** \brief DMA page table used by the DMA core
  *
@@ -1034,6 +1037,9 @@ static void shimos_dma_start(void)
 	             "callq shimos_dma_main" : : "r"(builtin_dma_stack + 512));
 }
 
+static int dma_dummycpu_size = 0;
+static int dma_dummycpus[8];
+
 /** \brief Initialization function of the DMA core
  *
  * This function allocates a DMA core, and prepares necessary tables
@@ -1044,8 +1050,8 @@ static int builtin_dma_init(void)
 {
 	int apicid;
 
-	if (builtin_dma_apicid >= 0) {
-		if (shimos_reserve_cpus(1, &builtin_dma_apicid)) {
+	if (dma_apicid >= 0) {
+		if (shimos_reserve_cpus(1, &dma_apicid)) {
 			printk("BUILTIN: Failed to reserve CPU core for DMA!\n");
 			return -ENOMEM;
 		}
@@ -1054,9 +1060,27 @@ static int builtin_dma_init(void)
 			printk("BUILTIN: Failed to allocate CPU core for DMA!\n");
 			return -ENOMEM;
 		}
-		builtin_dma_apicid = apicid;
+		dma_apicid = apicid;
 	}
-	printk("BUILTIN: DMA Core APIC ID = %d\n", builtin_dma_apicid);
+	if(dma_apicid > 1){
+		int i;
+
+		if(dmacpus > 8)
+			dmacpus = 8;
+		dma_dummycpu_size = dmacpus - 1;
+		for(i = 0; i < dmacpus; i++){
+			int	cpu = (dma_apicid / dmacpus) * dmacpus + i;
+			if(cpu == dma_apicid)
+				continue;
+			if(shimos_reserve_cpus(1, &cpu) == 0){
+				dma_dummycpus[dma_dummycpu_size] = cpu;
+				dma_dummycpu_size++;
+				printk("DUMMY APIC=%d\n", cpu);
+			}
+		}
+	}
+
+	printk("BUILTIN: DMA Core APIC ID = %d\n", dma_apicid);
 
 	/* XXX: module only */
 	__prepare_idt();
@@ -1068,7 +1092,7 @@ static int builtin_dma_init(void)
 	                         GFP_KERNEL);
 	builtin_dma_config_pa = virt_to_phys(builtin_dma_config);
 
-	shimos_boot_cpu_linux(builtin_dma_apicid, (unsigned long)shimos_dma_start);
+	shimos_boot_cpu_linux(dma_apicid, (unsigned long)shimos_dma_start);
 
 	/* Wait for dma boot */
 
@@ -1088,8 +1112,16 @@ static int builtin_dma_init(void)
  * This function resets the DMA core and frees pages. */
 static void builtin_dma_exit(void)
 {
-	shimos_reset_cpu(builtin_dma_apicid);
-	shimos_free_cpus(1, &builtin_dma_apicid);
+	shimos_reset_cpu(dma_apicid);
+	shimos_free_cpus(1, &dma_apicid);
+
+/**
+	for(i = 0; i < dma_dummycpu_size; i++){
+		shimos_reset_cpu(dma_dummycpus[i]);
+	}
+	shimos_free_cpus(dma_dummycpu_size, dma_dummycpus);
+	dma_dummycpu_size = 0;
+*/
 
 	free_page((unsigned long)builtin_dma_page_table);
 	free_page((unsigned long)dma_idt);
@@ -1098,7 +1130,7 @@ static void builtin_dma_exit(void)
 /** \brief Issues an interrupt to the DMA core. */
 void builtin_dma_issue_interrupt(void)
 {
-	shimos_issue_ipi(builtin_dma_apicid, BUILTIN_DMA_VECTOR);
+	shimos_issue_ipi(dma_apicid, BUILTIN_DMA_VECTOR);
 }
 
 extern int __builtin_dma_request(ihk_device_t dev, int channel,
