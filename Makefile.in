@@ -1,0 +1,49 @@
+TARGET = @TARGET@
+
+all::
+	@(cd linux/core; make modules)
+	@case "$(TARGET)" in \
+	    attached-mic) \
+		(cd linux/driver/attached/mic; make modules) \
+		;; \
+	    builtin*) \
+		(cd linux/driver/builtin; make modules) \
+		;; \
+	    *) \
+		echo "unknown target $(TARGET)" >&2 \
+		exit 1 \
+		;; \
+	esac
+	@(cd linux/user; make)
+
+install::
+	@(cd linux/core; make install)
+	@case "$(TARGET)" in \
+	    attached-mic) \
+		(cd linux/driver/attached/mic; make install) \
+		;; \
+	    builtin*) \
+		(cd linux/driver/builtin; make install) \
+		;; \
+	    *) \
+		echo "unknown target $(TARGET)" >&2 \
+		exit 1 \
+		;; \
+	esac
+	@(cd linux/user; make install)
+
+clean::
+	@(cd linux/core; make clean)
+	@case "$(TARGET)" in \
+	    attached-mic) \
+		(cd linux/driver/attached/mic; make clean) \
+		;; \
+	    builtin*) \
+		(cd linux/driver/builtin; make clean) \
+		;; \
+	    *) \
+		echo "unknown target $(TARGET)" >&2 \
+		exit 1 \
+		;; \
+	esac
+	@(cd linux/user; make clean)

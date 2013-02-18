@@ -1,0 +1,21 @@
+CC=@CC@
+CFLAGS=-Wall -O
+SBINDIR=@SBINDIR@
+TARGET=ihktest ihkostest memdump pagetable maccess memdump-mic
+
+IHKBASE ?= ../../../ihk
+
+.PHONY: all clean install
+
+all: ihk $(TARGET)
+
+ihk:
+	rm -f ihk; ln -s $(IHKBASE)/linux/include/ihk ihk
+
+clean:
+	$(RM) $(TARGET) *.o
+
+install:
+	mkdir -p -m 755 $(SBINDIR)
+	install -m 755 ihktest $(SBINDIR)
+	install -m 755 ihkostest $(SBINDIR)

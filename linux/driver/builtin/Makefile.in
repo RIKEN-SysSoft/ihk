@@ -1,0 +1,25 @@
+KDIR ?= @KDIR@
+ARCH ?= @ARCH@
+KMODDIR=@KMODDIR@
+
+PWD ?= `pwd`
+src ?= $(PWD)
+
+obj-m += ihk_builtin.o
+
+ihk_builtin-objs = ihk_builtin_driver.o dmacore.o dmacore_intr.o startup.o
+
+EXTRA_CFLAGS = -I$(src)/../../include -I$(src)/../../../ikc/include
+KBUILD_EXTRA_SYMBOLS=$(src)/../../core/Module.symvers
+
+.PHONY: clean install
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) ARCH=$(ARCH) modules
+
+clean:
+	$(RM) .*.cmd *.mod.c *.o *.ko* Module.symvers modules.order -r .tmp*
+
+install:
+	mkdir -p -m 755 $(KMODDIR)
+	install -m 644 ihk_builtin.ko $(KMODDIR)
