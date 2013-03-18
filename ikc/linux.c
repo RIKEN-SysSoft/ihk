@@ -28,16 +28,23 @@ static void ikc_work_func(struct work_struct *work)
 	struct ihk_ikc_channel_desc *c;
 	struct list_head *channels;
 	ihk_os_t os = ihk_ikc_linux_get_os_from_work(work);
+	ihk_spinlock_t *lock;
+	unsigned long flags;
 
 	channels = ihk_ikc_get_channel_list(os);
+	lock = ihk_ikc_get_channel_list_lock(os);
 
 	/* XXX: Linear search? */
+	flags = ihk_ikc_spinlock_lock(lock);
 	list_for_each_entry(c, channels, list) {
 		if (ihk_ikc_channel_enabled(c) && 
 		    !ihk_ikc_queue_is_empty(c->recv.queue)) {
+			ihk_ikc_spinlock_unlock(lock, flags);
 			ihk_ikc_recv_handler(c, c->handler, os, 0);
+			flags = ihk_ikc_spinlock_lock(lock);
 		}
 	}
+	ihk_ikc_spinlock_unlock(lock, flags);
 }
 
 /** \brief IKC interrupt handler (interrupt context) */

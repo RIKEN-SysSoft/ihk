@@ -26,15 +26,20 @@ static void ihk_ikc_interrupt_handler(void *priv)
 {
 	/* This should be done in the software irq... */
 	struct ihk_ikc_channel_desc *c;
+	unsigned long flags;
 
 	/* XXX: Linear search?, Per-core list of the queues! */
+	flags = ihk_ikc_spinlock_lock(&ihk_ikc_channels_lock);
 	list_for_each_entry(c, &ihk_ikc_channels, list) {
 		if (ihk_ikc_channel_enabled(c) && 
 		    !ihk_ikc_queue_is_empty(c->recv.queue) &&
 		    c->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
+			ihk_ikc_spinlock_unlock(&ihk_ikc_channels_lock, flags);
 			ihk_ikc_recv_handler(c, c->handler, NULL, 0);
+			flags = ihk_ikc_spinlock_lock(&ihk_ikc_channels_lock);
 		}
 	}
+	ihk_ikc_spinlock_unlock(&ihk_ikc_channels_lock, flags);
 }
 struct ihk_ikc_channel_desc *ihk_ikc_get_master_channel(ihk_os_t os)
 {

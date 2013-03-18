@@ -142,6 +142,8 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
                        ihk_ikc_ph_t packet_handler)
 {
 	struct list_head *channels = ihk_ikc_get_channel_list(ros);
+	ihk_spinlock_t *lock = ihk_ikc_get_channel_list_lock(ros);
+	unsigned long flags;
 
 	INIT_LIST_HEAD(&c->list);
 	INIT_LIST_HEAD(&c->all_list);
@@ -166,7 +168,9 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
 	ihk_ikc_spinlock_init(&c->recv.lock);
 	ihk_ikc_spinlock_init(&c->send.lock);
 
+	flags = ihk_ikc_spinlock_lock(lock);
 	list_add_tail(&c->list, channels);
+	ihk_ikc_spinlock_unlock(lock, flags);
 }
 
 void ihk_ikc_channel_set_cpu(struct ihk_ikc_channel_desc *c, int cpu)
@@ -260,8 +264,12 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 {
 	ihk_os_t os = desc->remote_os;
 	int qpages;
+	ihk_spinlock_t *lock = ihk_ikc_get_channel_list_lock(os);
+	unsigned long flags;
 
+	flags = ihk_ikc_spinlock_lock(lock);
 	list_del(&desc->list);
+	ihk_ikc_spinlock_unlock(lock, flags);
 
 	if (desc->recv.queue) {
 		qpages = (desc->recv.queue->queue_size
