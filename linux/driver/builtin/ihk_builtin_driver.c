@@ -862,7 +862,7 @@ static void *builtin_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
                                  void *virt, int flags)
 {
 	if (!virt) {
-		return ioremap_cache(phys, size);
+		return shimos_other_os_map(phys, size);
 	} else {
 		return ihk_host_map_generic(ihk_dev, phys, virt, size, flags);
 	}
@@ -872,8 +872,7 @@ static int builtin_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
                                   void *virt, unsigned long size)
 {
 	if ((unsigned long)virt >= PAGE_OFFSET) {
-		iounmap(virt);
-		return 0;
+		return shimos_other_os_unmap(virt, size);
 	} else {
 		return ihk_host_unmap_generic(ihk_dev, virt, size);
 	}
