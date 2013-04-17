@@ -428,7 +428,7 @@ kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
 		return -EINVAL;
 	}
 	pa = __ihk_os_map_memory(data, rpa, size);
-	kmsg_buf = ioremap_nocache(pa, PAGE_SIZE);
+	kmsg_buf = ihk_device_map_virtual(data->dev_data, pa, PAGE_SIZE, NULL, 0);
 	if(!kmsg_buf){
 		dprint_var_p(kmsg_buf);
 		return -EINVAL;
@@ -440,8 +440,12 @@ kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
 	rest = size;
 	for(;;){
 		size0 = size2 > maxsize? maxsize: size2;
-		copy_to_user(buf, (char *)(kmsg_buf) + offset, size0);
-		iounmap(kmsg_buf);
+		if (copy_to_user(buf, (char *)(kmsg_buf) + offset, size0)) {
+			ihk_device_unmap_virtual(data->dev_data, kmsg_buf, PAGE_SIZE);
+			mutex_unlock(&data->kmsg_mutex);
+			return -EFAULT;
+		}
+		ihk_device_unmap_virtual(data->dev_data, kmsg_buf, PAGE_SIZE);
 		buf += size0;
 		size2 -= size0;
 		if(size2 == 0)
@@ -449,7 +453,7 @@ kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
 		offset = 0;
 		maxsize = PAGE_SIZE;
 		pa += PAGE_SIZE;
-		kmsg_buf = ioremap_nocache(pa, PAGE_SIZE);
+		kmsg_buf = ihk_device_map_virtual(data->dev_data, pa, PAGE_SIZE, NULL, 0);
 	}
 	mutex_unlock(&data->kmsg_mutex);
 
