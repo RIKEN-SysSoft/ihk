@@ -167,10 +167,17 @@ void arch_delay(int us)
 	}
 }
 
-void x86_set_warm_reset(void)
+void x86_set_warm_reset(unsigned long ip, char *first_page_va)
 {
-//	asm volatile("outb %0, $0x70" : : "a"((char)0xf));
-//	asm volatile("outb %0, $0x71" : : "a"((char)0xa));
+#if 0	/* Should not be necessary because it uses the SIPI */
+	/* Write CMOS */
+	asm volatile("outb %0, $0x70" : : "a"((char)0xf));
+	asm volatile("outb %0, $0x71" : : "a"((char)0xa));
+
+	/* Set vector */
+	*(unsigned short *)(first_page_va + 0x469) = (ip >> 4);
+	*(unsigned short *)(first_page_va + 0x467) = ip & 0xf;
+#endif
 }
 
 void builtin_mc_dma_init(unsigned long cfg_addr);

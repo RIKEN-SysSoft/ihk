@@ -245,7 +245,7 @@ void arch_delay(int us)
 	}
 }
 
-void x86_set_warm_reset(void)
+void x86_set_warm_reset(unsigned long ip, char *first_page_va)
 {
 	/* outb is not implemented; we do nothing */
 }
