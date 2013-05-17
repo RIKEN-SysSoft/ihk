@@ -36,6 +36,8 @@ if test "X$sbindir" = X; then
 	SBINDIR="$sbindir"
 fi
 
+test "x$prefix" = xNONE && prefix="$ac_default_prefix"
+
 case $WITH_TARGET in
     attached-mic)
 	ARCH=`uname -m`
