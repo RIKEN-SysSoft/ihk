@@ -66,7 +66,7 @@ void ihk_ikc_system_exit(ihk_os_t os)
 
 struct ihk_ikc_queue_head *ihk_ikc_alloc_queue(int qpages)
 {
-	return ihk_mc_alloc_pages(qpages, 0);
+	return ihk_mc_alloc_pages(qpages, IHK_MC_AP_CRITICAL);
 }
 
 void ihk_ikc_free_queue(struct ihk_ikc_queue_head *q)
@@ -77,7 +77,7 @@ void ihk_ikc_free_queue(struct ihk_ikc_queue_head *q)
 
 void *ihk_ikc_malloc(int size)
 {
-	return ihk_mc_allocate(size, 0);
+	return ihk_mc_allocate(size, IHK_MC_AP_CRITICAL);
 }
 void ihk_ikc_free(void *p)
 {

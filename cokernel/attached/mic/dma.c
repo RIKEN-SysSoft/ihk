@@ -115,7 +115,7 @@ void ihk_mc_dma_init(void)
 	/* Initialize only channels #0 and #4 */
 	channels[0].channel = 0;
 	channels[0].owner = 0;
-	channels[0].desc = ihk_mc_alloc_pages(1, 0);
+	channels[0].desc = ihk_mc_alloc_pages(1, IHK_MC_AP_CRITICAL);
 	channels[0].desc_count = PAGE_SIZE / sizeof(union md_mic_dma_desc);
 	__initialize_dma(channels + 0);
 	ihk_mc_dma_enable_channel(0);
