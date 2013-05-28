@@ -300,7 +300,7 @@ static void load_scratch_values(struct mic_device_data *kdd)
 }
 
 /** \brief Timeout for __wait_for_bootstrap_ready in 100-ms unit */
-#define WFBR_TIMEOUT 50
+#define WFBR_TIMEOUT 1000
 
 /** \brief Waits for the Knights Ferry device to get ready by spinning */
 static int __wait_for_bootstrap_ready(struct mic_device_data *kdd)
