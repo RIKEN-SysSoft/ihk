@@ -79,6 +79,8 @@ static void __initialize_dma(struct mic_dma_channel *c)
 	dcr |= c->owner << (channel * 2);
 	sbox_write(SBOX_DCR, dcr);
 
+	memset(c->desc, 0, sizeof(union md_mic_dma_desc)*c->desc_count);
+
 	drarh = SET_SBOX_DRARHI_SIZE(c->desc_count);
 	drarh |= SET_SBOX_DRARHI_BA((unsigned long)virt_to_phys(c->desc) >> 32);
 	drarl = (unsigned long)virt_to_phys(c->desc) & 0xffffffff;
