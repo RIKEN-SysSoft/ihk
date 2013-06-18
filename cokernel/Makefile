@@ -9,6 +9,7 @@ SUBOPTS = CC=$(CC) LD=$(LD) V=$(V) TARGET=$(TARGET) IHKBASE=$(IHKBASE)
 $(if $(O),,$(error IHK Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
 
+CFLAGS += -I$(SRC)/include -mcmodel=kernel -D__KERNEL__
 include Makefile.common
 
 IHK_SRCDIRS += $(SRC)/../lib $(TARGETDIR)
