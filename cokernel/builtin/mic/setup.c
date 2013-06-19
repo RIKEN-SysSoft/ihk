@@ -88,14 +88,20 @@ unsigned long ihk_mc_get_memory_address(enum ihk_mc_gma_type type, int opt)
 	case IHK_MC_GMA_MAP_START:
 	case IHK_MC_GMA_AVAIL_START:
 		return boot_param->start;
+
 	case IHK_MC_GMA_MAP_END:
 	case IHK_MC_GMA_AVAIL_END:
 		return boot_param->end;
 
 	case IHK_MC_GMA_HEAP_START:
 		return virt_to_phys(get_last_early_heap());
+
 	case IHK_MC_NR_RESERVED_AREAS:
 		return 0;
+
+	case IHK_MC_RESERVED_AREA_START:
+	case IHK_MC_RESERVED_AREA_END:
+		return -ENOENT;
 	}
 
 	return -ENOENT;

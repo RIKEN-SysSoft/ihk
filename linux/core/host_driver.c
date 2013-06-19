@@ -337,13 +337,13 @@ static int __ihk_os_reserve_mem(struct ihk_host_linux_os_data *data,
 	return __ihk_os_alloc_resource(data, &resource);
 }
 
+#if 0
 /** \brief Initialize the kernel message buffer of the OS
  *
  * This function asks the locations of the buffer and maps it.
  */
 static void __ihk_os_init_kmsg(struct ihk_host_linux_os_data *data)
 {
-#if 0
 	unsigned long rpa, pa, size;
 
 	dprint_func_enter;
@@ -374,8 +374,8 @@ static void __ihk_os_init_kmsg(struct ihk_host_linux_os_data *data)
 	data->kmsg_pa = pa;
 	data->kmsg_len = size;
 	dprint_var_p(data->kmsg_buf);
-#endif
 }
+#endif
 
 /** \brief ioctl handler for reading the kernel message to the buffer */
 static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,

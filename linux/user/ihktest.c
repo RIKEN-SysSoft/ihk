@@ -70,7 +70,6 @@ static void do_clear_kmsg(int fd)
 {
 	unsigned long adr;
 	unsigned char *p;
-	int i;
 
 	if (__argc > 3) {
 		adr = strtol(__argv[3], NULL, 16);

@@ -17,7 +17,7 @@ static unsigned long rdtsc(void)
 static void measure_time(char *p)
 {
 	unsigned long st, ed, m = 0;
-	int i, j;
+	int j;
 
 	p = (char *)(((unsigned long)p + 4095) & ~(4095UL));
 	printf("%p\n", p);
