@@ -107,6 +107,18 @@ static void do_query(int fd)
 	printf("status = %d\n", r);
 }
 
+static void do_query_free_mem(int fd)
+{
+	int r = ioctl(fd, IHK_OS_QUERY_FREE_MEM);
+	
+	if (r < 0) {
+		printf("error querying free memory\n");
+	}
+
+	printf("number of free pages (4kB): %d\n", r);
+}
+
+
 static void do_intr(int fd)
 {
 	int r;
@@ -196,6 +208,7 @@ int main(int argc, char **argv)
 	else HANDLER(reserve_cpu)
 	else HANDLER(reserve_mem)
 	else HANDLER(query)
+	else HANDLER(query_free_mem)
 	else HANDLER(kargs)
 	else HANDLER(kmsg)
 	else HANDLER(clear_kmsg)

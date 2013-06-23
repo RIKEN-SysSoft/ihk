@@ -162,6 +162,12 @@ struct ihk_os_ops {
 	 **/
 	enum ihk_os_status (*query_status)(ihk_os_t, void *);
 
+	/** \brief Query free memory of a kernel
+	 *
+	 *  \return Number of free pages on MIC
+	 **/
+	int (*query_free_mem)(ihk_os_t, void *);
+
 	/** \brief Wait for the status of a kernel to change
 	 *
 	 *  \param status  The desired status. This function should wait 

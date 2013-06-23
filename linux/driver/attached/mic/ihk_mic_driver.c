@@ -53,6 +53,7 @@ extern int __mic_load_os_file(struct mic_device_data *kdd, const char *fn);
 extern int mic_boot_os(struct mic_device_data *kdd, struct mic_boot_param *);
 extern void mic_shutdown(struct mic_device_data *kdd);
 extern int __mic_os_get_status(struct mic_device_data *kdd);
+extern int __mic_os_get_free_mem(struct mic_device_data *kdd);
 extern int mic_issue_interrupt(struct mic_device_data *kdd,
                                int apicid, int vector);
 extern int mic_map_aperture(struct mic_device_data *kdd,
@@ -138,6 +139,14 @@ static enum ihk_os_status mic_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		return IHK_OS_STATUS_READY;
 	}
 	return IHK_OS_STATUS_NOT_BOOTED;
+}
+
+static int mic_ihk_os_query_free_mem(ihk_os_t ihk_os, void *priv)
+{
+	struct mic_os_data *os = priv;
+	struct mic_device_data *kdd = os->dev;
+	
+	return __mic_os_get_free_mem(kdd);
 }
 
 static int mic_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
@@ -303,6 +312,7 @@ static struct ihk_os_ops mic_ihk_os_ops = {
 
 	.alloc_resource = mic_ihk_os_alloc_resource,
 	.query_status = mic_ihk_os_query_status,
+	.query_free_mem = mic_ihk_os_query_free_mem,
 	.wait_for_status = mic_ihk_os_wait_for_status,
 	.issue_interrupt = mic_ihk_os_issue_interrupt,
 

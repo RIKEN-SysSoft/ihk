@@ -211,6 +211,8 @@ int ihk_mc_get_vector(enum ihk_mc_gv_type type)
 	switch (type) {
 	case IHK_GV_IKC:
 		return 0xd1;
+	case IHK_GV_QUERY_FREE_MEM:
+		return 0xd2;
 	default:
 		return -ENOENT;
 	}

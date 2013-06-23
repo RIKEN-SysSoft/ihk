@@ -17,6 +17,7 @@
 #define IHK_OS_SHUTDOWN               0x112a02
 #define IHK_OS_QUERY_STATUS           0x112a03
 #define IHK_OS_SET_KARGS              0x112a04
+#define IHK_OS_QUERY_FREE_MEM         0x112a05
 #define IHK_OS_ALLOC_CPU              0x112a10
 #define IHK_OS_ALLOC_MEM              0x112a11
 #define IHK_OS_RESERVE_CPU            0x112a12

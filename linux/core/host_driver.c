@@ -563,6 +563,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_query_status(data);
 		break;
 
+	case IHK_OS_QUERY_FREE_MEM:
+		ret = __ihk_os_query_free_mem(data);
+		break;
+
 	case IHK_OS_SET_KARGS:
 		ret = __ihk_os_set_kargs(data, (char * __user)arg);
 		break;

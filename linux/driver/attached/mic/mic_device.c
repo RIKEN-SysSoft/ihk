@@ -618,6 +618,38 @@ int __mic_os_get_status(struct mic_device_data *kdd)
 		return -1;
 	}
 }
+
+/** \brief Get the number of free pages on MIC.
+ *
+ * Since there is only one kernel in a device, the parameter includes
+ * no OS parameter.
+ * @param kdd   A Knights Ferry device
+ */
+int __mic_os_get_free_mem(struct mic_device_data *kdd)
+{
+	int timeout = 500;
+	int ret;
+
+	mic_write_sbox(kdd, SBOX_SCRATCH0, 0);
+	mic_write_sbox(kdd, SBOX_SCRATCH1, 0);
+
+	mic_issue_interrupt(kdd, 0, 0xd2);
+
+	while ((ret = mic_read_sbox(kdd, SBOX_SCRATCH1)) == 0) {
+		mdelay(100);
+		timeout--;
+	}
+	
+	if (timeout == 0) {
+		printk("__mic_os_get_free_mem(): ERROR: timeout\n");
+		return -1;
+	}
+	
+	ret = mic_read_sbox(kdd, SBOX_SCRATCH0);
+	
+	return ret;
+}
+
 /** \brief Get various special memory areas of a Knights Ferry device.
  *
  * @param [in] kdd   A Knights Ferry device

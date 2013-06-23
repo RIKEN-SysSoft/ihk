@@ -126,6 +126,12 @@ IHK_OS_OPS_BEGIN_NOARG(int, query_status)
 	IHK_OPS_BODY_NOARG(query_status);
 }
 
+IHK_OS_OPS_BEGIN_NOARG(int, query_free_mem)
+{
+	IHK_OPS_BODY_NOARG(query_free_mem);
+}
+
+
 IHK_DEV_OPS_BEGIN(unsigned long, map_memory,
                  unsigned long rphys, unsigned long size)
 {
