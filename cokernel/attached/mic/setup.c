@@ -22,6 +22,14 @@ extern struct ihk_kmsg_buf kmsg_buf;
 
 static struct mic_boot_param *boot_param;
 
+static int cpumhz = 1053;
+
+void set_cpumhz(int mhzval)
+{
+        cpumhz = mhzval;
+        kprintf("set cpu MHz: %d\n", cpumhz);
+}
+
 void gtt_write(int index, unsigned long phys, unsigned int enable)
 {
 	*(volatile unsigned int *)(MIC_GTT_BASE + (unsigned long)index * 4)
@@ -241,7 +249,8 @@ void arch_delay(int us)
 	unsigned long tsc;
 
 	/* XXX: 1.2GHz */
-	tsc = rdtsc() + 833 * us;
+/*	tsc = rdtsc() + 833 * us; */
+	tsc = rdtsc() + cpumhz * us;
 	while (rdtsc() < tsc) {
 		cpu_pause();
 	}

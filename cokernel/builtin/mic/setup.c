@@ -19,6 +19,14 @@ extern struct ihk_kmsg_buf kmsg_buf;
 
 unsigned long x86_kernel_phys_base;
 
+static int cpumhz = 1053;
+
+void set_cpumhz(int mhzval)
+{
+        cpumhz = mhzval;
+        kprintf("set cpu MHz: %d\n", cpumhz);
+}
+
 void arch_start(unsigned long param_addr, unsigned long phys_address)
 {
 	x86_kernel_phys_base = phys_address;
@@ -167,7 +175,8 @@ void arch_delay(int us)
 	unsigned long tsc;
 
 	/* XXX: 1.2 */
-	tsc = rdtsc() + 833 * us;
+/*	tsc = rdtsc() + 833 * us; */
+	tsc = rdtsc() + cpumhz * us;
 	while (rdtsc() < tsc) {
 		cpu_pause();
 	}
