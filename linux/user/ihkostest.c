@@ -11,6 +11,32 @@
 int __argc;
 char **__argv;
 
+static void usage(char **arg)
+{
+	char	*cmd;
+
+	cmd = strrchr(arg[0], '/');
+	if(cmd)
+		cmd++;
+	else
+		cmd = arg[0];
+	fprintf(stderr, "Usage: %s (dev #) (action)\n", cmd);
+	fprintf(stderr, "action:\n");
+	fprintf(stderr, "    load (kernel.img)\n");
+	fprintf(stderr, "    boot\n");
+	fprintf(stderr, "    shutdown\n");
+	fprintf(stderr, "    alloc [cpu [memory]]\n");
+	fprintf(stderr, "    reserve_cpu [cpu_num]...\n");
+	fprintf(stderr, "    reserve_mem (addr) (size)\n");
+	fprintf(stderr, "    query\n");
+	fprintf(stderr, "    query_free_mem\n");
+	fprintf(stderr, "    kargs (kernel arg)\n");
+	fprintf(stderr, "    kmsg\n");
+	fprintf(stderr, "    clear_kmsg\n");
+	fprintf(stderr, "    intr [intr]\n");
+	fprintf(stderr, "    ioctl (req) (arg)\n");
+}
+
 static void do_boot(int fd)
 {
 	int r = ioctl(fd, IHK_OS_BOOT, 0);
@@ -189,7 +215,7 @@ int main(int argc, char **argv)
 	__argv = argv;
 
 	if (argc < 3) {
-		fprintf(stderr, "Usage: %s (dev #) (action)\n", argv[0]);
+		usage(argv);
 		return 1;
 	}
 
@@ -216,6 +242,7 @@ int main(int argc, char **argv)
 	else HANDLER(ioctl)
 	else {
 		fprintf(stderr, "Unknown action : %s\n", argv[2]);
+		usage(argv);
 	}
 	
 	close(fd);

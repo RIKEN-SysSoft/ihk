@@ -10,6 +10,28 @@
 int __argc;
 char **__argv;
 
+static void usage(char **arg)
+{
+	char	*cmd;
+
+	cmd = strrchr(arg[0], '/');
+	if(cmd)
+		cmd++;
+	else
+		cmd = arg[0];
+	fprintf(stderr, "Usage: %s (dev #) (action)\n", cmd);
+	fprintf(stderr, "action:\n");
+	fprintf(stderr, "    create\n");
+	fprintf(stderr, "    destroy\n");
+	fprintf(stderr, "    scratch\n");
+	fprintf(stderr, "    sbox\n");
+	fprintf(stderr, "    read\n");
+	fprintf(stderr, "    mmap\n");
+	fprintf(stderr, "    ioctl\n");
+	fprintf(stderr, "    clear_kmsg\n");
+	fprintf(stderr, "    clear_kmsg_write\n");
+}
+
 static void do_destroy(int fd)
 {
 }
@@ -167,7 +189,7 @@ int main(int argc, char **argv)
 	__argv = argv;
 
 	if (argc < 3) {
-		fprintf(stderr, "Usage: %s (dev #) (action)\n", argv[0]);
+		usage(argv);
 		return 1;
 	}
 
@@ -190,6 +212,7 @@ int main(int argc, char **argv)
 	else HANDLER(clear_kmsg_write)
 	else {
 		fprintf(stderr, "Unknown action : %s\n", argv[2]);
+		usage(argv);
 	}
 	
 	close(fd);
