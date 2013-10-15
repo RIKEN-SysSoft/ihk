@@ -17,5 +17,5 @@ clean:
 
 install:
 	mkdir -p -m 755 $(SBINDIR)
-	install -m 755 ihktest $(SBINDIR)
-	install -m 755 ihkostest $(SBINDIR)
+	install -m 755 ihktest $(SBINDIR)/ihkconfig
+	install -m 755 ihkostest $(SBINDIR)/ihkosctl
