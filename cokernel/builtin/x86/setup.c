@@ -40,11 +40,11 @@ static void build_ihk_cpu_info(void)
 
 	ihk_cpu_info = early_alloc_page();
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
-	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + 64;
+	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + SHIMOS_MAX_CORES;
 
 	kprintf("CPU: ");
-	for (i = 0; i < sizeof(unsigned long) * 8; i++) {
-		if (boot_param->cores & (1UL << i)) {
+	for (i = 0; i < SHIMOS_MAX_CORES; i++) {
+		if (CORE_ISSET(i, boot_param->coreset)) {
 			ihk_cpu_info->hw_ids[n] = i;
 			ihk_cpu_info->nodes[n] = 0;
 
