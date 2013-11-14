@@ -1,6 +1,10 @@
 /**
  * \file mic_dma.c
- * \brief IHK MIC Driver: Knights Ferry DMA Device Driver 
+ *  License details are found in the file LICENSE.
+ * \brief
+ *	IHK MIC Driver: Xeon Phi DMA Device Driver 
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include <linux/sched.h>
 #include <linux/mm.h>

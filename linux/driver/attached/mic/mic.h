@@ -1,7 +1,11 @@
 /**
- * \file host/driver/mic/mic.h
- * \brief IHK MIC Driver: Header file for miscellaneous structures used
- *                        in Knights Ferry drivers
+ * \file mic.h
+ *  License details are found in the file LICENSE.
+ * \brief
+ *	IHK MIC Driver: Header file for miscellaneous structures used
+ *                        in Xeon Phi drivers
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011-2012 Taku Shimosawa
  */
 #ifndef MIC_H
 #define MIC_H

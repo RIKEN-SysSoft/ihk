@@ -1,8 +1,9 @@
 /**
  * \file dmacore.c
- * \brief IHK BUILTIN Driver: BUILTIN DMA Core Main Program
- *
- * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \brief
+ *	IHK BUILTIN Driver: BUILTIN DMA Core Main Program
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include "builtin_dma.h"
 #include <linux/sched.h>

@@ -1,8 +1,10 @@
 /**
  * \file ihk_mic_driver.c
- * \brief IHK MIC Driver: IHK Host Driver for Knights Ferry
- *
- * This code includes NDA-related codes at present.
+ *  License details are found in the file LICENSE.
+ * \brief
+ *	IHK MIC Driver: IHK Host Driver for Knights Ferry
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include <linux/sched.h>
 #include <linux/mm.h>

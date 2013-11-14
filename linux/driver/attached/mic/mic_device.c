@@ -1,8 +1,10 @@
 /**
  * \file mic_device.c
- * \brief IHK MIC Driver: MIC Driver Core
- *
- * This file treats the actual procedures for Knights Ferry boards.
+ *  License details are found in the file LICENSE.
+ * \brief
+ *	IHK MIC Driver: MIC Driver Core
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include <linux/sched.h>
 #include <linux/mm.h>

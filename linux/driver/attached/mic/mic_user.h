@@ -1,6 +1,9 @@
 /**
  * \file mic_user.h
- * \brief IHK MIC Driver: Definitions of MIC-specific ioctl constants
+ * \brief
+ *	IHK MIC Driver: Definitions of MIC-specific ioctl constants
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011-2012 Taku Shimosawa
  */
 #ifndef __MIC_USER_H
 #define __MIC_USER_H
