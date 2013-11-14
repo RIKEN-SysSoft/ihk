@@ -1,11 +1,20 @@
 /**
  * \file host_driver.c
- * \brief IHK-Host: Character Device Drivers for User Process Interaction
- *
+ * 
+ * \brief 
+ * IHK-Host: Character Device Drivers for User Process Interaction
  * Character device implementation in Linux of IHK-Host device and OS driver
  * files.
  *
- * Copyright (c) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
+ * 
+ * \author Balazs Gerofi  <bgerofi@il.is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2013  The University Of Tokyo
+ *
+ * HISTORY:
+ *  2013/06/24: bgerofi - interface for querying free physical memory on OS
+ *
  */
 #include <linux/sched.h>
 #include <linux/mm.h>

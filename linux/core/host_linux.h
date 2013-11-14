@@ -1,11 +1,11 @@
 /**
  * \file host_linux.h
+ * 
  * \brief IHK-Host: Structures used in implementation of IHK-Host
- *
- * Copyright (c) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
- */
-/*
  * Accelerator Abstraction Layer Host Implementation for Linux
+ *
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
  */
 #ifndef __HEADER_IHK_HOST_LINUX_H
 #define __HEADER_IHK_HOST_LINUX_H

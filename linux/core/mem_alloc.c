@@ -1,7 +1,11 @@
-/** \file mem_alloc.c
+/** 
+ * \file mem_alloc.c
+ * 
  * \brief IHK-Host: Generic page allocator (not so fast)
  *
- * (C) Copyright 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
+ * 
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
