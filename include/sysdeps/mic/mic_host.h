@@ -1,8 +1,11 @@
 /**
  * \file include/sysdeps/mic/mic_host.h
- * \brief IHK-Host/Manycore for MIC: Boot parameter structure
+ * 
+ * \brief 
+ * IHK-Host/Manycore for MIC: Boot parameter structure
  *
- * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
  */
 #ifndef __HEADER_IHK_SYSDEPS_MIC_MIC_HOST
 #define __HEADER_IHK_SYSDEPS_MIC_MIC_HOST

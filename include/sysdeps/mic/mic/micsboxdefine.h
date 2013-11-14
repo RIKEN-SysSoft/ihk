@@ -1,3 +1,15 @@
+/**
+ * \file micsboxdefine.h
+ * Licence details are found in the file LICENSE.
+ *  
+ * \brief
+ * KNF/KNC SBOX definitions taken from MPSS Linux.
+ *
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
+ * 
+ */
+
 /*
 * Intel MIC Platform Software Stack (MPSS)
 * The SCIF based one

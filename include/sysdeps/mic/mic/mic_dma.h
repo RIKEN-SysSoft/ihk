@@ -1,3 +1,13 @@
+/**
+ * \file include/sysdeps/mic/mic_dma.h
+ * 
+ * \brief 
+ * IHK-Host/Manycore for MIC: DMA queue element structures
+ * taken from MPSS Linux
+ *
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
+ */
 #ifndef HEADER_MIC_MIC_DMA_H
 #define HEADER_MIC_MIC_DMA_H
 

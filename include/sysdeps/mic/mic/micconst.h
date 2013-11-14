@@ -1,3 +1,16 @@
+/**
+ * \file micconst.h
+ * Licence details are found in the file LICENSE.
+ *  
+ * \brief
+ * Constans values for KNF/KNC, taken from MPSS Linux
+ *
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
+ * 
+ * \author Balazs Gerofi  <bgerofi@riken.jp> \par
+ * Copyright (C) 2012  RIKEN AICS
+ */
 #ifndef MICCONST_H
 #define MICCONST_H
 
