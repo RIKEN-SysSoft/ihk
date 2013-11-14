@@ -1,8 +1,9 @@
 /**
  * \file host/include/ihk/misc/debug.h
- * \brief IHK-Host: Debug printf functions
- *
- * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \brief
+ *	IHK-Host: Debug printf functions
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	 Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #ifndef __HEADER_IHK_MISC_DEBUG_H
 #define __HEADER_IHK_MISC_DEBUG_H

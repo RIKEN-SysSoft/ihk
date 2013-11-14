@@ -1,7 +1,8 @@
 /**
  * \file ihk_host_user.h
- * \brief IHK-Host: ioctl request numbers
- *
+ * \brief
+ *	 IHK-Host: ioctl request numbers
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #ifndef __HEADER_IHK_HOST_USER_H
