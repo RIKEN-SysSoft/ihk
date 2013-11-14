@@ -1,11 +1,19 @@
 /**
  * \file ops_wrappers.h
+ * 
  * \brief IHK-Host:
- *        Macros to generate static functions that invoke "*_ops" functions.
+ * Macros to generate static functions that invoke "*_ops" functions.
+ * All functions are prefixed with "__ihk_device_" or "__ihk_os_".
  *
- * All the function is prefixed with "__ihk_device_" or "__ihk_os_".
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
+ * 
+ * \author Balazs Gerofi  <bgerofi@riken.jp> \par
+ * Copyright (C) 2012  RIKEN AICS
  *
- * Copyright (c) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * HISTORY:
+ *  2013/06/24: bgerofi - interface for querying free physical memory on OS
+ *
  */
 #ifndef __HEADER_IHK_OPS_WRAPPERS_H
 #define __HEADER_IHK_OPS_WRAPPERS_H

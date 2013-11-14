@@ -1,7 +1,10 @@
-/** \file mm.c
+/** 
+ * \file mm.c
+ * 
  * \brief IHK-Host: Memory management misc functions (not implemented yet)
  *
- * (C) Copyright 2011 Taku Shimosawa.
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011 - 2012  Taku Shimosawa
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
