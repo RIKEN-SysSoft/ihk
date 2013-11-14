@@ -1,0 +1,59 @@
+.\" Man page for McKernel
+.\"   ihkconfig
+.\"
+.\" Copyright (C) 2013 The University of Tokyo, Japan
+.\"	Written by Yutaka Ishikawa <ishikawa@is.s.u-tokyo.ac.jp>
+.\"
+
+.TH IHKCONFIG 1 "@MCKERNEL_DATE@" "Version @VERSION@" MCKERNEL @VERSION@"
+.SH NAME
+ihkconfig \- configures the IHK device
+.\"
+
+.\" ----------------------------  SYNOPSIS ----------------------------
+.SH SYNOPSIS
+.B ihkconfig
+\fIdev#\fR \fICOMMAND\fR [\fIoptions\fR]
+
+.\" ----------------------------  DESCRIPTION ----------------------------
+.SH DESCRIPTION
+The device name "/dev/mcos followed by digits specified by \fIdev#\fR
+is created.
+The following commands are available:
+.PP
+.PD 0
+.TP 15
+.B create
+creates an OS device. The /dev/mcos\fI[n]\fR is created.
+.TP
+.B destroy
+nothing happens in this release.
+
+.PP
+The following commands are for debugging purposes:
+.TP 15
+.B scratch
+internal use.
+.TP
+.B sbox
+internal use.
+.TP
+.B read \fI<address>\fR
+reads 16 byte date from the speicifed address in McKernel using pread.
+.TP
+.B mmap  \fI<address>\fR
+reads 16 byte date from the speicifed address in McKernel using mmap.
+.TP
+.B ioctl \fI<command>\fR \fI<argument>\fR
+issues an ioctl.
+
+.PP
+.\" ----------------------------  SEE ALSO ----------------------------
+.SH SEE ALSO
+\fBihkconfig\fR (1), \fBihkosctl\fR (1)
+
+.\" ----------------------------  AUTHORS ----------------------------
+.SH AUTHORS
+    Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp>
+
+

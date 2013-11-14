@@ -1,3 +1,11 @@
+/**
+ * \file ihkconfig.c
+ *  License details are found in the file LICENSE.
+ * \brief
+ *  configures the IHK device
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011 - 2012  Taku Shimosawa
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>

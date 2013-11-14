@@ -1,0 +1,68 @@
+.\" Man page for McKernel
+.\"   ihkosctl
+.\"
+.\" Copyright (C) 2013 The University of Tokyo, Japan
+.\"	Written by Yutaka Ishikawa <ishikawa@is.s.u-tokyo.ac.jp>
+.\"
+
+.TH IHKOSCTL 1 "@MCKERNEL_RELEASEDATE@" "Version @MCKERNEL_VERSION@" MCKERNEL @MCKERNEL_VERSION@"
+.SH NAME
+ihkosctl \- configures the OSs on coprocessors
+.\"
+
+.\" ----------------------------  SYNOPSIS ----------------------------
+.SH SYNOPSIS
+.B ihkosctl
+\fIdev#\fR \fICOMMAND\fR [\fIoptions\fR]
+
+.\" ----------------------------  DESCRIPTION ----------------------------
+.SH DESCRIPTION
+The following commands are available:
+.PP
+.PD 0
+.TP 15
+.B load [\fI<os image>\fR]
+loades the specified OS image on coprocessors.
+If the option is omiited, @MCKERNE_INSTDIR@/mcos.image is loaded.
+.TP
+.B boot
+bootes the OS on coprocessors.
+.TP
+.B shutdown
+shutdowns the OS on coprocessors.
+.TP
+.B alloc
+allocates cores and memory area on coprocessors.
+.TP
+.B reserve_cpu
+reserves cores on coprocessors.
+.TP
+.B reserve_mem
+reserves memory area on coprocessors.
+.TP
+.B query
+prints the status of the OS on coprocessors.
+.TP
+.B query_free_mem
+prints the free pages on coprocessors.
+.TP
+.B kargs \fB<argument>\fR
+passes the string specified by \fB<argument>\fR to the OS on coprocessors.
+.TP
+.B kmsg
+printes the kernel messages on coprocessors.
+.TP
+.B clear_kmsg
+clears the kernel messages on coprocessors.
+.TP
+.B ioctl
+
+.PP
+.\" ----------------------------  SEE ALSO ----------------------------
+.SH SEE ALSO
+\fBihkconfig\fR (1), \fBihkosctl\fR (1)
+
+.\" ----------------------------  AUTHORS ----------------------------
+.SH AUTHORS
+    Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp>
+
