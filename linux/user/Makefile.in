@@ -1,7 +1,7 @@
 CC=@CC@
 CFLAGS=-Wall -O
 SBINDIR=@SBINDIR@
-TARGET=ihktest ihkostest memdump pagetable maccess memdump-mic
+TARGET=ihkconfig ihkosctl memdump pagetable maccess memdump-mic
 
 IHKBASE ?= ../../../ihk
 
@@ -17,5 +17,5 @@ clean:
 
 install:
 	mkdir -p -m 755 $(SBINDIR)
-	install -m 755 ihktest $(SBINDIR)/ihkconfig
-	install -m 755 ihkostest $(SBINDIR)/ihkosctl
+	install -m 755 ihkconfig $(SBINDIR)/ihkconfig
+	install -m 755 ihkosctl $(SBINDIR)/ihkosctl

@@ -1,3 +1,10 @@
+/**
+ * \file dmacore_intr.S
+ * \brief
+ *	IHK BUILTIN Driver: interrupt routine
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
 .text
 .globl builtin_dma_intr_enter
 builtin_dma_intr_enter:

@@ -1,7 +1,8 @@
 /**
  * \file ihk_host_misc.h
- * \brief IHK-Host: Miscellaneous Functions
- *
+ * \brief
+ *	 IHK-Host: Miscellaneous Functions
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #ifndef IHK_HOST_MISC_H

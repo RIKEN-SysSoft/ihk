@@ -1,6 +1,10 @@
 /**
- * \file mic.h
- * \brief IHK MIC Driver: MIC-related functions
+ * \file mic_mmio.h
+ *  License details are found in the file LICENSE.
+ * \brief
+ *	IHK MIC Driver: MIC-related functions
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011-2012 Taku Shimosawa
  */
 #ifndef __HEADER_IHK_DRIVER_MIC_H
 #define __HEADER_IHK_DRIVER_MIC_H

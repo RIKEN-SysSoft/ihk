@@ -1,8 +1,9 @@
 /**
- * \file host/driver/builtin/builtin_dma.h
- * \brief IHK BUILTIN Driver: Structures used by the BUILTIN DMA core
- *
- * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \file builtin_dma.h
+ * \brief
+ *	IHK BUILTIN Driver: Structures used by the BUILTIN DMA core
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #ifndef __HEADER_BUILTIN_DMA_H
 #define __HEADER_BUILTIN_DMA_H

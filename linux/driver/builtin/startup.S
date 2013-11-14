@@ -1,3 +1,11 @@
+/**
+ * \file startup.S
+ * \brief
+ *	IHK BUILTIN Driver: startup routine
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ */
+
 .globl startup_data
 startup_data:
 	leaq	0(%rip),%rbx

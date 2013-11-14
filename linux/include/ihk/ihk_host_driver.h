@@ -1,8 +1,9 @@
 /**
  * \file ihk_host_driver.h
- * \brief IHK-Host: Structures
- *
- * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \brief
+ *	IHK-Host: Structures
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
+ *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #ifndef __HEADER_IHK_HOST_DRIVER_H
 #define __HEADER_IHK_HOST_DRIVER_H

@@ -1,8 +1,9 @@
 /**
  * \file ihk_builtin_driver.c
- * \brief IHK BUILTIN Driver: IHK Host Driver 
+ * \brief
+ *	IHK BUILTIN Driver: IHK Host Driver 
  *                        for BUILTIN (Manycore Emulation Environemnt)
- *
+ * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  * Copyright (C) 2011-2012 Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include <linux/sched.h>
