@@ -128,8 +128,8 @@ AC_CONFIG_FILES([
 	linux/user/Makefile
 	linux/driver/builtin/Makefile
 	linux/driver/attached/mic/Makefile
-	ihkconfig.1:ihkconfig.1in
-	ihkosctl.1:ihkosctl.1in
+	linux/user/ihkconfig.1:linux/user/ihkconfig.1in
+	linux/user/ihkosctl.1:linux/user/ihkosctl.1in
 ])
 
 AC_OUTPUT

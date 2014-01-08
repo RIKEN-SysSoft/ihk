@@ -3229,7 +3229,7 @@ TARGET="$WITH_TARGET"
 
 
 
-ac_config_files="$ac_config_files Makefile linux/core/Makefile.module linux/user/Makefile linux/driver/builtin/Makefile linux/driver/attached/mic/Makefile ihkconfig.1:ihkconfig.1in ihkosctl.1:ihkosctl.1in"
+ac_config_files="$ac_config_files Makefile linux/core/Makefile.module linux/user/Makefile linux/driver/builtin/Makefile linux/driver/attached/mic/Makefile linux/user/ihkconfig.1:linux/user/ihkconfig.1in linux/user/ihkosctl.1:linux/user/ihkosctl.1in"
 
 
 cat >confcache <<\_ACEOF
@@ -3942,8 +3942,8 @@ do
     "linux/user/Makefile") CONFIG_FILES="$CONFIG_FILES linux/user/Makefile" ;;
     "linux/driver/builtin/Makefile") CONFIG_FILES="$CONFIG_FILES linux/driver/builtin/Makefile" ;;
     "linux/driver/attached/mic/Makefile") CONFIG_FILES="$CONFIG_FILES linux/driver/attached/mic/Makefile" ;;
-    "ihkconfig.1") CONFIG_FILES="$CONFIG_FILES ihkconfig.1:ihkconfig.1in" ;;
-    "ihkosctl.1") CONFIG_FILES="$CONFIG_FILES ihkosctl.1:ihkosctl.1in" ;;
+    "linux/user/ihkconfig.1") CONFIG_FILES="$CONFIG_FILES linux/user/ihkconfig.1:linux/user/ihkconfig.1in" ;;
+    "linux/user/ihkosctl.1") CONFIG_FILES="$CONFIG_FILES linux/user/ihkosctl.1:linux/user/ihkosctl.1in" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
