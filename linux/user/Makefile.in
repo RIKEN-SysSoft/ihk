@@ -1,6 +1,7 @@
 CC=@CC@
 CFLAGS=-Wall -O
 SBINDIR=@SBINDIR@
+MANDIR=@MANDIR@
 TARGET=ihkconfig ihkosctl memdump pagetable maccess memdump-mic
 
 IHKBASE ?= ../../../ihk
@@ -19,3 +20,6 @@ install:
 	mkdir -p -m 755 $(SBINDIR)
 	install -m 755 ihkconfig $(SBINDIR)/ihkconfig
 	install -m 755 ihkosctl $(SBINDIR)/ihkosctl
+	mkdir -p -m 755 $(MANDIR)/man1
+	install -m 644 ihkconfig.1 $(MANDIR)/man1/ihkconfig.1
+	install -m 644 ihkosctl.1 $(MANDIR)/man1/ihkosctl.1

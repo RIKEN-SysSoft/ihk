@@ -590,6 +590,7 @@ IHK_RELEASE_DATE
 DCFA_VERSION
 MCKERNEL_VERSION
 IHK_VERSION
+MANDIR
 KMODDIR
 SBINDIR
 BINDIR
@@ -2601,6 +2602,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 	if test "X$KMODDIR" = X; then
 		KMODDIR="$prefix/kmod"
 	fi
+	if test "X$MANDIR" = X; then
+		MANDIR="$prefix/man"
+	fi
 	;;
     builtin-mic)
 	ARCH=k1om
@@ -2651,6 +2655,9 @@ fi
 	fi
 	if test "X$KMODDIR" = X; then
 		KMODDIR="$prefix/attached/kmod"
+	fi
+	if test "X$MANDIR" = X; then
+		MANDIR="$prefix/attached/man"
 	fi
 	;;
     builtin-x86)
@@ -3204,6 +3211,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 	if test "X$KMODDIR" = X; then
 		KMODDIR="$prefix/kmod"
 	fi
+	if test "X$MANDIR" = X; then
+		MANDIR="$prefix/attached/man"
+	fi
 	;;
     *)
 	as_fn_error $? "target $WITH_TARGET is unknwon" "$LINENO" 5
@@ -3212,6 +3222,7 @@ esac
 
 KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
+
 
 
 

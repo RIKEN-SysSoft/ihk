@@ -66,6 +66,9 @@ case $WITH_TARGET in
 	if test "X$KMODDIR" = X; then
 		KMODDIR="$prefix/kmod"
 	fi
+	if test "X$MANDIR" = X; then
+		MANDIR="$prefix/man"
+	fi
 	;;
     builtin-mic)
 	ARCH=k1om
@@ -83,6 +86,9 @@ case $WITH_TARGET in
 	if test "X$KMODDIR" = X; then
 		KMODDIR="$prefix/attached/kmod"
 	fi
+	if test "X$MANDIR" = X; then
+		MANDIR="$prefix/attached/man"
+	fi
 	;;
     builtin-x86)
 	ARCH=`uname -m`
@@ -96,6 +102,9 @@ case $WITH_TARGET in
 	fi
 	if test "X$KMODDIR" = X; then
 		KMODDIR="$prefix/kmod"
+	fi
+	if test "X$MANDIR" = X; then
+		MANDIR="$prefix/attached/man"
 	fi
 	;;
     *)
@@ -114,6 +123,7 @@ AC_SUBST(TARGET)
 AC_SUBST(BINDIR)
 AC_SUBST(SBINDIR)
 AC_SUBST(KMODDIR)
+AC_SUBST(MANDIR)
 
 AC_SUBST(IHK_VERSION)
 AC_SUBST(MCKERNEL_VERSION)
