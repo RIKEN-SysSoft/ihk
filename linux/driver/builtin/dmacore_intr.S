@@ -5,6 +5,7 @@
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
+#ifdef USE_DMA
 .text
 .globl builtin_dma_intr_enter
 builtin_dma_intr_enter:
@@ -51,3 +52,4 @@ builtin_dma_intr_enter:
         popq  %rax
 		addq  $8, %rsp
 		iretq
+#endif

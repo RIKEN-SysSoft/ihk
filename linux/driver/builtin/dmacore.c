@@ -5,11 +5,13 @@
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
+#if USE_DMA
 #include "builtin_dma.h"
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <asm/io.h>
 #include <ihk/ihk_host_driver.h>
+
 
 /** \brief Pointer to the structure that contains information of the DMA core */
 struct builtin_dma_config_struct *builtin_dma_config;
@@ -226,5 +228,4 @@ int __builtin_dma_request(ihk_device_t dev, int channel,
 
 	return 0;
 }
-
-
+#endif

@@ -8,6 +8,8 @@
 #ifndef __HEADER_BUILTIN_DMA_H
 #define __HEADER_BUILTIN_DMA_H
 
+#ifdef USE_DMA
+
 #include <linux/spinlock.h>
 
 /* 32 byte */
@@ -59,4 +61,5 @@ void builtin_dma_issue_interrupt(void);
 
 void builtin_dma_desc_init(void);
 
+#endif
 #endif

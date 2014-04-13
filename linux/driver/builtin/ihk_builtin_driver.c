@@ -130,8 +130,10 @@ struct builtin_os_data {
 #define BUILTIN_DEV_STATUS_READY    0
 #define BUILTIN_DEV_STATUS_BOOTING  1
 
+#ifdef USE_DMA
 extern struct builtin_dma_config_struct *builtin_dma_config;
 static unsigned long builtin_dma_config_pa;
+#endif
 
 /** \brief Driver-speicific device structure
  *
@@ -146,11 +148,13 @@ struct builtin_device_data {
 	struct ihk_dma_channel builtin_host_channel;
 };
 
+#ifdef USE_DMA
 static int builtin_dma_request(ihk_dma_channel_t, struct ihk_dma_request *);
 
 struct ihk_dma_ops builtin_dma_ops = {
 	.request = builtin_dma_request,
 };
+#endif
 
 /** \brief Implementation of ihk_host_get_dma_channel.
  *
@@ -158,6 +162,7 @@ struct ihk_dma_ops builtin_dma_ops = {
 static ihk_dma_channel_t builtin_ihk_get_dma_channel(ihk_device_t dev, void *priv,
                                                  int channel)
 {
+#ifdef USE_DMA
 	struct builtin_device_data *data = priv;
 
 	data->builtin_host_channel.dev = dev;
@@ -165,6 +170,9 @@ static ihk_dma_channel_t builtin_ihk_get_dma_channel(ihk_device_t dev, void *pri
 	data->builtin_host_channel.ops = &builtin_dma_ops;
 
 	return &data->builtin_host_channel;
+#else
+	return NULL;
+#endif
 }
 
 /** \brief Set the status member of the OS data with lock */
@@ -251,14 +259,17 @@ static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	os->param.bp.start = os->mem_start;
 	os->param.bp.end = os->mem_end;
 	os->param.bp.coreset = os->coremaps;
+#ifdef USE_DMA
 	os->param.dma_address = builtin_dma_config_pa;
+#endif
 	os->param.ident_table = __pa(shimos_get_ident_page_table());
 	strncpy(os->param.kernel_args, os->kernel_args,
 	        sizeof(os->param.kernel_args));
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps[0],
-	        builtin_dma_config_pa);
+	        os->param.dma_address
+	);
 
 	return shimos_boot_cpu_kloader(os->boot_cpu, os->boot_rip,
 	                               &os->param.bp);
@@ -883,11 +894,13 @@ static int builtin_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
 static long builtin_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
                                   unsigned int req, unsigned long arg)
 {
+#ifdef USE_DMA
 	switch (req) {
 	case IHK_DEVICE_DEBUG_START + 0x10:
 		builtin_dma_issue_interrupt();
 		return 0;
 	}
+#endif
 	return -EINVAL;
 }
 
@@ -914,8 +927,10 @@ static struct ihk_register_device_data builtin_dev_reg_data = {
 	.ops = &builtin_ihk_device_ops,
 };
 
+#ifdef USE_DMA
 static int builtin_dma_init(void);
 static void builtin_dma_exit(void);
+#endif
 
 static int __init builtin_init(void)
 {
@@ -934,7 +949,9 @@ static int __init builtin_init(void)
 
 	shimos_set_irq_handler(builtin_irq_handler);
 
+#ifdef USE_DMA
 	builtin_dma_init();
+#endif
 
 	return 0;
 }
@@ -946,7 +963,9 @@ static void __exit builtin_exit(void)
 
 	shimos_set_irq_handler(NULL);
 
+#ifdef USE_DMA
 	builtin_dma_exit();
+#endif
 }
 
 module_init(builtin_init);
@@ -954,6 +973,7 @@ module_exit(builtin_exit);
 
 MODULE_LICENSE("Dual BSD/GPL");
 
+#ifdef USE_DMA
 /*
  * DMA stuff
  */
@@ -1142,3 +1162,4 @@ static int builtin_dma_request(ihk_dma_channel_t channel, struct ihk_dma_request
 
 	return 0;
 }
+#endif
