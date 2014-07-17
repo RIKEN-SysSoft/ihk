@@ -7,6 +7,17 @@
 #include <ikc/ihk.h>
 #include <ikc/queue.h>
 
+//#define DEBUG_QUEUE
+
+#ifdef DEBUG_QUEUE
+#define	dkprintf(...)	kprintf(__VA_ARGS__)
+#define	ekprintf(...)	kprintf(__VA_ARGS__)
+#else
+#define dkprintf(...)
+#define	ekprintf(...)	kprintf(__VA_ARGS__)
+#endif
+
+
 void ihk_ikc_notify_remote_read(struct ihk_ikc_channel_desc *c);
 void ihk_ikc_notify_remote_write(struct ihk_ikc_channel_desc *c);
 
@@ -406,7 +417,7 @@ void ihk_ikc_enable_channel(struct ihk_ikc_channel_desc *channel)
 {
 	unsigned long flags;
 
-	kprintf("Channel %d enabled. Recv CPU = %d.\n",
+	dkprintf("Channel %d enabled. Recv CPU = %d.\n",
 	        channel->channel_id, channel->send.queue->read_cpu);
 
 	flags = ihk_ikc_spinlock_lock(&channel->recv.lock);
