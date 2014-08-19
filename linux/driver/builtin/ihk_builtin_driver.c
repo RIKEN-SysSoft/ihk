@@ -51,8 +51,6 @@
 #define PTL3_SHIFT	30
 #define PTL2_SHIFT	21
 
-#define	IOREMAP_CACHE(phys,size)	shimos_other_os_map(phys, size);
-
 /** \brief BUILTIN boot parameter structure
  *
  * This structure contains vairous parameters both passed to the manycore 
@@ -325,7 +323,7 @@ builtin_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		printk("open failed: %s\n", fn);
 		return -ENOENT;
 	}
-	elf64 = IOREMAP_CACHE(os->mem_end - PAGE_SIZE, PAGE_SIZE); 
+	elf64 = shimos_other_os_map(os->mem_end - PAGE_SIZE, PAGE_SIZE);
 	fs = get_fs();
 	set_fs(get_ds());
 printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
@@ -379,7 +377,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
-			buf = IOREMAP_CACHE(offset, PAGE_SIZE); 
+			buf = shimos_other_os_map(offset, PAGE_SIZE);
 			fs = get_fs();
 			set_fs(get_ds());
 			r = vfs_read(file, buf, l, &pos);
@@ -402,7 +400,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
-			buf = IOREMAP_CACHE(offset, PAGE_SIZE); 
+			buf = shimos_other_os_map(offset, PAGE_SIZE);
 			memset(buf, '\0', PAGE_SIZE);
 			iounmap(buf);
 			offset += PAGE_SIZE;
@@ -419,9 +417,9 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 
 
 	cr3 = shimos_get_ident_page_table();
-	pml4 = IOREMAP_CACHE(pml4_p, PAGE_SIZE); 
-	pdp = IOREMAP_CACHE(pdp_p, PAGE_SIZE); 
-	pde = IOREMAP_CACHE(pde_p, PAGE_SIZE); 
+	pml4 = shimos_other_os_map(pml4_p, PAGE_SIZE);
+	pdp = shimos_other_os_map(pdp_p, PAGE_SIZE);
+	pde = shimos_other_os_map(pde_p, PAGE_SIZE);
 
 	memset(pml4, '\0', PAGE_SIZE);
 	memset(pdp, '\0', PAGE_SIZE);
@@ -445,7 +443,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	iounmap(pml4);
 
 	startup_p = os->mem_end - (2 << PTL2_SHIFT);
-	startup = IOREMAP_CACHE(startup_p, PAGE_SIZE);
+	startup = shimos_other_os_map(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
 	startup[2] = pml4_p;
 	startup[3] = 0xffffffffc0000000;
@@ -491,7 +489,7 @@ static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 	offset -= phys;
 
 	for (; size > 0; ) {
-		virt = IOREMAP_CACHE(phys, PAGE_SIZE);
+		virt = shimos_other_os_map(phys, PAGE_SIZE);
 		if (!virt) {
 			dprintf("builtin: Failed to map %lx\n", phys);
 
