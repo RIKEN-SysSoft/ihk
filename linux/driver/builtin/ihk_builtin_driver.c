@@ -331,7 +331,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	set_fs(fs);
 	if (r <= 0) {
 		printk("vfs_read failed: %ld\n", r);
-		iounmap(elf64);
+		shimos_other_os_unmap(elf64, PAGE_SIZE);
 		fput(file);
 		return (int)r;
 	}
@@ -341,7 +341,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	   elf64->e_ident[3] != 'F' ||
 	   elf64->e_phoff + sizeof(Elf64_Phdr) * elf64->e_phnum > PAGE_SIZE){
 		printk("kernel: BAD ELF\n");
-		iounmap(elf64);
+		shimos_other_os_unmap(elf64, PAGE_SIZE);
 		fput(file);
 		return (int)-EINVAL;
 	}
@@ -385,10 +385,10 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 			if(r != PAGE_SIZE){
 				memset(buf + r, '\0', PAGE_SIZE - r);
 			}
-			iounmap(buf);
+			shimos_other_os_unmap(buf, PAGE_SIZE);
 			if (r <= 0) {
 				printk("vfs_read failed: %ld\n", r);
-				iounmap(elf64);
+				shimos_other_os_unmap(elf64, PAGE_SIZE);
 				fput(file);
 				return (int)r;
 			}
@@ -402,14 +402,14 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 			}
 			buf = shimos_other_os_map(offset, PAGE_SIZE);
 			memset(buf, '\0', PAGE_SIZE);
-			iounmap(buf);
+			shimos_other_os_unmap(buf, PAGE_SIZE);
 			offset += PAGE_SIZE;
 		}
 		if(offset > maxoffset)
 			maxoffset = offset;
 	}
 	fput(file);
-	iounmap(elf64);
+	shimos_other_os_unmap(elf64, PAGE_SIZE);
 
 	pml4_p = os->mem_end - PAGE_SIZE;
 	pdp_p = pml4_p - PAGE_SIZE;
@@ -438,9 +438,9 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	}
 	pde[511] = (os->mem_end - (2 << PTL2_SHIFT)) | 0x83;
 
-	iounmap(pde);
-	iounmap(pdp);
-	iounmap(pml4);
+	shimos_other_os_unmap(pde, PAGE_SIZE);
+	shimos_other_os_unmap(pdp, PAGE_SIZE);
+	shimos_other_os_unmap(pml4, PAGE_SIZE);
 
 	startup_p = os->mem_end - (2 << PTL2_SHIFT);
 	startup = shimos_other_os_map(startup_p, PAGE_SIZE);
@@ -449,7 +449,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	startup[3] = 0xffffffffc0000000;
 	startup[4] = phys;
 	startup[5] = entry;
-	iounmap(startup);
+	shimos_other_os_unmap(startup, PAGE_SIZE);
 	os->boot_rip = startup_p;
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
@@ -509,7 +509,7 @@ static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 		/* Offset is only non-aligned at the first copy */
 		offset += to_read;
 		size -= to_read;
-		iounmap(virt);
+		shimos_other_os_unmap(virt, PAGE_SIZE);
 
 		phys += PAGE_SIZE;
 	}
