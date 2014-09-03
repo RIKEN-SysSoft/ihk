@@ -323,7 +323,7 @@ builtin_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		printk("open failed: %s\n", fn);
 		return -ENOENT;
 	}
-	elf64 = ioremap_cache(os->mem_end - PAGE_SIZE, PAGE_SIZE); 
+	elf64 = shimos_other_os_map(os->mem_end - PAGE_SIZE, PAGE_SIZE);
 	fs = get_fs();
 	set_fs(get_ds());
 printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
@@ -331,7 +331,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	set_fs(fs);
 	if (r <= 0) {
 		printk("vfs_read failed: %ld\n", r);
-		iounmap(elf64);
+		shimos_other_os_unmap(elf64, PAGE_SIZE);
 		fput(file);
 		return (int)r;
 	}
@@ -341,7 +341,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	   elf64->e_ident[3] != 'F' ||
 	   elf64->e_phoff + sizeof(Elf64_Phdr) * elf64->e_phnum > PAGE_SIZE){
 		printk("kernel: BAD ELF\n");
-		iounmap(elf64);
+		shimos_other_os_unmap(elf64, PAGE_SIZE);
 		fput(file);
 		return (int)-EINVAL;
 	}
@@ -377,7 +377,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
-			buf = ioremap_cache(offset, PAGE_SIZE); 
+			buf = shimos_other_os_map(offset, PAGE_SIZE);
 			fs = get_fs();
 			set_fs(get_ds());
 			r = vfs_read(file, buf, l, &pos);
@@ -385,10 +385,10 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 			if(r != PAGE_SIZE){
 				memset(buf + r, '\0', PAGE_SIZE - r);
 			}
-			iounmap(buf);
+			shimos_other_os_unmap(buf, PAGE_SIZE);
 			if (r <= 0) {
 				printk("vfs_read failed: %ld\n", r);
-				iounmap(elf64);
+				shimos_other_os_unmap(elf64, PAGE_SIZE);
 				fput(file);
 				return (int)r;
 			}
@@ -400,16 +400,16 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
-			buf = ioremap_cache(offset, PAGE_SIZE); 
+			buf = shimos_other_os_map(offset, PAGE_SIZE);
 			memset(buf, '\0', PAGE_SIZE);
-			iounmap(buf);
+			shimos_other_os_unmap(buf, PAGE_SIZE);
 			offset += PAGE_SIZE;
 		}
 		if(offset > maxoffset)
 			maxoffset = offset;
 	}
 	fput(file);
-	iounmap(elf64);
+	shimos_other_os_unmap(elf64, PAGE_SIZE);
 
 	pml4_p = os->mem_end - PAGE_SIZE;
 	pdp_p = pml4_p - PAGE_SIZE;
@@ -417,9 +417,9 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 
 
 	cr3 = shimos_get_ident_page_table();
-	pml4 = ioremap_cache(pml4_p, PAGE_SIZE); 
-	pdp = ioremap_cache(pdp_p, PAGE_SIZE); 
-	pde = ioremap_cache(pde_p, PAGE_SIZE); 
+	pml4 = shimos_other_os_map(pml4_p, PAGE_SIZE);
+	pdp = shimos_other_os_map(pdp_p, PAGE_SIZE);
+	pde = shimos_other_os_map(pde_p, PAGE_SIZE);
 
 	memset(pml4, '\0', PAGE_SIZE);
 	memset(pdp, '\0', PAGE_SIZE);
@@ -438,18 +438,18 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	}
 	pde[511] = (os->mem_end - (2 << PTL2_SHIFT)) | 0x83;
 
-	iounmap(pde);
-	iounmap(pdp);
-	iounmap(pml4);
+	shimos_other_os_unmap(pde, PAGE_SIZE);
+	shimos_other_os_unmap(pdp, PAGE_SIZE);
+	shimos_other_os_unmap(pml4, PAGE_SIZE);
 
 	startup_p = os->mem_end - (2 << PTL2_SHIFT);
-	startup = ioremap_cache(startup_p, PAGE_SIZE);
+	startup = shimos_other_os_map(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
 	startup[2] = pml4_p;
 	startup[3] = 0xffffffffc0000000;
 	startup[4] = phys;
 	startup[5] = entry;
-	iounmap(startup);
+	shimos_other_os_unmap(startup, PAGE_SIZE);
 	os->boot_rip = startup_p;
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
@@ -489,7 +489,7 @@ static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 	offset -= phys;
 
 	for (; size > 0; ) {
-		virt = ioremap_cache(phys, PAGE_SIZE);
+		virt = shimos_other_os_map(phys, PAGE_SIZE);
 		if (!virt) {
 			dprintf("builtin: Failed to map %lx\n", phys);
 
@@ -509,7 +509,7 @@ static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 		/* Offset is only non-aligned at the first copy */
 		offset += to_read;
 		size -= to_read;
-		iounmap(virt);
+		shimos_other_os_unmap(virt, PAGE_SIZE);
 
 		phys += PAGE_SIZE;
 	}
