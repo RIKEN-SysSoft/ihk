@@ -74,6 +74,7 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		c->send.qphys = wp;
 		c->recv.qrphys = r;
 		c->send.qrphys = w;
+		c->flag |= IKC_FLAG_NO_COPY;
 
 		printk("c->remote_os = %p\n", c->remote_os);
 		os->packet_handler = handler;
