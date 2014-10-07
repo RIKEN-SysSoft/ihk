@@ -1,5 +1,4 @@
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O3
-CFLAGS += -mno-red-zone
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include -Wno-unused-function -I$(IHKBASE)/../ikc/include
 CFLAGS += -DIHK_OS_MANYCORE
 
