@@ -1,19 +1,20 @@
 KDIR ?= @KDIR@
-src ?= $(shell pwd)
+ARCH ?= @ARCH@
+src = @abs_srcdir@
 KMODDIR=@KMODDIR@
 
 obj-m += ihk_mic.o
 
+ccflags-y := -I$(src)/../../../include -I$(src)/../../../../include -I$(src)/../../../../ikc/include -I$(src)/include
+
 ihk_mic-objs = ihk_mic_driver.o mic_device.o mic_dma.o
 
-EXTRA_CFLAGS = -I$(src)/../../../include -I$(src)/../../../../include -I$(src)/../../../../ikc/include -I$(src)/include
+KBUILD_EXTRA_SYMBOLS=@abs_builddir@/../../../core/Module.symvers
 
-KBUILD_EXTRA_SYMBOLS=$(src)/../../../core/Module.symvers
-
-.PHONY: clean install
+.PHONY: clean install modules
 
 modules:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules
+	$(MAKE) -C $(KDIR) M=$(PWD) SUBDIRS=$(PWD) ARCH=$(ARCH) modules
 
 clean:
 	$(RM) .*.cmd *.mod.c *.o *.ko* Module.symvers modules.order -r .tmp*

@@ -1,0 +1,5 @@
+obj-$(CONFIG_IHK)    := host_driver.o mem_alloc.o mm.o mikc.o
+obj-$(CONFIG_IHK)    += ikc/
+
+EXTRA_CFLAGS = -I$(src)/../include
+

@@ -134,7 +134,10 @@ AC_SUBST(DCFA_RESEASE_DATE)
 
 AC_CONFIG_FILES([
 	Makefile
+	linux/core/Makefile
 	linux/core/Makefile.module
+	linux/core/Makefile.builtin
+	ikc/Makefile
 	linux/user/Makefile
 	linux/driver/builtin/Makefile
 	linux/driver/attached/mic/Makefile

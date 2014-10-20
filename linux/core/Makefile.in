@@ -1,0 +1,12 @@
+BUILD_DIR ?= @abs_builddir@
+
+ifeq ($(CONFIG_IHK),y)
+
+include $(BUILD_DIR)/Makefile.builtin
+
+else
+
+include $(BUILD_DIR)/Makefile.module
+
+endif
+

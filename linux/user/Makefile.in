@@ -1,17 +1,14 @@
 CC=@CC@
-CFLAGS=-Wall -O
+IHKBASE ?= @abs_srcdir@/../..
+CFLAGS=-Wall -O -I$(IHKBASE)/linux/include/
 SBINDIR=@SBINDIR@
 MANDIR=@MANDIR@
+VPATH=@abs_srcdir@
 TARGET=ihkconfig ihkosctl memdump pagetable maccess memdump-mic
-
-IHKBASE ?= ../../../ihk
 
 .PHONY: all clean install
 
-all: ihk $(TARGET)
-
-ihk:
-	rm -f ihk; ln -s $(IHKBASE)/linux/include/ihk ihk
+all: $(TARGET)
 
 clean:
 	$(RM) $(TARGET) *.o
