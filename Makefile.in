@@ -9,6 +9,9 @@ all::
 	    builtin*) \
 		(cd linux/driver/builtin; make modules) \
 		;; \
+	    smp-x86) \
+		(cd linux/driver/smp-x86; make modules) \
+		;; \
 	    *) \
 		echo "unknown target $(TARGET)" >&2 \
 		exit 1 \
@@ -25,6 +28,9 @@ install::
 	    builtin*) \
 		(cd linux/driver/builtin; make install) \
 		;; \
+	    smp-x86) \
+		(cd linux/driver/smp-x86; make install) \
+		;; \
 	    *) \
 		echo "unknown target $(TARGET)" >&2 \
 		exit 1 \
@@ -40,6 +46,9 @@ clean::
 		;; \
 	    builtin*) \
 		(cd linux/driver/builtin; make clean) \
+		;; \
+	    smp-x86) \
+		(cd linux/driver/smp-x86; make clean) \
 		;; \
 	    *) \
 		echo "unknown target $(TARGET)" >&2 \

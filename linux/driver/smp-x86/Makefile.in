@@ -1,0 +1,24 @@
+KDIR ?= @KDIR@
+ARCH ?= @ARCH@
+src = @abs_srcdir@
+KMODDIR=@KMODDIR@
+
+obj-m += ihk-smp-x86.o
+
+ccflags-y := -I$(src)/../../include -I$(src)/../../../ikc/include
+
+ihk-smp-x86-y = smp-x86-driver.o smp-x86-startup.o smp-x86-trampoline_64.o
+
+KBUILD_EXTRA_SYMBOLS=@abs_builddir@/../../core/Module.symvers
+
+.PHONY: clean install modules
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) SUBDIRS=$(PWD) ARCH=$(ARCH) modules
+
+clean:
+	$(RM) .*.cmd *.mod.c *.o *.ko* Module.symvers modules.order -r .tmp*
+
+install:
+	mkdir -p -m 755 $(KMODDIR)
+	install -m 644 ihk-smp-x86.ko $(KMODDIR)
