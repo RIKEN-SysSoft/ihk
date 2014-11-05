@@ -5,7 +5,7 @@ KMODDIR=@KMODDIR@
 
 obj-m += ihk-smp-x86.o
 
-ccflags-y := -I$(src)/../../include -I$(src)/../../../ikc/include
+ccflags-y := -I$(src)/../../include -I$(src)/../../../ikc/include -I@abs_builddir@
 
 ihk-smp-x86-y = smp-x86-driver.o smp-x86-startup.o smp-x86-trampoline_64.o
 

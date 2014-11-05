@@ -1,11 +1,16 @@
 /**
- * \file ihk_builtin_driver.c
+ * \file smp-x86-driver.c
  * \brief
- *	IHK BUILTIN Driver: IHK Host Driver 
- *                        for BUILTIN (Manycore Emulation Environemnt)
- * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
- * Copyright (C) 2011-2012 Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
+ *	IHK SMP-x86 Driver: IHK Host Driver 
+ *                        for partitioning an x86 SMP chip
+ * \author Balazs Gerofi <bgerofi@is.s.u-tokyo.ac.jp> \par
+ * Copyright (C) 2014 Balazs Gerofi <bgerofi@is.s.u-tokyo.ac.jp>
+ * 
+ * Code partially based on IHK Builtin driver written by 
+ * Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */
+#include <config.h>
+#include <linux/version.h>
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/kernel.h>
@@ -24,7 +29,6 @@
 #include <linux/radix-tree.h>
 #include <linux/irq.h>
 #include <linux/autoconf.h>
-#include <linux/version.h>
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
@@ -40,11 +44,6 @@
 #include <asm/mc146818rtc.h>
 #include <asm/smpboot_hooks.h>
 #include "bootparam.h"
-
-
-//#ifndef CONFIG_SHIMOS
-//#error "SHIMOS is required to build BUILTIN!"
-//#endif
 
 #define BUILTIN_OS_STATUS_INITIAL  0
 #define BUILTIN_OS_STATUS_LOADING  1
@@ -66,100 +65,82 @@
 #define PTL2_SHIFT	21
 
 
-/* ----------------------------------------------- */
 /*
- * IHK-SMP global resources
+ * IHK-SMP unexported kernel symbols
  */
-/* linux 3.2 Ubuntu 
+#ifdef IHK_KSYM_per_cpu__vector_irq
 void *_per_cpu__vector_irq = 
-	0x000000000000bf40;
-int (*_lapic_get_maxlvt)(void) = 
-	0xffffffff81032990;
-atomic_t *_init_deasserted = 
-	0xffffffff81de67a8;
-void (*_cpu_hotplug_driver_lock)(void) = 
-	0xffffffff81032020;
-void (*_cpu_hotplug_driver_unlock)(void) = 
-	0xffffffff81032040;
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = 
-	0xffffffff810da380;
-struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
-	0xffffffff810da270;
-struct radix_tree_root *_irq_desc_tree = 
-	0xffffffff81c307d0;
-struct irq_chip *_dummy_irq_chip =
-	0xffffffff81c30880;
-int (*_wakeup_secondary_cpu_via_init)(int phys_apicid, 
-	unsigned long start_eip) = 
-	0xffffffff81640f13;
-*/
-
-/* 2.6.32-431.el6.x86_64 Centos6.5 VM */
-void *_per_cpu__vector_irq = 
-	0x000000000000c6e0;
-int (*_lapic_get_maxlvt)(void) = 
-	0xffffffff810317e0;
-atomic_t *_init_deasserted = 
-	0xffffffff81dfc360;
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = 
-	0xffffffff810e6d10;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
-struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
-	0x00;
-struct radix_tree_root *_irq_desc_tree = 
-	0x00;
-#else
-struct irq_desc *(*_irq_to_desc_alloc_node)(unsigned int irq, int node) =
-	0xffffffff8150e360;
+	(void *)
+	IHK_KSYM_per_cpu__vector_irq;
 #endif
+
+#ifdef IHK_KSYM_lapic_get_maxlvt
+typedef int (*int_star_fn_void_t)(void); 
+int (*_lapic_get_maxlvt)(void) = 
+	(int_star_fn_void_t)
+	IHK_KSYM_lapic_get_maxlvt;
+#endif
+
+#ifdef IHK_KSYM_init_deasserted
+atomic_t *_init_deasserted = 
+	(atomic_t *)
+	IHK_KSYM_init_deasserted;
+#endif
+
+#ifdef IHK_KSYM_irq_to_desc
+typedef struct irq_desc *(*irq_desc_star_fn_int_t)(unsigned int);
+struct irq_desc *(*_irq_to_desc)(unsigned int irq) = 
+	(irq_desc_star_fn_int_t)
+	IHK_KSYM_irq_to_desc;
+#endif
+
+#ifdef IHK_KSYM_irq_to_desc_alloc_node
+struct irq_desc *(*_irq_to_desc_alloc_node)(unsigned int irq, int node) =
+	IHK_KSYM_irq_to_desc_alloc_node;
+#endif
+
+#ifdef IHK_KSYM_alloc_desc
+struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
+	IHK_KSYM_alloc_desc;
+#endif
+
+#ifdef IHK_KSYM_irq_desc_tree
+struct radix_tree_root *_irq_desc_tree = 
+	IHK_KSYM_irq_desc_tree;
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#endif // KERNEL_VERSION(3,2,0)
+
+#ifdef IHK_KSYM_dummy_irq_chip
 struct irq_chip *_dummy_irq_chip =
-	0xffffffff81aaa380;
+	(struct irq_chip *)
+	IHK_KSYM_dummy_irq_chip;
+#endif
+
+#ifdef IHK_KSYM_get_uv_system_type
+typedef enum uv_system_type (*uv_system_type_star_fn_void_t)(void); 
 enum uv_system_type (*_get_uv_system_type)(void) = 
-	0xffffffff81037ea0;
+	(uv_system_type_star_fn_void_t)
+	IHK_KSYM_get_uv_system_type;
+#endif
+
+#ifdef IHK_KSYM_wakeup_secondary_cpu_via_init
 int (*_wakeup_secondary_cpu_via_init)(int phys_apicid, 
 	unsigned long start_eip) = 
-	0x00;
+	IHK_KSYM_wakeup_secondary_cpu_via_init;
+#endif
 
-
-/* TODO: look up these symbols in configuration time */
-/* 2.6.32-220.el6.x86_64 
-void *_per_cpu__vector_irq = 
-	0x000000000000c6e0;
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = 
-	0xffffffff810d9340;
-int (*_lapic_get_maxlvt)(void) = 
-	0xffffffff8102ac50;
-atomic_t *_init_deasserted = 
-	0xffffffff81debe88;
-enum uv_system_type (*_get_uv_system_type)(void) = 
-	0xffffffff81030ee0;
+#ifdef IHK_KSYM_cpu_up
+typedef int (*int_star_fn_int_t)(unsigned int);
 int (*_cpu_up)(unsigned int cpu) =
-	0xffffffff814e7ae2;
-*/
+	(int_star_fn_int_t)
+	IHK_KSYM_cpu_up;
+#endif
 
-/* 2.6.32-431.11.2.el6.x86_64 
-void *_per_cpu__vector_irq = 
-	0x000000000000c6e0;
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = 
-	0xffffffff810e6d00;
-int (*_lapic_get_maxlvt)(void) = 
-	0xffffffff810317e0;
-atomic_t *_init_deasserted = 
-	0xffffffff81dfd360;
-enum uv_system_type (*_get_uv_system_type)(void) = 
-	0xffffffff81037ea0;
-*/
-
-/* 2.6.32-shimos-bgerofi 
-void *_per_cpu__vector_irq = 
-	0x000000000000c6e0;
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = 
-	0xffffffff810e3690;
-int (*_lapic_get_maxlvt)(void) = 
-	0xffffffff81031750;
-atomic_t *_init_deasserted = 
-	0xffffffff81df8120;
-*/
+#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
+#else
+#error "kernel version is not supported :("
+#endif
 
 
 #define IHK_SMP_PHYS_START 0x20000000  /* TODO: allocate */
@@ -268,11 +249,6 @@ struct builtin_os_data {
 #define BUILTIN_DEV_STATUS_READY    0
 #define BUILTIN_DEV_STATUS_BOOTING  1
 
-#ifdef USE_DMA
-extern struct builtin_dma_config_struct *builtin_dma_config;
-static unsigned long builtin_dma_config_pa;
-#endif
-
 /** \brief Driver-speicific device structure
  *
  * This structure is very simple because it is assumed that there is only
@@ -286,31 +262,13 @@ struct builtin_device_data {
 	struct ihk_dma_channel builtin_host_channel;
 };
 
-#ifdef USE_DMA
-static int builtin_dma_request(ihk_dma_channel_t, struct ihk_dma_request *);
-
-struct ihk_dma_ops builtin_dma_ops = {
-	.request = builtin_dma_request,
-};
-#endif
-
 /** \brief Implementation of ihk_host_get_dma_channel.
  *
  * It returns the information of the only channel in the DMA emulating core. */
 static ihk_dma_channel_t builtin_ihk_get_dma_channel(ihk_device_t dev, void *priv,
                                                  int channel)
 {
-#ifdef USE_DMA
-	struct builtin_device_data *data = priv;
-
-	data->builtin_host_channel.dev = dev;
-	data->builtin_host_channel.channel = 0;
-	data->builtin_host_channel.ops = &builtin_dma_ops;
-
-	return &data->builtin_host_channel;
-#else
 	return NULL;
-#endif
 }
 
 /** \brief Set the status member of the OS data with lock */
@@ -547,9 +505,6 @@ static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	os->param.bp.start = os->mem_start;
 	os->param.bp.end = os->mem_end;
 	os->param.bp.coreset = os->coremaps;
-#ifdef USE_DMA
-	os->param.dma_address = builtin_dma_config_pa;
-#endif
 	os->param.ident_table = ident_page_table;
 	strncpy(os->param.kernel_args, os->kernel_args,
 	        sizeof(os->param.kernel_args));
@@ -1234,13 +1189,6 @@ static int builtin_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
 static long builtin_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
                                   unsigned int req, unsigned long arg)
 {
-#ifdef USE_DMA
-	switch (req) {
-	case IHK_DEVICE_DEBUG_START + 0x10:
-		builtin_dma_issue_interrupt();
-		return 0;
-	}
-#endif
 	return -EINVAL;
 }
 
@@ -1354,7 +1302,7 @@ static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 		printk("error: allocating trampoline_code\n");
 		return EFAULT;
 	}
-	printk("trampoline_page phys: 0x%lx\n", page_to_phys(trampoline_page));
+	printk("trampoline_page phys: 0x%llx\n", page_to_phys(trampoline_page));
 
 	memset(reserved_cpu_ids, sizeof(reserved_cpu_ids), 0);
 
@@ -1458,12 +1406,15 @@ static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 		}
 	
 		/* Pretend a real external interrupt */
-		int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
+		{
+			int *vectors = 
+				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
 				per_cpu_offset(smp_processor_id())));
 
-		if (vectors[vector] == -1) {
-			printk("fixed vector_irq for %d\n", vector);
-			vectors[vector] = vector;
+			if (vectors[vector] == -1) {
+				printk("fixed vector_irq for %d\n", vector);
+				vectors[vector] = vector;
+			}
 		}
 		
 		break;
@@ -1606,11 +1557,6 @@ static struct ihk_register_device_data builtin_dev_reg_data = {
 	.ops = &builtin_ihk_device_ops,
 };
 
-#ifdef USE_DMA
-static int builtin_dma_init(void);
-static void builtin_dma_exit(void);
-#endif
-
 static int __init builtin_init(void)
 {
 	ihk_device_t ihkd;
@@ -1628,10 +1574,6 @@ static int __init builtin_init(void)
 
 	//shimos_set_irq_handler(builtin_irq_handler);
 
-#ifdef USE_DMA
-	builtin_dma_init();
-#endif
-
 	return 0;
 }
 
@@ -1641,204 +1583,9 @@ static void __exit builtin_exit(void)
 	ihk_unregister_device(builtin_data.ihk_dev);
 
 	//shimos_set_irq_handler(NULL);
-
-#ifdef USE_DMA
-	builtin_dma_exit();
-#endif
 }
 
 module_init(builtin_init);
 module_exit(builtin_exit);
 
 MODULE_LICENSE("Dual BSD/GPL");
-
-#ifdef USE_DMA
-/*
- * DMA stuff
- */
-/** \brief APIC ID of the CPU core to use as a DMA-emulating core.
- * (Module parameter) */
-static int dma_apicid = -1;
-module_param(dma_apicid, int, 0444);
-
-static int dmacpus = 1;
-module_param(dmacpus, int, 0444);
-
-/** \brief DMA page table used by the DMA core
- *
- * This page table contains the kernel mapping and identity mapping */
-static unsigned long *builtin_dma_page_table;
-/** \brief Physical address of builtin_dma_page_table */
-static unsigned long builtin_dma_pt_pa;
-/** \brief Stack used by the DMA core */
-static unsigned long builtin_dma_stack[512] __attribute__((aligned(4096)));
-
-//extern void *shimos_get_ident_page_table(void);
-
-/** \brief Vector number that triggers action of the DMA core */
-#define BUILTIN_DMA_VECTOR 0xf2
-static struct idt_entry{
-	uint32_t desc[4];
-} *dma_idt;
-
-struct x86_desc_ptr {
-        uint16_t size;
-        uint64_t address;
-} __attribute__((packed));
-
-/** \brief IDT used by the DMA core */
-static struct x86_desc_ptr dma_idt_ptr;
-
-extern char builtin_dma_intr_enter[];
-
-/** \brief Set an entry in IDT. */
-static void set_idt_entry(int idx, unsigned long addr)
-{
-	dma_idt[idx].desc[0] = (addr & 0xffff) | (__KERNEL_CS << 16);
-	dma_idt[idx].desc[1] = (addr & 0xffff0000) | 0x8e00;
-	dma_idt[idx].desc[2] = (addr >> 32);
-	dma_idt[idx].desc[3] = 0;
-}
-
-/** \brief Prepare an IDT that will be used by the DMA core. */
-static void __prepare_idt(void)
-{
-	dma_idt = (void *)__get_free_page(GFP_KERNEL);
-
-	dma_idt_ptr.size = sizeof(struct idt_entry) * 256;
-	dma_idt_ptr.address = (unsigned long)dma_idt;
-
-	set_idt_entry(BUILTIN_DMA_VECTOR, (unsigned long)builtin_dma_intr_enter);
-}
-
-/** \brief Initialization function that is executed by the DMA core
- * after head_64.S */
-static void shimos_dma_start(void)
-{
-	unsigned long cr3;
-
-	asm volatile("movq %%cr3, %0" : "=r"(cr3));
-
-	/* Copy the ident area */
-	memcpy(builtin_dma_page_table,
-	       shimos_get_ident_page_table(),
-	       PAGE_SIZE);
-
-	/* Copy the kernel area */
-	memcpy(builtin_dma_page_table + 256,
-	       phys_to_virt(cr3 + (PAGE_SIZE >> 1)),
-	       PAGE_SIZE >> 1);
-
-	asm volatile("lidt %0" : : "m"(dma_idt_ptr));
-
-	asm volatile("movq %0, %%cr3" : : "r"(builtin_dma_pt_pa));
-	asm volatile("movq %0, %%rsp\n"
-	             "callq shimos_dma_main" : : "r"(builtin_dma_stack + 512));
-}
-
-static int dma_dummycpu_size = 0;
-static int dma_dummycpus[8];
-
-/** \brief Initialization function of the DMA core
- *
- * This function allocates a DMA core, and prepares necessary tables
- * (interrupt tables and memory tables), then boot the DMA core,
- * and finally waits of the DMA core to boot.
- */
-static int builtin_dma_init(void)
-{
-	int apicid;
-
-	if (dma_apicid >= 0) {
-		if (shimos_reserve_cpus(1, &dma_apicid)) {
-			printk("BUILTIN: Failed to reserve CPU core for DMA!\n");
-			return -ENOMEM;
-		}
-	} else { 
-		if (shimos_allocate_cpus(1, &apicid) != 1) {
-			printk("BUILTIN: Failed to allocate CPU core for DMA!\n");
-			return -ENOMEM;
-		}
-		dma_apicid = apicid;
-	}
-	if(dma_apicid > 1){
-		int i;
-
-		if(dmacpus > 8)
-			dmacpus = 8;
-		dma_dummycpu_size = dmacpus - 1;
-		for(i = 0; i < dmacpus; i++){
-			int	cpu = (dma_apicid / dmacpus) * dmacpus + i;
-			if(cpu == dma_apicid)
-				continue;
-			if(shimos_reserve_cpus(1, &cpu) == 0){
-				dma_dummycpus[dma_dummycpu_size] = cpu;
-				dma_dummycpu_size++;
-				printk("DUMMY APIC=%d\n", cpu);
-			}
-		}
-	}
-
-	printk("BUILTIN: DMA Core APIC ID = %d\n", dma_apicid);
-
-	/* XXX: module only */
-	__prepare_idt();
-	builtin_dma_page_table = (void *)__get_free_page(GFP_KERNEL);
-	builtin_dma_pt_pa = virt_to_phys(builtin_dma_page_table);
-	printk("Page table : %p => %lx\n", builtin_dma_page_table, builtin_dma_pt_pa);
-
-	builtin_dma_config = kmalloc(sizeof(struct builtin_dma_config_struct),
-	                         GFP_KERNEL);
-	builtin_dma_config_pa = virt_to_phys(builtin_dma_config);
-
-	shimos_boot_cpu_linux(dma_apicid, (unsigned long)shimos_dma_start);
-
-	/* Wait for dma boot */
-
-	while (!builtin_dma_config->status) {
-		mb();
-		cpu_relax();
-	}
-	printk("DMA Start Acked : %ld\n", sizeof(struct ihk_dma_request));
-
-	builtin_dma_desc_init();
-
-	return 0;
-}
-
-/** \brief Finalization function of the DMA core.
- *
- * This function resets the DMA core and frees pages. */
-static void builtin_dma_exit(void)
-{
-	shimos_reset_cpu(dma_apicid);
-	shimos_free_cpus(1, &dma_apicid);
-
-/**
-	for(i = 0; i < dma_dummycpu_size; i++){
-		shimos_reset_cpu(dma_dummycpus[i]);
-	}
-	shimos_free_cpus(dma_dummycpu_size, dma_dummycpus);
-	dma_dummycpu_size = 0;
-*/
-
-	free_page((unsigned long)builtin_dma_page_table);
-	free_page((unsigned long)dma_idt);
-}
-
-/** \brief Issues an interrupt to the DMA core. */
-void builtin_dma_issue_interrupt(void)
-{
-	shimos_issue_ipi(dma_apicid, BUILTIN_DMA_VECTOR);
-}
-
-extern int __builtin_dma_request(ihk_device_t dev, int channel,
-                             struct ihk_dma_request *req);
-/** \brief Wrapper function for __builtin_dma_request. */
-static int builtin_dma_request(ihk_dma_channel_t channel, struct ihk_dma_request *r)
-{
-	__builtin_dma_request(channel->dev, channel->channel, r);
-
-	return 0;
-}
-#endif

@@ -1784,7 +1784,7 @@ fi
 
 case "X$WITH_KERNELSRC" in
     Xyes | Xno | X)
-	WITH_KERNELSRC='/lib/modules/`uname -r`/build'
+	WITH_KERNELSRC="/lib/modules/`uname -r`/build"
 	;;
     X/*)
 	;;
@@ -4218,6 +4218,361 @@ esac
 KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
 
+IHK_LINUX_SYMTAB=""
+{ $as_echo "$as_me:$LINENO: checking for System.map" >&5
+$as_echo_n "checking for System.map... " >&6; }
+if test -f "/boot/System.map-`uname -r`"; then
+	IHK_LINUX_SYMTAB="/boot/System.map-`uname -r`"
+elif test -f "$KDIR/System.map"; then
+	IHK_LINUX_SYMTAB="$KDIR/System.map"
+fi
+
+if test "$IHK_LINUX_SYMTAB" == ""; then
+	{ { $as_echo "$as_me:$LINENO: error: couldn't find" >&5
+$as_echo "$as_me: error: couldn't find" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+{ $as_echo "$as_me:$LINENO: result: $IHK_LINUX_SYMTAB" >&5
+$as_echo "$IHK_LINUX_SYMTAB" >&6; }
+
+IHK_LINUX_SYMTAB_CMD="cat $IHK_LINUX_SYMTAB"
+
+# IHK_FIND_KSYM(SYMBOL)
+# ------------------------------------------------------
+# Search System.map for address of the given symbol and
+# do one of three things in config.h:
+# If not found, leave IHK_KSYM_foo undefined
+# If found to be exported, "#define IHK_KSYM_foo 0"
+# If found not to be exported, "#define IHK_KSYM_foo 0x<value>"
+
+
+if test "$TARGET" = "smp-x86"; then
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol per_cpu__vector_irq" >&5
+$as_echo_n "checking System.map for symbol per_cpu__vector_irq... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " per_cpu__vector_irq\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_per_cpu__vector_irq\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_per_cpu__vector_irq $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol lapic_get_maxlvt" >&5
+$as_echo_n "checking System.map for symbol lapic_get_maxlvt... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " lapic_get_maxlvt\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_lapic_get_maxlvt\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_lapic_get_maxlvt $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol init_deasserted" >&5
+$as_echo_n "checking System.map for symbol init_deasserted... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " init_deasserted\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_init_deasserted\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_init_deasserted $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol irq_to_desc" >&5
+$as_echo_n "checking System.map for symbol irq_to_desc... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_to_desc\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_irq_to_desc\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_irq_to_desc $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol alloc_desc" >&5
+$as_echo_n "checking System.map for symbol alloc_desc... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " alloc_desc\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_alloc_desc\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_alloc_desc $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol irq_desc_tree" >&5
+$as_echo_n "checking System.map for symbol irq_desc_tree... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_desc_tree\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_irq_desc_tree\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_irq_desc_tree $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol irq_to_desc_alloc_node" >&5
+$as_echo_n "checking System.map for symbol irq_to_desc_alloc_node... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_to_desc_alloc_node\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_irq_to_desc_alloc_node\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_irq_to_desc_alloc_node $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol dummy_irq_chip" >&5
+$as_echo_n "checking System.map for symbol dummy_irq_chip... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " dummy_irq_chip\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_dummy_irq_chip\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_dummy_irq_chip $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol get_uv_system_type" >&5
+$as_echo_n "checking System.map for symbol get_uv_system_type... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " get_uv_system_type\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_get_uv_system_type\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_get_uv_system_type $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol wakeup_secondary_cpu_via_init" >&5
+$as_echo_n "checking System.map for symbol wakeup_secondary_cpu_via_init... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " wakeup_secondary_cpu_via_init\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_wakeup_secondary_cpu_via_init\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_wakeup_secondary_cpu_via_init $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol cpu_hotplug_driver_lock" >&5
+$as_echo_n "checking System.map for symbol cpu_hotplug_driver_lock... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " cpu_hotplug_driver_lock\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_cpu_hotplug_driver_lock\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_cpu_hotplug_driver_lock $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol cpu_hotplug_driver_unlock" >&5
+$as_echo_n "checking System.map for symbol cpu_hotplug_driver_unlock... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " cpu_hotplug_driver_unlock\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_cpu_hotplug_driver_unlock\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_cpu_hotplug_driver_unlock $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:$LINENO: checking System.map for symbol cpu_up" >&5
+$as_echo_n "checking System.map for symbol cpu_up... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " cpu_up\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:$LINENO: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_cpu_up\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:$LINENO: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_cpu_up $ihk_addr
+_ACEOF
+
+  fi
+
+fi
 
 
 
@@ -4234,6 +4589,9 @@ TARGET="$WITH_TARGET"
 
 
 
+
+
+ac_config_headers="$ac_config_headers linux/driver/smp-x86/config.h"
 
 ac_config_files="$ac_config_files Makefile linux/core/Makefile linux/core/Makefile.module linux/core/Makefile.builtin ikc/Makefile linux/user/Makefile linux/driver/builtin/Makefile linux/driver/smp-x86/Makefile linux/driver/attached/mic/Makefile linux/user/ihkconfig.1:linux/user/ihkconfig.1in linux/user/ihkosctl.1:linux/user/ihkosctl.1in"
 
@@ -4317,43 +4675,7 @@ test "x$prefix" = xNONE && prefix=$ac_default_prefix
 # Let make expand exec_prefix.
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
 
-# Transform confdefs.h into DEFS.
-# Protect against shell expansion while executing Makefile rules.
-# Protect against Makefile macro expansion.
-#
-# If the first sed substitution is executed (which looks for macros that
-# take arguments), then branch to the quote section.  Otherwise,
-# look for a macro that doesn't take arguments.
-ac_script='
-:mline
-/\\$/{
- N
- s,\\\n,,
- b mline
-}
-t clear
-:clear
-s/^[	 ]*#[	 ]*define[	 ][	 ]*\([^	 (][^	 (]*([^)]*)\)[	 ]*\(.*\)/-D\1=\2/g
-t quote
-s/^[	 ]*#[	 ]*define[	 ][	 ]*\([^	 ][^	 ]*\)[	 ]*\(.*\)/-D\1=\2/g
-t quote
-b any
-:quote
-s/[	 `~#$^&*(){}\\|;'\''"<>?]/\\&/g
-s/\[/\\&/g
-s/\]/\\&/g
-s/\$/$$/g
-H
-:any
-${
-	g
-	s/^\n//
-	s/\n/ /g
-	p
-}
-'
-DEFS=`sed -n "$ac_script" confdefs.h`
-
+DEFS=-DHAVE_CONFIG_H
 
 ac_libobjs=
 ac_ltlibobjs=
@@ -4711,11 +5033,15 @@ case $ac_config_files in *"
 "*) set x $ac_config_files; shift; ac_config_files=$*;;
 esac
 
+case $ac_config_headers in *"
+"*) set x $ac_config_headers; shift; ac_config_headers=$*;;
+esac
 
 
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 # Files that config.status was made for.
 config_files="$ac_config_files"
+config_headers="$ac_config_headers"
 
 _ACEOF
 
@@ -4734,9 +5060,14 @@ Usage: $0 [OPTION]... [FILE]...
       --recheck    update $as_me by reconfiguring in the same conditions
       --file=FILE[:TEMPLATE]
                    instantiate the configuration file FILE
+      --header=FILE[:TEMPLATE]
+                   instantiate the configuration header FILE
 
 Configuration files:
 $config_files
+
+Configuration headers:
+$config_headers
 
 Report bugs to <bug-autoconf@gnu.org>."
 
@@ -4789,7 +5120,19 @@ do
     esac
     CONFIG_FILES="$CONFIG_FILES '$ac_optarg'"
     ac_need_defaults=false;;
-  --he | --h |  --help | --hel | -h )
+  --header | --heade | --head | --hea )
+    $ac_shift
+    case $ac_optarg in
+    *\'*) ac_optarg=`$as_echo "$ac_optarg" | sed "s/'/'\\\\\\\\''/g"` ;;
+    esac
+    CONFIG_HEADERS="$CONFIG_HEADERS '$ac_optarg'"
+    ac_need_defaults=false;;
+  --he | --h)
+    # Conflict between --help and --header
+    { $as_echo "$as_me: error: ambiguous option: $1
+Try \`$0 --help' for more information." >&2
+   { (exit 1); exit 1; }; };;
+  --help | --hel | -h )
     $as_echo "$ac_cs_usage"; exit ;;
   -q | -quiet | --quiet | --quie | --qui | --qu | --q \
   | -silent | --silent | --silen | --sile | --sil | --si | --s)
@@ -4846,6 +5189,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
+    "linux/driver/smp-x86/config.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/driver/smp-x86/config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "linux/core/Makefile") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile" ;;
     "linux/core/Makefile.module") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile.module" ;;
@@ -4871,6 +5215,7 @@ done
 # bizarre bug on SunOS 4.1.3.
 if $ac_need_defaults; then
   test "${CONFIG_FILES+set}" = set || CONFIG_FILES=$config_files
+  test "${CONFIG_HEADERS+set}" = set || CONFIG_HEADERS=$config_headers
 fi
 
 # Have a temporary directory for convenience.  Make it in the build tree
@@ -5054,8 +5399,120 @@ fi
 cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 fi # test -n "$CONFIG_FILES"
 
+# Set up the scripts for CONFIG_HEADERS section.
+# No need to generate them if there are no CONFIG_HEADERS.
+# This happens for instance with `./config.status Makefile'.
+if test -n "$CONFIG_HEADERS"; then
+cat >"$tmp/defines.awk" <<\_ACAWK ||
+BEGIN {
+_ACEOF
 
-eval set X "  :F $CONFIG_FILES      "
+# Transform confdefs.h into an awk script `defines.awk', embedded as
+# here-document in config.status, that substitutes the proper values into
+# config.h.in to produce config.h.
+
+# Create a delimiter string that does not exist in confdefs.h, to ease
+# handling of long lines.
+ac_delim='%!_!# '
+for ac_last_try in false false :; do
+  ac_t=`sed -n "/$ac_delim/p" confdefs.h`
+  if test -z "$ac_t"; then
+    break
+  elif $ac_last_try; then
+    { { $as_echo "$as_me:$LINENO: error: could not make $CONFIG_HEADERS" >&5
+$as_echo "$as_me: error: could not make $CONFIG_HEADERS" >&2;}
+   { (exit 1); exit 1; }; }
+  else
+    ac_delim="$ac_delim!$ac_delim _$ac_delim!! "
+  fi
+done
+
+# For the awk script, D is an array of macro values keyed by name,
+# likewise P contains macro parameters if any.  Preserve backslash
+# newline sequences.
+
+ac_word_re=[_$as_cr_Letters][_$as_cr_alnum]*
+sed -n '
+s/.\{148\}/&'"$ac_delim"'/g
+t rset
+:rset
+s/^[	 ]*#[	 ]*define[	 ][	 ]*/ /
+t def
+d
+:def
+s/\\$//
+t bsnl
+s/["\\]/\\&/g
+s/^ \('"$ac_word_re"'\)\(([^()]*)\)[	 ]*\(.*\)/P["\1"]="\2"\
+D["\1"]=" \3"/p
+s/^ \('"$ac_word_re"'\)[	 ]*\(.*\)/D["\1"]=" \2"/p
+d
+:bsnl
+s/["\\]/\\&/g
+s/^ \('"$ac_word_re"'\)\(([^()]*)\)[	 ]*\(.*\)/P["\1"]="\2"\
+D["\1"]=" \3\\\\\\n"\\/p
+t cont
+s/^ \('"$ac_word_re"'\)[	 ]*\(.*\)/D["\1"]=" \2\\\\\\n"\\/p
+t cont
+d
+:cont
+n
+s/.\{148\}/&'"$ac_delim"'/g
+t clear
+:clear
+s/\\$//
+t bsnlc
+s/["\\]/\\&/g; s/^/"/; s/$/"/p
+d
+:bsnlc
+s/["\\]/\\&/g; s/^/"/; s/$/\\\\\\n"\\/p
+b cont
+' <confdefs.h | sed '
+s/'"$ac_delim"'/"\\\
+"/g' >>$CONFIG_STATUS || ac_write_fail=1
+
+cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
+  for (key in D) D_is_set[key] = 1
+  FS = ""
+}
+/^[\t ]*#[\t ]*(define|undef)[\t ]+$ac_word_re([\t (]|\$)/ {
+  line = \$ 0
+  split(line, arg, " ")
+  if (arg[1] == "#") {
+    defundef = arg[2]
+    mac1 = arg[3]
+  } else {
+    defundef = substr(arg[1], 2)
+    mac1 = arg[2]
+  }
+  split(mac1, mac2, "(") #)
+  macro = mac2[1]
+  prefix = substr(line, 1, index(line, defundef) - 1)
+  if (D_is_set[macro]) {
+    # Preserve the white space surrounding the "#".
+    print prefix "define", macro P[macro] D[macro]
+    next
+  } else {
+    # Replace #undef with comments.  This is necessary, for example,
+    # in the case of _POSIX_SOURCE, which is predefined and required
+    # on some systems where configure will not decide to define it.
+    if (defundef == "undef") {
+      print "/*", prefix defundef, macro, "*/"
+      next
+    }
+  }
+}
+{ print }
+_ACAWK
+_ACEOF
+cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
+  { { $as_echo "$as_me:$LINENO: error: could not setup config headers machinery" >&5
+$as_echo "$as_me: error: could not setup config headers machinery" >&2;}
+   { (exit 1); exit 1; }; }
+fi # test -n "$CONFIG_HEADERS"
+
+
+eval set X "  :F $CONFIG_FILES  :H $CONFIG_HEADERS    "
 shift
 for ac_tag
 do
@@ -5314,7 +5771,36 @@ which seems to be undefined.  Please make sure it is defined." >&2;}
 $as_echo "$as_me: error: could not create $ac_file" >&2;}
    { (exit 1); exit 1; }; }
  ;;
-
+  :H)
+  #
+  # CONFIG_HEADER
+  #
+  if test x"$ac_file" != x-; then
+    {
+      $as_echo "/* $configure_input  */" \
+      && eval '$AWK -f "$tmp/defines.awk"' "$ac_file_inputs"
+    } >"$tmp/config.h" \
+      || { { $as_echo "$as_me:$LINENO: error: could not create $ac_file" >&5
+$as_echo "$as_me: error: could not create $ac_file" >&2;}
+   { (exit 1); exit 1; }; }
+    if diff "$ac_file" "$tmp/config.h" >/dev/null 2>&1; then
+      { $as_echo "$as_me:$LINENO: $ac_file is unchanged" >&5
+$as_echo "$as_me: $ac_file is unchanged" >&6;}
+    else
+      rm -f "$ac_file"
+      mv "$tmp/config.h" "$ac_file" \
+	|| { { $as_echo "$as_me:$LINENO: error: could not create $ac_file" >&5
+$as_echo "$as_me: error: could not create $ac_file" >&2;}
+   { (exit 1); exit 1; }; }
+    fi
+  else
+    $as_echo "/* $configure_input  */" \
+      && eval '$AWK -f "$tmp/defines.awk"' "$ac_file_inputs" \
+      || { { $as_echo "$as_me:$LINENO: error: could not create -" >&5
+$as_echo "$as_me: error: could not create -" >&2;}
+   { (exit 1); exit 1; }; }
+  fi
+ ;;
 
 
   esac

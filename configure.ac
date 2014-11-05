@@ -30,7 +30,7 @@ AC_ARG_WITH([target],
 
 case "X$WITH_KERNELSRC" in
     Xyes | Xno | X)
-	WITH_KERNELSRC='/lib/modules/`uname -r`/build'
+	WITH_KERNELSRC="/lib/modules/`uname -r`/build"
 	;;
     X/*)
 	;;
@@ -132,6 +132,64 @@ esac
 KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
 
+IHK_LINUX_SYMTAB=""
+AC_MSG_CHECKING([[for System.map]])
+if test -f "/boot/System.map-`uname -r`"; then
+	IHK_LINUX_SYMTAB="/boot/System.map-`uname -r`"	
+elif test -f "$KDIR/System.map"; then
+	IHK_LINUX_SYMTAB="$KDIR/System.map"	
+fi
+
+if test "$IHK_LINUX_SYMTAB" == ""; then
+	AC_MSG_ERROR([couldn't find])
+fi
+AC_MSG_RESULT([$IHK_LINUX_SYMTAB])
+
+IHK_LINUX_SYMTAB_CMD="cat $IHK_LINUX_SYMTAB"
+
+# IHK_FIND_KSYM(SYMBOL)
+# ------------------------------------------------------
+# Search System.map for address of the given symbol and
+# do one of three things in config.h:
+# If not found, leave IHK_KSYM_foo undefined
+# If found to be exported, "#define IHK_KSYM_foo 0"
+# If found not to be exported, "#define IHK_KSYM_foo 0x<value>"
+AC_DEFUN([IHK_FIND_KSYM],[
+  AC_MSG_CHECKING([[System.map for symbol $1]])
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " $1\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    AC_MSG_RESULT([not found])
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+    m4_ifval([$2],[],[
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_$1\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+    ])
+    AC_MSG_RESULT([$ihk_result])
+    AC_DEFINE_UNQUOTED(IHK_KSYM_[]$1,$ihk_addr,
+			[Define to address of kernel symbol $1, or 0 if exported])
+  fi
+])
+
+if test "$TARGET" = "smp-x86"; then
+	IHK_FIND_KSYM([per_cpu__vector_irq])
+	IHK_FIND_KSYM([lapic_get_maxlvt])
+	IHK_FIND_KSYM([init_deasserted])
+	IHK_FIND_KSYM([irq_to_desc])
+	IHK_FIND_KSYM([alloc_desc])
+	IHK_FIND_KSYM([irq_desc_tree])
+	IHK_FIND_KSYM([irq_to_desc_alloc_node])
+	IHK_FIND_KSYM([dummy_irq_chip])
+	IHK_FIND_KSYM([get_uv_system_type])
+	IHK_FIND_KSYM([wakeup_secondary_cpu_via_init])
+	IHK_FIND_KSYM([cpu_hotplug_driver_lock])
+	IHK_FIND_KSYM([cpu_hotplug_driver_unlock])
+	IHK_FIND_KSYM([cpu_up])
+fi
+
 AC_SUBST(CC)
 AC_SUBST(XCC)
 AC_SUBST(ARCH)
@@ -149,6 +207,7 @@ AC_SUBST(IHK_RELEASE_DATE)
 AC_SUBST(MCKERNEL_RELEASE_DATE)
 AC_SUBST(DCFA_RESEASE_DATE)
 
+AM_CONFIG_HEADER(linux/driver/smp-x86/config.h)
 AC_CONFIG_FILES([
 	Makefile
 	linux/core/Makefile
