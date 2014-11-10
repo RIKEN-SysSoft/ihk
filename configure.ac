@@ -141,7 +141,7 @@ elif test -f "$KDIR/System.map"; then
 fi
 
 if test "$IHK_LINUX_SYMTAB" == ""; then
-	AC_MSG_ERROR([couldn't find])
+	AC_MSG_ERROR([could not find])
 fi
 AC_MSG_RESULT([$IHK_LINUX_SYMTAB])
 
@@ -176,6 +176,7 @@ AC_DEFUN([IHK_FIND_KSYM],[
 
 if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([per_cpu__vector_irq])
+	IHK_FIND_KSYM([vector_irq])
 	IHK_FIND_KSYM([lapic_get_maxlvt])
 	IHK_FIND_KSYM([init_deasserted])
 	IHK_FIND_KSYM([irq_to_desc])

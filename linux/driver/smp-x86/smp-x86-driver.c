@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/fs.h>
 #include <linux/errno.h>
 #include <linux/pci.h>
@@ -28,7 +29,9 @@
 #include <linux/cpu.h>
 #include <linux/radix-tree.h>
 #include <linux/irq.h>
+#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
+#endif
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
@@ -69,81 +72,144 @@
  * IHK-SMP unexported kernel symbols
  */
 #ifdef IHK_KSYM_per_cpu__vector_irq
+#if IHK_KSYM_per_cpu__vector_irq
 void *_per_cpu__vector_irq = 
 	(void *)
 	IHK_KSYM_per_cpu__vector_irq;
 #endif
+#endif
+
+#ifdef IHK_KSYM_vector_irq
+#if IHK_KSYM_vector_irq
+void *_vector_irq = 
+	(void *)
+	IHK_KSYM_vector_irq;
+#endif
+#endif
 
 #ifdef IHK_KSYM_lapic_get_maxlvt
+#if IHK_KSYM_lapic_get_maxlvt
 typedef int (*int_star_fn_void_t)(void); 
 int (*_lapic_get_maxlvt)(void) = 
 	(int_star_fn_void_t)
 	IHK_KSYM_lapic_get_maxlvt;
 #endif
+#endif
 
 #ifdef IHK_KSYM_init_deasserted
+#if IHK_KSYM_init_deasserted
 atomic_t *_init_deasserted = 
 	(atomic_t *)
 	IHK_KSYM_init_deasserted;
 #endif
+#endif
 
 #ifdef IHK_KSYM_irq_to_desc
+#if IHK_KSYM_irq_to_desc
 typedef struct irq_desc *(*irq_desc_star_fn_int_t)(unsigned int);
 struct irq_desc *(*_irq_to_desc)(unsigned int irq) = 
 	(irq_desc_star_fn_int_t)
 	IHK_KSYM_irq_to_desc;
+#else // exported
+#include <linux/irqnr.h>
+struct irq_desc *(*_irq_to_desc)(unsigned int irq) = irq_to_desc;
+#endif
 #endif
 
 #ifdef IHK_KSYM_irq_to_desc_alloc_node
+#if IHK_KSYM_irq_to_desc_alloc_node
+typedef struct irq_desc *(*irq_desc_star_fn_int_int_t)(unsigned int, int);
 struct irq_desc *(*_irq_to_desc_alloc_node)(unsigned int irq, int node) =
+	(irq_desc_star_fn_int_int_t)
 	IHK_KSYM_irq_to_desc_alloc_node;
+#endif
 #endif
 
 #ifdef IHK_KSYM_alloc_desc
+#if IHK_KSYM_alloc_desc
 struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
 	IHK_KSYM_alloc_desc;
 #endif
+#endif
 
 #ifdef IHK_KSYM_irq_desc_tree
+#if IHK_KSYM_irq_desc_tree
 struct radix_tree_root *_irq_desc_tree = 
 	IHK_KSYM_irq_desc_tree;
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
-#endif // KERNEL_VERSION(3,2,0)
+#endif
 
 #ifdef IHK_KSYM_dummy_irq_chip
+#if IHK_KSYM_dummy_irq_chip
 struct irq_chip *_dummy_irq_chip =
 	(struct irq_chip *)
 	IHK_KSYM_dummy_irq_chip;
+#else // exported
+struct irq_chip *_dummy_irq_chip = &dummy_irq_chip;
+#endif
 #endif
 
 #ifdef IHK_KSYM_get_uv_system_type
+#if IHK_KSYM_get_uv_system_type
 typedef enum uv_system_type (*uv_system_type_star_fn_void_t)(void); 
 enum uv_system_type (*_get_uv_system_type)(void) = 
 	(uv_system_type_star_fn_void_t)
 	IHK_KSYM_get_uv_system_type;
 #endif
+#endif
 
 #ifdef IHK_KSYM_wakeup_secondary_cpu_via_init
+#if IHK_KSYM_wakeup_secondary_cpu_via_init
 int (*_wakeup_secondary_cpu_via_init)(int phys_apicid, 
 	unsigned long start_eip) = 
 	IHK_KSYM_wakeup_secondary_cpu_via_init;
 #endif
+#endif
 
 #ifdef IHK_KSYM_cpu_up
+#if IHK_KSYM_cpu_up
 typedef int (*int_star_fn_int_t)(unsigned int);
 int (*_cpu_up)(unsigned int cpu) =
 	(int_star_fn_int_t)
 	IHK_KSYM_cpu_up;
+#else // exported
+int (*_cpu_up)(unsigned int cpu) = cpu_up;
+#endif
 #endif
 
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
-#else
-#error "kernel version is not supported :("
+#ifdef IHK_KSYM_cpu_hotplug_driver_lock 
+#if IHK_KSYM_cpu_hotplug_driver_lock 
+void (*_cpu_hotplug_driver_lock)(void) = 
+	IHK_KSYM_cpu_hotplug_driver_lock;
+#else // exported
+#include <linux/cpu.h>
+void (*_cpu_hotplug_driver_lock)(void) = 
+	cpu_hotplug_driver_lock;
+#endif
+#else // static
+#include <linux/cpu.h>
+void (*_cpu_hotplug_driver_lock)(void) = 
+	cpu_hotplug_driver_lock;
+#endif	
+
+#ifdef IHK_KSYM_cpu_hotplug_driver_unlock
+#if IHK_KSYM_cpu_hotplug_driver_unlock
+void (*_cpu_hotplug_driver_unlock)(void) = 
+	IHK_KSYM_cpu_hotplug_driver_unlock;
+#else // exported
+void (*_cpu_hotplug_driver_unlock)(void) = 
+	cpu_hotplug_driver_unlock;
+#endif
+#else // static
+void (*_cpu_hotplug_driver_unlock)(void) = 
+	cpu_hotplug_driver_unlock;
 #endif
 
+static unsigned long phys_start = 0;
 
-#define IHK_SMP_PHYS_START 0x20000000  /* TODO: allocate */
+module_param(phys_start, ulong, 0644);
+MODULE_PARM_DESC(phys_start, "IHK reserved physical memory start address");
+
 #define IHK_SMP_MAXCPUS	256
 
 #define BUILTIN_MAX_CPUS IHK_SMP_MAXCPUS
@@ -863,7 +929,7 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 			n = cpus_requested;
 			for (i = 0; i < n; i++) {
 				if (reserved_cpu_ids[i].apic_id < BUILTIN_MAX_CPUS) {
-					printk("BUILTIN: Core APIC %d allocated.\n",
+					printk("IHK-SMP-x86: Core APIC %d allocated.\n",
 					        reserved_cpu_ids[i].apic_id);
 					CORE_SET(reserved_cpu_ids[i].apic_id, os->coremaps);
 				}
@@ -887,13 +953,13 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 			ret = -ENOMEM;
 		}
 #endif
-		resource->mem_start = IHK_SMP_PHYS_START;
+		resource->mem_start = phys_start;
 
 		if (!ret) { /* If successfully allocated ... */
 			os->mem_start = resource->mem_start;
 			os->mem_end = os->mem_start + resource->mem_size;
 
-			dprintf("BUILTIN: Memory %lx - %lx allocated.\n",
+			dprintf("IHK-SMP-x86: Memory %lx - %lx allocated.\n",
 			        os->mem_start, os->mem_end);
 		}
 	}
@@ -1162,7 +1228,7 @@ static void *builtin_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
                                  void *virt, int flags)
 {
 	if (!virt) {
-		if (phys >= IHK_SMP_PHYS_START) {
+		if (phys >= phys_start) {
 			return ioremap_cache(phys, size);
 		}
 		else
@@ -1317,21 +1383,34 @@ static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 	for (i = 0; i < cpus_requested; ++i) {
 		int ret;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+		struct device *dev = get_cpu_device(cpus_to_offline[i]);
+		//struct cpu *cpu = container_of(dev, struct cpu, dev);
+#else
 		struct sys_device *dev = get_cpu_sysdev(cpus_to_offline[i]);
 		struct cpu *cpu = container_of(dev, struct cpu, sysdev);
+#endif
 
 		reserved_cpu_ids[i].id = cpus_to_offline[i];
 		reserved_cpu_ids[i].apic_id = 
 			per_cpu(x86_cpu_to_apicid, cpus_to_offline[i]);
 
-		cpu_hotplug_driver_lock();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+		ret = dev->bus->offline(dev);
+		if (!ret) {
+			kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
+			dev->offline = true;
+		}
+#else
+		_cpu_hotplug_driver_lock();
 
 		ret = cpu_down(cpu->sysdev.id);
 		if (!ret)
 			kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
 		
-		cpu_hotplug_driver_unlock();
-		
+		_cpu_hotplug_driver_unlock();
+#endif
+
 		if (ret < 0) {
 			printk("ERROR: hot-unplugging CPU\n");
 			return EFAULT;
@@ -1407,14 +1486,20 @@ static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 	
 		/* Pretend a real external interrupt */
 		{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
+						per_cpu_offset(smp_processor_id())));
+#else
 			int *vectors = 
 				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
 				per_cpu_offset(smp_processor_id())));
-
+#endif			
+		
 			if (vectors[vector] == -1) {
 				printk("fixed vector_irq for %d\n", vector);
 				vectors[vector] = vector;
 			}
+			
 		}
 		
 		break;
@@ -1511,11 +1596,16 @@ static int builtin_ihk_exit(ihk_device_t ihk_dev, void *priv)
 #endif 
 
 	struct irq_desc *desc;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
+				per_cpu_offset(smp_processor_id())));
+#else
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
 				per_cpu_offset(smp_processor_id())));
+#endif	
 
 	vectors[ihk_smp_irq] == -1;
-	
+
 	//desc = _irq_to_desc(ihk_smp_irq);
 	//desc->handle_irq = orig_irq_flow_handler;
 	
