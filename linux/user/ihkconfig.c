@@ -40,8 +40,10 @@ static void usage(char **arg)
 	fprintf(stderr, "    clear_kmsg_write\n");
 }
 
-static void do_destroy(int fd)
+static void do_destroy(int fd, int os)
 {
+	int r = ioctl(fd, IHK_DEVICE_DESTROY_OS, os);
+	printf("ret = %d\n", r);
 }
 
 static void do_read(int fd)
@@ -210,8 +212,8 @@ int main(int argc, char **argv)
 	}
 
 	HANDLER(create) 
-	else HANDLER(destroy) 
-	else HANDLER(scratch)
+	else if (!strcmp(argv[2], "destroy")) { do_destroy(fd, atoi(argv[3])); }
+    else HANDLER(scratch)
 	else HANDLER(sbox)
 	else HANDLER(read)
 	else HANDLER(mmap)

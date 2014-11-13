@@ -941,6 +941,16 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 	case IHK_DEVICE_CREATE_OS:
 		ret = __ihk_device_create_os(data, arg);
 		break;
+	
+	case IHK_DEVICE_DESTROY_OS:
+		if (arg > OS_MAX_MINOR || !os_data[arg]) {
+			printk("IHK: error: no OS exists with id %lu\n", arg);
+			return ret;
+		}
+
+		ret = __ihk_device_destroy_os(data, os_data[arg]);
+		break;
+
 
 	default:
 		if (request >= IHK_DEVICE_DEBUG_START && 

@@ -9,6 +9,7 @@
 #define __HEADER_IHK_HOST_USER_H
 
 #define IHK_DEVICE_CREATE_OS          0x112900
+#define IHK_DEVICE_DESTROY_OS         0x112901
 
 #define IHK_DEVICE_DEBUG_START        0x122900
 #define IHK_DEVICE_DEBUG_END          0x1229ff
