@@ -1544,7 +1544,6 @@ int ihk_smp_reserve_mem(void)
 	ihk_mem <<= 20;
 
 	printk(KERN_INFO "IHK-SMP: ihk_mem: %lu bytes\n", ihk_mem);
-	printk(KERN_INFO "SHIMOS: shimos_nchunks=%d\n", shimos_nchunks);
 
 	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
 	alloced = 0;
@@ -1555,8 +1554,8 @@ int ihk_smp_reserve_mem(void)
 		p = (void *)__get_free_pages(GFP_KERNEL, order);
 		
 		if (!p) {
-			printk(KERN_ERR "SHIMOS: __get_free_pages() failed. %ld bytes have been allocated\n", alloced);
-			printk(KERN_NOTICE "SHIMOS: ihk_mem is ignored\n");
+			printk(KERN_ERR "IHK-SMP: __get_free_pages() failed. %ld bytes have been allocated\n", alloced);
+			printk(KERN_NOTICE "IHK-SMP: ihk_mem is ignored\n");
 			
 			ret = -1;
 			goto out;
@@ -1963,7 +1962,7 @@ static int __init builtin_init(void)
 {
 	ihk_device_t ihkd;
 
-	printk(KERN_INFO "builtin: BUILTIN initializing...\n");
+	printk(KERN_INFO "IHK-SMP: initializing...\n");
 
 	spin_lock_init(&builtin_data.lock);
 
@@ -1981,7 +1980,7 @@ static int __init builtin_init(void)
 
 static void __exit builtin_exit(void)
 {
-	printk(KERN_INFO "builtin: BUILTIN finalizing...\n");
+	printk(KERN_INFO "IHK-SMP: finalizing...\n");
 	ihk_unregister_device(builtin_data.ihk_dev);
 
 	//shimos_set_irq_handler(NULL);
