@@ -1026,10 +1026,16 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 			}
 			*/
 
-			n = cpus_requested;
+			if (resource->cpu_cores > cpus_requested) {
+				printk("IHK-SMP: error: %d CPUs requested, but only %d available\n",
+					resource->cpu_cores, cpus_requested);
+			}
+
+			n = resource->cpu_cores;
+
 			for (i = 0; i < n; i++) {
 				if (reserved_cpu_ids[i].apic_id < BUILTIN_MAX_CPUS) {
-					printk("IHK-SMP-x86: Core APIC %d allocated.\n",
+					printk("IHK-SMP: Core APIC %d allocated.\n",
 					        reserved_cpu_ids[i].apic_id);
 					CORE_SET(reserved_cpu_ids[i].apic_id, os->coremaps);
 				}
@@ -1652,6 +1658,16 @@ static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 	int num_online_cpus_target;
 	int vector = IRQ15_VECTOR + 2;
 
+	if (ihk_cores) {
+		if (ihk_cores > (num_online_cpus() - 1)) {
+			printk("IHK-SMP error: only %d CPUs in total are available\n", 
+					num_online_cpus());
+			return EINVAL;	
+		}
+		
+		cpus_requested = ihk_cores;
+	}
+
 	trampoline_page = alloc_pages(GFP_DMA | GFP_KERNEL, 1);
 	
 	if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
@@ -1667,6 +1683,7 @@ static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 	memset(reserved_cpu_ids, sizeof(reserved_cpu_ids), 0);
 
+	printk("IHK-SMP: attempting to offline %d CPUs\n", cpus_requested);
 	//printk("num_online_cpus: %d\n", num_online_cpus());
 	num_online_cpus_target = num_online_cpus() - cpus_requested;
 
