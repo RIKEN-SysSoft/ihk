@@ -205,10 +205,18 @@ void (*_cpu_hotplug_driver_unlock)(void) =
 	cpu_hotplug_driver_unlock;
 #endif
 
-static unsigned long phys_start = 0;
+static unsigned long ihk_phys_start = 0;
+module_param(ihk_phys_start, ulong, 0644);
+MODULE_PARM_DESC(ihk_phys_start, "IHK reserved physical memory start address");
 
-module_param(phys_start, ulong, 0644);
-MODULE_PARM_DESC(phys_start, "IHK reserved physical memory start address");
+static unsigned long ihk_mem = 0;
+module_param(ihk_mem, ulong, 0644);
+MODULE_PARM_DESC(ihk_mem, "IHK reserved memory in MBs");
+
+static unsigned int ihk_cores = 0;
+module_param(ihk_cores, uint, 0644);
+MODULE_PARM_DESC(ihk_cores, "IHK reserved CPU cores");
+
 
 #define IHK_SMP_MAXCPUS	256
 
@@ -327,6 +335,51 @@ struct builtin_device_data {
 
 	struct ihk_dma_channel builtin_host_channel;
 };
+
+struct chunk {
+	struct list_head chain;
+	uintptr_t addr;
+	size_t size;
+};
+
+static struct list_head ihk_mem_free_chunks;
+static struct list_head unused;
+static struct list_head ihk_mem_used_chunks;
+
+void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
+{
+	if (ihk_mem) {
+
+		struct chunk *mem_chunk = NULL;
+
+		/* look up address among used chunks */
+		list_for_each_entry(mem_chunk, &ihk_mem_used_chunks, chain) {
+			if (phys >= mem_chunk->addr && 
+					(phys + size) <= (mem_chunk->addr + mem_chunk->size)) {
+
+				return (phys_to_virt(mem_chunk->addr) 
+						+ (phys - mem_chunk->addr));
+			}
+		}
+	}
+
+	else if (ihk_phys_start) {
+		return ioremap_cache(phys, size);
+	}
+
+	return 0;
+}
+
+void ihk_smp_unmap_virtual(void *virt)
+{
+	if (ihk_mem) {
+		/* TODO: look up chunks and report error if not in range */
+		return;	
+	}
+	else if (ihk_phys_start) {
+		iounmap(virt);
+	}
+}
 
 /** \brief Implementation of ihk_host_get_dma_channel.
  *
@@ -644,8 +697,7 @@ builtin_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		printk("open failed: %s\n", fn);
 		return -ENOENT;
 	}
-	elf64 = ioremap_cache(os->mem_end - PAGE_SIZE, PAGE_SIZE); 
-	//elf64 = ioremap_wc(os->mem_end - PAGE_SIZE, PAGE_SIZE); 
+	elf64 = ihk_smp_map_virtual(os->mem_end - PAGE_SIZE, PAGE_SIZE); 
 	if (!elf64) {
 		printk("error: ioremap() returns NULL\n");
 		return -EINVAL;
@@ -657,7 +709,8 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	set_fs(fs);
 	if (r <= 0) {
 		printk("vfs_read failed: %ld\n", r);
-		iounmap(elf64);
+		ihk_smp_unmap_virtual(elf64);
+		//iounmap(elf64);
 		fput(file);
 		return (int)r;
 	}
@@ -667,7 +720,8 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	   elf64->e_ident[3] != 'F' ||
 	   elf64->e_phoff + sizeof(Elf64_Phdr) * elf64->e_phnum > PAGE_SIZE){
 		printk("kernel: BAD ELF\n");
-		iounmap(elf64);
+		ihk_smp_unmap_virtual(elf64);
+		//iounmap(elf64);
 		fput(file);
 		return (int)-EINVAL;
 	}
@@ -703,7 +757,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
-			buf = ioremap_cache(offset, PAGE_SIZE); 
+			buf = ihk_smp_map_virtual(offset, PAGE_SIZE); 
 			fs = get_fs();
 			set_fs(get_ds());
 			r = vfs_read(file, buf, l, &pos);
@@ -711,10 +765,10 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 			if(r != PAGE_SIZE){
 				memset(buf + r, '\0', PAGE_SIZE - r);
 			}
-			iounmap(buf);
+			ihk_smp_unmap_virtual(buf);
 			if (r <= 0) {
 				printk("vfs_read failed: %ld\n", r);
-				iounmap(elf64);
+				ihk_smp_unmap_virtual(elf64);
 				fput(file);
 				return (int)r;
 			}
@@ -726,16 +780,16 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
-			buf = ioremap_cache(offset, PAGE_SIZE); 
+			buf = ihk_smp_map_virtual(offset, PAGE_SIZE); 
 			memset(buf, '\0', PAGE_SIZE);
-			iounmap(buf);
+			ihk_smp_unmap_virtual(buf);
 			offset += PAGE_SIZE;
 		}
 		if(offset > maxoffset)
 			maxoffset = offset;
 	}
 	fput(file);
-	iounmap(elf64);
+	ihk_smp_unmap_virtual(elf64);
 
 	pml4_p = os->mem_end - PAGE_SIZE;
 	pdp_p = pml4_p - PAGE_SIZE;
@@ -743,9 +797,9 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 
 
 	cr3 = ident_page_table_virt;
-	pml4 = ioremap_cache(pml4_p, PAGE_SIZE); 
-	pdp = ioremap_cache(pdp_p, PAGE_SIZE); 
-	pde = ioremap_cache(pde_p, PAGE_SIZE); 
+	pml4 = ihk_smp_map_virtual(pml4_p, PAGE_SIZE); 
+	pdp = ihk_smp_map_virtual(pdp_p, PAGE_SIZE); 
+	pde = ihk_smp_map_virtual(pde_p, PAGE_SIZE); 
 
 	memset(pml4, '\0', PAGE_SIZE);
 	memset(pdp, '\0', PAGE_SIZE);
@@ -764,12 +818,12 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	}
 	pde[511] = (os->mem_end - (2 << PTL2_SHIFT)) | 0x83;
 
-	iounmap(pde);
-	iounmap(pdp);
-	iounmap(pml4);
+	ihk_smp_unmap_virtual(pde);
+	ihk_smp_unmap_virtual(pdp);
+	ihk_smp_unmap_virtual(pml4);
 
 	startup_p = os->mem_end - (2 << PTL2_SHIFT);
-	startup = ioremap_cache(startup_p, PAGE_SIZE);
+	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
 	startup[2] = pml4_p;
 	startup[3] = 0xffffffffc0000000;
@@ -778,7 +832,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	startup[6] = (unsigned long)ihk_smp_irq | 
 		((unsigned long)ihk_smp_irq_apicid << 32);
 	startup[7] = entry;
-	iounmap(startup);
+	ihk_smp_unmap_virtual(startup);
 	os->boot_rip = startup_p;
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
@@ -818,7 +872,7 @@ static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 	offset -= phys;
 
 	for (; size > 0; ) {
-		virt = ioremap_cache(phys, PAGE_SIZE);
+		virt = ihk_smp_map_virtual(phys, PAGE_SIZE);
 		if (!virt) {
 			dprintf("builtin: Failed to map %lx\n", phys);
 
@@ -838,7 +892,7 @@ static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 		/* Offset is only non-aligned at the first copy */
 		offset += to_read;
 		size -= to_read;
-		iounmap(virt);
+		ihk_smp_unmap_virtual(virt);
 
 		phys += PAGE_SIZE;
 	}
@@ -942,6 +996,8 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 
 	/* TODO: When we allocate more than an area... */
 	if (!ret && resource->mem_size) {
+		struct chunk *mem_chunk, *mem_chunk_iter;
+		mem_chunk = NULL;
 #if 0
 		if (resource->flags & IHK_RESOURCE_FLAG_MEM_SPECIFIED) {
 			if (shimos_reserve_memory(resource->mem_start,
@@ -953,7 +1009,27 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 			ret = -ENOMEM;
 		}
 #endif
-		resource->mem_start = phys_start;
+
+		if (ihk_mem) {
+			list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+				if (mem_chunk_iter->size >= resource->mem_size) {
+					mem_chunk = mem_chunk_iter;
+					break;
+				}
+			}
+
+			if (!mem_chunk) {
+				printk("IHK-SMP: error: not enough memory\n");
+				return -ENOMEM;
+			}
+
+			list_move(&mem_chunk->chain, &ihk_mem_used_chunks);
+
+			resource->mem_start = mem_chunk->addr;
+		}
+		else if (ihk_phys_start) {
+			resource->mem_start = ihk_phys_start;
+		}
 
 		if (!ret) { /* If successfully allocated ... */
 			os->mem_start = resource->mem_start;
@@ -1038,7 +1114,7 @@ static int builtin_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	if (cpu < 0 || cpu >= os->cpu_info.n_cpus) {
 		return -EINVAL;
 	}
-	printk("builtin_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
+	//printk("builtin_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
 	//shimos_issue_ipi(os->cpu_info.hw_ids[cpu], v);
 	
 	__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
@@ -1223,18 +1299,31 @@ static int builtin_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 	return 0;
 }
 
+
+
 static void *builtin_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
                                  unsigned long phys, unsigned long size,
                                  void *virt, int flags)
 {
 	if (!virt) {
-		if (phys >= phys_start) {
+		void *ret;
+		
+		ret = ihk_smp_map_virtual(phys, size);
+		if (!ret) {
+			printk("WARNING: ihk_smp_map_virtual() returned NULL!\n");
+		}
+
+		return ret;
+		/*
+		if (phys >= ihk_phys_start) {
 			return ioremap_cache(phys, size);
 		}
 		else
 			return 0;
 		//return shimos_other_os_map(phys, size);
-	} else {
+		*/
+	} 
+	else {
 		return ihk_host_map_generic(ihk_dev, phys, virt, size, flags);
 	}
 }
@@ -1242,6 +1331,10 @@ static void *builtin_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
 static int builtin_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
                                   void *virt, unsigned long size)
 {
+	ihk_smp_unmap_virtual(virt);
+	return 0;
+
+	/*
 	if ((unsigned long)virt >= PAGE_OFFSET) {
 		iounmap(virt);
 		return 0;
@@ -1250,6 +1343,7 @@ static int builtin_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
 		return ihk_host_unmap_generic(ihk_dev, virt, size);
 	}
 	return 0;
+	*/
 }
 
 static long builtin_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
@@ -1350,8 +1444,146 @@ void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 }
 #endif
 
+int shimos_nchunks = 16;
+
+int ihk_smp_reserve_mem(void)
+{
+	const int order = 10;		/* 4 MiB a chunk */
+	size_t want;
+	size_t alloced;
+	int nchunk;
+	struct chunk *p;
+	struct chunk *q;
+	void *va;
+	size_t remain;
+	int i;
+	int ret;
+
+	INIT_LIST_HEAD(&ihk_mem_free_chunks);
+	INIT_LIST_HEAD(&ihk_mem_used_chunks);
+	INIT_LIST_HEAD(&unused);
+
+	if (!ihk_mem) {
+		if (!ihk_phys_start) {
+			printk("IHK-SMP: error: both ihk_mem and ihk_phys_start are 0\n");
+			ret = -1;
+			goto out;
+		}
+		
+		printk("IHK-SMP: ihk_phys_start is 0x%lx\n", ihk_phys_start);
+		return 0;
+	}
+	
+	/* ihk_mem is in MBs */
+	ihk_mem <<= 20;
+
+	printk(KERN_INFO "IHK-SMP: ihk_mem=%lu bytes\n", ihk_mem);
+	printk(KERN_INFO "SHIMOS: shimos_nchunks=%d\n", shimos_nchunks);
+
+	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
+	alloced = 0;
+	nchunk = 0;
+
+	/* allocate and merge pages */
+	while (alloced < want) {
+		p = (void *)__get_free_pages(GFP_KERNEL, order);
+		
+		if (!p) {
+			printk(KERN_ERR "SHIMOS: __get_free_pages() failed. %ld bytes have been allocated\n", alloced);
+			printk(KERN_NOTICE "SHIMOS: ihk_mem is ignored\n");
+			
+			ret = -1;
+			goto out;
+		}
+		
+		alloced += PAGE_SIZE << order;
+
+		p->addr = virt_to_phys(p);
+		p->size = PAGE_SIZE << order;
+		INIT_LIST_HEAD(&p->chain);
+
+		/* insert a chunk in physical address ascending order */
+		list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
+			if (p->addr < q->addr) {
+				break;
+			}
+		}
+		
+		if ((void *)q == &ihk_mem_free_chunks) {
+			list_add_tail(&p->chain, &ihk_mem_free_chunks);
+		}
+		else {
+			list_add_tail(&p->chain, &q->chain);
+		}
+		
+		++nchunk;
+
+		q = list_entry(p->chain.next, struct chunk, chain);
+		if (((void *)q != &ihk_mem_free_chunks) && 
+				((p->addr + p->size) == q->addr)) {
+			list_del(&q->chain);
+			p->size += q->size;
+			--nchunk;
+		}
+
+		q = list_entry(p->chain.prev, struct chunk, chain);
+		if (((void *)q != &ihk_mem_free_chunks) && 
+				((q->addr + q->size) == p->addr)) {
+			list_del(&p->chain);
+			q->size += p->size;
+			--nchunk;
+		}
+	}
+
+	/* free excess and small chunks */
+	/* XXX: There may be a performance problem when allocated pages 
+	 * fragment too many */
+	while (nchunk > shimos_nchunks) {
+		q = NULL;
+		list_for_each_entry(p, &ihk_mem_free_chunks, chain) {
+			if (!q || (p->size < q->size)) {
+				q = p;
+			}
+		}
+
+		list_move(&q->chain, &unused);
+		--nchunk;
+	}
+
+	if (1) {
+		i = 0;
+		list_for_each_entry(p, &ihk_mem_free_chunks, chain) {
+			printk(KERN_INFO "IHK-SMP: chunk #%d: 0x%lx - 0x%lx\n",
+					i, p->addr, p->addr+p->size);
+			++i;
+		}
+	}
+	
+	ret = 0;
+
+out:
+	/* free unused chunks */
+	//list_splice(&ihk_mem_free_chunks, &unused);
+	nchunk = 0;
+	list_for_each_entry_safe(p, q, &unused, chain) {
+		list_del(&p->chain);
+
+		va = phys_to_virt(p->addr);
+		remain = p->size;
+		
+		while (remain > 0) {
+			free_pages((uintptr_t)va, order);
+			va += PAGE_SIZE << order;
+			remain -= PAGE_SIZE << order;
+		}
+	}
+	
+	return ret;
+}
+
+
 int ihk_smp_reset_cpu(int phys_apicid);
-				
+
 static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 	struct builtin_ihk_device_ops *data = priv;
@@ -1365,14 +1597,19 @@ static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 	trampoline_page = alloc_pages(GFP_DMA | GFP_KERNEL, 1);
 	
 	if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
-		printk("error: allocating trampoline_code\n");
+		printk("IHK-SMP error: allocating trampoline_code\n");
 		return EFAULT;
 	}
-	printk("trampoline_page phys: 0x%llx\n", page_to_phys(trampoline_page));
+	printk("IHK-SMP: trampoline_page phys: 0x%llx\n", page_to_phys(trampoline_page));
+
+	if (ihk_smp_reserve_mem() < 0) {
+		printk("IHK-SMP error: reserving memory\n");
+		return ENOMEM;
+	}
 
 	memset(reserved_cpu_ids, sizeof(reserved_cpu_ids), 0);
 
-	printk("num_online_cpus: %d\n", num_online_cpus());
+	//printk("num_online_cpus: %d\n", num_online_cpus());
 	num_online_cpus_target = num_online_cpus() - cpus_requested;
 
 	for_each_online_cpu(cpu) {
