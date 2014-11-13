@@ -338,10 +338,22 @@ struct builtin_device_data {
 	struct ihk_dma_channel builtin_host_channel;
 };
 
+/* Chunk denotes a memory range that is pre-reserved by IHK-SMP.
+ * NOTE: chunk structures reside at the beginning of the physical memory
+ * they represent!! */
 struct chunk {
 	struct list_head chain;
 	uintptr_t addr;
 	size_t size;
+};
+
+/* ihk_os_mem_chunk represents a memory range which is used by 
+ * one of the OSs */
+struct ihk_os_mem_chunk {
+	struct list_head list;
+	uintptr_t addr;
+	size_t size;
+	ihk_os_t os;
 };
 
 static struct list_head ihk_mem_free_chunks;
@@ -352,15 +364,16 @@ void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
 	if (ihk_mem) {
 
-		struct chunk *mem_chunk = NULL;
+		struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 
 		/* look up address among used chunks */
-		list_for_each_entry(mem_chunk, &ihk_mem_used_chunks, chain) {
-			if (phys >= mem_chunk->addr && 
-					(phys + size) <= (mem_chunk->addr + mem_chunk->size)) {
+		list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+			if (phys >= os_mem_chunk->addr && 
+					(phys + size) <= (os_mem_chunk->addr + 
+						os_mem_chunk->size)) {
 
-				return (phys_to_virt(mem_chunk->addr) 
-						+ (phys - mem_chunk->addr));
+				return (phys_to_virt(os_mem_chunk->addr) 
+						+ (phys - os_mem_chunk->addr));
 			}
 		}
 	}
@@ -910,6 +923,8 @@ static int builtin_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 {
 	struct builtin_os_data *os = priv;
 	int i, apicid;
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	struct chunk *mem_chunk;
 	
 	for (i = 0; i < cpus_requested; ++i) {
 		ihk_smp_reset_cpu(reserved_cpu_ids[i].apic_id);
@@ -917,6 +932,27 @@ static int builtin_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		printk("IHK-SMP: CPU %d has been re-set successfully, APIC: %d\n", 
 			reserved_cpu_ids[i].id, reserved_cpu_ids[i].apic_id);
 	}
+
+	/* Drop memory chunk used by this OS */
+	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+		if (os_mem_chunk->os == ihk_os) {
+			list_del(&os_mem_chunk->list);
+
+			mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+			mem_chunk->addr = os_mem_chunk->addr;
+			mem_chunk->size = os_mem_chunk->size;
+			INIT_LIST_HEAD(&mem_chunk->chain);
+
+			list_add_tail(&mem_chunk->chain, &ihk_mem_free_chunks);
+
+			printk("IHK-SMP: mem chunk: 0x%lx - 0x%lx freed\n",
+				mem_chunk->addr, mem_chunk->addr + mem_chunk->size);
+
+			kfree(os_mem_chunk);
+			break;
+		}
+	}
+
 	
 	os->status = BUILTIN_OS_STATUS_INITIAL;
 
@@ -1006,8 +1042,17 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 
 	/* TODO: When we allocate more than an area... */
 	if (!ret && resource->mem_size) {
-		struct chunk *mem_chunk, *mem_chunk_iter;
-		mem_chunk = NULL;
+		struct ihk_os_mem_chunk *os_mem_chunk;
+		struct chunk *mem_chunk_iter;
+		os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
+		
+		if (!os_mem_chunk) {
+			printk("IHK-DMP: error: allocating os_mem_chunk\n");
+			return -ENOMEM;
+		}
+		
+		os_mem_chunk->addr = 0;
+		INIT_LIST_HEAD(&os_mem_chunk->list);
 #if 0
 		if (resource->flags & IHK_RESOURCE_FLAG_MEM_SPECIFIED) {
 			if (shimos_reserve_memory(resource->mem_start,
@@ -1023,19 +1068,24 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		if (ihk_mem) {
 			list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
 				if (mem_chunk_iter->size >= resource->mem_size) {
-					mem_chunk = mem_chunk_iter;
+
+					os_mem_chunk->addr = mem_chunk_iter->addr;
+					os_mem_chunk->size = mem_chunk_iter->size;
+					os_mem_chunk->os = ihk_os;
+
+					list_del(&mem_chunk_iter->chain);
 					break;
 				}
 			}
 
-			if (!mem_chunk) {
+			if (!os_mem_chunk->addr) {
 				printk("IHK-SMP: error: not enough memory\n");
 				return -ENOMEM;
 			}
 
-			list_move(&mem_chunk->chain, &ihk_mem_used_chunks);
+			list_add(&os_mem_chunk->list, &ihk_mem_used_chunks);
 
-			resource->mem_start = mem_chunk->addr;
+			resource->mem_start = os_mem_chunk->addr;
 		}
 		else if (ihk_phys_start) {
 			resource->mem_start = ihk_phys_start;
@@ -1487,7 +1537,7 @@ int ihk_smp_reserve_mem(void)
 	/* ihk_mem is in MBs */
 	ihk_mem <<= 20;
 
-	printk(KERN_INFO "IHK-SMP: ihk_mem=%lu bytes\n", ihk_mem);
+	printk(KERN_INFO "IHK-SMP: ihk_mem: %lu bytes\n", ihk_mem);
 	printk(KERN_INFO "SHIMOS: shimos_nchunks=%d\n", shimos_nchunks);
 
 	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
