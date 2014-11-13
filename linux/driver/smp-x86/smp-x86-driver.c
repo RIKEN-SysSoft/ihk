@@ -217,6 +217,10 @@ static unsigned int ihk_cores = 0;
 module_param(ihk_cores, uint, 0644);
 MODULE_PARM_DESC(ihk_cores, "IHK reserved CPU cores");
 
+static unsigned int ihk_start_irq = 0;
+module_param(ihk_start_irq, uint, 0644);
+MODULE_PARM_DESC(ihk_start_irq, "IHK IKC IPI to be scanned from this IRQ vector");
+
 
 #define IHK_SMP_MAXCPUS	256
 
@@ -1734,7 +1738,8 @@ static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 	}
 	
 	/* Find a suitable IRQ vector */
-	for (vector = IRQ14_VECTOR + 2; vector < 256; vector += 1) {
+	for (vector = ihk_start_irq ? ihk_start_irq : (IRQ14_VECTOR + 2); 
+			vector < 256; vector += 1) {
 		struct irq_desc *desc;
 
 		if (test_bit(vector, used_vectors)) {
