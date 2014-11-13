@@ -250,19 +250,23 @@ static int  __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
 	void *buf;
-
+	
+	/* No need for this 
 	if (data->kmsg_buf) {
 		buf = data->kmsg_buf;
 		data->kmsg_buf = NULL;
 		iounmap(data->kmsg_buf);
 		__ihk_os_unmap_memory(data, data->kmsg_pa, data->kmsg_len);
 	}
+	*/
 
 	ikc_master_finalize(data);
 
 	if (data->ops->shutdown) {
 		ret = data->ops->shutdown(data, data->priv, flag);
 	}
+
+	printk("IHK: OS shutdown OK\n"); 
 
 	return ret;
 }

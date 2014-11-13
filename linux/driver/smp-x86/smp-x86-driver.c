@@ -238,6 +238,8 @@ unsigned long *ident_page_table_virt;
 int ihk_smp_irq = 0;
 int ihk_smp_irq_apicid = 0;
 
+int ihk_smp_reset_cpu(int phys_apicid);
+
 extern const char ihk_smp_trampoline_end[], ihk_smp_trampoline_data[];
 #define IHK_SMP_TRAMPOLINE_SIZE \
 	roundup(ihk_smp_trampoline_end - ihk_smp_trampoline_data, PAGE_SIZE)
@@ -908,7 +910,15 @@ static int builtin_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 {
 	struct builtin_os_data *os = priv;
 	int i, apicid;
-	unsigned long flags, st, ed;
+	
+	for (i = 0; i < cpus_requested; ++i) {
+		ihk_smp_reset_cpu(reserved_cpu_ids[i].apic_id);
+
+		printk("IHK-SMP: CPU %d has been re-set successfully, APIC: %d\n", 
+			reserved_cpu_ids[i].id, reserved_cpu_ids[i].apic_id);
+	}
+	
+	os->status = BUILTIN_OS_STATUS_INITIAL;
 
 #if 0
 	for (i = BUILTIN_MAX_CPUS - 1; i >= 0; i--) {
@@ -1581,8 +1591,6 @@ out:
 	return ret;
 }
 
-
-int ihk_smp_reset_cpu(int phys_apicid);
 
 static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
