@@ -65,6 +65,7 @@ static int ihk_host_os_open(struct inode *inode, struct file *file)
 {
 	int idx, ret;
 	struct ihk_host_linux_os_data *data;
+	struct ihk_file *ifile;
 
 	idx = inode->i_rdev - mcos_dev_num;
 	if (idx < 0 || idx > os_max_minor) {
@@ -81,7 +82,10 @@ static int ihk_host_os_open(struct inode *inode, struct file *file)
 		return -EBUSY;
 	}
 
-	file->private_data = data;
+	ifile = kmalloc(sizeof(struct ihk_file), GFP_KERNEL);
+	memset(ifile, '\0', sizeof(struct ihk_file));
+	ifile->osdata = data;
+	file->private_data = ifile;
 
 	if (data->ops->open) {
 		ret = data->ops->open(data, data->priv, file);
@@ -98,16 +102,32 @@ static int ihk_host_os_open(struct inode *inode, struct file *file)
 static int ihk_host_os_release(struct inode *inode, struct file *file)
 {
 	struct ihk_host_linux_os_data *data;
-	
-	data = file->private_data;
+	struct ihk_file *ifile;
+
+	ifile = file->private_data;
+	data = ifile->osdata;
+	if(ifile->release_handler){
+		ifile->release_handler(data, ifile->param);
+	}
 
 	if (data->ops->close) {
 		data->ops->close(data, data->priv, file);
 	}
 
 	atomic_dec(&data->refcount);
+	kfree(ifile);
 	
 	return 0;
+}
+
+void  ihk_os_register_release_handler(struct file *file,
+                                      void (*handler)(ihk_os_t, void *),
+                                      void *param)
+{
+	struct ihk_file *ifile = file->private_data;
+
+	ifile->release_handler = handler;
+	ifile->param = param;
 }
 
 /** \brief load_memory operation for an OS device file */
@@ -346,7 +366,7 @@ static int __ihk_os_reserve_mem(struct ihk_host_linux_os_data *data,
 	return __ihk_os_alloc_resource(data, &resource);
 }
 
-#if 0
+#if 1
 /** \brief Initialize the kernel message buffer of the OS
  *
  * This function asks the locations of the buffer and maps it.
@@ -390,7 +410,7 @@ static void __ihk_os_init_kmsg(struct ihk_host_linux_os_data *data)
 static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
                               char __user *buf)
 {
-#if 0
+#if 1
 	int tail, len, len_end;
 
 	if (!data->kmsg_buf) {
@@ -424,7 +444,7 @@ kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
 	}
 
 	return tail + len_end;
-#endif
+#else
 	int size1, size2;
 	unsigned long rpa, pa, size;
 	void *kmsg_buf;
@@ -467,6 +487,7 @@ kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
 	mutex_unlock(&data->kmsg_mutex);
 
 	return size1;
+#endif
 }
 
 /** \brief Set the kernel command-line parameter for the kernel
@@ -509,7 +530,8 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 
 /** \brief Handles ioctl calls with the additional request number */
 static long __ihk_os_ioctl_call_aux(struct ihk_host_linux_os_data *os,
-                                    unsigned int request, unsigned long arg)
+                                    unsigned int request, unsigned long arg,
+                                    struct file *file)
 {
 	struct ihk_os_user_call *c;
 	int i;
@@ -520,7 +542,7 @@ static long __ihk_os_ioctl_call_aux(struct ihk_host_linux_os_data *os,
 			if (c->handlers[i].request == request) {
 				return c->handlers[i].func(os, request,
 				                           c->handlers[i].priv,
-				                           arg);
+				                           arg, file);
 			}
 		}
 	}
@@ -534,8 +556,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 {
 	int ret = -EINVAL;
 	struct ihk_host_linux_os_data *data;
+	struct ihk_file *ifile;
 	
-	data = file->private_data;
+	ifile = file->private_data;
+	data = ifile->osdata;
 
 /*	dprintf("IHK: ioctl request = %x, arg = %lx\n", request, arg); */
 
@@ -595,7 +619,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 			                                   request, arg);
 		} else if (request >= IHK_OS_AUX_CALL_START &&
 		           request <= IHK_OS_AUX_CALL_END) {
-			ret = __ihk_os_ioctl_call_aux(data, request, arg);
+			ret = __ihk_os_ioctl_call_aux(data, request, arg, file);
 		}
 		break;
 	}
@@ -608,7 +632,8 @@ static long ihk_host_os_write(struct file *file, const char __user *buf,
                               size_t size, loff_t *off)
 {
 	int r;
-	struct ihk_host_linux_os_data *data = file->private_data;
+	struct ihk_file *ifile = file->private_data;
+	struct ihk_host_linux_os_data *data = ifile->osdata;
 	char *ubuf;
 
 	if (size < 0) {
@@ -1520,3 +1545,4 @@ EXPORT_SYMBOL(ihk_os_get_cpu_info);
 EXPORT_SYMBOL(ihk_device_get_dma_channel);
 EXPORT_SYMBOL(ihk_device_get_dma_info);
 EXPORT_SYMBOL(ihk_dma_request);
+EXPORT_SYMBOL(ihk_os_register_release_handler);

@@ -106,4 +106,14 @@ struct ihk_host_linux_os_data {
 	void *usrdata;
 };
 
+/** \brief Structure that manages a kernel instance fd in Linux */
+struct ihk_file {
+	/** \brief kernel instance */
+	struct ihk_host_linux_os_data *osdata;
+	/** \brief release handler */
+	void (*release_handler)(ihk_os_t osdata, void *param);
+	/** \brief param for handler */
+	void *param;
+};
+
 #endif

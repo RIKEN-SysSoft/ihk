@@ -661,8 +661,8 @@ struct ihk_os_user_call_handler {
 	/** \brief Passed as the third argument to the handler */
 	void *priv;
 	/** \brief Handler */
-	long (*func)(ihk_os_t os, 
-	             unsigned int request, void *priv, unsigned long arg);
+	long (*func)(ihk_os_t os, unsigned int request, void *priv,
+	             unsigned long arg, struct file *file);
 };
 
 /** \brief Descriptor of the additional handlers for ioctl requests */
@@ -689,5 +689,7 @@ int ihk_device_get_dma_info(ihk_device_t data, struct ihk_dma_info *info);
 ihk_dma_channel_t ihk_device_get_dma_channel(ihk_device_t data, int channel);
 /** \brief Request a DMA opertation on the DMA channel */
 int ihk_dma_request(ihk_dma_channel_t ihk_ch, struct ihk_dma_request *req);
+void  ihk_os_register_release_handler(struct file *,void (*)(ihk_os_t, void *),
+                                      void *);
 
 #endif
