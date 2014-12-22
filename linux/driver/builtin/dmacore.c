@@ -5,7 +5,7 @@
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
-#if USE_DMA
+#ifdef USE_DMA
 #include "builtin_dma.h"
 #include <linux/sched.h>
 #include <linux/mm.h>
