@@ -95,6 +95,10 @@ unsigned long ihk_mc_get_memory_address(enum ihk_mc_gma_type type, int opt)
 		return virt_to_phys(get_last_early_heap());
 	case IHK_MC_NR_RESERVED_AREAS:
 		return 0;
+
+	case IHK_MC_RESERVED_AREA_START:
+	case IHK_MC_RESERVED_AREA_END:
+		return -ENOENT;
 	}
 
 	return -ENOENT;
