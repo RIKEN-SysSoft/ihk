@@ -17,12 +17,26 @@ extern void setup_x86(void);
 extern struct ihk_kmsg_buf kmsg_buf;
 
 unsigned long x86_kernel_phys_base;
+unsigned long ap_trampoline = 0;
+unsigned int ihk_ikc_irq = 0;
+unsigned int ihk_ikc_irq_apicid = 0;
 
-void arch_start(unsigned long param_addr, unsigned long phys_address)
+/* NOTEs on parameters: 
+ *
+ * param_addr (RDI) is set in shimos_trampoline_64.S before jumping
+ * into starrtup.S 
+ * phys_addr (RSI), ap_trampoline_start (RDX), ihk_ikc_irq (RCX) are set 
+ * in startup.S
+ */
+void arch_start(unsigned long param_addr, unsigned long phys_address, 
+	unsigned long _ap_trampoline, unsigned long _ihk_ikc_irq)
 {
 	x86_kernel_phys_base = phys_address;
 	boot_param = phys_to_virt(param_addr);
 	boot_param_pa = param_addr;
+	ap_trampoline = _ap_trampoline;
+	ihk_ikc_irq = _ihk_ikc_irq & 0x00000000ffffffff;
+	ihk_ikc_irq_apicid = (_ihk_ikc_irq >> 32);
 
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));

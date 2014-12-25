@@ -448,7 +448,10 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	startup[2] = pml4_p;
 	startup[3] = 0xffffffffc0000000;
 	startup[4] = phys;
-	startup[5] = entry;
+	startup[5] = 0x10000;						/* trampoline page phys addr */
+	startup[6] = (unsigned long)SHIMOS_VECTOR	/* IKC IRQ and core APIC id */
+		| (0 << 32); 
+	startup[7] = entry;
 	shimos_other_os_unmap(startup, PAGE_SIZE);
 	os->boot_rip = startup_p;
 

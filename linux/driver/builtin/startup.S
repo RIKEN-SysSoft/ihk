@@ -18,6 +18,10 @@ stack:
 	.quad	0
 arg2:
 	.quad	0
+trampoline:
+	.quad	0
+ikc_irq:
+	.quad	0
 next_rip:
 	.quad	0
 startup_body:
@@ -37,11 +41,14 @@ startup_body:
 	movq	%rax,%cr3
 
 	movq	(arg2 - base)(%rbx),%rsi
-	movq	(next_rip - base)(%rbx),%rcx
+	movq	(trampoline - base)(%rbx),%rdx
+	movq	(ikc_irq - base)(%rbx),%rcx
+	
+	movq	(next_rip - base)(%rbx),%r8
 
 	movq	%cr3,%rax
 	movq	%rax,%cr3
 
-	jmp	*%rcx
+	jmp	*%r8
 .globl startup_data_end
 startup_data_end:
