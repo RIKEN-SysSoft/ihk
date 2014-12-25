@@ -22,6 +22,12 @@ extern struct ihk_kmsg_buf kmsg_buf;
 
 static struct mic_boot_param *boot_param;
 
+/* IHK in builtin/SMP modes passes the following variables
+ * during boot, for MIC we use the pre-defined values */
+unsigned long ap_trampoline = 0x10000;
+unsigned int ihk_ikc_irq = 0;
+unsigned int ihk_ikc_irq_apicid = 0;
+
 static int cpumhz = 1053;
 
 void set_cpumhz(int mhzval)
