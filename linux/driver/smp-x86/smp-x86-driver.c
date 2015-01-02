@@ -403,7 +403,7 @@ void ihk_smp_unmap_virtual(void *virt)
 /** \brief Implementation of ihk_host_get_dma_channel.
  *
  * It returns the information of the only channel in the DMA emulating core. */
-static ihk_dma_channel_t builtin_ihk_get_dma_channel(ihk_device_t dev, void *priv,
+static ihk_dma_channel_t smp_ihk_get_dma_channel(ihk_device_t dev, void *priv,
                                                  int channel)
 {
 	return NULL;
@@ -602,7 +602,7 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 }
 
 /** \brief Boot a kernel. */
-static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
+static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
 	struct builtin_os_data *os = priv;
 	struct builtin_device_data *dev = os->dev;
@@ -668,8 +668,7 @@ static int builtin_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	return smp_wakeup_secondary_cpu(os->boot_cpu, page_to_phys(trampoline_page));
 }
 
-static int
-builtin_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
+static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
 	struct builtin_os_data *os = priv;
 	struct file *file;
@@ -858,7 +857,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	return 0;
 }
 
-static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
+static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
                                unsigned long size, long offset)
 {
 	struct builtin_os_data *os = priv;
@@ -923,7 +922,7 @@ static int builtin_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 	return 0;
 }
 
-static int builtin_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
+static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 {
 	struct builtin_os_data *os = priv;
 	int i, apicid;
@@ -985,7 +984,7 @@ static int builtin_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 }
 
 
-static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
+static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
                                      struct ihk_resource *resource)
 {
 	struct builtin_os_data *os = priv;
@@ -1114,7 +1113,7 @@ static int builtin_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 	return ret;
 }
 
-static enum ihk_os_status builtin_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
+static enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 {
 	struct builtin_os_data *os = priv;
 	int status;
@@ -1134,7 +1133,7 @@ static enum ihk_os_status builtin_ihk_os_query_status(ihk_os_t ihk_os, void *pri
 	}
 }
 
-static int builtin_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
+static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 {
 	unsigned long flags;
 	struct builtin_os_data *os = priv;
@@ -1155,7 +1154,7 @@ static int builtin_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	return 0;
 }
 
-static int builtin_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
+static int smp_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
                                       enum ihk_os_status status, 
                                       int sleepable, int timeout)
 {
@@ -1165,7 +1164,7 @@ static int builtin_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
 		return -1;
 	} else {
 		/* Polling */
-		while ((s = builtin_ihk_os_query_status(ihk_os, priv)),
+		while ((s = smp_ihk_os_query_status(ihk_os, priv)),
 		       s != status && s < IHK_OS_STATUS_SHUTDOWN 
 		       && timeout > 0) {
 			mdelay(100);
@@ -1175,7 +1174,7 @@ static int builtin_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
 	}
 }
 
-static int builtin_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
+static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
                                       int cpu, int v)
 {
 	struct builtin_os_data *os = priv;
@@ -1184,7 +1183,7 @@ static int builtin_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	if (cpu < 0 || cpu >= os->cpu_info.n_cpus) {
 		return -EINVAL;
 	}
-	//printk("builtin_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
+	//printk("smp_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
 	//shimos_issue_ipi(os->cpu_info.hw_ids[cpu], v);
 	
 	__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
@@ -1193,7 +1192,7 @@ static int builtin_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	return -EINVAL;
 }
 
-static unsigned long builtin_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
+static unsigned long smp_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
                                            unsigned long remote_phys,
                                            unsigned long size)
 {
@@ -1201,14 +1200,14 @@ static unsigned long builtin_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
 	return remote_phys;
 }
 
-static int builtin_ihk_os_unmap_memory(ihk_os_t ihk_os, void *priv,
+static int smp_ihk_os_unmap_memory(ihk_os_t ihk_os, void *priv,
                                     unsigned long local_phys,
                                     unsigned long size)
 {
 	return 0;
 }
 
-static int builtin_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
+static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
                                        enum ihk_special_addr_type type,
                                        unsigned long *addr,
                                        unsigned long *size)
@@ -1243,12 +1242,12 @@ static int builtin_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 	return -EINVAL;
 }
 
-static long builtin_ihk_os_debug_request(ihk_os_t ihk_os, void *priv,
+static long smp_ihk_os_debug_request(ihk_os_t ihk_os, void *priv,
                                      unsigned int req, unsigned long arg)
 {
 	switch (req) {
 	case IHK_OS_DEBUG_START:
-		builtin_ihk_os_issue_interrupt(ihk_os, priv, (arg >> 8),
+		smp_ihk_os_issue_interrupt(ihk_os, priv, (arg >> 8),
 		                           (arg & 0xff));
 		return 0;
 	}
@@ -1257,7 +1256,7 @@ static long builtin_ihk_os_debug_request(ihk_os_t ihk_os, void *priv,
 
 static LIST_HEAD(builtin_interrupt_handlers);
 
-static int builtin_ihk_os_register_handler(ihk_os_t os, void *os_priv, int itype,
+static int smp_ihk_os_register_handler(ihk_os_t os, void *os_priv, int itype,
                                        struct ihk_host_interrupt_handler *h)
 {
 	h->os = os;
@@ -1267,7 +1266,7 @@ static int builtin_ihk_os_register_handler(ihk_os_t os, void *os_priv, int itype
 	return 0;
 }
 
-static int builtin_ihk_os_unregister_handler(ihk_os_t os, void *os_priv, int itype,
+static int smp_ihk_os_unregister_handler(ihk_os_t os, void *os_priv, int itype,
                                          struct ihk_host_interrupt_handler *h)
 {
 	list_del(&h->list);
@@ -1288,7 +1287,7 @@ static irqreturn_t builtin_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static struct ihk_mem_info *builtin_ihk_os_get_memory_info(ihk_os_t ihk_os,
+static struct ihk_mem_info *smp_ihk_os_get_memory_info(ihk_os_t ihk_os,
                                                        void *priv)
 {
 	struct builtin_os_data *os = priv;
@@ -1296,40 +1295,40 @@ static struct ihk_mem_info *builtin_ihk_os_get_memory_info(ihk_os_t ihk_os,
 	return &os->mem_info;
 }
 
-static struct ihk_cpu_info *builtin_ihk_os_get_cpu_info(ihk_os_t ihk_os, void *priv)
+static struct ihk_cpu_info *smp_ihk_os_get_cpu_info(ihk_os_t ihk_os, void *priv)
 {
 	struct builtin_os_data *os = priv;
 
 	return &os->cpu_info;
 }
 
-static struct ihk_os_ops builtin_ihk_os_ops = {
-	.load_mem = builtin_ihk_os_load_mem,
-	.load_file = builtin_ihk_os_load_file,
-	.boot = builtin_ihk_os_boot,
-	.shutdown = builtin_ihk_os_shutdown,
-	.alloc_resource = builtin_ihk_os_alloc_resource,
-	.query_status = builtin_ihk_os_query_status,
-	.wait_for_status = builtin_ihk_os_wait_for_status,
-	.set_kargs = builtin_ihk_os_set_kargs,
-	.issue_interrupt = builtin_ihk_os_issue_interrupt,
-	.map_memory = builtin_ihk_os_map_memory,
-	.unmap_memory = builtin_ihk_os_unmap_memory,
-	.register_handler = builtin_ihk_os_register_handler,
-	.unregister_handler = builtin_ihk_os_unregister_handler,
-	.get_special_addr = builtin_ihk_os_get_special_addr,
-	.debug_request = builtin_ihk_os_debug_request,
-	.get_memory_info = builtin_ihk_os_get_memory_info,
-	.get_cpu_info = builtin_ihk_os_get_cpu_info,
+static struct ihk_os_ops smp_ihk_os_ops = {
+	.load_mem = smp_ihk_os_load_mem,
+	.load_file = smp_ihk_os_load_file,
+	.boot = smp_ihk_os_boot,
+	.shutdown = smp_ihk_os_shutdown,
+	.alloc_resource = smp_ihk_os_alloc_resource,
+	.query_status = smp_ihk_os_query_status,
+	.wait_for_status = smp_ihk_os_wait_for_status,
+	.set_kargs = smp_ihk_os_set_kargs,
+	.issue_interrupt = smp_ihk_os_issue_interrupt,
+	.map_memory = smp_ihk_os_map_memory,
+	.unmap_memory = smp_ihk_os_unmap_memory,
+	.register_handler = smp_ihk_os_register_handler,
+	.unregister_handler = smp_ihk_os_unregister_handler,
+	.get_special_addr = smp_ihk_os_get_special_addr,
+	.debug_request = smp_ihk_os_debug_request,
+	.get_memory_info = smp_ihk_os_get_memory_info,
+	.get_cpu_info = smp_ihk_os_get_cpu_info,
 };	
 
 static struct ihk_register_os_data builtin_os_reg_data = {
 	.name = "builtinos",
 	.flag = 0,
-	.ops = &builtin_ihk_os_ops,
+	.ops = &smp_ihk_os_ops,
 };
 
-static int builtin_ihk_create_os(ihk_device_t ihk_dev, void *priv,
+static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
                              unsigned long arg, ihk_os_t ihk_os,
                              struct ihk_register_os_data *regdata)
 {
@@ -1354,7 +1353,7 @@ static int builtin_ihk_create_os(ihk_device_t ihk_dev, void *priv,
  *
  * In BUILTIN, all the kernels including the host kernel are running in the
  * same physical memory map, thus there is nothing to do. */
-static unsigned long builtin_ihk_map_memory(ihk_device_t ihk_dev, void *priv,
+static unsigned long smp_ihk_map_memory(ihk_device_t ihk_dev, void *priv,
                                         unsigned long remote_phys,
                                         unsigned long size)
 {
@@ -1362,7 +1361,7 @@ static unsigned long builtin_ihk_map_memory(ihk_device_t ihk_dev, void *priv,
 	return remote_phys;
 }
 
-static int builtin_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
+static int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
                                 unsigned long local_phys,
                                 unsigned long size)
 {
@@ -1371,7 +1370,7 @@ static int builtin_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 
 
 
-static void *builtin_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
+static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
                                  unsigned long phys, unsigned long size,
                                  void *virt, int flags)
 {
@@ -1398,7 +1397,7 @@ static void *builtin_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
 	}
 }
 
-static int builtin_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
+static int smp_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
                                   void *virt, unsigned long size)
 {
 	ihk_smp_unmap_virtual(virt);
@@ -1416,7 +1415,7 @@ static int builtin_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
 	*/
 }
 
-static long builtin_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
+static long smp_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
                                   unsigned int req, unsigned long arg)
 {
 	return -EINVAL;
@@ -1651,9 +1650,9 @@ out:
 }
 
 
-static int builtin_ihk_init(ihk_device_t ihk_dev, void *priv)
+static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
-	struct builtin_ihk_device_ops *data = priv;
+	struct smp_ihk_device_ops *data = priv;
 	int i = 0;
 	int nr_cpus = 0;
 	int cpu, apicid;
@@ -1881,7 +1880,7 @@ int ihk_smp_reset_cpu(int phys_apicid) {
 	return 0;
 }
 
-static int builtin_ihk_exit(ihk_device_t ihk_dev, void *priv) 
+static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv) 
 {
 	int i;
 
@@ -1938,16 +1937,16 @@ static int builtin_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	return 0;
 }
 
-static struct ihk_device_ops builtin_ihk_device_ops = {
-	.init = builtin_ihk_init,
-	.exit = builtin_ihk_exit,
-	.create_os = builtin_ihk_create_os,
-	.map_memory = builtin_ihk_map_memory,
-	.unmap_memory = builtin_ihk_unmap_memory,
-	.map_virtual = builtin_ihk_map_virtual,
-	.unmap_virtual = builtin_ihk_unmap_virtual,
-	.debug_request = builtin_ihk_debug_request,
-	.get_dma_channel = builtin_ihk_get_dma_channel,
+static struct ihk_device_ops smp_ihk_device_ops = {
+	.init = smp_ihk_init,
+	.exit = smp_ihk_exit,
+	.create_os = smp_ihk_create_os,
+	.map_memory = smp_ihk_map_memory,
+	.unmap_memory = smp_ihk_unmap_memory,
+	.map_virtual = smp_ihk_map_virtual,
+	.unmap_virtual = smp_ihk_unmap_virtual,
+	.debug_request = smp_ihk_debug_request,
+	.get_dma_channel = smp_ihk_get_dma_channel,
 };	
 
 /** \brief The driver-specific driver structure
@@ -1960,7 +1959,7 @@ static struct ihk_register_device_data builtin_dev_reg_data = {
 	.name = "builtin",
 	.flag = 0,
 	.priv = &builtin_data,
-	.ops = &builtin_ihk_device_ops,
+	.ops = &smp_ihk_device_ops,
 };
 
 static int __init builtin_init(void)
