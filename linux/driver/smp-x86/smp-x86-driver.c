@@ -452,7 +452,7 @@ static void __build_os_info(struct builtin_os_data *os)
 	os->cpu_info.hw_ids = os->cpu_hw_ids;
 }
 
-struct ihk_smp_trampoline_header{
+struct ihk_smp_trampoline_header {
 	unsigned long reserved;   /* jmp ins. */
 	unsigned long page_table; /* ident page table */
 	unsigned long next_ip;    /* the program address */
@@ -1962,7 +1962,7 @@ static struct ihk_register_device_data builtin_dev_reg_data = {
 	.ops = &smp_ihk_device_ops,
 };
 
-static int __init builtin_init(void)
+static int __init smp_module_init(void)
 {
 	ihk_device_t ihkd;
 
@@ -1976,21 +1976,17 @@ static int __init builtin_init(void)
 	}
 
 	builtin_data.ihk_dev = ihkd;
-
-	//shimos_set_irq_handler(builtin_irq_handler);
-
+	
 	return 0;
 }
 
-static void __exit builtin_exit(void)
+static void __exit smp_module_exit(void)
 {
 	printk(KERN_INFO "IHK-SMP: finalizing...\n");
 	ihk_unregister_device(builtin_data.ihk_dev);
-
-	//shimos_set_irq_handler(NULL);
 }
 
-module_init(builtin_init);
-module_exit(builtin_exit);
+module_init(smp_module_init);
+module_exit(smp_module_exit);
 
 MODULE_LICENSE("Dual BSD/GPL");
