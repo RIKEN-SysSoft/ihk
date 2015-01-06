@@ -228,6 +228,7 @@ MODULE_PARM_DESC(ihk_start_irq, "IHK IKC IPI to be scanned from this IRQ vector"
 
 #define IHK_SMP_CPU_AVAILABLE	0
 #define IHK_SMP_CPU_ALLOCATED	1
+#define IHK_SMP_CPU_TO_OFFLINE	2
 
 struct ihk_smp_cpu {
 	int id;
@@ -1699,7 +1700,6 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 	int i = 0;
 	int nr_cpus = 0;
 	int cpu;
-	int cpus_to_offline[256];
 	int num_online_cpus_target;
 	int vector = IRQ15_VECTOR + 2;
 
@@ -1734,23 +1734,24 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 	for_each_online_cpu(cpu) {
 		if (++nr_cpus > num_online_cpus_target) {
-			cpus_to_offline[i++] = cpu;
+			ihk_smp_cpus[i].id = cpu;
+			ihk_smp_cpus[i].status = IHK_SMP_CPU_TO_OFFLINE;
+			++i;
 		}
 	}
 
 	for (i = 0; i < ihk_smp_nr_reserved_cpus; ++i) {
 		int ret;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-		struct device *dev = get_cpu_device(cpus_to_offline[i]);
+		struct device *dev = get_cpu_device(ihk_smp_cpus[i].id);
 		//struct cpu *cpu = container_of(dev, struct cpu, dev);
 #else
-		struct sys_device *dev = get_cpu_sysdev(cpus_to_offline[i]);
+		struct sys_device *dev = get_cpu_sysdev(ihk_smp_cpus[i].id);
 		struct cpu *cpu = container_of(dev, struct cpu, sysdev);
 #endif
 
-		ihk_smp_cpus[i].id = cpus_to_offline[i];
 		ihk_smp_cpus[i].apic_id = 
-			per_cpu(x86_cpu_to_apicid, cpus_to_offline[i]);
+			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[i].id);
 		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[i].os = (ihk_os_t)0;
 
