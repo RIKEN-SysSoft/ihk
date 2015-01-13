@@ -1,5 +1,8 @@
 /* linux/driver/smp-x86/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to address of kernel symbol _cpu_up, or 0 if exported */
+#undef IHK_KSYM__cpu_up
+
 /* Define to address of kernel symbol alloc_desc, or 0 if exported */
 #undef IHK_KSYM_alloc_desc
 
@@ -10,9 +13,6 @@
 /* Define to address of kernel symbol cpu_hotplug_driver_unlock, or 0 if
    exported */
 #undef IHK_KSYM_cpu_hotplug_driver_unlock
-
-/* Define to address of kernel symbol cpu_up, or 0 if exported */
-#undef IHK_KSYM_cpu_up
 
 /* Define to address of kernel symbol dummy_irq_chip, or 0 if exported */
 #undef IHK_KSYM_dummy_irq_chip
@@ -57,9 +57,6 @@
 
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
-
-/* Define to the home page for this package. */
-#undef PACKAGE_URL
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION

@@ -188,7 +188,7 @@ if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([wakeup_secondary_cpu_via_init])
 	IHK_FIND_KSYM([cpu_hotplug_driver_lock])
 	IHK_FIND_KSYM([cpu_hotplug_driver_unlock])
-	IHK_FIND_KSYM([cpu_up])
+	IHK_FIND_KSYM([_cpu_up])
 fi
 
 AC_SUBST(CC)

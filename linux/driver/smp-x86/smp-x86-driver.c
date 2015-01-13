@@ -166,14 +166,14 @@ int (*_wakeup_secondary_cpu_via_init)(int phys_apicid,
 #endif
 #endif
 
-#ifdef IHK_KSYM_cpu_up
-#if IHK_KSYM_cpu_up
-typedef int (*int_star_fn_int_t)(unsigned int);
-int (*_cpu_up)(unsigned int cpu) =
-	(int_star_fn_int_t)
-	IHK_KSYM_cpu_up;
+#ifdef IHK_KSYM__cpu_up
+#if IHK_KSYM__cpu_up
+typedef int (*int_star_fn_uint_int_t)(unsigned int, int);
+int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) =
+	(int_star_fn_uint_int_t)
+	IHK_KSYM__cpu_up;
 #else // exported
-int (*_cpu_up)(unsigned int cpu) = cpu_up;
+int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) = _cpu_up;
 #endif
 #endif
 
@@ -1606,7 +1606,7 @@ int ihk_smp_reserve_mem(void)
 			printk(KERN_NOTICE "IHK-SMP: ihk_mem is ignored\n");
 			
 			ret = -1;
-			goto out;
+			goto err;
 		}
 		
 		alloced += PAGE_SIZE << order;
@@ -1676,7 +1676,6 @@ int ihk_smp_reserve_mem(void)
 
 out:
 	/* free unused chunks */
-	//list_splice(&ihk_mem_free_chunks, &unused);
 	nchunk = 0;
 	list_for_each_entry_safe(p, q, &unused, chain) {
 		list_del(&p->chain);
@@ -1692,21 +1691,25 @@ out:
 	}
 	
 	return ret;
+
+err:
+	list_splice(&ihk_mem_free_chunks, &unused);
+	goto out;
 }
 
 
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 	int i = 0;
-	int nr_cpus = 0;
+	int cpu_to_offline = 0;
+	int cpu_to_offline_from;
 	int cpu;
-	int num_online_cpus_target;
 	int vector = IRQ15_VECTOR + 2;
 
 	if (ihk_cores) {
-		if (ihk_cores > (num_online_cpus() - 1)) {
+		if (ihk_cores > (num_possible_cpus() - 1)) {
 			printk("IHK-SMP error: only %d CPUs in total are available\n", 
-					num_online_cpus());
+					num_possible_cpus());
 			return EINVAL;	
 		}
 		
@@ -1728,15 +1731,37 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 	memset(ihk_smp_cpus, sizeof(ihk_smp_cpus), 0);
 
-	printk("IHK-SMP: attempting to offline %d CPUs\n", ihk_smp_nr_reserved_cpus);
-	//printk("num_online_cpus: %d\n", num_online_cpus());
-	num_online_cpus_target = num_online_cpus() - ihk_smp_nr_reserved_cpus;
+	/* First check offline CPUs */
+	for_each_possible_cpu(cpu) {
+		if (!cpu_is_offline(cpu)) continue;
 
-	for_each_online_cpu(cpu) {
-		if (++nr_cpus > num_online_cpus_target) {
-			ihk_smp_cpus[i].id = cpu;
-			ihk_smp_cpus[i].status = IHK_SMP_CPU_TO_OFFLINE;
-			++i;
+		ihk_smp_cpus[i].id = cpu;
+		ihk_smp_cpus[i].apic_id = 
+			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[i].id);
+		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
+		ihk_smp_cpus[i].os = (ihk_os_t)0;
+		
+		printk("CPU %d (already offline) reserved successfully, APIC: %d\n", 
+			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
+		
+		++i;
+		if (i == ihk_smp_nr_reserved_cpus) {
+			break;
+		}
+	}
+
+	//printk("num_online_cpus: %d\n", num_online_cpus());
+	cpu_to_offline_from = num_online_cpus() - (ihk_smp_nr_reserved_cpus - i);
+	if (cpu_to_offline_from < num_online_cpus()) {
+		printk("IHK-SMP: attempting to offline %d CPUs\n", 
+			num_online_cpus() - cpu_to_offline_from);
+
+		for_each_online_cpu(cpu) {
+			if (++cpu_to_offline > cpu_to_offline_from) {
+				ihk_smp_cpus[i].id = cpu;
+				ihk_smp_cpus[i].status = IHK_SMP_CPU_TO_OFFLINE;
+				++i;
+			}
 		}
 	}
 
@@ -1749,6 +1774,8 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 		struct sys_device *dev = get_cpu_sysdev(ihk_smp_cpus[i].id);
 		struct cpu *cpu = container_of(dev, struct cpu, sysdev);
 #endif
+		if (ihk_smp_cpus[i].status != IHK_SMP_CPU_TO_OFFLINE)
+			continue;
 
 		ihk_smp_cpus[i].apic_id = 
 			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[i].id);
@@ -1928,33 +1955,11 @@ int ihk_smp_reset_cpu(int phys_apicid) {
 
 static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv) 
 {
-#if 0
+	struct chunk *mem_chunk;
+	struct chunk *mem_chunk_next;
+	unsigned long size_left;
+	unsigned long va;
 	int i;
-	
-	for (i = 0; i < ihk_smp_nr_reserved_cpus; ++i) {
-		int ret;
-		struct sys_device *dev = get_cpu_sysdev(ihk_smp_cpus[i].id);
-		struct cpu *cpu = container_of(dev, struct cpu, sysdev);
-
-		ihk_smp_reset_cpu(ihk_smp_cpus[i].apic_id);
-
-		cpu_hotplug_driver_lock();
-
-		ret = _cpu_up(cpu->sysdev.id);
-		if (!ret)
-			kobject_uevent(&dev->kobj, KOBJ_ONLINE);
-		
-		cpu_hotplug_driver_unlock();
-		
-		if (ret < 0) {
-			printk("ERROR: hot-plugging CPU (skipping)\n");
-			continue;
-		}
-		
-		printk("CPU %d re-enabled successfully, APIC: %d\n", 
-			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
-	}
-#endif 
 
 	//struct irq_desc *desc;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
@@ -1965,6 +1970,27 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 				per_cpu_offset(smp_processor_id())));
 #endif	
 
+	/* Re-enable CPU cores */
+	//TODO: cpu_maps_update_begin();
+	for (i = 0; i < ihk_smp_nr_reserved_cpus; ++i) {
+		int ret;
+
+		ihk_smp_reset_cpu(ihk_smp_cpus[i].apic_id);
+		
+		ret = ihk_cpu_up(ihk_smp_cpus[i].id, 1);
+		if (ret) {
+			printk("IHK-SMP: WARNING: failed to re-enable CPU %d, APIC: %d\n", 
+				ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
+			continue;
+		}
+		
+		printk("IHK-SMP: CPU %d re-enabled successfully, APIC: %d\n", 
+			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
+	}
+	
+	//TODO: cpu_maps_update_done();
+
+	/* Release IRQ vector */
 	vectors[ihk_smp_irq] = -1;
 
 	//desc = _irq_to_desc(ihk_smp_irq);
@@ -1978,6 +2004,34 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 	if (ident_npages_order) {
 		free_pages((unsigned long)ident_page_table_virt, ident_npages_order);
+	}
+
+	/* Free memory */
+	list_for_each_entry_safe(mem_chunk, mem_chunk_next, 
+			&ihk_mem_free_chunks, chain) {
+
+		list_del(&mem_chunk->chain);
+
+		va = (unsigned long)phys_to_virt(mem_chunk->addr);
+		size_left = mem_chunk->size;
+		while (size_left > 0) {
+			int order = 1;
+			int order_size = PAGE_SIZE;
+			
+			for (;;) {
+				if (((order_size << 1) > size_left) || order == 10) {
+					break;
+				}
+
+				order += 1;
+				order_size <<= 1;
+			}
+
+			free_pages(va, order);
+			printk("0x%lx, page order: %d freed\n", va, order); 
+			size_left -= order_size;
+			va += order_size;
+		}
 	}
 
 	return 0;
