@@ -249,9 +249,9 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 static int  __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
-	void *buf;
 	
 	/* No need for this 
+	void *buf;
 	if (data->kmsg_buf) {
 		buf = data->kmsg_buf;
 		data->kmsg_buf = NULL;

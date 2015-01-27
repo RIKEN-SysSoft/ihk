@@ -127,7 +127,10 @@ struct irq_desc *(*_irq_to_desc_alloc_node)(unsigned int irq, int node) =
 
 #ifdef IHK_KSYM_alloc_desc
 #if IHK_KSYM_alloc_desc
+typedef struct irq_desc *(*irq_desc_star_fn_int_int_module_star_t)
+	(int, int, struct module*);
 struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
+	(irq_desc_star_fn_int_int_module_star_t)
 	IHK_KSYM_alloc_desc;
 #endif
 #endif
@@ -135,6 +138,7 @@ struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
 #ifdef IHK_KSYM_irq_desc_tree
 #if IHK_KSYM_irq_desc_tree
 struct radix_tree_root *_irq_desc_tree = 
+	(struct radix_tree_root *)
 	IHK_KSYM_irq_desc_tree;
 #endif
 #endif
@@ -179,7 +183,9 @@ int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) = _cpu_up;
 
 #ifdef IHK_KSYM_cpu_hotplug_driver_lock 
 #if IHK_KSYM_cpu_hotplug_driver_lock 
+typedef void (*void_fn_void_t)(void);
 void (*_cpu_hotplug_driver_lock)(void) = 
+	(void_fn_void_t)
 	IHK_KSYM_cpu_hotplug_driver_lock;
 #else // exported
 #include <linux/cpu.h>
@@ -194,7 +200,11 @@ void (*_cpu_hotplug_driver_lock)(void) =
 
 #ifdef IHK_KSYM_cpu_hotplug_driver_unlock
 #if IHK_KSYM_cpu_hotplug_driver_unlock
+#ifndef void_fn_void_t
+typedef void (*void_fn_void_t)(void);
+#endif
 void (*_cpu_hotplug_driver_unlock)(void) = 
+	(void_fn_void_t)
 	IHK_KSYM_cpu_hotplug_driver_unlock;
 #else // exported
 void (*_cpu_hotplug_driver_unlock)(void) = 
@@ -1548,13 +1558,13 @@ void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 		return;
 	}
 	
-	spin_lock(&desc->lock);
+	raw_spin_lock(&desc->lock);
 
 	//printk("IHK-SMP: calling handler for IRQ %d\n", irq);
 	desc->action->handler(irq, NULL);
 	//ack_APIC_irq();
 	
-	spin_unlock(&desc->lock);
+	raw_spin_unlock(&desc->lock);
 }
 #endif
 
