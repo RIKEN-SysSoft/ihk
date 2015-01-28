@@ -1558,13 +1558,21 @@ void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 		return;
 	}
 	
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	raw_spin_lock(&desc->lock);
+#else
+	spin_lock(&desc->lock);
+#endif
 
 	//printk("IHK-SMP: calling handler for IRQ %d\n", irq);
 	desc->action->handler(irq, NULL);
 	//ack_APIC_irq();
 	
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	raw_spin_unlock(&desc->lock);
+#else
+	spin_unlock(&desc->lock);
+#endif
 }
 #endif
 
