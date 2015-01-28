@@ -1889,6 +1889,15 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 			printk("IRQ vector %d: request_irq failed\n", vector);
 			continue;
 		}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
+		/* NOTE: this is nasty, but we need to decrease the refcount because as
+		 * of Linux 3.1 request_irq holds a reference to the module.
+		 * This causes rmmod to fail and report the module is in use when one
+		 * tries to unload it. To overcome this, we drop one ref here and get
+		 * an extra one before free_irq in the module's exit code */
+		module_put(THIS_MODULE);
+#endif
 	
 		/* Pretend a real external interrupt */
 		{
@@ -2013,7 +2022,11 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 	//desc = _irq_to_desc(ihk_smp_irq);
 	//desc->handle_irq = orig_irq_flow_handler;
-	
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
+	try_module_get(THIS_MODULE);
+#endif
+
 	free_irq(ihk_smp_irq, NULL);
 
 	if (trampoline_page) {
