@@ -18,7 +18,7 @@
 int __argc;
 char **__argv;
 
-static void usage(char **arg)
+static int usage(char **arg)
 {
 	char	*cmd;
 
@@ -38,22 +38,27 @@ static void usage(char **arg)
 	fprintf(stderr, "    ioctl\n");
 	fprintf(stderr, "    clear_kmsg\n");
 	fprintf(stderr, "    clear_kmsg_write\n");
+
+	return 0;
 }
 
-static void do_destroy(int fd)
+static int do_destroy(int fd)
 {
 	int os;
+	int r;
+
 	if (__argc < 4) {
 		printf("Usage: %s (dev #) destroy (os #)\n", __argv[0]);
-		exit(1);
+		return 1;
 	}
 
 	os = atoi(__argv[3]);
-	int r = ioctl(fd, IHK_DEVICE_DESTROY_OS, os);
+	r = ioctl(fd, IHK_DEVICE_DESTROY_OS, os);
 	printf("ret = %d\n", r);
+	return r;
 }
 
-static void do_read(int fd)
+static int do_read(int fd)
 {
 	unsigned long adr;
 	unsigned char buf[16];
@@ -63,22 +68,23 @@ static void do_read(int fd)
 		adr = strtol(__argv[3], NULL, 16);
 	} else {
 		fprintf(stderr, "Address is not specified!\n");
-		return;
+		return 1;
 	}
 	
 	i = pread(fd, buf, sizeof(buf), adr);
 	if (i < 0) {
 		perror("pread");
-		return;
+		return 1;
 	}
 
 	for (i = 0; i < sizeof(buf); i++) {
 		printf("%02x ", buf[i]);
 	}
 	printf("\n");
+	return 0;
 }
 
-static void do_mmap(int fd)
+static int do_mmap(int fd)
 {
 	unsigned long adr;
 	unsigned char *p;
@@ -88,13 +94,13 @@ static void do_mmap(int fd)
 		adr = strtol(__argv[3], NULL, 16);
 	} else {
 		fprintf(stderr, "Address is not specified!\n");
-		return;
+		return 1;
 	}
 
 	p = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, adr);
 	if (p == MAP_FAILED) {
 		perror("mmap");
-		return;
+		return 1;
 	}
 
 	for (i = 0; i < 16; i++) {
@@ -103,9 +109,10 @@ static void do_mmap(int fd)
 	printf("\n");
 
 	munmap(p, 4096);
+	return 0;
 }
 
-static void do_clear_kmsg(int fd)
+static int do_clear_kmsg(int fd)
 {
 	unsigned long adr;
 	unsigned char *p;
@@ -114,21 +121,22 @@ static void do_clear_kmsg(int fd)
 		adr = strtol(__argv[3], NULL, 16);
 	} else {
 		fprintf(stderr, "Address is not specified!\n");
-		return;
+		return 1;
 	}
 
 	p = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, adr);
 	if (p == MAP_FAILED) {
 		perror("mmap");
-		return;
+		return 1;
 	}
 
 	printf("Before write : %d\n", *(unsigned int *)p);
 	*(unsigned int *)p = 0;
 	munmap(p, 4096);
+	return 0;
 }
 
-static void do_clear_kmsg_write(int fd)
+static int do_clear_kmsg_write(int fd)
 {
 	unsigned long adr;
 	unsigned int l;
@@ -138,23 +146,26 @@ static void do_clear_kmsg_write(int fd)
 		adr = strtol(__argv[3], NULL, 16);
 	} else {
 		fprintf(stderr, "Address is not specified!\n");
-		return;
+		return 1;
 	}
 	
 	l = 0;
 	i = pwrite(fd, &l, sizeof(l), adr);
 	if (i < 0) {
 		perror("pwrite");
-		return;
+		return 1;
 	}
+
+	return 0;
 }
 
-static void do_create(int fd)
+static int do_create(int fd)
 {
 	int r = ioctl(fd, IHK_DEVICE_CREATE_OS, 0);
 	printf("ret = %d\n", r);
+	return r;
 }
-static void do_scratch(int fd)
+static int do_scratch(int fd)
 {
 	int i;
 	long r;
@@ -163,8 +174,9 @@ static void do_scratch(int fd)
 		r = ioctl(fd, IHK_DEVICE_DEBUG_START + 0, i);
 		printf("Scratch %2d = %08lx\n", i, r);
 	}
+	return r;
 }
-static void do_sbox(int fd)
+static int do_sbox(int fd)
 {
 	int idx;
 	long r;
@@ -177,9 +189,10 @@ static void do_sbox(int fd)
 
 	r = ioctl(fd, IHK_DEVICE_DEBUG_START + 1, idx);
 	printf("SBOX %04x = %08lx\n", idx, r);
+	return r;
 }
 
-static void do_ioctl(int fd)
+static int do_ioctl(int fd)
 {
 	unsigned int req;
 	unsigned long arg;
@@ -187,16 +200,17 @@ static void do_ioctl(int fd)
 
 	if (__argc <= 4) {
 		fprintf(stderr, "No req or arg is specified.\n");
-		return;
+		return 1;
 	}
 	req = strtol(__argv[3], NULL, 16);
 	arg = strtoll(__argv[4], NULL, 16);
 
 	r = ioctl(fd, req, arg);
 	printf("ret = %lx (%ld)\n", r, r);
+	return r;
 }
 
-#define HANDLER(name) if (!strcmp(argv[2], #name)) { do_##name(fd); }
+#define HANDLER(name) if (!strcmp(argv[2], #name)) { int r = do_##name(fd); close(fd); return r; }
 int main(int argc, char **argv)
 {
 	int fd;
