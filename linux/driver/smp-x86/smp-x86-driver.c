@@ -1874,8 +1874,6 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 			
 			desc->status_use_accessors &= ~IRQ_NOREQUEST;
 		}
-		
-		desc->handle_irq = ihk_smp_irq_flow_handler;
 #else
 		if (desc->status & IRQ_NOREQUEST) {
 			
@@ -1883,9 +1881,9 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 			
 			desc->status &= ~IRQ_NOREQUEST;
 		}
-		
-		desc->handle_irq = ihk_smp_irq_flow_handler;
 #endif
+		orig_irq_flow_handler = desc->handle_irq;
+		desc->handle_irq = ihk_smp_irq_flow_handler;
 #endif // CONFIG_SPARSE_IRQ
 
 		if (request_irq(vector, 
@@ -1991,8 +1989,10 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	unsigned long size_left;
 	unsigned long va;
 	int i;
+#ifdef CONFIG_SPARSE_IRQ
+	struct irq_desc *desc;
+#endif
 
-	//struct irq_desc *desc;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
 				per_cpu_offset(smp_processor_id())));
@@ -2000,9 +2000,26 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
 				per_cpu_offset(smp_processor_id())));
 #endif	
+	
+	/* Release IRQ vector */
+	vectors[ihk_smp_irq] = -1;
+
+#ifdef CONFIG_SPARSE_IRQ
+	desc = _irq_to_desc(ihk_smp_irq);
+	desc->handle_irq = orig_irq_flow_handler;
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
+	try_module_get(THIS_MODULE);
+#endif
+
+	free_irq(ihk_smp_irq, NULL);
+	
+#ifdef CONFIG_SPARSE_IRQ
+	irq_free_descs(ihk_smp_irq, 1);
+#endif
 
 	/* Re-enable CPU cores */
-	//TODO: cpu_maps_update_begin();
 	for (i = 0; i < ihk_smp_nr_reserved_cpus; ++i) {
 		int ret;
 
@@ -2018,20 +2035,6 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 		printk("IHK-SMP: CPU %d re-enabled successfully, APIC: %d\n", 
 			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
 	}
-	
-	//TODO: cpu_maps_update_done();
-
-	/* Release IRQ vector */
-	vectors[ihk_smp_irq] = -1;
-
-	//desc = _irq_to_desc(ihk_smp_irq);
-	//desc->handle_irq = orig_irq_flow_handler;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
-	try_module_get(THIS_MODULE);
-#endif
-
-	free_irq(ihk_smp_irq, NULL);
 
 	if (trampoline_page) {
 		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);
@@ -2050,20 +2053,12 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 		va = (unsigned long)phys_to_virt(mem_chunk->addr);
 		size_left = mem_chunk->size;
 		while (size_left > 0) {
-			int order = 1;
-			int order_size = PAGE_SIZE;
-			
-			for (;;) {
-				if (((order_size << 1) > size_left) || order == 10) {
-					break;
-				}
-
-				order += 1;
-				order_size <<= 1;
-			}
+			/* NOTE: memory was allocated via __get_free_pages() in 4MB blocks */
+			int order = 10;
+			int order_size = 4194304;
 
 			free_pages(va, order);
-			printk("0x%lx, page order: %d freed\n", va, order); 
+			pr_debug("0x%lx, page order: %d freed\n", va, order); 
 			size_left -= order_size;
 			va += order_size;
 		}
