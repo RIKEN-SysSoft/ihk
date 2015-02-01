@@ -160,6 +160,8 @@ enum uv_system_type (*_get_uv_system_type)(void) =
 	(uv_system_type_star_fn_void_t)
 	IHK_KSYM_get_uv_system_type;
 #endif
+#else // static
+#define _get_uv_system_type get_uv_system_type
 #endif
 
 #ifdef IHK_KSYM_wakeup_secondary_cpu_via_init
@@ -181,6 +183,7 @@ int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) = _cpu_up;
 #endif
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
 #ifdef IHK_KSYM_cpu_hotplug_driver_lock 
 #if IHK_KSYM_cpu_hotplug_driver_lock 
 typedef void (*void_fn_void_t)(void);
@@ -213,6 +216,7 @@ void (*_cpu_hotplug_driver_unlock)(void) =
 #else // static
 void (*_cpu_hotplug_driver_unlock)(void) = 
 	cpu_hotplug_driver_unlock;
+#endif
 #endif
 
 static unsigned long ihk_phys_start = 0;
@@ -1747,7 +1751,7 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 		return ENOMEM;
 	}
 
-	memset(ihk_smp_cpus, sizeof(ihk_smp_cpus), 0);
+	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
 	/* First check offline CPUs */
 	for_each_possible_cpu(cpu) {
