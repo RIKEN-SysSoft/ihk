@@ -2016,7 +2016,9 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	free_irq(ihk_smp_irq, NULL);
 	
 #ifdef CONFIG_SPARSE_IRQ
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
 	irq_free_descs(ihk_smp_irq, 1);
+#endif
 #endif
 
 	/* Re-enable CPU cores */
