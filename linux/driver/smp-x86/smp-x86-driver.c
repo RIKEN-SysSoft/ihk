@@ -1729,9 +1729,9 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 	int vector = IRQ15_VECTOR + 2;
 
 	if (ihk_cores) {
-		if (ihk_cores > (num_possible_cpus() - 1)) {
+		if (ihk_cores > (num_present_cpus() - 1)) {
 			printk("IHK-SMP error: only %d CPUs in total are available\n", 
-					num_possible_cpus());
+					num_present_cpus());
 			return EINVAL;	
 		}
 		
@@ -1754,7 +1754,7 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
 	/* First check offline CPUs */
-	for_each_possible_cpu(cpu) {
+	for_each_present_cpu(cpu) {
 		if (!cpu_is_offline(cpu)) continue;
 
 		ihk_smp_cpus[i].id = cpu;
