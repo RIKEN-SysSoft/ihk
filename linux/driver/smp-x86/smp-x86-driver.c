@@ -235,6 +235,9 @@ static unsigned int ihk_start_irq = 0;
 module_param(ihk_start_irq, uint, 0644);
 MODULE_PARM_DESC(ihk_start_irq, "IHK IKC IPI to be scanned from this IRQ vector");
 
+static unsigned long ihk_trampoline = 0;
+module_param(ihk_trampoline, ulong, 0644);
+MODULE_PARM_DESC(ihk_trampoline, "IHK trampoline page physical address");
 
 #define IHK_SMP_MAXCPUS	256
 
@@ -254,6 +257,8 @@ struct ihk_smp_cpu {
 int ihk_smp_nr_reserved_cpus = 2;
 static struct ihk_smp_cpu ihk_smp_cpus[IHK_SMP_MAXCPUS];
 struct page *trampoline_page;
+unsigned long trampoline_phys;
+void *trampoline_va;
 
 unsigned long ident_page_table;
 int ident_npages_order = 0;
@@ -672,11 +677,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	);
 
 	/* Prepare trampoline code */
-	memcpy(pfn_to_kaddr(page_to_pfn(trampoline_page)), 
-			ihk_smp_trampoline_data,
-			IHK_SMP_TRAMPOLINE_SIZE);
+	memcpy(trampoline_va, ihk_smp_trampoline_data, IHK_SMP_TRAMPOLINE_SIZE);
 
-	header = pfn_to_kaddr(page_to_pfn(trampoline_page));
+	header = trampoline_va; 
 	header->page_table = ident_page_table;
 	header->next_ip = os->boot_rip;
 	header->notify_address = __pa(&os->param.bp);
@@ -684,7 +687,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	printk("calling wakeup_secondary_cpu...\n");
 	udelay(300);
 	
-	return smp_wakeup_secondary_cpu(os->boot_cpu, page_to_phys(trampoline_page));
+	return smp_wakeup_secondary_cpu(os->boot_cpu, trampoline_phys);
 }
 
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
@@ -863,7 +866,7 @@ printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
 	startup[2] = pml4_p;
 	startup[3] = 0xffffffffc0000000;
 	startup[4] = phys;
-	startup[5] = page_to_phys(trampoline_page);
+	startup[5] = trampoline_phys;
 	startup[6] = (unsigned long)ihk_smp_irq | 
 		((unsigned long)ihk_smp_irq_apicid << 32);
 	startup[7] = entry;
@@ -1738,13 +1741,49 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 		ihk_smp_nr_reserved_cpus = ihk_cores;
 	}
 
-	trampoline_page = alloc_pages(GFP_DMA | GFP_KERNEL, 1);
-	
-	if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
-		printk("IHK-SMP error: allocating trampoline_code\n");
-		return EFAULT;
+	if (ihk_trampoline) {
+		printk("IHK-SMP: preallocated trampoline phys: 0x%lx\n", ihk_trampoline);
+		
+		trampoline_phys = ihk_trampoline;
+		trampoline_va = ioremap_cache(trampoline_phys, PAGE_SIZE);
+
 	}
-	printk("IHK-SMP: trampoline_page phys: 0x%llx\n", page_to_phys(trampoline_page));
+	else {
+#define TRAMP_ATTEMPTS	20
+		int attempts = 0;
+		struct page *bad_pages[TRAMP_ATTEMPTS];
+		
+		memset(bad_pages, 0, TRAMP_ATTEMPTS * sizeof(struct page *));
+
+retry_trampoline:
+		trampoline_page = alloc_pages(GFP_DMA | GFP_KERNEL, 1);
+
+		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
+			bad_pages[attempts] = trampoline_page;
+			
+			if (++attempts < TRAMP_ATTEMPTS) {
+				printk("IHK-SMP warning: retrying trampoline_code allocation\n");
+				goto retry_trampoline;
+			}
+
+			printk("IHK-SMP error: allocating trampoline_code\n");
+			return EFAULT;
+		}
+		
+		/* Free failed attempts.. */
+		for (attempts = 0; attempts < TRAMP_ATTEMPTS; ++attempts) {
+			if (!bad_pages[attempts]) {
+				continue;
+			}
+
+			free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(bad_pages[attempts])), 1);
+		}
+	
+		trampoline_phys = page_to_phys(trampoline_page);
+		trampoline_va = pfn_to_kaddr(page_to_pfn(trampoline_page));
+
+		printk("IHK-SMP: trampoline_page phys: 0x%llx\n", page_to_phys(trampoline_page));
+	}
 
 	if (ihk_smp_reserve_mem() < 0) {
 		printk("IHK-SMP error: reserving memory\n");
@@ -2040,6 +2079,9 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 	if (trampoline_page) {
 		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);
+	}
+	else {
+		iounmap(trampoline_va);
 	}
 
 	if (ident_npages_order) {
