@@ -532,6 +532,24 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 	return 0;
 }
 
+static int __ihk_os_dump(struct ihk_host_linux_os_data *data, void __user *uargsp) {
+	dumpargs_t args;
+	int error;
+
+	if (copy_from_user(&args, uargsp, sizeof(args))) {
+		return -EFAULT;
+	}
+
+	if (data->ops->dump) {
+		error = (*data->ops->dump)(data, data->priv, &args);
+	}
+
+	if (copy_to_user(uargsp, &args, sizeof(args))) {
+		return -EFAULT;
+	}
+	return error;
+}
+
 /** \brief Handles ioctl calls with the additional request number */
 static long __ihk_os_ioctl_call_aux(struct ihk_host_linux_os_data *os,
                                     unsigned int request, unsigned long arg,
@@ -614,6 +632,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
 	case IHK_OS_CLEAR_KMSG:
 		ret = __ihk_os_clear_kmsg(data);
+		break;
+
+	case IHK_OS_DUMP:
+		ret = __ihk_os_dump(data, (char __user *)arg);
 		break;
 
 	default:

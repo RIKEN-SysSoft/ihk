@@ -20,6 +20,7 @@
 #define IHK_OS_QUERY_STATUS           0x112a03
 #define IHK_OS_SET_KARGS              0x112a04
 #define IHK_OS_QUERY_FREE_MEM         0x112a05
+#define IHK_OS_DUMP                   0x112a06
 #define IHK_OS_ALLOC_CPU              0x112a10
 #define IHK_OS_ALLOC_MEM              0x112a11
 #define IHK_OS_RESERVE_CPU            0x112a12
@@ -35,4 +36,17 @@
 #define IHK_OS_AUX_CALL_END        0x7fffffff
 
 #define FLAG_IHK_OS_SHUTDOWN_FORCE    0x40000000
+
+typedef struct dumpargs_s {
+	int cmd;
+#define DUMP_NMI 1
+#define DUMP_QUERY 2
+#define DUMP_READ 3
+	int pad;
+	long start;
+	long size;
+	void *buf;
+	void *spare[4];
+} dumpargs_t;
+
 #endif

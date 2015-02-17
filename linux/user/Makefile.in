@@ -5,6 +5,7 @@ SBINDIR=@SBINDIR@
 MANDIR=@MANDIR@
 VPATH=@abs_srcdir@
 TARGET=ihkconfig ihkosctl memdump pagetable maccess memdump-mic
+#TARGET+=ihkosdump eclair
 
 .PHONY: all clean install
 
@@ -12,6 +13,12 @@ all: $(TARGET)
 
 clean:
 	$(RM) $(TARGET) *.o
+
+ihkosdump: ihkosdump.c
+	${CC} ${CFLAGS} -o $@ $< -lbfd
+
+eclair: eclair.c
+	${CC} ${CFLAGS} -o $@ $< -lbfd
 
 install:
 	mkdir -p -m 755 $(SBINDIR)

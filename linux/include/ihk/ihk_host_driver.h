@@ -108,6 +108,7 @@ struct ihk_dma_channel_info {
 	unsigned long max_size;
 };
 
+struct dumpargs_s;
 /** \brief IHK-Host driver handlers for OS operations */
 struct ihk_os_ops {
 	/** \brief When a user tries to open an OS device file 
@@ -192,6 +193,7 @@ struct ihk_os_ops {
 	 *
 	 * \param buf Parameter string */
 	int (*set_kargs)(ihk_os_t, void *, char *buf);
+	int (*dump)(ihk_os_t ihk_os, void *priv, struct dumpargs_s *args);
 
 	/** \note Obsolete. */
 	unsigned long (*map_memory)(ihk_os_t, void *,
