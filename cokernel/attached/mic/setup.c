@@ -16,6 +16,7 @@
 extern void main(void);
 extern void setup_x86(void);
 extern void init_sfi(void);
+extern void init_boot_processor_local(void);
 
 static unsigned char stack[8192] __attribute__((aligned(4096)));
 extern struct ihk_kmsg_buf kmsg_buf;
@@ -140,6 +141,7 @@ void arch_start(unsigned long param, unsigned long phys_address)
 	setup_boot_param();
 
 	/* Enter the main routine (in the manycore kernel) */
+	init_boot_processor_local();
 	main();
 
 	/* It can not reach this point. */

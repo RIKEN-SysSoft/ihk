@@ -15,6 +15,7 @@ struct shimos_boot_param *boot_param;
 
 extern void main(void);
 extern void setup_x86(void);
+extern void init_boot_processor_local(void);
 extern struct ihk_kmsg_buf kmsg_buf;
 
 unsigned long x86_kernel_phys_base;
@@ -51,6 +52,7 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
 
+	init_boot_processor_local();
 	main();
 
 	while (1);
