@@ -51,22 +51,25 @@ static struct ihk_mc_cpu_info *ihk_cpu_info;
 static void build_ihk_cpu_info(void)
 {
 	int i, n = 0;
+	unsigned long s;
 
 	ihk_cpu_info = early_alloc_page();
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
 	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + SHIMOS_MAX_CORES;
 
 	kprintf("CPU: ");
+	s = kprintf_lock();
 	for (i = 0; i < SHIMOS_MAX_CORES; i++) {
 		if (CORE_ISSET(i, boot_param->coreset)) {
 			ihk_cpu_info->hw_ids[n] = i;
 			ihk_cpu_info->nodes[n] = 0;
 
-			kprintf("%d ", ihk_cpu_info->hw_ids[n]);
+			__kprintf("%d ", ihk_cpu_info->hw_ids[n]);
 			n++;
 		}
 	}
-	kprintf("\n");
+	__kprintf("\n");
+	kprintf_unlock(s);
 
 	ihk_cpu_info->ncpus = n;
 }
