@@ -1931,9 +1931,11 @@ retry_trampoline:
 			continue;
 		}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
-		/* NOTE: this is nasty, but we need to decrease the refcount because as
-		 * of Linux 3.1 request_irq holds a reference to the module.
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0) 
+		/* NOTE: this is nasty, but we need to decrease the refcount because
+		 * between Linux 3.0 and 3.18 request_irq holds a reference to the
+		 * module. (As of 3.18 the refcounting code changed.)
 		 * This causes rmmod to fail and report the module is in use when one
 		 * tries to unload it. To overcome this, we drop one ref here and get
 		 * an extra one before free_irq in the module's exit code */
@@ -2048,7 +2050,8 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	desc->handle_irq = orig_irq_flow_handler;
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0) 
 	try_module_get(THIS_MODULE);
 #endif
 
