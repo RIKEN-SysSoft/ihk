@@ -18,6 +18,16 @@
 int __argc;
 char **__argv;
 
+//#define DEBUG_PRINT
+
+#ifdef DEBUG_PRINT
+#define	dprintf(...) printf(__VA_ARGS__)
+#define	eprintf(...) printf(__VA_ARGS__)
+#else
+#define dprintf(...) do { if (0) printf(__VA_ARGS__); } while (0)
+#define	eprintf(...) printf(__VA_ARGS__)
+#endif
+
 static int usage(char **arg)
 {
 	char	*cmd;
@@ -54,7 +64,10 @@ static int do_destroy(int fd)
 
 	os = atoi(__argv[3]);
 	r = ioctl(fd, IHK_DEVICE_DESTROY_OS, os);
-	printf("ret = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: destroying OS instance %d\n", os);
+	}
+	dprintf("ret = %d\n", r);
 	return r;
 }
 
@@ -162,7 +175,10 @@ static int do_clear_kmsg_write(int fd)
 static int do_create(int fd)
 {
 	int r = ioctl(fd, IHK_DEVICE_CREATE_OS, 0);
-	printf("ret = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: creating OS instance\n");
+	}
+	dprintf("ret = %d\n", r);
 	return r;
 }
 static int do_scratch(int fd)
@@ -206,7 +222,10 @@ static int do_ioctl(int fd)
 	arg = strtoll(__argv[4], NULL, 16);
 
 	r = ioctl(fd, req, arg);
-	printf("ret = %lx (%ld)\n", r, r);
+	if (r != 0) {
+		fprintf(stderr, "error: ioctl()\n");
+	}
+	dprintf("ret = %lx (%ld)\n", r, r);
 	return r;
 }
 

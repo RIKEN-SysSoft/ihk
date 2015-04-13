@@ -19,6 +19,16 @@
 int __argc;
 char **__argv;
 
+//#define DEBUG_PRINT
+
+#ifdef DEBUG_PRINT
+#define	dprintf(...) printf(__VA_ARGS__)
+#define	eprintf(...) printf(__VA_ARGS__)
+#else
+#define dprintf(...) do { if (0) printf(__VA_ARGS__); } while (0)
+#define	eprintf(...) printf(__VA_ARGS__)
+#endif
+
 static int usage(char **arg)
 {
 	char	*cmd;
@@ -50,7 +60,10 @@ static int usage(char **arg)
 static int do_boot(int fd)
 {
 	int r = ioctl(fd, IHK_OS_BOOT, 0);
-	printf("ret = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: booting\n");
+	}
+	dprintf("ret = %d\n", r);
 	return r;
 }
 
@@ -64,14 +77,20 @@ static int do_load(int fd)
 	}
 	int r = ioctl(fd, IHK_OS_LOAD, (unsigned long)fn);
 
-	printf("ret = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: loading %s\n", fn);
+	}
+	dprintf("ret = %d\n", r);
 	return r;
 }
 
 static int do_shutdown(int fd)
 {
 	int r = ioctl(fd, IHK_OS_SHUTDOWN, 0);
-	printf("ret = %d\n", r);
+	dprintf("ret = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: shutting down\n");
+	}
 	return r;
 }
 
@@ -98,13 +117,17 @@ static int do_alloc(int fd)
 	}
 
 	r = ioctl(fd, IHK_OS_ALLOC_CPU, n);
-	printf("ret[cpu] = %d\n", r);
 	if (r != 0) {
+		fprintf(stderr, "error: allocating CPUs\n");
 		return r;
 	}
+	dprintf("ret[cpu] = %d\n", r);
 
 	r = ioctl(fd, IHK_OS_ALLOC_MEM, size);
-	printf("ret[mem] = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: allocating memory\n");
+	}
+	dprintf("ret[mem] = %d\n", r);
 	return r;
 }
 
@@ -125,7 +148,10 @@ static int do_reserve_cpu(int fd)
 	}
 
 	r = ioctl(fd, IHK_OS_RESERVE_CPU, (unsigned long)param);
-	printf("ret[cpu] = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: reserving CPUs\n");
+	}
+	dprintf("ret[cpu] = %d\n", r);
 	return r;
 }
 
@@ -142,14 +168,20 @@ static int do_reserve_mem(int fd)
 	arg[1] = strtoll(__argv[4], NULL, 16);
 
 	r = ioctl(fd, IHK_OS_RESERVE_MEM, (unsigned long)arg);
-	printf("ret[mem] = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: reserving memory\n");
+	}
+	dprintf("ret[mem] = %d\n", r);
 	return r;
 }
 
 static int do_query(int fd)
 {
 	int r = ioctl(fd, IHK_OS_QUERY_STATUS);
-	printf("status = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: querying\n");
+	}
+	dprintf("status = %d\n", r);
 	return 0;
 }
 
@@ -157,12 +189,12 @@ static int do_query_free_mem(int fd)
 {
 	int r = ioctl(fd, IHK_OS_QUERY_FREE_MEM);
 	
-	if (r < 0) {
-		printf("error querying free memory\n");
+	if (r != 0) {
+		fprintf(stderr, "error: querying free memory\n");
 	}
 
 	printf("number of free pages (4kB): %d\n", r);
-	return 0;
+	return r;
 }
 
 
@@ -174,7 +206,10 @@ static int do_intr(int fd)
 		v = atoi(__argv[3]);
 	}
 	r = ioctl(fd, IHK_OS_DEBUG_START, v);
-	printf("ret = %d\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: sending IRQ\n");
+	}
+	dprintf("ret = %d\n", r);
 	return 0;
 }
 
@@ -183,13 +218,16 @@ static int do_kargs(int fd)
 	int r;
 
 	if (__argc <= 3) {
-		printf("No arg specified.\n");
+		fprintf(stderr, "error: no arg specified.\n");
 		return 1;
-	} else {
-		r = ioctl(fd, IHK_OS_SET_KARGS, (char *)__argv[3]);
-		printf("ret = %d\n", r);
+	} 
+
+	r = ioctl(fd, IHK_OS_SET_KARGS, (char *)__argv[3]);
+	if (r != 0) {
+		fprintf(stderr, "error: sending IRQ\n");
 	}
-	return 0;
+	dprintf("ret = %d\n", r);
+	return r;
 }
 
 static int do_kmsg(int fd)
@@ -200,8 +238,9 @@ static int do_kmsg(int fd)
 		buf[r] = 0;
 		printf("%s\n", buf);
 		return 0;
-	} else {
-		printf("error = %d\n", r);
+	}
+	else {
+		fprintf(stderr, "error querying kmsg\n");
 		return 1;
 	}
 }
@@ -210,7 +249,7 @@ static int do_clear_kmsg(int fd)
 {
 	int r = ioctl(fd, IHK_OS_CLEAR_KMSG, 0);
 
-	printf("ret = %d\n", r >= 0 ? r : -errno);
+	dprintf("ret = %d\n", r >= 0 ? r : -errno);
 	return r >= 0 ? r : -errno;
 }
 
@@ -228,7 +267,10 @@ static int do_ioctl(int fd)
 	arg = strtoll(__argv[4], NULL, 16);
 
 	r = ioctl(fd, req, arg);
-	printf("ret = %lx\n", r);
+	if (r != 0) {
+		fprintf(stderr, "error: ioctl\n");
+	}
+	dprintf("ret = %lx\n", r);
 	return r;
 }
 
