@@ -964,7 +964,7 @@ static void add_free_mem_chunk(struct chunk *chunk)
 		list_add_tail(&chunk->chain, &ihk_mem_free_chunks);
 	}
 
-	printk("IHK-SMP: free mem chunk 0x%lx - 0x%lx added\n",
+	dprintf("IHK-SMP: free mem chunk 0x%lx - 0x%lx added\n",
 			chunk->addr, 
 			chunk->addr + chunk->size);
 }
@@ -981,7 +981,7 @@ rerun:
 		if (mem_chunk != mem_chunk_next &&
 			mem_chunk_next->addr == mem_chunk->addr + mem_chunk->size) {
 			
-			printk("IHK-SMP: free 0x%lx - 0x%lx and 0x%lx - 0x%lx merged\n",
+			dprintf("IHK-SMP: free 0x%lx - 0x%lx and 0x%lx - 0x%lx merged\n",
 				mem_chunk->addr,
 				mem_chunk->addr + mem_chunk->size,
 				mem_chunk_next->addr,
@@ -993,6 +993,20 @@ rerun:
 			goto rerun;
 		}
 	}
+}
+
+static size_t max_size_free_mem_chunk(void)
+{
+	size_t max = 0;
+	struct chunk *chunk_iter;
+
+	list_for_each_entry(chunk_iter, &ihk_mem_free_chunks, chain) {
+		if (chunk_iter->size > max) {
+			max = chunk_iter->size;
+		}
+	}
+
+	return max;
 }
 
 static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
@@ -1589,8 +1603,7 @@ int ihk_smp_reserve_mem(void)
 {
 	const int order = 10;		/* 4 MiB a chunk */
 	size_t want;
-	size_t alloced;
-	int nchunk;
+	size_t allocated;
 	struct chunk *p;
 	struct chunk *q;
 	void *va;
@@ -1619,28 +1632,43 @@ int ihk_smp_reserve_mem(void)
 	printk(KERN_INFO "IHK-SMP: ihk_mem: %lu bytes\n", ihk_mem);
 
 	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
-	alloced = 0;
-	nchunk = 0;
+	allocated = 0;
 
-	/* allocate and merge pages */
-	while (alloced < want) {
-		p = (void *)__get_free_pages(GFP_KERNEL, order);
+	/* allocate and merge pages until we get a contigous area
+	 * or run out of free memory. keep the longest areas */
+	while (max_size_free_mem_chunk() < want) {
+		struct page *pg;
 		
-		if (!p) {
-			printk(KERN_ERR "IHK-SMP: __get_free_pages() failed. %ld bytes have been allocated\n", alloced);
+		/* FIXME: obtain pages from the requested NUMA domain */
+		pg = alloc_pages_node(0, GFP_KERNEL, order);
+		if (!pg) {
+			if (allocated >= want) break;
+
+			printk(KERN_ERR "IHK-SMP: __alloc_pages_node() failed. %ld bytes have been allocated\n", allocated);
 			printk(KERN_NOTICE "IHK-SMP: ihk_mem is ignored\n");
 			
 			ret = -1;
 			goto err;
 		}
+
+		p = page_address(pg);
+
+		//p = (void *)__get_free_pages(GFP_KERNEL, order);
+		if (!p) {
+			printk(KERN_ERR "IHK-SMP: __get_free_pages() failed. %ld bytes have been allocated\n", allocated);
+			printk(KERN_NOTICE "IHK-SMP: ihk_mem is ignored\n");
+
+			ret = -1;
+			goto err;
+		}
 		
-		alloced += PAGE_SIZE << order;
+		allocated += PAGE_SIZE << order;
 
 		p->addr = virt_to_phys(p);
 		p->size = PAGE_SIZE << order;
 		INIT_LIST_HEAD(&p->chain);
 
-		/* insert a chunk in physical address ascending order */
+		/* insert the chunk in physical address ascending order */
 		list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
 			if (p->addr < q->addr) {
 				break;
@@ -1654,54 +1682,61 @@ int ihk_smp_reserve_mem(void)
 			list_add_tail(&p->chain, &q->chain);
 		}
 		
-		++nchunk;
-
-		q = list_entry(p->chain.next, struct chunk, chain);
-		if (((void *)q != &ihk_mem_free_chunks) && 
-				((p->addr + p->size) == q->addr)) {
-			list_del(&q->chain);
-			p->size += q->size;
-			--nchunk;
-		}
-
-		q = list_entry(p->chain.prev, struct chunk, chain);
-		if (((void *)q != &ihk_mem_free_chunks) && 
-				((q->addr + q->size) == p->addr)) {
-			list_del(&p->chain);
-			q->size += p->size;
-			--nchunk;
-		}
+		/* merge adjucent chunks */
+		merge_free_mem_chunks();
 	}
 
-	/* free excess and small chunks */
-	/* XXX: There may be a performance problem when allocated pages 
-	 * fragment too many */
-	while (nchunk > shimos_nchunks) {
-		q = NULL;
-		list_for_each_entry(p, &ihk_mem_free_chunks, chain) {
-			if (!q || (p->size < q->size)) {
-				q = p;
+	/* move all chunks to unused list */
+	list_for_each_entry_safe(p, q, &ihk_mem_free_chunks, chain) {
+		list_move_tail(&p->chain, &unused);
+	}
+
+	/* move the largest chunks back to free list until we meet
+	 * the required size */
+	allocated = 0;
+	while (allocated < want) {
+		size_t max = 0;
+		p = NULL;
+
+		list_for_each_entry(q, &unused, chain) {
+			if (q->size > max) {
+				p = q;
+				max = p->size;
 			}
 		}
 
-		list_move(&q->chain, &unused);
-		--nchunk;
+		if (!p) break;
+
+		list_del(&p->chain);
+
+		/* insert the chunk in physical address ascending order */
+		list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
+			if (p->addr < q->addr) {
+				break;
+			}
+		}
+		
+		if ((void *)q == &ihk_mem_free_chunks) {
+			list_add_tail(&p->chain, &ihk_mem_free_chunks);
+		}
+		else {
+			list_add_tail(&p->chain, &q->chain);
+		}
+
+		allocated += max;
 	}
 
-	if (1) {
-		i = 0;
-		list_for_each_entry(p, &ihk_mem_free_chunks, chain) {
-			printk(KERN_INFO "IHK-SMP: chunk #%d: 0x%lx - 0x%lx\n",
-					i, p->addr, p->addr+p->size);
-			++i;
-		}
+	i = 0;
+	list_for_each_entry(p, &ihk_mem_free_chunks, chain) {
+		printk(KERN_INFO "IHK-SMP: chunk #%d: 0x%lx - 0x%lx\n",
+				i, p->addr, p->addr+p->size);
+		++i;
 	}
-	
+
 	ret = 0;
 
 out:
 	/* free unused chunks */
-	nchunk = 0;
 	list_for_each_entry_safe(p, q, &unused, chain) {
 		list_del(&p->chain);
 
