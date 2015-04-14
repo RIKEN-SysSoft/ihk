@@ -1981,11 +1981,11 @@ retry_trampoline:
 		{
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
-						per_cpu_offset(smp_processor_id())));
+						per_cpu_offset(0)));
 #else
 			int *vectors = 
 				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
-				per_cpu_offset(smp_processor_id())));
+				per_cpu_offset(0)));
 #endif			
 		
 			if (vectors[vector] == -1) {
@@ -2004,7 +2004,7 @@ retry_trampoline:
 	}
 
 	ihk_smp_irq = vector;
-	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, smp_processor_id());
+	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, 0);
 	printk("IHK-SMP: IKC irq vector: %d, CPU APIC id: %d\n", 
 		ihk_smp_irq, ihk_smp_irq_apicid);
 
@@ -2071,10 +2071,10 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
-				per_cpu_offset(smp_processor_id())));
+				per_cpu_offset(0)));
 #else
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
-				per_cpu_offset(smp_processor_id())));
+				per_cpu_offset(0)));
 #endif	
 	
 	/* Release IRQ vector */
