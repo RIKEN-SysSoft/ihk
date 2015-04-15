@@ -301,6 +301,38 @@ struct ihk_device_ops {
 	int (*destroy_os)(ihk_device_t, void *, ihk_os_t os, void *os_priv);
 
 	/**
+	 * \brief Reserve CPU cores
+	 *
+	 * Reserves CPU cores if applicable.
+	 * \param arg     CPU core ID list
+	 */
+	int (*reserve_cpu)(ihk_device_t, unsigned long arg);
+
+	/**
+	 * \brief Release CPU cores
+	 *
+	 * Releases CPU cores if applicable.
+	 * \param arg     CPU core ID list
+	 */
+	int (*release_cpu)(ihk_device_t, unsigned long arg);
+
+	/**
+	 * \brief Reserve memory
+	 *
+	 * Reserves memory if applicable.
+	 * \param arg     CPU core ID list
+	 */
+	int (*reserve_mem)(ihk_device_t, unsigned long arg);
+
+	/**
+	 * \brief Release memory
+	 *
+	 * Releases memory if applicable.
+	 * \param arg     CPU core ID list
+	 */
+	int (*release_mem)(ihk_device_t, unsigned long arg);
+
+	/**
 	 * \brief Map a physical memory area to the host physical memory
 	 *
 	 * \param addr Physical address in the manycore device

@@ -950,6 +950,46 @@ static int __destroy_all_os(struct ihk_host_linux_device_data *data)
 	return 0;
 }
 
+/** \brief Reserve CPU cores */
+static int __ihk_device_reserve_cpu(struct ihk_host_linux_device_data *data,
+		unsigned long arg)
+{
+	if (!data->ops || !data->ops->reserve_cpu)
+		return -1;
+
+	return data->ops->reserve_cpu(data, arg);
+}
+
+/** \brief Release CPU cores */
+static int __ihk_device_release_cpu(struct ihk_host_linux_device_data *data,
+		unsigned long arg)
+{
+	if (!data->ops || !data->ops->release_cpu)
+		return -1;
+
+	return data->ops->release_cpu(data, arg);
+}
+
+/** \brief Reserve memory */
+static int __ihk_device_reserve_mem(struct ihk_host_linux_device_data *data,
+		unsigned long arg)
+{
+	if (!data->ops || !data->ops->reserve_mem)
+		return -1;
+
+	return data->ops->reserve_mem(data, arg);
+}
+
+/** \brief Release memory */
+static int __ihk_device_release_mem(struct ihk_host_linux_device_data *data,
+		unsigned long arg)
+{
+	if (!data->ops || !data->ops->release_mem)
+		return -1;
+
+	return data->ops->release_mem(data, arg);
+}
+
 /** \brief ioctl handler for the device file */
 static long ihk_host_device_ioctl(struct file *file, unsigned int request,
                                   unsigned long arg)
@@ -973,6 +1013,21 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_device_destroy_os(data, os_data[arg]);
 		break;
 
+	case IHK_DEVICE_RESERVE_CPU:
+		ret = __ihk_device_reserve_cpu(data, arg);
+		break;
+
+	case IHK_DEVICE_RELEASE_CPU:
+		ret = __ihk_device_release_cpu(data, arg);
+		break;
+
+	case IHK_DEVICE_RESERVE_MEM:
+		ret = __ihk_device_reserve_mem(data, arg);
+		break;
+
+	case IHK_DEVICE_RELEASE_MEM:
+		ret = __ihk_device_release_mem(data, arg);
+		break;
 
 	default:
 		if (request >= IHK_DEVICE_DEBUG_START && 
