@@ -239,13 +239,16 @@ static unsigned long ihk_trampoline = 0;
 module_param(ihk_trampoline, ulong, 0644);
 MODULE_PARM_DESC(ihk_trampoline, "IHK trampoline page physical address");
 
-#define IHK_SMP_MAXCPUS	256
+#define IHK_SMP_MAXCPUS	1024
 
 #define BUILTIN_MAX_CPUS IHK_SMP_MAXCPUS
 
-#define IHK_SMP_CPU_AVAILABLE	0
-#define IHK_SMP_CPU_ALLOCATED	1
-#define IHK_SMP_CPU_TO_OFFLINE	2
+#define IHK_SMP_CPU_ONLINE		0
+#define IHK_SMP_CPU_AVAILABLE	1
+#define IHK_SMP_CPU_ASSIGNED	2
+#define IHK_SMP_CPU_TO_OFFLINE	3
+#define IHK_SMP_CPU_OFFLINED	4
+#define IHK_SMP_CPU_TO_ONLINE	5
 
 struct ihk_smp_cpu {
 	int id;
@@ -254,7 +257,6 @@ struct ihk_smp_cpu {
 	ihk_os_t os;
 };
 
-int ihk_smp_nr_reserved_cpus = 2;
 static struct ihk_smp_cpu ihk_smp_cpus[IHK_SMP_MAXCPUS];
 struct page *trampoline_page;
 unsigned long trampoline_phys;
@@ -1017,7 +1019,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	struct chunk *mem_chunk;
 	
 	/* Reset CPU cores used by this OS */
-	for (i = 0; i < ihk_smp_nr_reserved_cpus; ++i) {
+	for (i = 0; i < IHK_SMP_MAXCPUS; ++i) {
 		
 		if (ihk_smp_cpus[i].os != ihk_os) 
 			continue;
@@ -1078,7 +1080,7 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		int ihk_smp_nr_allocated_cpus = 0;
 
 		/* Check the number of available CPUs */
-		for (i = 0; i < ihk_smp_nr_reserved_cpus; i++) {
+		for (i = 0; i < IHK_SMP_MAXCPUS; i++) {
 			if (ihk_smp_cpus[i].status == IHK_SMP_CPU_AVAILABLE) {
 				++ihk_smp_nr_avail_cpus;
 			}
@@ -1091,17 +1093,17 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		}
 
 		/* Assign cores */
-		for (i = 0; ((i < ihk_smp_nr_reserved_cpus) && 
+		for (i = 0; ((i < IHK_SMP_MAXCPUS) && 
 					(ihk_smp_nr_allocated_cpus < resource->cpu_cores)); ++i) {
 
-			if (ihk_smp_cpus[i].status == IHK_SMP_CPU_ALLOCATED) 
+			if (ihk_smp_cpus[i].status == IHK_SMP_CPU_ASSIGNED) 
 				continue;
 
 			printk("IHK-SMP: CPU APIC %d assigned.\n",
 					ihk_smp_cpus[i].apic_id);
 			CORE_SET(ihk_smp_cpus[i].apic_id, os->coremaps);
 
-			ihk_smp_cpus[i].status = IHK_SMP_CPU_ALLOCATED;
+			ihk_smp_cpus[i].status = IHK_SMP_CPU_ASSIGNED;
 			ihk_smp_cpus[i].os = ihk_os;
 
 			++ihk_smp_nr_allocated_cpus;
@@ -1173,9 +1175,9 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 
 error_drop_cores:
 	/* Drop CPU cores for this OS */
-	for (i = 0; i < ihk_smp_nr_reserved_cpus; ++i) {
+	for (i = 0; i < IHK_SMP_MAXCPUS; ++i) {
 
-		if (ihk_smp_cpus[i].status != IHK_SMP_CPU_ALLOCATED ||
+		if (ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED ||
 			ihk_smp_cpus[i].os != ihk_os) 
 			continue;
 
@@ -1757,13 +1759,244 @@ err:
 	goto out;
 }
 
+static int smp_ihk_offline_cpu(int cpu_id)
+{
+	int ret;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	struct device *dev = get_cpu_device(cpu_id);
+#else
+	struct sys_device *dev = get_cpu_sysdev(cpu_id);
+	struct cpu *cpu = container_of(dev, struct cpu, sysdev);
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	ret = dev->bus->offline(dev);
+	if (!ret) {
+		kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
+		dev->offline = true;
+	}
+#else
+	_cpu_hotplug_driver_lock();
+
+	ret = cpu_down(cpu->sysdev.id);
+	if (!ret)
+		kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
+
+	_cpu_hotplug_driver_unlock();
+#endif
+
+	if (ret < 0) {
+		printk("IHK-SMP: error: hot-unplugging CPU %d\n", cpu_id);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
+{
+	int ret;
+	int cpu;
+	cpumask_t cpus_to_offline;;
+
+	memset(&cpus_to_offline, 0, sizeof(cpus_to_offline));
+
+	/* Parse CPU list provided by user
+	 * FIXME: validate userspace buffer */
+	cpulist_parse((char *)arg, &cpus_to_offline);
+
+	/* Collect cores to be offlined */
+	for_each_cpu_mask(cpu, cpus_to_offline) {
+
+		if (cpu > IHK_SMP_MAXCPUS) {
+			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
+			ret = -EINVAL;
+			goto err_before_offline;
+		}
+
+		if (!cpu_present(cpu)) {
+			printk("IHK-SMP: error: CPU %d is not present\n", cpu);
+			ret = -EINVAL;
+			goto err_before_offline;
+		}
+
+		if (!cpu_online(cpu)) {
+			if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_AVAILABLE)
+				printk("IHK-SMP: error: CPU %d was reserved already\n", cpu);
+
+			if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ASSIGNED)
+				printk("IHK-SMP: erro: CPU %d was assigned already\n", cpu);
+
+			ret = -EINVAL;
+			goto err_before_offline;
+		}
+
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ONLINE) {
+			printk("IHK-SMP: error: CPU %d is in inconsistent state, skipping\n",
+					cpu);
+			ret = -EINVAL;
+			goto err_before_offline;
+		}
+
+		ihk_smp_cpus[cpu].id = cpu;
+		ihk_smp_cpus[cpu].apic_id =
+			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[cpu].id);
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_TO_OFFLINE;
+		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
+
+		printk("IHK-SMP: CPU %d to be offlined, APIC: %d\n",
+			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+	}
+
+	/* Offline CPU cores */
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
+			continue;
+
+		if ((ret = smp_ihk_offline_cpu(cpu)) != 0) {
+			goto err_during_offline;
+		}
+
+		ihk_smp_cpus[cpu].apic_id =
+			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[cpu].id);
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_OFFLINED;
+		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
+
+		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
+
+		printk("IHK-SMP: CPU %d offlined successfully, APIC: %d\n",
+			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+	}
+
+	/* Offlining CPU cores went well, mark them as available */
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
+			continue;
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
+
+		printk("IHK-SMP: CPU %d reserved successfully, APIC: %d\n",
+			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+	}
+
+	ret = 0;
+	goto out;
+
+err_during_offline:
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
+			continue;
+
+		/* TODO: actually online CPU core */
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
+	}
+
+err_before_offline:
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
+			continue;
+
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
+	}
+
+out:
+	return ret;
+}
+
+static int smp_ihk_online_cpu(int cpu_id)
+{
+	int ret;
+
+	ret = ihk_cpu_up(cpu_id, 1);
+	if (ret) {
+		printk("IHK-SMP: WARNING: failed to re-enable CPU %d\n", cpu_id);
+	}
+
+	return 0;
+}
+
+
+static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
+{
+	int ret;
+	int cpu;
+	cpumask_t cpus_to_online;;
+
+	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
+
+	/* Parse CPU list provided by user
+	 * FIXME: validate userspace buffer */
+	cpulist_parse((char *)arg, &cpus_to_online);
+
+	/* Collect cores to be onlined */
+	for_each_cpu_mask(cpu, cpus_to_online) {
+
+		if (cpu > IHK_SMP_MAXCPUS) {
+			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
+			ret = -EINVAL;
+			goto err;
+		}
+
+		if (!cpu_present(cpu)) {
+			printk("IHK-SMP: error: CPU %d is not valid\n", cpu);
+			ret = -EINVAL;
+			goto err;
+		}
+
+		if (cpu_online(cpu)) {
+			continue;
+		}
+
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
+			printk("IHK-SMP: error: CPU %d is in use\n", cpu);
+			ret = -EINVAL;
+			goto err;
+		}
+
+		ihk_smp_cpus[cpu].id = cpu;
+		ihk_smp_cpus[cpu].apic_id =
+			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[cpu].id);
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_TO_ONLINE;
+		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
+
+		printk("IHK-SMP: CPU %d to be onlined, APIC: %d\n",
+			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+	}
+
+	/* Online CPU cores */
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_ONLINE)
+			continue;
+
+		if ((ret = smp_ihk_online_cpu(cpu)) != 0) {
+			goto err;
+		}
+
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
+		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
+
+		printk("IHK-SMP: CPU %d onlined successfully, APIC: %d\n",
+			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+	}
+
+	ret = 0;
+	goto out;
+
+err:
+	/* Something went wrong, what shall we do?
+	 * Mark "to be onlined" cores as available for now */
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_ONLINE)
+			continue;
+
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
+	}
+
+out:
+	return ret;
+}
 
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
-	int i = 0;
-	int cpu_to_offline = 0;
-	int cpu_to_offline_from;
-	int cpu;
 	int vector = IRQ15_VECTOR + 2;
 
 	if (ihk_cores) {
@@ -1772,8 +2005,6 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 					num_present_cpus());
 			return EINVAL;	
 		}
-		
-		ihk_smp_nr_reserved_cpus = ihk_cores;
 	}
 
 	if (ihk_trampoline) {
@@ -1827,84 +2058,6 @@ retry_trampoline:
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
-	/* First check offline CPUs */
-	for_each_present_cpu(cpu) {
-		if (!cpu_is_offline(cpu)) continue;
-
-		ihk_smp_cpus[i].id = cpu;
-		ihk_smp_cpus[i].apic_id = 
-			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[i].id);
-		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
-		ihk_smp_cpus[i].os = (ihk_os_t)0;
-		
-		printk("CPU %d (already offline) reserved successfully, APIC: %d\n", 
-			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
-		
-		++i;
-		if (i == ihk_smp_nr_reserved_cpus) {
-			break;
-		}
-	}
-
-	//printk("num_online_cpus: %d\n", num_online_cpus());
-	cpu_to_offline_from = num_online_cpus() - (ihk_smp_nr_reserved_cpus - i);
-	if (cpu_to_offline_from < num_online_cpus()) {
-		printk("IHK-SMP: attempting to offline %d CPUs\n", 
-			num_online_cpus() - cpu_to_offline_from);
-
-		for_each_online_cpu(cpu) {
-			if (++cpu_to_offline > cpu_to_offline_from) {
-				ihk_smp_cpus[i].id = cpu;
-				ihk_smp_cpus[i].status = IHK_SMP_CPU_TO_OFFLINE;
-				++i;
-			}
-		}
-	}
-
-	for (i = 0; i < ihk_smp_nr_reserved_cpus; ++i) {
-		int ret;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-		struct device *dev = get_cpu_device(ihk_smp_cpus[i].id);
-		//struct cpu *cpu = container_of(dev, struct cpu, dev);
-#else
-		struct sys_device *dev = get_cpu_sysdev(ihk_smp_cpus[i].id);
-		struct cpu *cpu = container_of(dev, struct cpu, sysdev);
-#endif
-		if (ihk_smp_cpus[i].status != IHK_SMP_CPU_TO_OFFLINE)
-			continue;
-
-		ihk_smp_cpus[i].apic_id = 
-			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[i].id);
-		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
-		ihk_smp_cpus[i].os = (ihk_os_t)0;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-		ret = dev->bus->offline(dev);
-		if (!ret) {
-			kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
-			dev->offline = true;
-		}
-#else
-		_cpu_hotplug_driver_lock();
-
-		ret = cpu_down(cpu->sysdev.id);
-		if (!ret)
-			kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
-		
-		_cpu_hotplug_driver_unlock();
-#endif
-
-		if (ret < 0) {
-			printk("ERROR: hot-unplugging CPU\n");
-			return EFAULT;
-		}
-		
-		ihk_smp_reset_cpu(ihk_smp_cpus[i].apic_id);
-		
-		printk("CPU %d reserved successfully, APIC: %d\n", 
-			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
-	}
-	
 	/* Find a suitable IRQ vector */
 	for (vector = ihk_start_irq ? ihk_start_irq : (IRQ14_VECTOR + 2); 
 			vector < 256; vector += 1) {
@@ -2064,7 +2217,6 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	struct chunk *mem_chunk_next;
 	unsigned long size_left;
 	unsigned long va;
-	int i;
 #ifdef CONFIG_SPARSE_IRQ
 	struct irq_desc *desc;
 #endif
@@ -2099,20 +2251,18 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 #endif
 
 	/* Re-enable CPU cores */
-	for (i = 0; i < ihk_smp_nr_reserved_cpus; ++i) {
-		int ret;
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE)
+			continue;
 
 		ihk_smp_reset_cpu(ihk_smp_cpus[i].apic_id);
-		
-		ret = ihk_cpu_up(ihk_smp_cpus[i].id, 1);
-		if (ret) {
-			printk("IHK-SMP: WARNING: failed to re-enable CPU %d, APIC: %d\n", 
-				ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
+
+		if ((ret = smp_ihk_online_cpu(cpu)) != 0) {
 			continue;
 		}
-		
-		printk("IHK-SMP: CPU %d re-enabled successfully, APIC: %d\n", 
-			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
+
+		printk("IHK-SMP: CPU %d onlined successfully, APIC: %d\n", 
+			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
 	}
 
 	if (trampoline_page) {
@@ -2159,6 +2309,8 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.unmap_virtual = smp_ihk_unmap_virtual,
 	.debug_request = smp_ihk_debug_request,
 	.get_dma_channel = smp_ihk_get_dma_channel,
+	.reserve_cpu = smp_ihk_reserve_cpu,
+	.release_cpu = smp_ihk_release_cpu,
 };	
 
 /** \brief The driver-specific driver structure
