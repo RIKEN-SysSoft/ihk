@@ -376,6 +376,7 @@ struct chunk {
 	struct list_head chain;
 	uintptr_t addr;
 	size_t size;
+	int numa_id;
 };
 
 /* ihk_os_mem_chunk represents a memory range which is used by 
@@ -385,32 +386,25 @@ struct ihk_os_mem_chunk {
 	uintptr_t addr;
 	size_t size;
 	ihk_os_t os;
+	int numa_id;
 };
 
 static struct list_head ihk_mem_free_chunks;
-static struct list_head unused;
 static struct list_head ihk_mem_used_chunks;
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
-	if (ihk_mem) {
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 
-		struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	/* look up address among used chunks */
+	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+		if (phys >= os_mem_chunk->addr && 
+				(phys + size) <= (os_mem_chunk->addr + 
+					os_mem_chunk->size)) {
 
-		/* look up address among used chunks */
-		list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-			if (phys >= os_mem_chunk->addr && 
-					(phys + size) <= (os_mem_chunk->addr + 
-						os_mem_chunk->size)) {
-
-				return (phys_to_virt(os_mem_chunk->addr) 
-						+ (phys - os_mem_chunk->addr));
-			}
+			return (phys_to_virt(os_mem_chunk->addr) 
+					+ (phys - os_mem_chunk->addr));
 		}
-	}
-
-	else if (ihk_phys_start) {
-		return ioremap_cache(phys, size);
 	}
 
 	return 0;
@@ -418,13 +412,8 @@ void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 
 void ihk_smp_unmap_virtual(void *virt)
 {
-	if (ihk_mem) {
-		/* TODO: look up chunks and report error if not in range */
-		return;	
-	}
-	else if (ihk_phys_start) {
-		iounmap(virt);
-	}
+	/* TODO: look up chunks and report error if not in range */
+	return;	
 }
 
 /** \brief Implementation of ihk_host_get_dma_channel.
@@ -971,17 +960,17 @@ static void add_free_mem_chunk(struct chunk *chunk)
 			chunk->addr + chunk->size);
 }
 
-static void merge_free_mem_chunks(void)
+static void merge_mem_chunks(struct list_head *chunks)
 {
 	struct chunk *mem_chunk;
 	struct chunk *mem_chunk_next;
 
 rerun:
-	list_for_each_entry_safe(mem_chunk, mem_chunk_next, 
-			&ihk_mem_free_chunks, chain) {
+	list_for_each_entry_safe(mem_chunk, mem_chunk_next, chunks, chain) {
 
 		if (mem_chunk != mem_chunk_next &&
-			mem_chunk_next->addr == mem_chunk->addr + mem_chunk->size) {
+			mem_chunk_next->addr == mem_chunk->addr + mem_chunk->size &&
+			mem_chunk_next->numa_id == mem_chunk->numa_id) {
 			
 			dprintf("IHK-SMP: free 0x%lx - 0x%lx and 0x%lx - 0x%lx merged\n",
 				mem_chunk->addr,
@@ -997,12 +986,12 @@ rerun:
 	}
 }
 
-static size_t max_size_free_mem_chunk(void)
+static size_t max_size_mem_chunk(struct list_head *chunks)
 {
 	size_t max = 0;
 	struct chunk *chunk_iter;
 
-	list_for_each_entry(chunk_iter, &ihk_mem_free_chunks, chain) {
+	list_for_each_entry(chunk_iter, chunks, chain) {
 		if (chunk_iter->size > max) {
 			max = chunk_iter->size;
 		}
@@ -1040,13 +1029,15 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 			mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
 			mem_chunk->addr = os_mem_chunk->addr;
 			mem_chunk->size = os_mem_chunk->size;
+			mem_chunk->numa_id = os_mem_chunk->numa_id;
 			INIT_LIST_HEAD(&mem_chunk->chain);
 
-			printk("IHK-SMP: mem chunk: 0x%lx - 0x%lx freed\n",
-				mem_chunk->addr, mem_chunk->addr + mem_chunk->size);
+			printk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
+				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+				mem_chunk->size);
 
 			add_free_mem_chunk(mem_chunk);
-			merge_free_mem_chunks();
+			merge_mem_chunks(&ihk_mem_free_chunks);
 
 			kfree(os_mem_chunk);
 			break;
@@ -1093,7 +1084,7 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		}
 
 		/* Assign cores */
-		for (i = 0; i < IHK_SMP_MAXCPUS && 
+		for (i = 0; i < IHK_SMP_MAXCPUS &&
 			ihk_smp_nr_allocated_cpus < resource->cpu_cores; i++) {
 			if (ihk_smp_cpus[i].status != IHK_SMP_CPU_AVAILABLE) {
 				continue;
@@ -1116,51 +1107,48 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		struct chunk *mem_chunk_leftover;
 		struct chunk *mem_chunk_iter;
 		os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
-		
+
 		if (!os_mem_chunk) {
 			printk("IHK-DMP: error: allocating os_mem_chunk\n");
 			return -ENOMEM;
 		}
-		
+
 		os_mem_chunk->addr = 0;
 		INIT_LIST_HEAD(&os_mem_chunk->list);
 
-		if (ihk_mem) {
-			list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
-				if (mem_chunk_iter->size >= resource->mem_size) {
+		list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+			if (mem_chunk_iter->size >= resource->mem_size) {
 
-					os_mem_chunk->addr = mem_chunk_iter->addr;
-					os_mem_chunk->size = resource->mem_size;
-					os_mem_chunk->os = ihk_os;
+				os_mem_chunk->addr = mem_chunk_iter->addr;
+				os_mem_chunk->size = resource->mem_size;
+				os_mem_chunk->os = ihk_os;
+				os_mem_chunk->numa_id = mem_chunk_iter->numa_id;
 
-					list_del(&mem_chunk_iter->chain);
-					break;
-				}
-			}
-
-			if (!os_mem_chunk->addr) {
-				printk("IHK-SMP: error: not enough memory\n");
-				ret = -ENOMEM;
-				goto error_drop_cores;
-			}
-			
-			list_add(&os_mem_chunk->list, &ihk_mem_used_chunks);
-			resource->mem_start = os_mem_chunk->addr;
-			
-			/* Split if there is any leftover */
-			if (mem_chunk_iter->size > resource->mem_size) {
-				mem_chunk_leftover = (struct chunk*)
-					phys_to_virt(mem_chunk_iter->addr + resource->mem_size);
-				mem_chunk_leftover->addr = mem_chunk_iter->addr + 
-					resource->mem_size;
-				mem_chunk_leftover->size = mem_chunk_iter->size - 
-					resource->mem_size;
-				
-				add_free_mem_chunk(mem_chunk_leftover);
+				list_del(&mem_chunk_iter->chain);
+				break;
 			}
 		}
-		else if (ihk_phys_start) {
-			resource->mem_start = ihk_phys_start;
+
+		if (!os_mem_chunk->addr) {
+			printk("IHK-SMP: error: not enough memory\n");
+			ret = -ENOMEM;
+			goto error_drop_cores;
+		}
+
+		list_add(&os_mem_chunk->list, &ihk_mem_used_chunks);
+		resource->mem_start = os_mem_chunk->addr;
+
+		/* Split if there is any leftover */
+		if (mem_chunk_iter->size > resource->mem_size) {
+			mem_chunk_leftover = (struct chunk*)
+				phys_to_virt(mem_chunk_iter->addr + resource->mem_size);
+			mem_chunk_leftover->addr = mem_chunk_iter->addr +
+				resource->mem_size;
+			mem_chunk_leftover->size = mem_chunk_iter->size -
+				resource->mem_size;
+			mem_chunk_leftover->numa_id = mem_chunk_iter->numa_id;
+
+			add_free_mem_chunk(mem_chunk_leftover);
 		}
 
 		os->mem_start = resource->mem_start;
@@ -1178,7 +1166,7 @@ error_drop_cores:
 	for (i = 0; i < IHK_SMP_MAXCPUS; ++i) {
 
 		if (ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED ||
-			ihk_smp_cpus[i].os != ihk_os) 
+			ihk_smp_cpus[i].os != ihk_os)
 			continue;
 
 		printk("IHK-SMP: CPU APIC %d deassigned.\n",
@@ -1423,8 +1411,8 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
 		ihk_smp_cpus[cpu].os = ihk_os;
 
-		printk("IHK-SMP: CPU APIC %d assigned.\n",
-				ihk_smp_cpus[cpu].apic_id);
+		printk("IHK-SMP: CPU APIC %d assigned to %p.\n",
+				ihk_smp_cpus[cpu].apic_id, ihk_os);
 	}
 
 	ret = 0;
@@ -1458,7 +1446,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	for_each_cpu_mask(cpu, cpus_to_release) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
 			ihk_smp_cpus[cpu].os != ihk_os) {
-			printk("IHK-SMP: error: CPU core %d is not assigned\n", cpu);
+			printk("IHK-SMP: error: CPU core %d is not assigned to %p\n", 
+				cpu, ihk_os);
 			ret = -EINVAL;
 			goto err;
 		}
@@ -1483,6 +1472,143 @@ err:
 	return ret;
 }
 
+static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
+{
+	char *oldp;
+
+	/* Parse memory string provided by the user
+	 * FIXME: validate userspace buffer */
+	oldp = p;
+	*mem_size = memparse(p, &p);
+	if (p == oldp)
+		return -EINVAL;
+
+	if (!(*p)) {
+		*numa_id = 0;
+	}
+	else {
+		if (*p != '@') {
+			return -EINVAL;
+		}
+
+		*numa_id = memparse(p + 1, &p);
+	}
+
+	printk("smp_ihk_parse_mem(): %lu @ %d parsed\n", *mem_size, *numa_id);
+
+	return 0;
+}
+
+
+static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	size_t mem_size;
+	int numa_id;
+	struct builtin_os_data *os = priv;
+	unsigned long flags;
+	int ret;
+
+	struct ihk_os_mem_chunk *os_mem_chunk;
+	struct chunk *mem_chunk_leftover;
+	struct chunk *mem_chunk_iter;
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		return -EBUSY;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
+	if (ret != 0) {
+		printk("IHK-SMP: os_assign_mem: error: parsing memory string\n");
+		return ret;
+	}
+
+	/* Do the assignment */
+	os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
+
+	if (!os_mem_chunk) {
+		printk("IHK-SMP: error: allocating os_mem_chunk\n");
+		return -ENOMEM;
+	}
+
+	os_mem_chunk->addr = 0;
+	os_mem_chunk->numa_id = numa_id;
+	INIT_LIST_HEAD(&os_mem_chunk->list);
+
+	/* Find a big enough free memory chunk on this NUMA node */
+	list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+		if (mem_chunk_iter->size >= mem_size &&
+				mem_chunk_iter->numa_id == numa_id) {
+
+			os_mem_chunk->addr = mem_chunk_iter->addr;
+			os_mem_chunk->size = mem_size;
+			os_mem_chunk->os = ihk_os;
+
+			list_del(&mem_chunk_iter->chain);
+			break;
+		}
+	}
+
+	if (!os_mem_chunk->addr) {
+		printk("IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
+		kfree(os_mem_chunk);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	list_add(&os_mem_chunk->list, &ihk_mem_used_chunks);
+
+	/* Split if there is any leftover */
+	if (mem_chunk_iter->size > mem_size) {
+		mem_chunk_leftover = (struct chunk*)
+			phys_to_virt(mem_chunk_iter->addr + mem_size);
+		mem_chunk_leftover->addr = mem_chunk_iter->addr + mem_size;
+		mem_chunk_leftover->size = mem_chunk_iter->size - mem_size;
+
+		add_free_mem_chunk(mem_chunk_leftover);
+	}
+
+	os->mem_start = os_mem_chunk->addr;
+	os->mem_end = os->mem_start + mem_size;
+
+	dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p\n",
+			os->mem_start, os->mem_end, (os->mem_end - os->mem_start),
+			numa_id, ihk_os);
+
+	ret = 0;
+out:
+
+	return ret;
+}
+
+static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	size_t mem_size;
+	int numa_id;
+	struct builtin_os_data *os = priv;
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		return -EBUSY;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
+	if (ret != 0) {
+		printk("IHK-SMP: os_assign_mem: error: parsing memory string\n");
+		return ret;
+	}
+
+	/* Do the release */
+
+	return ret;
+}
+
 
 static struct ihk_os_ops smp_ihk_os_ops = {
 	.load_mem = smp_ihk_os_load_mem,
@@ -1504,8 +1630,8 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.get_cpu_info = smp_ihk_os_get_cpu_info,
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
-	//.assign_mem = smp_ihk_os_assign_mem,
-	//.release_mem = smp_ihk_os_release_mem,
+	.assign_mem = smp_ihk_os_assign_mem,
+	.release_mem = smp_ihk_os_release_mem,
 };	
 
 static struct ihk_register_os_data builtin_os_reg_data = {
@@ -1562,7 +1688,7 @@ static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
 {
 	if (!virt) {
 		void *ret;
-		
+
 		ret = ihk_smp_map_virtual(phys, size);
 		if (!ret) {
 			printk("WARNING: ihk_smp_map_virtual() returned NULL!\n");
@@ -1577,7 +1703,7 @@ static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
 			return 0;
 		//return shimos_other_os_map(phys, size);
 		*/
-	} 
+	}
 	else {
 		return ihk_host_map_generic(ihk_dev, phys, virt, size, flags);
 	}
@@ -1709,7 +1835,7 @@ void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 
 int shimos_nchunks = 16;
 
-int ihk_smp_reserve_mem(void)
+int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
 	const int order = 10;		/* 4 MiB a chunk */
 	size_t want;
@@ -1718,97 +1844,65 @@ int ihk_smp_reserve_mem(void)
 	struct chunk *q;
 	void *va;
 	size_t remain;
-	int i;
 	int ret;
+	struct list_head tmp_chunks;
 
-	INIT_LIST_HEAD(&ihk_mem_free_chunks);
-	INIT_LIST_HEAD(&ihk_mem_used_chunks);
-	INIT_LIST_HEAD(&unused);
+	INIT_LIST_HEAD(&tmp_chunks);
 
-	if (!ihk_mem) {
-		if (!ihk_phys_start) {
-			printk("IHK-SMP: error: both ihk_mem and ihk_phys_start are 0\n");
-			ret = -1;
-			goto out;
-		}
-		
-		printk("IHK-SMP: ihk_phys_start is 0x%lx\n", ihk_phys_start);
-		return 0;
-	}
-	
-	/* ihk_mem is in MBs */
-	ihk_mem <<= 20;
-
-	printk(KERN_INFO "IHK-SMP: ihk_mem: %lu bytes\n", ihk_mem);
+	printk(KERN_INFO "IHK-SMP: __ihk_smp_reserve_mem: %lu bytes\n", ihk_mem);
 
 	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
 	allocated = 0;
 
-	/* allocate and merge pages until we get a contigous area
-	 * or run out of free memory. keep the longest areas */
-	while (max_size_free_mem_chunk() < want) {
+	/* Allocate and merge pages until we get a contigous area
+	 * or run out of free memory. Keep the longest areas */
+	while (max_size_mem_chunk(&tmp_chunks) < want) {
 		struct page *pg;
-		
-		/* FIXME: obtain pages from the requested NUMA domain */
-		pg = alloc_pages_node(0, GFP_KERNEL, order);
+
+		pg = alloc_pages_node(numa_id, GFP_KERNEL, order);
 		if (!pg) {
 			if (allocated >= want) break;
 
-			printk(KERN_ERR "IHK-SMP: __alloc_pages_node() failed. %ld bytes have been allocated\n", allocated);
-			printk(KERN_NOTICE "IHK-SMP: ihk_mem is ignored\n");
-			
+			printk(KERN_ERR "IHK-SMP: error: __alloc_pages_node() failed\n");
+
 			ret = -1;
-			goto err;
+			goto out;
 		}
 
 		p = page_address(pg);
 
-		//p = (void *)__get_free_pages(GFP_KERNEL, order);
-		if (!p) {
-			printk(KERN_ERR "IHK-SMP: __get_free_pages() failed. %ld bytes have been allocated\n", allocated);
-			printk(KERN_NOTICE "IHK-SMP: ihk_mem is ignored\n");
-
-			ret = -1;
-			goto err;
-		}
-		
 		allocated += PAGE_SIZE << order;
 
 		p->addr = virt_to_phys(p);
 		p->size = PAGE_SIZE << order;
+		p->numa_id = numa_id;
 		INIT_LIST_HEAD(&p->chain);
 
-		/* insert the chunk in physical address ascending order */
-		list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
+		/* Insert the chunk in physical address ascending order */
+		list_for_each_entry(q, &tmp_chunks, chain) {
 			if (p->addr < q->addr) {
 				break;
 			}
 		}
-		
-		if ((void *)q == &ihk_mem_free_chunks) {
-			list_add_tail(&p->chain, &ihk_mem_free_chunks);
+
+		if ((void *)q == &tmp_chunks) {
+			list_add_tail(&p->chain, &tmp_chunks);
 		}
 		else {
 			list_add_tail(&p->chain, &q->chain);
 		}
-		
-		/* merge adjucent chunks */
-		merge_free_mem_chunks();
+
+		/* Merge adjucent chunks */
+		merge_mem_chunks(&tmp_chunks);
 	}
 
-	/* move all chunks to unused list */
-	list_for_each_entry_safe(p, q, &ihk_mem_free_chunks, chain) {
-		list_move_tail(&p->chain, &unused);
-	}
-
-	/* move the largest chunks back to free list until we meet
-	 * the required size */
+	/* Move the largest chunks to free list until we meet the required size */
 	allocated = 0;
 	while (allocated < want) {
 		size_t max = 0;
 		p = NULL;
 
-		list_for_each_entry(q, &unused, chain) {
+		list_for_each_entry(q, &tmp_chunks, chain) {
 			if (q->size > max) {
 				p = q;
 				max = p->size;
@@ -1819,13 +1913,13 @@ int ihk_smp_reserve_mem(void)
 
 		list_del(&p->chain);
 
-		/* insert the chunk in physical address ascending order */
+		/* Insert the chunk in physical address ascending order */
 		list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
 			if (p->addr < q->addr) {
 				break;
 			}
 		}
-		
+
 		if ((void *)q == &ihk_mem_free_chunks) {
 			list_add_tail(&p->chain, &ihk_mem_free_chunks);
 		}
@@ -1836,35 +1930,32 @@ int ihk_smp_reserve_mem(void)
 		allocated += max;
 	}
 
-	i = 0;
+	/* Merge free chunks in case this wasn't the first reservation */
+	merge_mem_chunks(&ihk_mem_free_chunks);
+
 	list_for_each_entry(p, &ihk_mem_free_chunks, chain) {
-		printk(KERN_INFO "IHK-SMP: chunk #%d: 0x%lx - 0x%lx\n",
-				i, p->addr, p->addr+p->size);
-		++i;
+		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx (len: %lu) @ NUMA node: %d is available\n",
+				p->addr, p->addr + p->size, p->size, p->numa_id);
 	}
 
 	ret = 0;
 
 out:
-	/* free unused chunks */
-	list_for_each_entry_safe(p, q, &unused, chain) {
+	/* Free leftover tmp_chunks */
+	list_for_each_entry_safe(p, q, &tmp_chunks, chain) {
 		list_del(&p->chain);
 
 		va = phys_to_virt(p->addr);
 		remain = p->size;
-		
+
 		while (remain > 0) {
 			free_pages((uintptr_t)va, order);
 			va += PAGE_SIZE << order;
 			remain -= PAGE_SIZE << order;
 		}
 	}
-	
-	return ret;
 
-err:
-	list_splice(&ihk_mem_free_chunks, &unused);
-	goto out;
+	return ret;
 }
 
 static int smp_ihk_offline_cpu(int cpu_id)
@@ -2103,9 +2194,78 @@ out:
 	return ret;
 }
 
+
+static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
+{
+	size_t mem_size;
+	int numa_id;
+	int ret;
+
+	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
+	if (ret != 0) {
+		printk("IHK-SMP: reserve_mem: error: parsing memory string\n");
+		return ret;
+	}
+
+	/* Do the reservation */
+	ret = __ihk_smp_reserve_mem(mem_size, numa_id);
+
+	return ret;
+}
+
+static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
+{
+	//size_t mem_size;
+	//int numa_id;
+	int ret = 0;
+	struct chunk *mem_chunk;
+	struct chunk *mem_chunk_next;
+	unsigned long size_left;
+	unsigned long va;
+
+	/*
+	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
+	if (ret != 0) {
+		printk("IHK-SMP: release_mem: error: parsing memory string\n");
+		return ret;
+	}
+	*/
+	/* Find out if there is enough free memory to be released */
+
+	/* Drop all memory for now.. */
+	list_for_each_entry_safe(mem_chunk, mem_chunk_next, 
+			&ihk_mem_free_chunks, chain) {
+		unsigned long pa = mem_chunk->addr;
+		unsigned long size = mem_chunk->size;
+
+		list_del(&mem_chunk->chain);
+
+		va = (unsigned long)phys_to_virt(pa);
+		size_left = mem_chunk->size;
+		while (size_left > 0) {
+			/* NOTE: memory was allocated via __get_free_pages() in 4MB blocks */
+			int order = 10;
+			int order_size = 4194304;
+
+			free_pages(va, order);
+			pr_debug("0x%lx, page order: %d freed\n", va, order); 
+			size_left -= order_size;
+			va += order_size;
+		}
+
+		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
+	}
+
+	return ret;
+}
+
+
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 	int vector = IRQ15_VECTOR + 2;
+
+	INIT_LIST_HEAD(&ihk_mem_free_chunks);
+	INIT_LIST_HEAD(&ihk_mem_used_chunks);
 
 	if (ihk_cores) {
 		if (ihk_cores > (num_present_cpus() - 1)) {
@@ -2157,11 +2317,6 @@ retry_trampoline:
 		trampoline_va = pfn_to_kaddr(page_to_pfn(trampoline_page));
 
 		printk("IHK-SMP: trampoline_page phys: 0x%llx\n", page_to_phys(trampoline_page));
-	}
-
-	if (ihk_smp_reserve_mem() < 0) {
-		printk("IHK-SMP error: reserving memory\n");
-		return ENOMEM;
 	}
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
@@ -2421,6 +2576,8 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.get_dma_channel = smp_ihk_get_dma_channel,
 	.reserve_cpu = smp_ihk_reserve_cpu,
 	.release_cpu = smp_ihk_release_cpu,
+	.reserve_mem = smp_ihk_reserve_mem,
+	.release_mem = smp_ihk_release_mem,
 };	
 
 /** \brief The driver-specific driver structure
