@@ -33,6 +33,11 @@
 #define IHK_OS_READ_KMSG              0x112a20
 #define IHK_OS_CLEAR_KMSG             0x112a21
 
+#define IHK_OS_ASSIGN_CPU             0x112a22
+#define IHK_OS_RELEASE_CPU            0x112a23
+#define IHK_OS_ASSIGN_MEM             0x112a24
+#define IHK_OS_RELEASE_MEM            0x112a25
+
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff
 

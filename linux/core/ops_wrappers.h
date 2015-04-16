@@ -74,6 +74,30 @@
 		return data->ops->name(data, data->priv, __VA_ARGS__); \
 	} while (0)
 
+IHK_OS_OPS_BEGIN(int, assign_cpu,
+                 unsigned long arg)
+{
+	IHK_OPS_BODY(assign_cpu, arg);
+}
+
+IHK_OS_OPS_BEGIN(int, release_cpu,
+                 unsigned long arg)
+{
+	IHK_OPS_BODY(release_cpu, arg);
+}
+
+IHK_OS_OPS_BEGIN(int, assign_mem,
+                 unsigned long arg)
+{
+	IHK_OPS_BODY(assign_mem, arg);
+}
+
+IHK_OS_OPS_BEGIN(int, release_mem,
+                 unsigned long arg)
+{
+	IHK_OPS_BODY(release_mem, arg);
+}
+
 IHK_OS_OPS_BEGIN(unsigned long, map_memory,
                  unsigned long rphys, unsigned long size)
 {

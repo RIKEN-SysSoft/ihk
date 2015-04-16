@@ -243,6 +243,35 @@ struct ihk_os_ops {
 	 */ 
 	long (*debug_request)(ihk_os_t, void *, unsigned int request,
 	                      unsigned long arg);
+	
+	/** \brief Assign CPU cores to the OS instance
+	 *
+	 *  \return Success or failure.
+	 *  \param CPU list in the same format as for reserve operation.
+	 **/
+	int (*assign_cpu)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Release CPU cores of an OS instance
+	 *
+	 *  \return Success or failure.
+	 *  \param CPU list in the same format as for reserve operation.
+	 **/
+	int (*release_cpu)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Assign CPU cores to the OS instance
+	 *
+	 *  \return Success or failure.
+	 *  \param Memory is 
+	 **/
+	int (*assign_mem)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Release CPU cores of an OS instance
+	 *
+	 *  \return Success or failure.
+	 *  \param Memory
+	 **/
+	int (*release_mem)(ihk_os_t, void *, unsigned long arg);
+
 };
 
 struct ihk_register_os_data;

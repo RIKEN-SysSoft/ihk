@@ -43,9 +43,15 @@ static int usage(char **arg)
 	fprintf(stderr, "    load (kernel.img)\n");
 	fprintf(stderr, "    boot\n");
 	fprintf(stderr, "    shutdown\n");
-	fprintf(stderr, "    alloc [cpu [memory]]\n");
+	fprintf(stderr, "    alloc [cpu [memory]] \n");
 	fprintf(stderr, "    reserve_cpu [cpu_num]...\n");
 	fprintf(stderr, "    reserve_mem (addr) (size)\n");
+	fprintf(stderr, "    assign cpu|mem (new IHK iface)\n");
+	fprintf(stderr, "           cpu (cpu_list) (new IHK iface)\n");
+	fprintf(stderr, "           mem (addr) (size) (new IHK iface)\n");
+	fprintf(stderr, "    release cpu|mem (new IHK iface)\n");
+	fprintf(stderr, "            cpu (cpu_list) (new IHK iface)\n");
+	fprintf(stderr, "            mem (addr) (size) (new IHK iface)\n");
 	fprintf(stderr, "    query\n");
 	fprintf(stderr, "    query_free_mem\n");
 	fprintf(stderr, "    kargs (kernel arg)\n");
@@ -175,6 +181,70 @@ static int do_reserve_mem(int fd)
 	return r;
 }
 
+static int do_assign(int fd)
+{
+	int ret;
+
+	if (__argc < 5) {
+		usage(__argv);
+		return -1;
+	}
+
+	if (!strcmp(__argv[3], "cpu")) {
+		ret = ioctl(fd, IHK_OS_ASSIGN_CPU, __argv[4]);
+
+		if (ret != 0) {
+			fprintf(stderr, "error: assigning CPUs: %s\n", __argv[4]);
+		}
+	}
+	else if (!strcmp(__argv[3], "mem")) {
+		ret = ioctl(fd, IHK_OS_ASSIGN_MEM, __argv[4]);
+
+		if (ret != 0) {
+			fprintf(stderr, "error: assigning memory: %s\n", __argv[4]);
+		}
+	}
+	else {
+		usage(__argv);
+		ret = -EINVAL;
+	}
+
+	dprintf("ret = %d\n", ret);
+	return ret;
+}
+
+static int do_release(int fd)
+{
+	int ret;
+
+	if (__argc < 4) {
+		usage(__argv);
+		return -1;
+	}
+
+	if (!strcmp(__argv[3], "cpu")) {
+		ret = ioctl(fd, IHK_OS_RELEASE_CPU, __argv[4]);
+
+		if (ret != 0) {
+			fprintf(stderr, "error: releasing CPUs: %s\n", __argv[4]);
+		}
+	}
+	else if (!strcmp(__argv[3], "mem")) {
+		ret = ioctl(fd, IHK_OS_RELEASE_MEM, __argv[4]);
+
+		if (ret != 0) {
+			fprintf(stderr, "error: releasing memory: %s\n", __argv[4]);
+		}
+	}
+	else {
+		usage(__argv);
+		ret = -EINVAL;
+	}
+
+	dprintf("ret = %d\n", ret);
+	return ret;
+}
+
 static int do_query(int fd)
 {
 	int r = ioctl(fd, IHK_OS_QUERY_STATUS);
@@ -302,6 +372,8 @@ int main(int argc, char **argv)
 	else HANDLER(alloc)
 	else HANDLER(reserve_cpu)
 	else HANDLER(reserve_mem)
+	else HANDLER(assign)
+	else HANDLER(release)
 	else HANDLER(query)
 	else HANDLER(query_free_mem)
 	else HANDLER(kargs)
