@@ -239,7 +239,7 @@ static unsigned long ihk_trampoline = 0;
 module_param(ihk_trampoline, ulong, 0644);
 MODULE_PARM_DESC(ihk_trampoline, "IHK trampoline page physical address");
 
-#define IHK_SMP_MAXCPUS	1024
+#define IHK_SMP_MAXCPUS	256
 
 #define BUILTIN_MAX_CPUS IHK_SMP_MAXCPUS
 
