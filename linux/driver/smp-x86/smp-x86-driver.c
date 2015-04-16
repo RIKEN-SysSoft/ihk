@@ -1093,11 +1093,11 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		}
 
 		/* Assign cores */
-		for (i = 0; ((i < IHK_SMP_MAXCPUS) && 
-					(ihk_smp_nr_allocated_cpus < resource->cpu_cores)); ++i) {
-
-			if (ihk_smp_cpus[i].status == IHK_SMP_CPU_ASSIGNED) 
+		for (i = 0; i < IHK_SMP_MAXCPUS && 
+			ihk_smp_nr_allocated_cpus < resource->cpu_cores; i++) {
+			if (ihk_smp_cpus[i].status != IHK_SMP_CPU_AVAILABLE) {
 				continue;
+			}
 
 			printk("IHK-SMP: CPU APIC %d assigned.\n",
 					ihk_smp_cpus[i].apic_id);
@@ -1380,6 +1380,110 @@ static struct ihk_cpu_info *smp_ihk_os_get_cpu_info(ihk_os_t ihk_os, void *priv)
 	return &os->cpu_info;
 }
 
+static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret;
+	int cpu;
+	struct builtin_os_data *os = priv;
+	cpumask_t cpus_to_assign;
+	unsigned long flags;
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		return -EBUSY;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	memset(&cpus_to_assign, 0, sizeof(cpus_to_assign));
+
+	/* Parse CPU list provided by user
+	 * FIXME: validate userspace buffer */
+	cpulist_parse((char *)arg, &cpus_to_assign);
+
+	/* Check if cores to be assigned are available */
+	for_each_cpu_mask(cpu, cpus_to_assign) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
+			printk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
+			ret = -EINVAL;
+			goto err;
+		}
+	}
+
+	/* Do the assignment */
+	for_each_cpu_mask(cpu, cpus_to_assign) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
+			printk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
+			ret = -EINVAL;
+			goto err;
+		}
+
+		CORE_SET(ihk_smp_cpus[cpu].apic_id, os->coremaps);
+
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
+		ihk_smp_cpus[cpu].os = ihk_os;
+
+		printk("IHK-SMP: CPU APIC %d assigned.\n",
+				ihk_smp_cpus[cpu].apic_id);
+	}
+
+	ret = 0;
+
+err:
+	return ret;
+}
+
+static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret;
+	int cpu;
+	struct builtin_os_data *os = priv;
+	cpumask_t cpus_to_release;
+	unsigned long flags;
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		return -EBUSY;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	memset(&cpus_to_release, 0, sizeof(cpus_to_release));
+
+	/* Parse CPU list provided by user
+	 * FIXME: validate userspace buffer */
+	cpulist_parse((char *)arg, &cpus_to_release);
+
+	/* Check if cores to be released are assigned to this OS */
+	for_each_cpu_mask(cpu, cpus_to_release) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
+			ihk_smp_cpus[cpu].os != ihk_os) {
+			printk("IHK-SMP: error: CPU core %d is not assigned\n", cpu);
+			ret = -EINVAL;
+			goto err;
+		}
+	}
+
+	/* Do the release */
+	for_each_cpu_mask(cpu, cpus_to_release) {
+
+		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
+		CORE_CLR(ihk_smp_cpus[cpu].apic_id, os->coremaps);
+
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
+		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
+
+		printk("IHK-SMP: CPU APIC %d released from 0x%p.\n",
+				ihk_smp_cpus[cpu].apic_id, os);
+	}
+
+	ret = 0;
+
+err:
+	return ret;
+}
+
+
 static struct ihk_os_ops smp_ihk_os_ops = {
 	.load_mem = smp_ihk_os_load_mem,
 	.load_file = smp_ihk_os_load_file,
@@ -1398,6 +1502,10 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.debug_request = smp_ihk_os_debug_request,
 	.get_memory_info = smp_ihk_os_get_memory_info,
 	.get_cpu_info = smp_ihk_os_get_cpu_info,
+	.assign_cpu = smp_ihk_os_assign_cpu,
+	.release_cpu = smp_ihk_os_release_cpu,
+	//.assign_mem = smp_ihk_os_assign_mem,
+	//.release_mem = smp_ihk_os_release_mem,
 };	
 
 static struct ihk_register_os_data builtin_os_reg_data = {
@@ -2217,6 +2325,8 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	struct chunk *mem_chunk_next;
 	unsigned long size_left;
 	unsigned long va;
+	int cpu;
+
 #ifdef CONFIG_SPARSE_IRQ
 	struct irq_desc *desc;
 #endif
@@ -2255,9 +2365,9 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 		if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE)
 			continue;
 
-		ihk_smp_reset_cpu(ihk_smp_cpus[i].apic_id);
+		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
 
-		if ((ret = smp_ihk_online_cpu(cpu)) != 0) {
+		if (smp_ihk_online_cpu(cpu) != 0) {
 			continue;
 		}
 
