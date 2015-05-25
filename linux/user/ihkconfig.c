@@ -286,6 +286,8 @@ static int do_query(int fd)
 		return -1;
 	}
 
+	memset(query_result, 0, sizeof(query_result));
+
 	if (!strcmp(__argv[3], "cpu")) {
 		ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, query_result);
 

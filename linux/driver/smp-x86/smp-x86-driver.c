@@ -2194,6 +2194,35 @@ out:
 	return ret;
 }
 
+static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
+{
+	int cpu;
+	cpumask_t cpus_reserved;
+	char query_res[1024];
+
+	memset(&cpus_reserved, 0, sizeof(cpus_reserved));
+	memset(query_res, 0, sizeof(query_res));
+
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE &&
+			ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
+			continue;
+
+		cpumask_set_cpu(cpu, &cpus_reserved);
+	}
+
+	bitmap_scnlistprintf(query_res, sizeof(query_res),
+		cpumask_bits(&cpus_reserved), nr_cpumask_bits);
+
+	if (strlen(query_res) > 0) {
+		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
+			printk("IHK-SMP: error: copying CPU string to user-space\n");
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
 
 static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
@@ -2259,6 +2288,30 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	return ret;
 }
 
+static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
+{
+	char query_res[1024];
+	struct chunk *mem_chunk;
+
+	memset(query_res, 0, sizeof(query_res));
+
+	/* Parse memory;
+	 * TODO: do for all entries.. */
+	list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
+
+		sprintf(query_res, "%lu@%d", mem_chunk->size, mem_chunk->numa_id);
+		break;
+	}
+
+	if (strlen(query_res) > 0) {
+		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
+			printk("IHK-SMP: error: copying mem string to user-space\n");
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
 
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
@@ -2578,6 +2631,8 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.release_cpu = smp_ihk_release_cpu,
 	.reserve_mem = smp_ihk_reserve_mem,
 	.release_mem = smp_ihk_release_mem,
+	.query_cpu = smp_ihk_query_cpu,
+	.query_mem = smp_ihk_query_mem,
 };	
 
 /** \brief The driver-specific driver structure
