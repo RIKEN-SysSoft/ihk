@@ -35,7 +35,7 @@
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
-#define IHK_DEBUG
+//#define IHK_DEBUG
 #include <ihk/misc/debug.h>
 #include <ikc/msg.h>
 //#include <linux/shimos.h>
@@ -607,11 +607,9 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 	}
 
 	if (apic->wakeup_secondary_cpu) {
-		printk("calling apic->wakeup_secondary_cpu()\n");
 		return apic->wakeup_secondary_cpu(apicid, start_eip);
 	}
 	else {
-		printk("calling smp_wakeup_secondary_cpu_via_init()\n");
 		return smp_wakeup_secondary_cpu_via_init(apicid, start_eip);
 	}
 }
@@ -675,7 +673,8 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	header->next_ip = os->boot_rip;
 	header->notify_address = __pa(&os->param.bp);
 	
-	printk("calling wakeup_secondary_cpu...\n");
+	printk("IHK-SMP: booting OS 0x%lx, calling smp_wakeup_secondary_cpu() \n", 
+		ihk_os);
 	udelay(300);
 	
 	return smp_wakeup_secondary_cpu(os->boot_cpu, trampoline_phys);
@@ -735,7 +734,8 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	}
 	fs = get_fs();
 	set_fs(get_ds());
-printk("read pa=%lx va=%lx\n", os->mem_end - PAGE_SIZE, (unsigned long)elf64);
+	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n", 
+		ihk_os, os->mem_end - PAGE_SIZE);
 	r = vfs_read(file, (char *)elf64, PAGE_SIZE, &pos);
 	set_fs(fs);
 	if (r <= 0) {
@@ -1494,7 +1494,7 @@ static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
 		*numa_id = memparse(p + 1, &p);
 	}
 
-	printk("smp_ihk_parse_mem(): %lu @ %d parsed\n", *mem_size, *numa_id);
+	dprintf("smp_ihk_parse_mem(): %lu @ %d parsed\n", *mem_size, *numa_id);
 
 	return 0;
 }
