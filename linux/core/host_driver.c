@@ -1006,6 +1006,26 @@ static int __ihk_device_release_mem(struct ihk_host_linux_device_data *data,
 	return data->ops->release_mem(data, arg);
 }
 
+/** \brief Query CPU cores */
+static int __ihk_device_query_cpu(struct ihk_host_linux_device_data *data,
+		unsigned long arg)
+{
+	if (!data->ops || !data->ops->query_cpu)
+		return -1;
+
+	return data->ops->query_cpu(data, arg);
+}
+
+/** \brief Query memory */
+static int __ihk_device_query_mem(struct ihk_host_linux_device_data *data,
+		unsigned long arg)
+{
+	if (!data->ops || !data->ops->query_mem)
+		return -1;
+
+	return data->ops->query_mem(data, arg);
+}
+
 /** \brief ioctl handler for the device file */
 static long ihk_host_device_ioctl(struct file *file, unsigned int request,
                                   unsigned long arg)
@@ -1043,6 +1063,14 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 
 	case IHK_DEVICE_RELEASE_MEM:
 		ret = __ihk_device_release_mem(data, arg);
+		break;
+
+	case IHK_DEVICE_QUERY_CPU:
+		ret = __ihk_device_query_cpu(data, arg);
+		break;
+
+	case IHK_DEVICE_QUERY_MEM:
+		ret = __ihk_device_query_mem(data, arg);
 		break;
 
 	default:

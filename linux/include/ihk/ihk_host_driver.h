@@ -362,6 +362,22 @@ struct ihk_device_ops {
 	int (*release_mem)(ihk_device_t, unsigned long arg);
 
 	/**
+	 * \brief Query CPU cores
+	 *
+	 * Queries reserved CPU cores.
+	 * \param arg     Query result string
+	 */
+	int (*query_cpu)(ihk_device_t, unsigned long arg);
+
+	/**
+	 * \brief Query memory
+	 *
+	 * Queries reserved memory.
+	 * \param arg     Query result string
+	 */
+	int (*query_mem)(ihk_device_t, unsigned long arg);
+
+	/**
 	 * \brief Map a physical memory area to the host physical memory
 	 *
 	 * \param addr Physical address in the manycore device

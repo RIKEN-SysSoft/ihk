@@ -51,6 +51,7 @@ static int usage(char **arg)
 	fprintf(stderr, "    clear_kmsg_write\n");
 	fprintf(stderr, "    reserve cpu|mem\n");
 	fprintf(stderr, "    release cpu|mem\n");
+	fprintf(stderr, "    query cpu|mem\n");
 
 	return 0;
 }
@@ -275,6 +276,43 @@ static int do_release(int fd)
 	return ret;
 }
 
+static int do_query(int fd)
+{
+	int ret;
+	char query_result[1024];
+
+	if (__argc < 3) {
+		usage(__argv);
+		return -1;
+	}
+
+	if (!strcmp(__argv[3], "cpu")) {
+		ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, query_result);
+
+		if (ret != 0) {
+			fprintf(stderr, "error: querying CPUs\n");
+		}
+	}
+	else if (!strcmp(__argv[3], "mem")) {
+		ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, query_result);
+
+		if (ret != 0) {
+			fprintf(stderr, "error: querying memory\n");
+		}
+	}
+	else {
+		usage(__argv);
+		ret = -EINVAL;
+	}
+
+	if (ret == 0) {
+		printf("%s\n", query_result);
+	}
+
+	dprintf("ret = %d\n", ret);
+	return ret;
+}
+
 static int do_ioctl(int fd)
 {
 	unsigned int req;
@@ -329,6 +367,7 @@ int main(int argc, char **argv)
 	else HANDLER(clear_kmsg_write)
 	else HANDLER(reserve)
 	else HANDLER(release)
+	else HANDLER(query)
 	else {
 		fprintf(stderr, "Unknown action : %s\n", argv[2]);
 		usage(argv);
