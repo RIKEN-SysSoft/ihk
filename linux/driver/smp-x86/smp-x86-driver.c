@@ -674,7 +674,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	header->notify_address = __pa(&os->param.bp);
 	
 	printk("IHK-SMP: booting OS 0x%lx, calling smp_wakeup_secondary_cpu() \n", 
-		ihk_os);
+		(unsigned long)ihk_os);
 	udelay(300);
 	
 	return smp_wakeup_secondary_cpu(os->boot_cpu, trampoline_phys);
@@ -735,7 +735,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	fs = get_fs();
 	set_fs(get_ds());
 	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n", 
-		ihk_os, os->mem_end - PAGE_SIZE);
+		(unsigned long)ihk_os, os->mem_end - PAGE_SIZE);
 	r = vfs_read(file, (char *)elf64, PAGE_SIZE, &pos);
 	set_fs(fs);
 	if (r <= 0) {
@@ -2265,7 +2265,9 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	list_for_each_entry_safe(mem_chunk, mem_chunk_next, 
 			&ihk_mem_free_chunks, chain) {
 		unsigned long pa = mem_chunk->addr;
+#ifdef IHK_DEBUG
 		unsigned long size = mem_chunk->size;
+#endif
 
 		list_del(&mem_chunk->chain);
 
