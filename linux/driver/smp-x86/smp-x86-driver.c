@@ -183,7 +183,7 @@ int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) = _cpu_up;
 #endif
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #ifdef IHK_KSYM_cpu_hotplug_driver_lock 
 #if IHK_KSYM_cpu_hotplug_driver_lock 
 typedef void (*void_fn_void_t)(void);
