@@ -1859,7 +1859,7 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
 		struct page *pg;
 
-		pg = alloc_pages_node(numa_id, GFP_KERNEL, order);
+		pg = alloc_pages_node(numa_id, GFP_KERNEL | __GFP_COMP, order);
 		if (!pg) {
 			if (allocated >= want) break;
 
