@@ -46,6 +46,7 @@
 #include <asm/tlbflush.h>
 #include <asm/mc146818rtc.h>
 #include <asm/smpboot_hooks.h>
+#include <asm/realmode.h>
 #include "bootparam.h"
 
 #define BUILTIN_OS_STATUS_INITIAL  0
@@ -71,6 +72,14 @@
 /*
  * IHK-SMP unexported kernel symbols
  */
+#ifdef IHK_KSYM_real_mode_header
+#if IHK_KSYM_real_mode_header
+struct real_mode_header *real_mode_header = 
+	(void *)
+	IHK_KSYM_real_mode_header;
+#endif
+#endif
+
 #ifdef IHK_KSYM_per_cpu__vector_irq
 #if IHK_KSYM_per_cpu__vector_irq
 void *_per_cpu__vector_irq = 
@@ -260,6 +269,8 @@ struct ihk_smp_cpu {
 static struct ihk_smp_cpu ihk_smp_cpus[IHK_SMP_MAXCPUS];
 struct page *trampoline_page;
 unsigned long trampoline_phys;
+int using_linux_trampoline = 0;
+char linux_trampoline_backup[4096];
 void *trampoline_va;
 
 unsigned long ident_page_table;
@@ -664,6 +675,11 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps.set[0],
 	        os->param.dma_address
 	);
+
+	/* Make a temporary copy of the Linux trampoline */
+	if (using_linux_trampoline) {
+		memcpy(linux_trampoline_backup, trampoline_va, IHK_SMP_TRAMPOLINE_SIZE);
+	}
 
 	/* Prepare trampoline code */
 	memcpy(trampoline_va, ihk_smp_trampoline_data, IHK_SMP_TRAMPOLINE_SIZE);
@@ -1190,6 +1206,11 @@ static enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		if (os->param.bp.status == 1) {
 			return IHK_OS_STATUS_BOOTED;
 		} else if(os->param.bp.status == 2) {
+			/* Restore Linux trampoline once ready */
+			if (using_linux_trampoline) {
+				memcpy(trampoline_va, linux_trampoline_backup, 
+						IHK_SMP_TRAMPOLINE_SIZE);
+			}
 			return IHK_OS_STATUS_READY;
 		} else {
 			return IHK_OS_STATUS_BOOTING;
@@ -2344,6 +2365,11 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 		
 		memset(bad_pages, 0, TRAMP_ATTEMPTS * sizeof(struct page *));
 
+		/* Try to allocate trampoline page, it has to be under 1M so we can 
+		 * execute real-mode AP code. If allocation fails more than 
+		 * TRAMP_ATTEMPTS times, we will use Linux's one from real_header.
+		 * NOTE: using Linux trampoline could potentially cause race 
+		 * conditions with concurrent CPU online request */
 retry_trampoline:
 		trampoline_page = alloc_pages(GFP_DMA | GFP_KERNEL, 1);
 
@@ -2351,14 +2377,10 @@ retry_trampoline:
 			bad_pages[attempts] = trampoline_page;
 			
 			if (++attempts < TRAMP_ATTEMPTS) {
-				printk("IHK-SMP warning: retrying trampoline_code allocation\n");
 				goto retry_trampoline;
 			}
-
-			printk("IHK-SMP error: allocating trampoline_code\n");
-			return EFAULT;
 		}
-		
+
 		/* Free failed attempts.. */
 		for (attempts = 0; attempts < TRAMP_ATTEMPTS; ++attempts) {
 			if (!bad_pages[attempts]) {
@@ -2367,11 +2389,28 @@ retry_trampoline:
 
 			free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(bad_pages[attempts])), 1);
 		}
-	
-		trampoline_phys = page_to_phys(trampoline_page);
-		trampoline_va = pfn_to_kaddr(page_to_pfn(trampoline_page));
 
-		printk("IHK-SMP: trampoline_page phys: 0x%llx\n", page_to_phys(trampoline_page));
+		/* Couldn't allocate trampoline page, use Linux' one from real_header */
+		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
+#ifdef IHK_KSYM_real_mode_header
+#if IHK_KSYM_real_mode_header
+			printk("IHK-SMP warning: allocating trampoline_page failed, using Linux'\n");
+			using_linux_trampoline = 1;
+
+			trampoline_phys = real_mode_header->trampoline_start;
+			trampoline_va = __va(trampoline_phys);
+#endif
+#else
+			printk("IHK-SMP: error: allocating trampoline area\n");
+			return ENOMEM;
+#endif
+		}
+		else {
+			trampoline_phys = page_to_phys(trampoline_page);
+			trampoline_va = pfn_to_kaddr(page_to_pfn(trampoline_page));
+		}
+
+		printk("IHK-SMP: trampoline_page phys: 0x%llx\n", trampoline_phys);
 	}
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
@@ -2589,7 +2628,8 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);
 	}
 	else {
-		iounmap(trampoline_va);
+		if (!using_linux_trampoline)
+			iounmap(trampoline_va);
 	}
 
 	if (ident_npages_order) {

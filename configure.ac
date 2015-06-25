@@ -175,6 +175,7 @@ AC_DEFUN([IHK_FIND_KSYM],[
 ])
 
 if test "$TARGET" = "smp-x86"; then
+	IHK_FIND_KSYM([real_mode_header])
 	IHK_FIND_KSYM([per_cpu__vector_irq])
 	IHK_FIND_KSYM([vector_irq])
 	IHK_FIND_KSYM([lapic_get_maxlvt])
