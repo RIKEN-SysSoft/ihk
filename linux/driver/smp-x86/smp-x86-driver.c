@@ -2394,7 +2394,7 @@ retry_trampoline:
 		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
 #ifdef IHK_KSYM_real_mode_header
 #if IHK_KSYM_real_mode_header
-			printk("IHK-SMP warning: allocating trampoline_page failed, using Linux'\n");
+			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
 			using_linux_trampoline = 1;
 
 			trampoline_phys = real_mode_header->trampoline_start;
@@ -2410,7 +2410,7 @@ retry_trampoline:
 			trampoline_va = pfn_to_kaddr(page_to_pfn(trampoline_page));
 		}
 
-		printk("IHK-SMP: trampoline_page phys: 0x%llx\n", trampoline_phys);
+		printk("IHK-SMP: trampoline_page phys: 0x%lx\n", trampoline_phys);
 	}
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
