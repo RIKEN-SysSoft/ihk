@@ -16,6 +16,7 @@ extern void main(void);
 extern void setup_x86(void);
 extern void init_boot_processor_local(void);
 extern struct ihk_kmsg_buf kmsg_buf;
+extern int no_turbo;
 
 unsigned long x86_kernel_phys_base;
 unsigned long ap_trampoline = 0;
@@ -83,6 +84,12 @@ void arch_init(void)
 	boot_param->status = 1;
 
 	build_ihk_cpu_info();
+
+	/* This is an early check to instruct the kernel initialization 
+	 * process not to deal with turbo boost support */
+	if (strstr(boot_param->kernel_args, "no_turbo")) {
+		no_turbo = 1;
+	}
 
 	setup_x86();
 	boot_param = map_fixed_area(boot_param_pa, sizeof(*boot_param), 0);
