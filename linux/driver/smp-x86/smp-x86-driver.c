@@ -46,7 +46,11 @@
 #include <asm/tlbflush.h>
 #include <asm/mc146818rtc.h>
 #include <asm/smpboot_hooks.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+#include <asm/trampoline.h>
+#else
 #include <asm/realmode.h>
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0) */
 #include "bootparam.h"
 
 #define BUILTIN_OS_STATUS_INITIAL  0
@@ -72,11 +76,15 @@
 /*
  * IHK-SMP unexported kernel symbols
  */
+
+/* real_mode_header has been introduced in 3.10 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #ifdef IHK_KSYM_real_mode_header
 #if IHK_KSYM_real_mode_header
 struct real_mode_header *real_mode_header = 
 	(void *)
 	IHK_KSYM_real_mode_header;
+#endif
 #endif
 #endif
 
@@ -2367,9 +2375,9 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 		/* Try to allocate trampoline page, it has to be under 1M so we can 
 		 * execute real-mode AP code. If allocation fails more than 
-		 * TRAMP_ATTEMPTS times, we will use Linux's one from real_header.
+		 * TRAMP_ATTEMPTS times, we will use Linux's one.
 		 * NOTE: using Linux trampoline could potentially cause race 
-		 * conditions with concurrent CPU online request */
+		 * conditions with concurrent CPU onlining requests */
 retry_trampoline:
 		trampoline_page = alloc_pages(GFP_DMA | GFP_KERNEL, 1);
 
@@ -2392,6 +2400,7 @@ retry_trampoline:
 
 		/* Couldn't allocate trampoline page, use Linux' one from real_header */
 		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #ifdef IHK_KSYM_real_mode_header
 #if IHK_KSYM_real_mode_header
 			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
@@ -2403,6 +2412,13 @@ retry_trampoline:
 #else
 			printk("IHK-SMP: error: allocating trampoline area\n");
 			return ENOMEM;
+#endif
+#else /* LINUX_VERSION_CODE < 3.10 */
+			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
+			using_linux_trampoline = 1;
+
+			trampoline_phys = TRAMPOLINE_BASE;
+			trampoline_va = __va(TRAMPOLINE_BASE);
 #endif
 		}
 		else {
