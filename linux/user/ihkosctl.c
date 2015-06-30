@@ -43,16 +43,13 @@ static int usage(char **arg)
 	fprintf(stderr, "    load (kernel.img)\n");
 	fprintf(stderr, "    boot\n");
 	fprintf(stderr, "    shutdown\n");
-	fprintf(stderr, "    alloc [cpu [memory]] \n");
-	fprintf(stderr, "    reserve_cpu [cpu_num]...\n");
-	fprintf(stderr, "    reserve_mem (addr) (size)\n");
-	fprintf(stderr, "    assign cpu|mem (new IHK iface)\n");
-	fprintf(stderr, "           cpu (cpu_list) (new IHK iface)\n");
-	fprintf(stderr, "           mem (addr) (size) (new IHK iface)\n");
-	fprintf(stderr, "    release cpu|mem (new IHK iface)\n");
-	fprintf(stderr, "            cpu (cpu_list) (new IHK iface)\n");
-	fprintf(stderr, "            mem (addr) (size) (new IHK iface)\n");
-	fprintf(stderr, "    query\n");
+	fprintf(stderr, "    assign cpu|mem \n");
+	fprintf(stderr, "           cpu (cpu_list) \n");
+	fprintf(stderr, "           mem (size@NUMA) \n");
+	fprintf(stderr, "    release cpu|mem \n");
+	fprintf(stderr, "            cpu (cpu_list) \n");
+	fprintf(stderr, "            mem (size@NUMA) \n");
+	fprintf(stderr, "    query [cpu|mem]\n");
 	fprintf(stderr, "    query_free_mem\n");
 	fprintf(stderr, "    kargs (kernel arg)\n");
 	fprintf(stderr, "    kmsg\n");
@@ -247,12 +244,47 @@ static int do_release(int fd)
 
 static int do_query(int fd)
 {
-	int r = ioctl(fd, IHK_OS_QUERY_STATUS);
-	if (r != 0) {
-		fprintf(stderr, "error: querying\n");
+	int ret; 
+	char query_result[1024];
+
+	/* Old code.. */
+	if (__argc < 3) {
+		int r = ioctl(fd, IHK_OS_QUERY_STATUS);
+		if (r != 0) {
+			fprintf(stderr, "error: querying\n");
+		}
+		dprintf("status = %d\n", r);
+
+		return r;
 	}
-	dprintf("status = %d\n", r);
-	return 0;
+	
+	memset(query_result, 0, sizeof(query_result));
+
+	if (!strcmp(__argv[3], "cpu")) {
+		ret = ioctl(fd, IHK_OS_QUERY_CPU, query_result);
+
+		if (ret != 0) {
+			fprintf(stderr, "error: querying CPUs\n");
+		}
+	}
+	else if (!strcmp(__argv[3], "mem")) {
+		ret = ioctl(fd, IHK_OS_QUERY_MEM, query_result);
+
+		if (ret != 0) {
+			fprintf(stderr, "error: querying memory\n");
+		}
+	}
+	else {
+		usage(__argv);
+		ret = -EINVAL;
+	}
+
+	if (ret == 0) {
+		printf("%s\n", query_result);
+	}
+
+	dprintf("ret = %d\n", ret);
+	return ret;
 }
 
 static int do_query_free_mem(int fd)

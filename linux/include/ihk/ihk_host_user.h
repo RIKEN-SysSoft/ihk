@@ -39,6 +39,8 @@
 #define IHK_OS_RELEASE_CPU            0x112a23
 #define IHK_OS_ASSIGN_MEM             0x112a24
 #define IHK_OS_RELEASE_MEM            0x112a25
+#define IHK_OS_QUERY_CPU              0x112a26
+#define IHK_OS_QUERY_MEM              0x112a27
 
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff

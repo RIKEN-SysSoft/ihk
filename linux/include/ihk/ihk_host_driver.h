@@ -258,19 +258,33 @@ struct ihk_os_ops {
 	 **/
 	int (*release_cpu)(ihk_os_t, void *, unsigned long arg);
 
-	/** \brief Assign CPU cores to the OS instance
+	/** \brief Query CPU cores of an OS instance
+	 *
+	 *  \return Success or failure.
+	 *  \param CPU list in the same format as for reserve operation.
+	 **/
+	int (*query_cpu)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Assign memory to the OS instance
 	 *
 	 *  \return Success or failure.
 	 *  \param Memory is 
 	 **/
 	int (*assign_mem)(ihk_os_t, void *, unsigned long arg);
 
-	/** \brief Release CPU cores of an OS instance
+	/** \brief Release memory of an OS instance
 	 *
 	 *  \return Success or failure.
 	 *  \param Memory
 	 **/
 	int (*release_mem)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Query memory of an OS instance
+	 *
+	 *  \return Success or failure.
+	 *  \param Memory
+	 **/
+	int (*query_mem)(ihk_os_t, void *, unsigned long arg);
 
 };
 

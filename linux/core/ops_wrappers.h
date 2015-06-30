@@ -86,6 +86,12 @@ IHK_OS_OPS_BEGIN(int, release_cpu,
 	IHK_OPS_BODY(release_cpu, arg);
 }
 
+IHK_OS_OPS_BEGIN(int, query_cpu,
+                 unsigned long arg)
+{
+	IHK_OPS_BODY(query_cpu, arg);
+}
+
 IHK_OS_OPS_BEGIN(int, assign_mem,
                  unsigned long arg)
 {
@@ -96,6 +102,12 @@ IHK_OS_OPS_BEGIN(int, release_mem,
                  unsigned long arg)
 {
 	IHK_OPS_BODY(release_mem, arg);
+}
+
+IHK_OS_OPS_BEGIN(int, query_mem,
+                 unsigned long arg)
+{
+	IHK_OPS_BODY(query_mem, arg);
 }
 
 IHK_OS_OPS_BEGIN(unsigned long, map_memory,
