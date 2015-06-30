@@ -1501,6 +1501,39 @@ err:
 	return ret;
 }
 
+char query_res[1024];
+
+static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int cpu;
+	cpumask_t cpus_assigned;
+
+	memset(&cpus_assigned, 0, sizeof(cpus_assigned));
+	memset(query_res, 0, sizeof(query_res));
+
+	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
+			continue;
+		if (ihk_smp_cpus[cpu].os != ihk_os)
+			continue;
+
+		cpumask_set_cpu(cpu, &cpus_assigned);
+	}
+
+	bitmap_scnlistprintf(query_res, sizeof(query_res),
+		cpumask_bits(&cpus_assigned), nr_cpumask_bits);
+
+	if (strlen(query_res) > 0) {
+		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
+			printk("IHK-SMP: error: copying CPU string to user-space\n");
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+
 static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
 {
 	char *oldp;
@@ -1638,6 +1671,44 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 	return ret;
 }
 
+/* FIXME: use some max NUMA domain macro */
+unsigned long query_mem_per_numa[1024];
+
+static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int i;
+	struct ihk_os_mem_chunk *os_mem_chunk;
+
+	memset(query_mem_per_numa, 0, sizeof(query_mem_per_numa));
+	memset(query_res, 0, sizeof(query_res));
+
+	/* Collect memory information */
+	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+		if (os_mem_chunk->os != ihk_os) 
+			continue;
+
+		query_mem_per_numa[os_mem_chunk->numa_id] += os_mem_chunk->size;
+	}
+
+	for (i = 0; i < 1024; ++i) {
+		if (!query_mem_per_numa[i]) 
+			continue;
+
+		sprintf(query_res, "%lu@%d", query_mem_per_numa[i], i);
+		break;
+	}
+
+	if (strlen(query_res) > 0) {
+		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
+			printk("IHK-SMP: error: copying mem string to user-space\n");
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+
 
 static struct ihk_os_ops smp_ihk_os_ops = {
 	.load_mem = smp_ihk_os_load_mem,
@@ -1659,8 +1730,10 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.get_cpu_info = smp_ihk_os_get_cpu_info,
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
+	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,
+	.query_mem = smp_ihk_os_query_mem,
 };	
 
 static struct ihk_register_os_data builtin_os_reg_data = {
@@ -2227,7 +2300,6 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int cpu;
 	cpumask_t cpus_reserved;
-	char query_res[1024];
 
 	memset(&cpus_reserved, 0, sizeof(cpus_reserved));
 	memset(query_res, 0, sizeof(query_res));
@@ -2321,16 +2393,27 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
-	char query_res[1024];
+	int i;
 	struct chunk *mem_chunk;
+	struct ihk_os_mem_chunk *os_mem_chunk;
 
+	memset(query_mem_per_numa, 0, sizeof(query_mem_per_numa));
 	memset(query_res, 0, sizeof(query_res));
 
-	/* Parse memory;
-	 * TODO: do for all entries.. */
+	/* Collect memory information */
 	list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
+		query_mem_per_numa[mem_chunk->numa_id] += mem_chunk->size;
+	}
 
-		sprintf(query_res, "%lu@%d", mem_chunk->size, mem_chunk->numa_id);
+	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+		query_mem_per_numa[os_mem_chunk->numa_id] += os_mem_chunk->size;
+	}
+
+	for (i = 0; i < 1024; ++i) {
+		if (!query_mem_per_numa[i]) 
+			continue;
+
+		sprintf(query_res, "%lu@%d", query_mem_per_numa[i], i);
 		break;
 	}
 
