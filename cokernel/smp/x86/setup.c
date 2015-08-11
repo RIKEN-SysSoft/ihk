@@ -77,6 +77,8 @@ static void build_ihk_cpu_info(void)
 	ihk_cpu_info->ncpus = n;
 }
 
+extern char *strstr(const char *haystack, const char *needle);
+
 void arch_init(void)
 {
 	/* Ack boot (trampoline code shall be free'd) */
