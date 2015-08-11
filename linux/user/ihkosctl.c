@@ -54,7 +54,7 @@ static int usage(char **arg)
 	fprintf(stderr, "    kargs (kernel arg)\n");
 	fprintf(stderr, "    kmsg\n");
 	fprintf(stderr, "    clear_kmsg\n");
-	fprintf(stderr, "    intr [intr]\n");
+	fprintf(stderr, "    intr cpu irq_vector\n");
 	fprintf(stderr, "    ioctl (req) (arg)\n");
 
 	return 0;
@@ -304,10 +304,16 @@ static int do_intr(int fd)
 {
 	int r;
 	int v = 0xf1;
+	int c = 0;
 	if (__argc > 3) {
 		v = atoi(__argv[3]);
 	}
-	r = ioctl(fd, IHK_OS_DEBUG_START, v);
+	if (__argc > 4) {
+		c = atoi(__argv[3]);
+		v = atoi(__argv[4]);
+	}
+	dprintf("sending IRQ %d to core %d\n", v, c);
+	r = ioctl(fd, IHK_OS_DEBUG_START, ((c << 8) | v));
 	if (r != 0) {
 		fprintf(stderr, "error: sending IRQ\n");
 	}
