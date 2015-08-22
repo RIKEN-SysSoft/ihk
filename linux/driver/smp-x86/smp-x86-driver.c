@@ -252,6 +252,10 @@ static unsigned int ihk_start_irq = 0;
 module_param(ihk_start_irq, uint, 0644);
 MODULE_PARM_DESC(ihk_start_irq, "IHK IKC IPI to be scanned from this IRQ vector");
 
+static unsigned int ihk_ikc_irq_core = 0;
+module_param(ihk_ikc_irq_core, uint, 0644);
+MODULE_PARM_DESC(ihk_ikc_irq_core, "Target CPU of IHK IKC IRQ");
+
 static unsigned long ihk_trampoline = 0;
 module_param(ihk_trampoline, ulong, 0644);
 MODULE_PARM_DESC(ihk_trampoline, "IHK trampoline page physical address");
@@ -2590,11 +2594,11 @@ retry_trampoline:
 		{
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
-						per_cpu_offset(0)));
+						per_cpu_offset(ihk_ikc_irq_core)));
 #else
 			int *vectors = 
 				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
-				per_cpu_offset(0)));
+				per_cpu_offset(ihk_ikc_irq_core)));
 #endif			
 		
 			if (vectors[vector] == -1) {
@@ -2613,9 +2617,10 @@ retry_trampoline:
 	}
 
 	ihk_smp_irq = vector;
-	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, 0);
-	printk("IHK-SMP: IKC irq vector: %d, CPU APIC id: %d\n", 
-		ihk_smp_irq, ihk_smp_irq_apicid);
+	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, 
+		ihk_ikc_irq_core);
+	printk("IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n", 
+		ihk_smp_irq, ihk_ikc_irq_core, ihk_smp_irq_apicid);
 
 	smp_ihk_init_ident_page_table();
 
@@ -2681,10 +2686,10 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
-				per_cpu_offset(0)));
+				per_cpu_offset(ihk_ikc_irq_core)));
 #else
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
-				per_cpu_offset(0)));
+				per_cpu_offset(ihk_ikc_irq_core)));
 #endif	
 	
 	/* Release IRQ vector */
