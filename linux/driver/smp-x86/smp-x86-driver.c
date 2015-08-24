@@ -327,6 +327,10 @@ struct builtin_boot_param {
 	 * (passed to the manycore) */
 	unsigned long ident_table;
 
+	unsigned long ns_per_tsc;
+	unsigned long boot_sec;
+	unsigned long boot_nsec;
+
 	/** \brief Kernel command-line parameter */
 	char kernel_args[256];
 };
@@ -637,6 +641,84 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 	}
 }
 
+static unsigned long __rdtsc(void)
+{
+	unsigned int high, low;
+	asm volatile("rdtsc" : "=a" (low), "=d" (high));
+	return (unsigned long)high << 32 | low;
+}
+
+
+static unsigned long nanosecs_per_1000tsc(void)
+{
+#define TSC_NANO_LOOP	50000
+	unsigned long cputs1, cputs2;
+	struct timespec ts1, ts2;
+	struct timespec now;
+	unsigned long rdtsc_ts;
+	unsigned long getnstimeofday_ts;
+	unsigned long nanosecs;
+	int i;
+	unsigned long flags;
+	uint64_t op;
+	uint64_t eax, ebx, ecx, edx;
+
+	/* Check if Invariant TSC is supported.
+	 * Processor’s support for invariant TSC is indicated by
+	 * CPUID.80000007H:EDX[8].
+	 * See page 2498 of the Intel64 and IA-32 Architectures Software
+	 * Developer’s Manual - combined */
+
+	op = 0x80000007;
+	asm volatile("cpuid" : "=a"(eax),"=b"(ebx),"=c"(ecx),"=d"(edx) : "a" (op));
+
+	if (!(edx & (1 << 8))) {
+		return 0;
+	}
+
+	printk("IHK-SMP: invariant TSC supported: measuring nanosec/TSC ratio.\n");
+
+	local_irq_save(flags);
+	preempt_disable();
+
+	/* Figure out how long rdtsc takes */
+	cputs1 = __rdtsc();
+	for (i = 0; i < TSC_NANO_LOOP; ++i) {
+		__rdtsc();
+	}
+	cputs2 = __rdtsc();
+	rdtsc_ts = (cputs2 - cputs1) / (TSC_NANO_LOOP + 1);
+
+	/* Figure out how long getnstimeofday takes */
+	cputs1 = __rdtsc();
+	for (i = 0; i < (TSC_NANO_LOOP); ++i) {
+		getnstimeofday(&now);
+	}
+	cputs2 = __rdtsc();
+	getnstimeofday_ts = (cputs2 - cputs1 - rdtsc_ts) / (TSC_NANO_LOOP);
+
+	/* Now figure out how many nanosecs elapses in 1000 TSC */
+	cputs1 = __rdtsc();
+	getnstimeofday(&ts1);
+	for (i = 0; i < (TSC_NANO_LOOP); ++i) {
+		__rdtsc();
+	}
+	getnstimeofday(&ts2);
+
+	/* Between ts2 and ts1 there were (TSC_NANO_LOOP * rdtsc_ts)
+	 * + getnstimeofday_ts TSCs */
+	nanosecs = ((ts2.tv_sec - ts1.tv_sec) * NSEC_PER_SEC)
+		+ ts2.tv_nsec - ts1.tv_nsec;
+
+	printk("IHK-SMP: nanosecs / 1000TSC: %lu\n", nanosecs * 1000 /
+		((TSC_NANO_LOOP * rdtsc_ts) + getnstimeofday_ts));
+
+	local_irq_restore(flags);
+	preempt_enable();
+
+	return nanosecs * 1000 / ((TSC_NANO_LOOP * rdtsc_ts) + getnstimeofday_ts);
+}
+
 /** \brief Boot a kernel. */
 static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
@@ -644,6 +726,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	struct builtin_device_data *dev = os->dev;
 	unsigned long flags;
 	struct ihk_smp_trampoline_header *header;
+	struct timespec now;
 
 	spin_lock_irqsave(&dev->lock, flags);
 #if 0
@@ -682,6 +765,11 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	os->param.ident_table = ident_page_table;
 	strncpy(os->param.kernel_args, os->kernel_args,
 	        sizeof(os->param.kernel_args));
+
+	os->param.ns_per_tsc = nanosecs_per_1000tsc();
+	getnstimeofday(&now);
+	os->param.boot_sec = now.tv_sec;
+	os->param.boot_nsec = now.tv_nsec;
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps.set[0],

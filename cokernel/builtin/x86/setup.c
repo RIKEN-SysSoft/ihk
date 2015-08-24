@@ -42,6 +42,9 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
 
+	/* The first thing we do is to zero the TSC */
+	zero_tsc();
+
 	init_boot_processor_local();
 	main();
 

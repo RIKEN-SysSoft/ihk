@@ -60,6 +60,8 @@ static void build_ihk_cpu_info(void)
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
 	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + SHIMOS_MAX_CORES;
 
+	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
+
 	kprintf("CPU: ");
 	s = kprintf_lock();
 	for (i = 0; i < SHIMOS_MAX_CORES; i++) {
@@ -166,6 +168,18 @@ int ihk_mc_get_vector(enum ihk_mc_gv_type type)
 	default:
 		return -ENOENT;
 	}
+}
+
+/* Returns the number of nanosecs in 1000 TSC */
+unsigned long ihk_mc_get_ns_per_tsc(void)
+{
+	return boot_param->ns_per_tsc;
+}
+
+void ihk_mc_get_boot_time(unsigned long *tv_sec, unsigned long *tv_nsec)
+{
+	*tv_sec = boot_param->boot_sec;
+	*tv_nsec = boot_param->boot_nsec;
 }
 
 char *ihk_mc_get_kernel_args(void)

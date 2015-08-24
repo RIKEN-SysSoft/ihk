@@ -35,6 +35,9 @@ struct shimos_boot_param {
 
 	unsigned long dma_address;
 	unsigned long ident_table;
+	unsigned long ns_per_tsc;
+	unsigned long boot_sec;
+	unsigned long boot_nsec;
 	char kernel_args[256];
 };
 
