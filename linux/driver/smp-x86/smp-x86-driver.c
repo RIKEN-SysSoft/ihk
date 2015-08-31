@@ -45,7 +45,9 @@
 #include <asm/nmi.h>
 #include <asm/tlbflush.h>
 #include <asm/mc146818rtc.h>
+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 #include <asm/smpboot_hooks.h>
+#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #include <asm/trampoline.h>
 #else
@@ -418,6 +420,30 @@ struct ihk_os_mem_chunk {
 
 static struct list_head ihk_mem_free_chunks;
 static struct list_head ihk_mem_used_chunks;
+
+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
+#else
+/* origin: arch/x86/kernel/smpboot.c */
+static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&rtc_lock, flags);
+	CMOS_WRITE(0xa, 0xf);
+	spin_unlock_irqrestore(&rtc_lock, flags);
+	local_flush_tlb();
+	pr_debug("1.\n");
+	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_HIGH)) =
+							start_eip >> 4;
+	pr_debug("2.\n");
+	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_LOW)) =
+							start_eip & 0xf;
+	pr_debug("3.\n");
+}
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,0,9)
+#warning smpboot_setup_warm_reset_vector() supported to compile under 4.0 kernels
+#endif
+#endif
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
@@ -1612,8 +1638,13 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		cpumask_set_cpu(cpu, &cpus_assigned);
 	}
 
+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 	bitmap_scnlistprintf(query_res, sizeof(query_res),
 		cpumask_bits(&cpus_assigned), nr_cpumask_bits);
+#else
+	scnprintf(query_res, sizeof(query_res), "%*pbl", nr_cpumask_bits,
+		cpumask_bits(&cpus_assigned));
+#endif
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
@@ -2404,8 +2435,13 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		cpumask_set_cpu(cpu, &cpus_reserved);
 	}
 
+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 	bitmap_scnlistprintf(query_res, sizeof(query_res),
 		cpumask_bits(&cpus_reserved), nr_cpumask_bits);
+#else
+	scnprintf(query_res, sizeof(query_res), "%*pbl", nr_cpumask_bits,
+		cpumask_bits(&cpus_reserved));
+#endif
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
