@@ -74,6 +74,14 @@
 #define PTL3_SHIFT	30
 #define PTL2_SHIFT	21
 
+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
+#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
+	bitmap_scnlistprintf(buf, buflen, maskp, nmaskbits)
+#else
+#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
+	scnprintf(buf, buflen, "%*pbl", nmaskbits, maskp)
+#endif
+
 
 /*
  * IHK-SMP unexported kernel symbols
@@ -1638,13 +1646,8 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		cpumask_set_cpu(cpu, &cpus_assigned);
 	}
 
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-	bitmap_scnlistprintf(query_res, sizeof(query_res),
+	BITMAP_SCNLISTPRINTF(query_res, sizeof(query_res),
 		cpumask_bits(&cpus_assigned), nr_cpumask_bits);
-#else
-	scnprintf(query_res, sizeof(query_res), "%*pbl", nr_cpumask_bits,
-		cpumask_bits(&cpus_assigned));
-#endif
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
@@ -2435,13 +2438,8 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		cpumask_set_cpu(cpu, &cpus_reserved);
 	}
 
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-	bitmap_scnlistprintf(query_res, sizeof(query_res),
+	BITMAP_SCNLISTPRINTF(query_res, sizeof(query_res),
 		cpumask_bits(&cpus_reserved), nr_cpumask_bits);
-#else
-	scnprintf(query_res, sizeof(query_res), "%*pbl", nr_cpumask_bits,
-		cpumask_bits(&cpus_reserved));
-#endif
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
