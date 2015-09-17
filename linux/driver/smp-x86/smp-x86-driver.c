@@ -2651,7 +2651,24 @@ retry_trampoline:
 			printk("IRQ vector %d: used\n", vector);
 			continue;
 		}
+
+		{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
+						per_cpu_offset(ihk_ikc_irq_core)));
+#else
+			int *vectors = 
+				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
+				per_cpu_offset(ihk_ikc_irq_core)));
+#endif			
 		
+			if (vectors[vector] != -1) {
+				printk("IRQ vector %d: used %d\n", vector, vectors[vector]);
+				continue;
+			}
+			
+		}
+
 #ifdef CONFIG_SPARSE_IRQ
 		/* If no descriptor, create one */
 		desc = _irq_to_desc(vector);
