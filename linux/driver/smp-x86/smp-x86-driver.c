@@ -1399,6 +1399,7 @@ static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
                                       int cpu, int v)
 {
 	struct builtin_os_data *os = priv;
+	unsigned long flags;
 
 	/* better calcuation or make map */
 	if (cpu < 0 || cpu >= os->cpu_info.n_cpus) {
@@ -1407,8 +1408,10 @@ static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	//printk("smp_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
 	//shimos_issue_ipi(os->cpu_info.hw_ids[cpu], v);
 	
+	local_irq_save(flags);
 	__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
 			APIC_DEST_PHYSICAL);
+	local_irq_restore(flags);
 
 	return -EINVAL;
 }
