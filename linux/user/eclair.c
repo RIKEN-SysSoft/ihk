@@ -171,7 +171,7 @@ enum {
 	/* process */
 	CTX_OFFSET,
 	SCHED_LIST_OFFSET,
-	FTN_OFFSET,
+	PROC_OFFSET,
 
 	/* fork_tree_node */
 	STATUS_OFFSET,
@@ -206,7 +206,7 @@ static int setup_constants(void) {
 		printf("CPU_STATUS_OFFSET: %ld\n", K(CPU_STATUS_OFFSET));
 		printf("CTX_OFFSET: %ld\n", K(CTX_OFFSET));
 		printf("SCHED_LIST_OFFSET: %ld\n", K(SCHED_LIST_OFFSET));
-		printf("FTN_OFFSET: %ld\n", K(FTN_OFFSET));
+		printf("PROC_OFFSET: %ld\n", K(PROC_OFFSET));
 		printf("STATUS_OFFSET: %ld\n", K(STATUS_OFFSET));
 		printf("PID_OFFSET: %ld\n", K(PID_OFFSET));
 		printf("TID_OFFSET: %ld\n", K(TID_OFFSET));
@@ -272,8 +272,8 @@ static int setup_threads(void) {
 		}
 
 		while (entry != head) {
+			uintptr_t thread;
 			uintptr_t proc;
-			uintptr_t ftn;
 			int pid;
 			int tid;
 			struct thread_info *ti;
@@ -285,27 +285,27 @@ static int setup_threads(void) {
 				return 1;
 			}
 
-			proc = entry - K(SCHED_LIST_OFFSET);
+			thread = entry - K(SCHED_LIST_OFFSET);
 
-			error = read_64(proc+K(FTN_OFFSET), &ftn);
+			error = read_64(thread+K(PROC_OFFSET), &proc);
 			if (error) {
-				perror("ftn");
+				perror("proc");
 				return 1;
 			}
 
-			error = read_32(ftn+K(STATUS_OFFSET), &status);
+			error = read_32(thread+K(STATUS_OFFSET), &status);
 			if (error) {
 				perror("status");
 				return 1;
 			}
 
-			error = read_32(ftn+K(PID_OFFSET), &pid);
+			error = read_32(proc+K(PID_OFFSET), &pid);
 			if (error) {
 				perror("pid");
 				return 1;
 			}
 
-			error = read_32(ftn+K(TID_OFFSET), &tid);
+			error = read_32(thread+K(TID_OFFSET), &tid);
 			if (error) {
 				perror("tid");
 				return 1;
@@ -315,9 +315,9 @@ static int setup_threads(void) {
 			ti->status = status;
 			ti->pid = pid;
 			ti->tid = tid;
-			ti->cpu = (proc == current)? cpu: -1;
+			ti->cpu = (thread == current)? cpu: -1;
 			ti->lcpu = cpu;
-			ti->process = proc;
+			ti->process = thread;
 			ti->clv = v;
 			ti->x86_clv = locals + locals_span*cpu;
 
