@@ -1375,6 +1375,43 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	return 0;
 }
 
+static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
+{
+	struct builtin_os_data *os = priv;
+
+	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
+			args->cmd, args->start, args->size, args->buf);
+
+	if (args->cmd == DUMP_NMI) {
+		int i;
+
+		for (i = 0; i < os->cpu_info.n_cpus; ++i) {
+			__default_send_IPI_dest_field(
+					os->cpu_info.hw_ids[i],
+					NMI_VECTOR, APIC_DEST_PHYSICAL);
+		}
+		return 0;
+	}
+
+	if (args->cmd == DUMP_QUERY) {
+		args->start = os->mem_start;
+		args->size = os->mem_end - os->mem_start;
+		return 0;
+	}
+
+	if (args->cmd == DUMP_READ) {
+		void *va;
+
+		va = phys_to_virt(args->start);
+		if (copy_to_user(args->buf, va, args->size)) {
+			return -EFAULT;
+		}
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
 static int smp_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
                                       enum ihk_os_status status, 
                                       int sleepable, int timeout)
@@ -1848,6 +1885,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.query_status = smp_ihk_os_query_status,
 	.wait_for_status = smp_ihk_os_wait_for_status,
 	.set_kargs = smp_ihk_os_set_kargs,
+	.dump = smp_ihk_os_dump,
 	.issue_interrupt = smp_ihk_os_issue_interrupt,
 	.map_memory = smp_ihk_os_map_memory,
 	.unmap_memory = smp_ihk_os_unmap_memory,
