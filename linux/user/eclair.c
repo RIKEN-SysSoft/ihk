@@ -754,7 +754,7 @@ static void command(char *cmd, char *res) {
 static void options(int argc, char *argv[]) {
 	memset(&opt, 0, sizeof(opt));
 	opt.kernel_path = "./kernel.img";
-	opt.dump_path = "./a.dump";
+	opt.dump_path = "./mcdump";
 
 	for (;;) {
 		int c;
@@ -826,7 +826,8 @@ static int start_gdb(void) {
 		char buf[32];
 
 		sprintf(buf, "target remote :%d", ntohs(sin.sin_port));
-		execlp("gdb", "eclair", "-q", "-ex", buf, opt.kernel_path, NULL);
+		execlp("gdb", "eclair", "-q", "-ex", "set prompt (eclair) ",
+				"-ex", buf, opt.kernel_path, NULL);
 		perror("execlp");
 		return 3;
 	}
@@ -852,6 +853,11 @@ static int start_gdb(void) {
 	return 0;
 } /* start_gdb() */
 
+static void print_usage(void) {
+	fprintf(stderr, "usage: eclair [-ch] [-d <mcdump>] [-k <kernel.img>]\n");
+	return;
+} /* print_usage() */
+
 int main(int argc, char *argv[]) {
 	int c;
 	int error;
@@ -864,22 +870,24 @@ int main(int argc, char *argv[]) {
 	char *lbp;
 	char *p;
 
-	printf("eclair 0.20150313\n");
+	printf("eclair 0.20151110\n");
 	options(argc, argv);
 	if (opt.help) {
-		fprintf(stderr, "usage: eclair [-ch]\n");
+		print_usage();
 		return 2;
 	}
 
 	error = setup_symbols(opt.kernel_path);
 	if (error) {
 		perror("setup_symbols");
+		print_usage();
 		return 1;
 	}
 
 	error = setup_dump(opt.dump_path);
 	if (error) {
 		perror("setup_dump");
+		print_usage();
 		return 1;
 	}
 
