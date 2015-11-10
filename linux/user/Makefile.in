@@ -6,7 +6,7 @@ MANDIR=@MANDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
 TARGET=ihkconfig ihkosctl memdump pagetable maccess memdump-mic
-@uncomment_if_ENABLE_MEMDUMP@TARGET+=ihkosdump eclair
+@uncomment_if_ENABLE_MEMDUMP@TARGET+=eclair
 
 .PHONY: all clean install
 
