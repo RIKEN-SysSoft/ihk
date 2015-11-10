@@ -1,11 +1,12 @@
 CC=@CC@
 IHKBASE ?= @abs_srcdir@/../..
-CFLAGS=-Wall -O -I$(IHKBASE)/linux/include/
+CFLAGS=-Wall -O -I$(IHKBASE)/linux/include/ -I.
 SBINDIR=@SBINDIR@
 MANDIR=@MANDIR@
 VPATH=@abs_srcdir@
+LIBS=@LIBS@
 TARGET=ihkconfig ihkosctl memdump pagetable maccess memdump-mic
-#TARGET+=ihkosdump eclair
+@uncomment_if_ENABLE_MEMDUMP@TARGET+=ihkosdump eclair
 
 .PHONY: all clean install
 
@@ -14,11 +15,8 @@ all: $(TARGET)
 clean:
 	$(RM) $(TARGET) *.o
 
-ihkosdump: ihkosdump.c
-	${CC} ${CFLAGS} -o $@ $< -lbfd
-
-eclair: eclair.c
-	${CC} ${CFLAGS} -o $@ $< -lbfd
+%: %.c
+	${CC} ${CFLAGS} -o $@ $< ${LIBS}
 
 install:
 	mkdir -p -m 755 $(SBINDIR)

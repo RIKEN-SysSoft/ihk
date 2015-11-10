@@ -28,6 +28,12 @@ AC_ARG_WITH([target],
     [--with-target={attached-mic | builtin-mic | builtin-x86 | smp-x86}],[target, default is attached-mic]),
   [WITH_TARGET=$withval],[WITH_TARGET=yes])
 
+AC_ARG_ENABLE([memdump],
+	AS_HELP_STRING([--enable-memdump],
+		[enable dumping memory and analyzing a dump]),
+	[ENABLE_MEMDUMP=$enableval],
+	[ENABLE_MEMDUMP=default])
+
 case "X$WITH_KERNELSRC" in
     Xyes | Xno | X)
 	WITH_KERNELSRC="/lib/modules/`uname -r`/build"
@@ -54,9 +60,26 @@ fi
 test "x$prefix" = xNONE && prefix="$ac_default_prefix"
 
 case $WITH_TARGET in
-    attached-mic)
+    attached-mic | builtin-x86 | smp-x86)
 	ARCH=`uname -m`
 	AC_PROG_CC
+	XCC=$CC
+	;;
+    builtin-mic)
+	ARCH=k1om
+	AC_CHECK_PROG(XCC,
+		[x86_64-$ARCH-linux-gcc],
+		[x86_64-$ARCH-linux-gcc],
+		[no])
+	CC=$XCC
+	;;
+    *)
+	AC_MSG_ERROR([target $WITH_TARGET is unknwon])
+	;;
+esac
+
+case $WITH_TARGET in
+    attached-mic)
 	if test "X$BINDIR" = X; then
 		BINDIR="$prefix/bin"
 	fi
@@ -71,12 +94,6 @@ case $WITH_TARGET in
 	fi
 	;;
     builtin-mic)
-	ARCH=k1om
-	AC_CHECK_PROG(XCC,
-		[x86_64-$ARCH-linux-gcc],
-		[x86_64-$ARCH-linux-gcc],
-		[no])
-	CC=$XCC
 	if test "X$BINDIR" = X; then
 		BINDIR="$prefix/attached/bin"
 	fi
@@ -91,9 +108,6 @@ case $WITH_TARGET in
 	fi
 	;;
     builtin-x86)
-	ARCH=`uname -m`
-	AC_PROG_CC
-	XCC=$CC
 	if test "X$BINDIR" = X; then
 		BINDIR="$prefix/bin"
 	fi
@@ -108,9 +122,6 @@ case $WITH_TARGET in
 	fi
 	;;
     smp-x86)
-	ARCH=`uname -m`
-	AC_PROG_CC
-	XCC=$CC
 	if test "X$BINDIR" = X; then
 		BINDIR="$prefix/bin"
 	fi
@@ -127,6 +138,21 @@ case $WITH_TARGET in
     *)
 	AC_MSG_ERROR([target $WITH_TARGET is unknwon])
 	;;
+esac
+
+case $ENABLE_MEMDUMP in
+	yes|no|auto)
+		;;
+	default)
+		if test "x$WITH_TARGET" = "xsmp-x86" ; then
+			ENABLE_MEMDUMP=auto
+		else
+			ENABLE_MEMDUMP=no
+		fi
+		;;
+	*)
+		AC_MSG_ERROR([unknown memdump argument: $ENABLE_MEMDUMP])
+		;;
 esac
 
 KDIR="$WITH_KERNELSRC"
@@ -192,6 +218,26 @@ if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([_cpu_up])
 fi
 
+if test "x$ENABLE_MEMDUMP" != "xno" ; then
+	enableval=yes
+	AC_CHECK_LIB([bfd],[bfd_init],[],[enableval=no])
+	AC_CHECK_HEADER([bfd.h],[],[enableval=no])
+
+	if test "x$ENABLE_MEMDUMP" = "xyes" -a "x$enableval" = "xno" ; then
+		AC_MSG_ERROR([memdump feature needs bfd.h and libbfd a.k.a binutils-devel])
+	fi
+	ENABLE_MEMDUMP=$enableval
+fi
+
+if test "x$ENABLE_MEMDUMP" = "xyes" ; then
+	AC_MSG_NOTICE([memdump feature is enabled])
+	AC_DEFINE([ENABLE_MEMDUMP],[1],[whether memdump feature is enabled])
+	uncomment_if_ENABLE_MEMDUMP=''
+else
+	AC_MSG_NOTICE([memdump feature is disabled])
+	uncomment_if_ENABLE_MEMDUMP='#'
+fi
+
 AC_SUBST(CC)
 AC_SUBST(XCC)
 AC_SUBST(ARCH)
@@ -208,8 +254,9 @@ AC_SUBST(DCFA_VERSION)
 AC_SUBST(IHK_RELEASE_DATE)
 AC_SUBST(MCKERNEL_RELEASE_DATE)
 AC_SUBST(DCFA_RESEASE_DATE)
+AC_SUBST(uncomment_if_ENABLE_MEMDUMP)
 
-AC_CONFIG_HEADERS([linux/driver/smp-x86/config.h])
+AC_CONFIG_HEADERS([linux/driver/smp-x86/config.h linux/user/config.h])
 AC_CONFIG_FILES([
 	Makefile
 	linux/core/Makefile
