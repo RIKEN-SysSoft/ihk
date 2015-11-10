@@ -19,12 +19,12 @@ DCFA_RELEASE_DATE=DCFA_RELEASE_DATE_m4
 AC_PREFIX_DEFAULT([/opt/ppos])
 
 AC_ARG_WITH([kernelsrc],
-  AC_HELP_STRING(
+  AS_HELP_STRING(
     [--with-kernelsrc=path],[Path to 'kernel src', default is /lib/modules/uname_r/build]),
   [WITH_KERNELSRC=$withval],[WITH_KERNELSRC=yes])
 
 AC_ARG_WITH([target],
-  AC_HELP_STRING(
+  AS_HELP_STRING(
     [--with-target={attached-mic | builtin-mic | builtin-x86 | smp-x86}],[target, default is attached-mic]),
   [WITH_TARGET=$withval],[WITH_TARGET=yes])
 
