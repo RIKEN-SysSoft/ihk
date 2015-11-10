@@ -209,7 +209,7 @@ AC_SUBST(IHK_RELEASE_DATE)
 AC_SUBST(MCKERNEL_RELEASE_DATE)
 AC_SUBST(DCFA_RESEASE_DATE)
 
-AM_CONFIG_HEADER(linux/driver/smp-x86/config.h)
+AC_CONFIG_HEADERS([linux/driver/smp-x86/config.h])
 AC_CONFIG_FILES([
 	Makefile
 	linux/core/Makefile
