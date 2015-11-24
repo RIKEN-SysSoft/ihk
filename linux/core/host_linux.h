@@ -104,6 +104,9 @@ struct ihk_host_linux_os_data {
 
 	/** \brief user data */
 	void *usrdata;
+
+	/** \brief linux struct device for /dev/mcos* */
+	struct device *lindev;
 };
 
 /** \brief Structure that manages a kernel instance fd in Linux */

@@ -890,8 +890,9 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 		return -ENOMEM;
 	}
 
-	if (IS_ERR(device_create(mcos_class, NULL, os->dev_num, NULL,
-	                         OS_DEV_NAME "%d", minor))) {
+	os->lindev = device_create(mcos_class, NULL, os->dev_num, NULL,
+			OS_DEV_NAME "%d", minor);
+	if (IS_ERR(os->lindev)) {
 		/* XXX: call destroy */
 		printk("ihk: device_create failed.\n");
 		os_data[minor] = NULL;
@@ -1660,6 +1661,13 @@ int ihk_dma_request(ihk_dma_channel_t ihk_ch, struct ihk_dma_request *req)
 	}
 }
 
+struct device *ihk_os_get_linux_device(ihk_os_t ihk_os)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+
+	return os->lindev;
+} /* ihk_os_get_linux_device() */
+
 EXPORT_SYMBOL(ihk_register_device);
 EXPORT_SYMBOL(ihk_unregister_device);
 EXPORT_SYMBOL(ihk_device_create_os);
@@ -1689,3 +1697,4 @@ EXPORT_SYMBOL(ihk_device_get_dma_channel);
 EXPORT_SYMBOL(ihk_device_get_dma_info);
 EXPORT_SYMBOL(ihk_dma_request);
 EXPORT_SYMBOL(ihk_os_register_release_handler);
+EXPORT_SYMBOL(ihk_os_get_linux_device);

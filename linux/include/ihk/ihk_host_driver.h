@@ -785,4 +785,7 @@ int ihk_dma_request(ihk_dma_channel_t ihk_ch, struct ihk_dma_request *req);
 void  ihk_os_register_release_handler(struct file *,void (*)(ihk_os_t, void *),
                                       void *);
 
+/** \brief get a linux device for the specified mcos */
+struct device *ihk_os_get_linux_device(ihk_os_t os);
+
 #endif
