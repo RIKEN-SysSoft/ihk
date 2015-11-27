@@ -1507,7 +1507,11 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	cpulist_parse((char *)arg, &cpus_to_assign);
 
 	/* Check if cores to be assigned are available */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	for_each_cpu(cpu, &cpus_to_assign) {
+#else
 	for_each_cpu_mask(cpu, cpus_to_assign) {
+#endif
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
 			printk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
 			ret = -EINVAL;
@@ -1516,7 +1520,11 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 
 	/* Do the assignment */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	for_each_cpu(cpu, &cpus_to_assign) {
+#else
 	for_each_cpu_mask(cpu, cpus_to_assign) {
+#endif
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
 			printk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
 			ret = -EINVAL;
@@ -1560,7 +1568,11 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	cpulist_parse((char *)arg, &cpus_to_release);
 
 	/* Check if cores to be released are assigned to this OS */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	for_each_cpu(cpu, &cpus_to_release) {
+#else
 	for_each_cpu_mask(cpu, cpus_to_release) {
+#endif
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
 			ihk_smp_cpus[cpu].os != ihk_os) {
 			printk("IHK-SMP: error: CPU core %d is not assigned to %p\n", 
@@ -1571,7 +1583,11 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 
 	/* Do the release */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	for_each_cpu(cpu, &cpus_to_release) {
+#else
 	for_each_cpu_mask(cpu, cpus_to_release) {
+#endif
 
 		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
 		CORE_CLR(ihk_smp_cpus[cpu].apic_id, os->coremaps);
@@ -2196,8 +2212,11 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	cpulist_parse((char *)arg, &cpus_to_offline);
 
 	/* Collect cores to be offlined */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	for_each_cpu(cpu, &cpus_to_offline) {
+#else
 	for_each_cpu_mask(cpu, cpus_to_offline) {
-
+#endif
 		if (cpu > IHK_SMP_MAXCPUS) {
 			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
 			ret = -EINVAL;
@@ -2318,8 +2337,11 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	cpulist_parse((char *)arg, &cpus_to_online);
 
 	/* Collect cores to be onlined */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	for_each_cpu(cpu, &cpus_to_online) {
+#else
 	for_each_cpu_mask(cpu, cpus_to_online) {
-
+#endif
 		if (cpu > IHK_SMP_MAXCPUS) {
 			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
 			ret = -EINVAL;
@@ -2518,7 +2540,11 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+	int vector = ISA_IRQ_VECTOR(15) + 2;
+#else
 	int vector = IRQ15_VECTOR + 2;
+#endif
 
 	INIT_LIST_HEAD(&ihk_mem_free_chunks);
 	INIT_LIST_HEAD(&ihk_mem_used_chunks);
@@ -2604,8 +2630,13 @@ retry_trampoline:
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
 	/* Find a suitable IRQ vector */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+	for (vector = ihk_start_irq ? ihk_start_irq : (ISA_IRQ_VECTOR(14) + 2); 
+			vector < 256; vector += 1) {
+#else
 	for (vector = ihk_start_irq ? ihk_start_irq : (IRQ14_VECTOR + 2); 
 			vector < 256; vector += 1) {
+#endif	
 		struct irq_desc *desc;
 
 		if (test_bit(vector, used_vectors)) {
@@ -2675,6 +2706,9 @@ retry_trampoline:
 		desc->handle_irq = ihk_smp_irq_flow_handler;
 #endif // CONFIG_SPARSE_IRQ
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0))
+#define IRQF_DISABLED 0x0
+#endif
 		if (request_irq(vector, 
 					smp_ihk_interrupt, IRQF_DISABLED, "IHK-SMP", NULL) != 0) { 
 			printk("IRQ vector %d: request_irq failed\n", vector);
