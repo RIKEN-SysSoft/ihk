@@ -123,11 +123,13 @@ int (*_lapic_get_maxlvt)(void) =
 #endif
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 #ifdef IHK_KSYM_init_deasserted
 #if IHK_KSYM_init_deasserted
 atomic_t *_init_deasserted = 
 	(atomic_t *)
 	IHK_KSYM_init_deasserted;
+#endif
 #endif
 #endif
 
@@ -448,8 +450,8 @@ static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 							start_eip & 0xf;
 	pr_debug("3.\n");
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,0,9)
-#warning smpboot_setup_warm_reset_vector() supported to compile under 4.0 kernels
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
+#warning smpboot_setup_warm_reset_vector() has been only tested up to 4.3.0 kernels
 #endif
 #endif
 
@@ -583,7 +585,9 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 	local_irq_restore(flags);
 
 	mb();
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 	atomic_set(_init_deasserted, 1);
+#endif
 
 	/*
 	 * Should we send STARTUP IPIs ?
@@ -2014,9 +2018,18 @@ static irqreturn_t smp_ihk_interrupt(int irq, void *dev_id)
 }
 
 #ifdef CONFIG_SPARSE_IRQ
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+void (*orig_irq_flow_handler)(struct irq_desc *desc) = NULL;
+void ihk_smp_irq_flow_handler(struct irq_desc *desc)
+#else
 void (*orig_irq_flow_handler)(unsigned int irq, struct irq_desc *desc) = NULL;
 void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0) */
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	unsigned int irq = desc->irq_data.irq;
+#endif
+
 	if (!desc->action || !desc->action->handler) {
 		printk("IHK-SMP: no handler for IRQ %d??\n", irq);
 		return;
@@ -2645,20 +2658,30 @@ retry_trampoline:
 		}
 
 		{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+			/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
+			struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+						per_cpu_offset(ihk_ikc_irq_core)));
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
 						per_cpu_offset(ihk_ikc_irq_core)));
 #else
 			int *vectors = 
 				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
 				per_cpu_offset(ihk_ikc_irq_core)));
-#endif			
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
 		
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+			if (vectors[vector] != VECTOR_UNUSED) {
+				printk("IRQ vector %d \n", vector);
+				continue;
+			}
+#else
 			if (vectors[vector] != -1) {
 				printk("IRQ vector %d: used %d\n", vector, vectors[vector]);
 				continue;
 			}
-			
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
 		}
 
 #ifdef CONFIG_SPARSE_IRQ
@@ -2728,20 +2751,30 @@ retry_trampoline:
 	
 		/* Pretend a real external interrupt */
 		{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+			/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
+			struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+						per_cpu_offset(ihk_ikc_irq_core)));
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
 						per_cpu_offset(ihk_ikc_irq_core)));
 #else
 			int *vectors = 
 				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
 				per_cpu_offset(ihk_ikc_irq_core)));
-#endif			
+#endif
 		
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+			if (vectors[vector] == VECTOR_UNUSED) {
+				printk("fixed vector_irq for %d\n", vector);
+				vectors[vector] = desc;
+			}
+#else
 			if (vectors[vector] == -1) {
 				printk("fixed vector_irq for %d\n", vector);
 				vectors[vector] = vector;
 			}
-			
+#endif
 		}
 		
 		break;
@@ -2820,7 +2853,11 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	struct irq_desc *desc;
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
+	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+				per_cpu_offset(ihk_ikc_irq_core)));
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
 				per_cpu_offset(ihk_ikc_irq_core)));
 #else
@@ -2829,7 +2866,11 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 #endif	
 	
 	/* Release IRQ vector */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	vectors[ihk_smp_irq] = VECTOR_UNUSED;
+#else
 	vectors[ihk_smp_irq] = -1;
+#endif
 
 #ifdef CONFIG_SPARSE_IRQ
 	desc = _irq_to_desc(ihk_smp_irq);
