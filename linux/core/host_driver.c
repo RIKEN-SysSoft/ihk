@@ -1425,6 +1425,7 @@ int ihk_unregister_device(ihk_device_t ihkdev)
 	printk("IHK: Device %s unregistered.\n", data->name);
 	dev_data[data->minor] = NULL;
 
+	kfree(data->name);
 	kfree(data);
 
 	return 0;
