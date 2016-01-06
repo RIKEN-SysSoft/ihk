@@ -40,6 +40,7 @@
 #include <ikc/msg.h>
 //#include <linux/shimos.h>
 //#include "builtin_dma.h"
+#include <asm/apic.h>
 #include <asm/ipi.h>
 #include <asm/uv/uv.h>
 #include <asm/nmi.h>
@@ -677,6 +678,15 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 	else {
 		return smp_wakeup_secondary_cpu_via_init(apicid, start_eip);
 	}
+}
+
+unsigned long x2apic_is_enabled(void)
+{
+	unsigned long msr;
+
+	rdmsrl(MSR_IA32_APICBASE, msr);
+
+	return msr & (1 << 10); /* x2APIC enabled? */
 }
 
 /** \brief Boot a kernel. */
@@ -1372,8 +1382,13 @@ static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	//shimos_issue_ipi(os->cpu_info.hw_ids[cpu], v);
 	
 	local_irq_save(flags);
-	__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
+	if (x2apic_is_enabled()) {
+		native_x2apic_icr_write(v, os->cpu_info.hw_ids[cpu]);
+	}
+	else{
+		__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
 			APIC_DEST_PHYSICAL);
+	}
 	local_irq_restore(flags);
 
 	return -EINVAL;

@@ -142,7 +142,7 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 	/* No hole */
 }
 
-extern void x86_issue_ipi(int, int);
+extern void (*x86_issue_ipi)(int, int);
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
 	x86_issue_ipi(cpu, 0xee);
