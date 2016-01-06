@@ -501,6 +501,7 @@ static int __ihk_os_set_kargs(struct ihk_host_linux_os_data *data,
                               char __user *buf)
 {
 	char *kbuf;
+	int error;
 
 	kbuf = kmalloc(1024, GFP_KERNEL);
 	if (!kbuf) {
@@ -512,11 +513,13 @@ static int __ihk_os_set_kargs(struct ihk_host_linux_os_data *data,
 	}
 	kbuf[1023] = 0;
 	
+	error = -EINVAL;
 	if (data->ops->set_kargs) {
-		return data->ops->set_kargs(data, data->priv, kbuf);
-	} else {
-		return -EINVAL;
+		error = data->ops->set_kargs(data, data->priv, kbuf);
 	}
+
+	kfree(kbuf);
+	return error;
 }
 
 /** \brief Clear the kernel message buffer. */
