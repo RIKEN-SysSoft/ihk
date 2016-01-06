@@ -1963,7 +1963,7 @@ static long smp_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
 static void smp_ihk_init_ident_page_table(void)
 {
 	int ident_npages = 0;
-	int i, j, k, ident_npages_order;
+	int i, j, k;
 	unsigned long maxmem = 0, *p, physaddr;
 	struct page *ident_pages;
 
