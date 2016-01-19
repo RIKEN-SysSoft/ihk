@@ -746,6 +746,13 @@ void ihk_host_os_set_usrdata(ihk_os_t os, void *data);
 void *ihk_host_os_get_usrdata(ihk_os_t);
 
 /**
+ * \brief Get index OS instance.
+ *
+ * \param os     OS instance
+ */
+int ihk_host_os_get_index(ihk_os_t);
+
+/**
  * \brief Descriptor of the handler for a ioctl request to the OS device file.
  */
 struct ihk_os_user_call_handler {

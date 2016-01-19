@@ -1621,6 +1621,25 @@ void *ihk_host_os_get_usrdata(ihk_os_t ihk_os)
 	return os -> usrdata;
 }
 
+int ihk_host_os_get_index(ihk_os_t ihk_os)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	int i;
+	unsigned long flags;
+
+	spin_lock_irqsave(&os_data_lock, flags);
+
+	for (i = 0; i < OS_MAX_MINOR; ++i) {
+		if (os_data[i] == os) {
+			spin_unlock_irqrestore(&os_data_lock, flags);
+			return i;
+		}
+	}
+
+	spin_unlock_irqrestore(&os_data_lock, flags);
+	return -1;
+}
+
 int ihk_os_register_user_call_handlers(ihk_os_t ihk_os,
                                        struct ihk_os_user_call *clist)
 {
@@ -1687,6 +1706,7 @@ EXPORT_SYMBOL(ihk_host_find_dev);
 EXPORT_SYMBOL(ihk_host_find_os);
 EXPORT_SYMBOL(ihk_host_os_set_usrdata);
 EXPORT_SYMBOL(ihk_host_os_get_usrdata);
+EXPORT_SYMBOL(ihk_host_os_get_index);
 EXPORT_SYMBOL(ihk_os_to_dev);
 EXPORT_SYMBOL(ihk_device_map_virtual);
 EXPORT_SYMBOL(ihk_device_unmap_virtual);
