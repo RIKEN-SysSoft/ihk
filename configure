@@ -690,6 +690,7 @@ enable_option_checking
 with_kernelsrc
 with_target
 enable_memdump
+with_system_map
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1318,6 +1319,8 @@ Optional Packages:
                           /lib/modules/uname_r/build
   --with-target={attached-mic | builtin-mic | builtin-x86 | smp-x86}
                           target, default is attached-mic
+  --with-system_map=path  Path to 'System.map file', default is
+                          /boot/System.map-uname_r
 
 Some influential environment variables:
   CC          C compiler command
@@ -2074,6 +2077,15 @@ if test "${enable_memdump+set}" = set; then :
   enableval=$enable_memdump; ENABLE_MEMDUMP=$enableval
 else
   ENABLE_MEMDUMP=default
+fi
+
+
+
+# Check whether --with-system_map was given.
+if test "${with_system_map+set}" = set; then :
+  withval=$with_system_map; WITH_SYSTEM_MAP=$withval
+else
+  WITH_SYSTEM_MAP=yes
 fi
 
 
@@ -3024,9 +3036,20 @@ KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
 
 IHK_LINUX_SYMTAB=""
+case "X$WITH_SYSTEM_MAP" in
+    Xyes | Xno | X)
+	IHK_LINUX_SYMTAB=""
+	;;
+    *)
+	IHK_LINUX_SYMTAB="$WITH_SYSTEM_MAP"
+	;;
+esac
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for System.map" >&5
 $as_echo_n "checking for System.map... " >&6; }
-if test -f "/boot/System.map-`uname -r`"; then
+if test -f "$IHK_LINUX_SYMTAB"; then
+	IHK_LINUX_SYMTAB="$IHK_LINUX_SYMTAB"
+elif test -f "/boot/System.map-`uname -r`"; then
 	IHK_LINUX_SYMTAB="/boot/System.map-`uname -r`"
 elif test -f "$KDIR/System.map"; then
 	IHK_LINUX_SYMTAB="$KDIR/System.map"
@@ -3034,6 +3057,10 @@ fi
 
 if test "$IHK_LINUX_SYMTAB" == ""; then
 	as_fn_error $? "could not find" "$LINENO" 5
+fi
+
+if test -z "`eval cat $IHK_LINUX_SYMTAB`"; then
+	as_fn_error $? "could not read System.map file, no read permission?" "$LINENO" 5
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $IHK_LINUX_SYMTAB" >&5
 $as_echo "$IHK_LINUX_SYMTAB" >&6; }
@@ -3050,6 +3077,31 @@ IHK_LINUX_SYMTAB_CMD="cat $IHK_LINUX_SYMTAB"
 
 
 if test "$TARGET" = "smp-x86"; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol x86_trampoline_base" >&5
+$as_echo_n "checking System.map for symbol x86_trampoline_base... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " x86_trampoline_base\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_x86_trampoline_base\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_x86_trampoline_base $ihk_addr
+_ACEOF
+
+  fi
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol real_mode_header" >&5
 $as_echo_n "checking System.map for symbol real_mode_header... " >&6; }
@@ -3396,6 +3448,31 @@ $as_echo "$ihk_result" >&6; }
 
 cat >>confdefs.h <<_ACEOF
 #define IHK_KSYM_cpu_hotplug_driver_unlock $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol cpu_up" >&5
+$as_echo_n "checking System.map for symbol cpu_up... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " cpu_up\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_cpu_up\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_cpu_up $ihk_addr
 _ACEOF
 
   fi

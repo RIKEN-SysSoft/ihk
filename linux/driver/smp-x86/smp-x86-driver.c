@@ -49,11 +49,15 @@
 #if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 #include <asm/smpboot_hooks.h>
 #endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
 #include <asm/trampoline.h>
-#else
+#elif (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
+#include <asm/trampoline.h>
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 #include <asm/realmode.h>
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0) */
+#endif
+
 #include "bootparam.h"
 
 #define BUILTIN_OS_STATUS_INITIAL  0
@@ -88,8 +92,19 @@
  * IHK-SMP unexported kernel symbols
  */
 
+/* x86_trampoline_base has been introduced in 2.6.38 */
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
+#ifdef IHK_KSYM_x86_trampoline_base
+#if IHK_KSYM_x86_trampoline_base
+unsigned char *x86_trampoline_base = 
+	(void *)
+	IHK_KSYM_x86_trampoline_base;
+#endif
+#endif
+#endif
+
 /* real_mode_header has been introduced in 3.10 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 #ifdef IHK_KSYM_real_mode_header
 #if IHK_KSYM_real_mode_header
 struct real_mode_header *real_mode_header = 
@@ -211,7 +226,16 @@ int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) =
 #else // exported
 int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) = _cpu_up;
 #endif
+#elif defined IHK_KSYM_cpu_up
+#if IHK_KSYM_cpu_up
+typedef int (*int_star_fn_uint_t)(unsigned int);
+int (*ihk_cpu_up)(unsigned int cpu) =
+	(int_star_fn_uint_t)
+	IHK_KSYM_cpu_up;
+#else // exported
+int (*ihk_cpu_up)(unsigned int cpu) = cpu_up;
 #endif
+#endif /* _cpu_up */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #ifdef IHK_KSYM_cpu_hotplug_driver_lock 
@@ -2345,7 +2369,11 @@ static int smp_ihk_online_cpu(int cpu_id)
 {
 	int ret;
 
+#ifdef IHK_KSYM__cpu_up
 	ret = ihk_cpu_up(cpu_id, 1);
+#elif defined IHK_KSYM_cpu_up
+	ret = ihk_cpu_up(cpu_id);
+#endif
 	if (ret) {
 		printk("IHK-SMP: WARNING: failed to re-enable CPU %d\n", cpu_id);
 	}
@@ -2628,26 +2656,24 @@ retry_trampoline:
 
 		/* Couldn't allocate trampoline page, use Linux' one from real_header */
 		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+			using_linux_trampoline = 1;
+			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38))
+			trampoline_phys = TRAMPOLINE_BASE;
+#elif ((LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)))
+#ifdef IHK_KSYM_x86_trampoline_base
+#if IHK_KSYM_x86_trampoline_base
+			trampoline_phys = __pa(x86_trampoline_base);
+#endif
+#endif
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0))
 #ifdef IHK_KSYM_real_mode_header
 #if IHK_KSYM_real_mode_header
-			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
-			using_linux_trampoline = 1;
-
 			trampoline_phys = real_mode_header->trampoline_start;
+#endif
+#endif
+#endif /* LINUX_VERSION_CODE check */
 			trampoline_va = __va(trampoline_phys);
-#endif
-#else
-			printk("IHK-SMP: error: allocating trampoline area\n");
-			return ENOMEM;
-#endif
-#else /* LINUX_VERSION_CODE < 3.10 */
-			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
-			using_linux_trampoline = 1;
-
-			trampoline_phys = TRAMPOLINE_BASE;
-			trampoline_va = __va(TRAMPOLINE_BASE);
-#endif
 		}
 		else {
 			trampoline_phys = page_to_phys(trampoline_page);
@@ -2667,7 +2693,9 @@ retry_trampoline:
 	for (vector = ihk_start_irq ? ihk_start_irq : (IRQ14_VECTOR + 2); 
 			vector < 256; vector += 1) {
 #endif	
+#ifdef CONFIG_SPARSE_IRQ
 		struct irq_desc *desc;
+#endif
 
 		if (test_bit(vector, used_vectors)) {
 			printk("IRQ vector %d: used\n", vector);
@@ -2679,7 +2707,8 @@ retry_trampoline:
 			/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 			struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 						per_cpu_offset(ihk_ikc_irq_core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+/* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
 			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
 						per_cpu_offset(ihk_ikc_irq_core)));
 #else
@@ -2771,7 +2800,7 @@ retry_trampoline:
 			/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 			struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 						per_cpu_offset(ihk_ikc_irq_core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
 			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
 						per_cpu_offset(ihk_ikc_irq_core)));
 #else
@@ -2873,7 +2902,7 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(ihk_ikc_irq_core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
 				per_cpu_offset(ihk_ikc_irq_core)));
 #else

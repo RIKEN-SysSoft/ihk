@@ -221,6 +221,7 @@ AC_DEFUN([IHK_FIND_KSYM],[
 ])
 
 if test "$TARGET" = "smp-x86"; then
+	IHK_FIND_KSYM([x86_trampoline_base])
 	IHK_FIND_KSYM([real_mode_header])
 	IHK_FIND_KSYM([per_cpu__vector_irq])
 	IHK_FIND_KSYM([vector_irq])
@@ -235,6 +236,7 @@ if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([wakeup_secondary_cpu_via_init])
 	IHK_FIND_KSYM([cpu_hotplug_driver_lock])
 	IHK_FIND_KSYM([cpu_hotplug_driver_unlock])
+	IHK_FIND_KSYM([cpu_up])
 	IHK_FIND_KSYM([_cpu_up])
 fi
 
