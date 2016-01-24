@@ -1382,13 +1382,15 @@ static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	//shimos_issue_ipi(os->cpu_info.hw_ids[cpu], v);
 	
 	local_irq_save(flags);
+#ifdef CONFIG_X86_X2APIC
 	if (x2apic_is_enabled()) {
 		native_x2apic_icr_write(v, os->cpu_info.hw_ids[cpu]);
 	}
-	else{
+	else
+#else
 		__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
 			APIC_DEST_PHYSICAL);
-	}
+#endif
 	local_irq_restore(flags);
 
 	return -EINVAL;
