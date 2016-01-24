@@ -34,6 +34,11 @@ AC_ARG_ENABLE([memdump],
 	[ENABLE_MEMDUMP=$enableval],
 	[ENABLE_MEMDUMP=default])
 
+AC_ARG_WITH([system_map],
+  AS_HELP_STRING(
+    [--with-system_map=path],[Path to 'System.map file', default is /boot/System.map-uname_r]),
+  [WITH_SYSTEM_MAP=$withval],[WITH_SYSTEM_MAP=yes])
+
 case "X$WITH_KERNELSRC" in
     Xyes | Xno | X)
 	WITH_KERNELSRC="/lib/modules/`uname -r`/build"
@@ -159,8 +164,19 @@ KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
 
 IHK_LINUX_SYMTAB=""
+case "X$WITH_SYSTEM_MAP" in
+    Xyes | Xno | X)
+	IHK_LINUX_SYMTAB=""
+	;;
+    *)
+	IHK_LINUX_SYMTAB="$WITH_SYSTEM_MAP"
+	;;
+esac
+
 AC_MSG_CHECKING([[for System.map]])
-if test -f "/boot/System.map-`uname -r`"; then
+if test -f "$IHK_LINUX_SYMTAB"; then
+	IHK_LINUX_SYMTAB="$IHK_LINUX_SYMTAB"
+elif test -f "/boot/System.map-`uname -r`"; then
 	IHK_LINUX_SYMTAB="/boot/System.map-`uname -r`"	
 elif test -f "$KDIR/System.map"; then
 	IHK_LINUX_SYMTAB="$KDIR/System.map"	
@@ -168,6 +184,10 @@ fi
 
 if test "$IHK_LINUX_SYMTAB" == ""; then
 	AC_MSG_ERROR([could not find])
+fi
+
+if test -z "`eval cat $IHK_LINUX_SYMTAB`"; then
+	AC_MSG_ERROR([could not read System.map file, no read permission?])
 fi
 AC_MSG_RESULT([$IHK_LINUX_SYMTAB])
 
