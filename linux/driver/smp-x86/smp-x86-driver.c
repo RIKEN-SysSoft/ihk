@@ -1411,10 +1411,11 @@ static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 		native_x2apic_icr_write(v, os->cpu_info.hw_ids[cpu]);
 	}
 	else
-#else
+#endif
+	{
 		__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
 			APIC_DEST_PHYSICAL);
-#endif
+	}
 	local_irq_restore(flags);
 
 	return -EINVAL;
