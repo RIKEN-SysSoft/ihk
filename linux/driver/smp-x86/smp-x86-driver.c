@@ -29,6 +29,7 @@
 #include <linux/cpu.h>
 #include <linux/radix-tree.h>
 #include <linux/irq.h>
+#include <asm/hw_irq.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
@@ -2597,6 +2598,10 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	return 0;
 }
 
+static struct irq_chip ihk_irq_chip = {
+	.name = "ihk_irq",
+};
+
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
@@ -2837,6 +2842,9 @@ retry_trampoline:
 	printk("IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n", 
 		ihk_smp_irq, ihk_ikc_irq_core, ihk_smp_irq_apicid);
 
+	irq_set_chip(vector, &ihk_irq_chip);
+	irq_set_chip_data(vector, NULL);
+
 	smp_ihk_init_ident_page_table();
 
 	return 0;
@@ -2917,6 +2925,8 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 #else
 	vectors[ihk_smp_irq] = -1;
 #endif
+
+	irq_set_chip(ihk_smp_irq, NULL);
 
 #ifdef CONFIG_SPARSE_IRQ
 	desc = _irq_to_desc(ihk_smp_irq);
