@@ -2790,13 +2790,15 @@ retry_trampoline:
 			continue;
 		}
 
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
+#if !defined(RHEL_RELEASE_CODE) && \
+    ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
 	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
 		/* NOTE: this is nasty, but we need to decrease the refcount because
 		 * after Linux 3.0 request_irq holds a reference to the module. 
 		 * This causes rmmod to fail and report the module is in use when one
 		 * tries to unload it. To overcome this, we drop one ref here and get
-		 * an extra one before free_irq in the module's exit code */
+		 * an extra one before free_irq in the module's exit code 
+		 * UPDATE: don't do this in RedHat / CentOS */
 		module_put(THIS_MODULE);
 #endif
 	
@@ -2933,7 +2935,8 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	desc->handle_irq = orig_irq_flow_handler;
 #endif
 
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
+#if !defined(RHEL_RELEASE_CODE) && \
+    ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
 	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
 	try_module_get(THIS_MODULE);
 #endif
