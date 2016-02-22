@@ -30,6 +30,7 @@
 #include <linux/file.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
+#include <asm/spinlock.h>
 #include <ihk/misc/debug.h>
 #include "host_linux.h"
 #include "ops_wrappers.h"
@@ -56,6 +57,15 @@ static int os_max_minor = 0;
 
 extern int ikc_master_init(ihk_os_t os);
 extern void ikc_master_finalize(ihk_os_t os);
+
+struct ihk_kmsg_buf {
+		int tail;
+		int len;
+		int head;
+		int mode;
+		ihk_spinlock_t lock;
+		char str[0];
+};
 
 /*
  * OS character device file operations.
@@ -370,7 +380,6 @@ static int __ihk_os_reserve_mem(struct ihk_host_linux_os_data *data,
 	return __ihk_os_alloc_resource(data, &resource);
 }
 
-#if 1
 /** \brief Initialize the kernel message buffer of the OS
  *
  * This function asks the locations of the buffer and maps it.
@@ -408,14 +417,14 @@ static void __ihk_os_init_kmsg(struct ihk_host_linux_os_data *data)
 	data->kmsg_len = size;
 	dprint_var_p(data->kmsg_buf);
 }
-#endif
 
 /** \brief ioctl handler for reading the kernel message to the buffer */
 static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
                               char __user *buf)
 {
-#if 1
-	int tail, len, len_end;
+	int tail, len, len_end, len_start, head, mode, read_top;
+	unsigned long flags;
+	struct ihk_kmsg_buf *kmsg_buf;
 
 	if (!data->kmsg_buf) {
 		mutex_lock(&data->kmsg_mutex);
@@ -426,72 +435,54 @@ static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
 		return -EINVAL;
 	}
 
+	kmsg_buf = (struct ihk_kmsg_buf *)data->kmsg_buf;
+
+	mode = kmsg_buf->mode;
+	flags = 0;
+	if (mode == 2) {
+		spin_lock_irqsave(&kmsg_buf->lock, flags);
+	}
+	  
 	/* XXX: How to share the structure definition with manycore ihk? */
-	tail = *(int *)data->kmsg_buf;
-	len = *(((int *)data->kmsg_buf) + 1);
-	len_end = strnlen((char *)((data->kmsg_buf) + sizeof(int) * 2) + tail + 1,
-	                  len - tail);
-kprintf("kmsg tail: %d, len: %d, len_end: %d\n", tail, len, len_end);
+	tail = kmsg_buf->tail;
+	len = kmsg_buf->len;
+	head = kmsg_buf->head;
+	if (mode != 0) {
+		read_top = head;
+		if (head > tail) {
+			len_end = strnlen(&kmsg_buf->str[head], len - head);
+			len_start = tail;
+		} else {
+			len_end = tail - head;
+			len_start = 0;
+		}
+	} else {
+		read_top = tail + 1;
+		len_end = strnlen(&kmsg_buf->str[tail+1], len - tail);
+		len_start = tail;
+	}
+kprintf("kmsg tail: %d, len: %d, len_end: %d len_start: %d head: %d read_top = %d\n", tail, len, len_end, len_start, head, read_top);
 
 	/* Print the end of the buffer */
-	if (copy_to_user(buf, (char *)(data->kmsg_buf) + sizeof(int) * 2 + tail + 1,
-	             len_end)) {
-		dprintf("error: copying string to user-space\n");
-		return -EINVAL;
+	if (len_end > 0) {
+		if (copy_to_user(buf, &kmsg_buf->str[read_top], len_end)) {
+			dprintf("error: copying string to user-space\n");
+			return -EINVAL;
+		}
 	}
 
 	/* Then the front of it */
-	if (copy_to_user(buf + len_end, (char *)(data->kmsg_buf) + sizeof(int) * 2,
-	             tail)) {
-		dprintf("error: copying string to user-space\n");
-		return -EINVAL;
-	}
-
-	return tail + len_end;
-#else
-	int size1, size2;
-	unsigned long rpa, pa, size;
-	void *kmsg_buf;
-	unsigned long offset, maxsize, rest, size0;
-
-	mutex_lock(&data->kmsg_mutex);
-
-	if (__ihk_os_get_special_addr(data, IHK_SPADDR_KMSG, &rpa, &size)) {
-		dprintf("get_special_addr: failed.\n");
-		return -EINVAL;
-	}
-	pa = __ihk_os_map_memory(data, rpa, size);
-	kmsg_buf = ihk_device_map_virtual(data->dev_data, pa, PAGE_SIZE, NULL, 0);
-	if(!kmsg_buf){
-		dprint_var_p(kmsg_buf);
-		return -EINVAL;
-	}
-
-	size1 = size2 = *(int *)kmsg_buf;
-	offset = 8;
-	maxsize = PAGE_SIZE - offset;
-	rest = size;
-	for(;;){
-		size0 = size2 > maxsize? maxsize: size2;
-		if (copy_to_user(buf, (char *)(kmsg_buf) + offset, size0)) {
-			ihk_device_unmap_virtual(data->dev_data, kmsg_buf, PAGE_SIZE);
-			mutex_unlock(&data->kmsg_mutex);
-			return -EFAULT;
+	if (len_start > 0) {
+		if (copy_to_user(buf + len_end, kmsg_buf->str, len_start)) {
+			dprintf("error: copying string to user-space\n");
+			return -EINVAL;
 		}
-		ihk_device_unmap_virtual(data->dev_data, kmsg_buf, PAGE_SIZE);
-		buf += size0;
-		size2 -= size0;
-		if(size2 == 0)
-			break;
-		offset = 0;
-		maxsize = PAGE_SIZE;
-		pa += PAGE_SIZE;
-		kmsg_buf = ihk_device_map_virtual(data->dev_data, pa, PAGE_SIZE, NULL, 0);
 	}
-	mutex_unlock(&data->kmsg_mutex);
-
-	return size1;
-#endif
+	kmsg_buf->head = tail; 
+	if (mode == 2) {
+		spin_unlock_irqrestore(&kmsg_buf->lock, flags);
+	}
+	return len_end + len_start;
 }
 
 /** \brief Set the kernel command-line parameter for the kernel

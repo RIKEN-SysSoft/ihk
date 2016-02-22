@@ -47,6 +47,9 @@
    exported */
 #undef IHK_KSYM_cpu_hotplug_driver_unlock
 
+/* Define to address of kernel symbol cpu_up, or 0 if exported */
+#undef IHK_KSYM_cpu_up
+
 /* Define to address of kernel symbol dummy_irq_chip, or 0 if exported */
 #undef IHK_KSYM_dummy_irq_chip
 
@@ -81,6 +84,9 @@
 /* Define to address of kernel symbol wakeup_secondary_cpu_via_init, or 0 if
    exported */
 #undef IHK_KSYM_wakeup_secondary_cpu_via_init
+
+/* Define to address of kernel symbol x86_trampoline_base, or 0 if exported */
+#undef IHK_KSYM_x86_trampoline_base
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
