@@ -329,7 +329,7 @@ unsigned long *ident_page_table_virt;
 
 int ihk_smp_irq = 0;
 int ihk_smp_irq_apicid = 0;
-
+int this_module_put = 0;
 int ihk_smp_reset_cpu(int phys_apicid);
 
 extern const char ihk_smp_trampoline_end[], ihk_smp_trampoline_data[];
@@ -2790,16 +2790,6 @@ retry_trampoline:
 			continue;
 		}
 
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
-		/* NOTE: this is nasty, but we need to decrease the refcount because
-		 * after Linux 3.0 request_irq holds a reference to the module. 
-		 * This causes rmmod to fail and report the module is in use when one
-		 * tries to unload it. To overcome this, we drop one ref here and get
-		 * an extra one before free_irq in the module's exit code */
-		module_put(THIS_MODULE);
-#endif
-	
 		/* Pretend a real external interrupt */
 		{
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
@@ -2846,6 +2836,19 @@ retry_trampoline:
 	irq_set_chip_data(vector, NULL);
 
 	smp_ihk_init_ident_page_table();
+
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
+		(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+	/* NOTE: this is nasty, but we need to decrease the refcount because
+	 * after Linux 3.0 request_irq holds an extra reference to the module. 
+	 * This causes rmmod to fail and report the module is in use when one
+	 * tries to unload it. To overcome this, we drop one ref here and get
+	 * an extra one before free_irq in the module's exit code */
+	if (module_refcount(THIS_MODULE) == 2) {
+		module_put(THIS_MODULE);
+		this_module_put = 1;
+	}
+#endif
 
 	return 0;
 }
@@ -2935,7 +2938,9 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 #if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
 	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
-	try_module_get(THIS_MODULE);
+	if (this_module_put) {
+		try_module_get(THIS_MODULE);
+	}
 #endif
 
 	free_irq(ihk_smp_irq, NULL);
