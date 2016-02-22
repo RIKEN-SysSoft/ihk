@@ -1,0 +1,17 @@
+CC=@CC@
+SBINDIR=@SBINDIR@
+TARGET=mcklogd
+
+.PHONY: modules clean install
+
+modules: $(TARGET)
+
+clean:
+	$(RM) $(TARGET) *.o
+
+%: %.c
+	${CC} ${CFLAGS} -o $@ $< ${LIBS}
+
+install:
+	mkdir -p -m 755 $(SBINDIR)
+	install -m 755 mcklogd $(SBINDIR)/mcklogd
