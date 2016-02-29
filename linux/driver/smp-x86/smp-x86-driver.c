@@ -2781,7 +2781,7 @@ retry_trampoline:
 		desc->handle_irq = ihk_smp_irq_flow_handler;
 #endif // CONFIG_SPARSE_IRQ
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
 #define IRQF_DISABLED 0x0
 #endif
 		if (request_irq(vector, 
