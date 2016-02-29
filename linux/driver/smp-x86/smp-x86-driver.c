@@ -2604,7 +2604,7 @@ static struct irq_chip ihk_irq_chip = {
 
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
 	int vector = ISA_IRQ_VECTOR(15) + 2;
 #else
 	int vector = IRQ15_VECTOR + 2;
@@ -2692,7 +2692,7 @@ retry_trampoline:
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
 	/* Find a suitable IRQ vector */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
 	for (vector = ihk_start_irq ? ihk_start_irq : (ISA_IRQ_VECTOR(14) + 2); 
 			vector < 256; vector += 1) {
 #else
