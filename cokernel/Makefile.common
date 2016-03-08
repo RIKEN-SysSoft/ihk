@@ -6,8 +6,6 @@ TARGETDIR = $(shell echo $(TARGET) | sed "s/-/\//")
 
 -include $(IHKBASE)/$(TARGETDIR)/Makefile.config
 
-IHKARCH ?= x86
-
 CFLAGS += -I$(SRC)/../lib/include -I$(SRC)/../arch/$(IHKARCH)/kernel/include
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include
 
