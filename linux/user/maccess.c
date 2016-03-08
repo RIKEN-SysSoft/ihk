@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ihk/rdtsc.h>
 
+#if 0
 static unsigned long rdtsc(void)
 {
 	unsigned int low, high;
@@ -9,6 +11,7 @@ static unsigned long rdtsc(void)
  
 	return (low | ((unsigned long)high << 32));
 }
+#endif
 
 #define rdtscll(v) ( v = rdtsc() )
 

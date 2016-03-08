@@ -6,6 +6,7 @@
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 
+#if __x86_64
 .globl startup_data
 startup_data:
 	leaq	0(%rip),%rbx
@@ -52,3 +53,4 @@ startup_body:
 	jmp	*%r8
 .globl startup_data_end
 startup_data_end:
+#endif
