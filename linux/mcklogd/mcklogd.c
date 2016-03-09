@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -21,19 +22,68 @@ int main(int argc, char **argv)
 	int count = 0;
 	int interval = 1;
 	int buffer_wait = 0;
+	int facility = LOG_LOCAL6;
+	int i;
+	int len;
 	char pid_file_path[] = "./mcklogd.pid";
-	char buf[KPRINTF_LOCAL_BUF_LEN];
+	char buf[512];
 	char command[512];
+	char inifile[512];
+	char item[256];
+	char value[256];
 	char *envptr;
+	char *delimiter;
 	FILE *pid_file;
 	FILE *fp;
 	pid_t pid;
+	struct {
+		char name[12];
+		int code;
+	} facility_list[8] = {
+		"LOG_LOCAL0", LOG_LOCAL0,
+		"LOG_LOCAL1", LOG_LOCAL1,
+		"LOG_LOCAL2", LOG_LOCAL2,
+		"LOG_LOCAL3", LOG_LOCAL3,
+		"LOG_LOCAL4", LOG_LOCAL4,
+		"LOG_LOCAL5", LOG_LOCAL5,
+		"LOG_LOCAL6", LOG_LOCAL6,
+		"LOG_LOCAL7", LOG_LOCAL7
+	};
 
 	/**
 	 * mcklogd[PID]: log message
-	 * /var/log/local6
+	 * default facility: LOG_LOCAL6 (/var/log/local6)
 	 */
-	openlog("mcklogd", LOG_PID, LOG_LOCAL6);
+	strcpy(inifile, "./mcklogd.ini");
+	fp = fopen(inifile, "r");
+	if (fp != NULL) {
+		while(fgets(buf, sizeof(buf), fp) != NULL) {
+printf("buf = %s\n", buf);
+			if (buf[0] == '#') continue;
+			len = strlen(buf);
+			if (len > 0) {
+				if (buf[len-1] == '\n') {
+					buf[len-1] = '\0';
+				}
+			}
+			delimiter = strstr(buf, "=");
+printf("deliter = %p\n", delimiter);
+			if (delimiter == NULL) continue;
+			*delimiter = '\0';
+			sscanf(buf, "%s", item);
+			sscanf(delimiter+1, "%s", value);
+printf("item = %s value = %s\n", item, value);
+			if (strcmp(item, "FACILITY") == 0) {
+				for (i = 0; i < 8; i++) {
+					if (strcmp(value, facility_list[i].name) == 0) {
+						facility = facility_list[i].code;
+						break;
+					}
+				}
+			}
+		}
+	}
+	openlog("mcklogd", LOG_PID, facility);
 
 	const struct option longopt[] = {
 		{"help", no_argument, NULL, '?'},

@@ -15,3 +15,4 @@ clean:
 install:
 	mkdir -p -m 755 $(SBINDIR)
 	install -m 755 mcklogd $(SBINDIR)/mcklogd
+	install -m 644 mcklogd.ini $(SBINDIR)/mcklogd.ini
