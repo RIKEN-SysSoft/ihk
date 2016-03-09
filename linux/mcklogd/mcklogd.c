@@ -58,7 +58,6 @@ int main(int argc, char **argv)
 	fp = fopen(inifile, "r");
 	if (fp != NULL) {
 		while(fgets(buf, sizeof(buf), fp) != NULL) {
-printf("buf = %s\n", buf);
 			if (buf[0] == '#') continue;
 			len = strlen(buf);
 			if (len > 0) {
@@ -67,12 +66,10 @@ printf("buf = %s\n", buf);
 				}
 			}
 			delimiter = strstr(buf, "=");
-printf("deliter = %p\n", delimiter);
 			if (delimiter == NULL) continue;
 			*delimiter = '\0';
 			sscanf(buf, "%s", item);
 			sscanf(delimiter+1, "%s", value);
-printf("item = %s value = %s\n", item, value);
 			if (strcmp(item, "FACILITY") == 0) {
 				for (i = 0; i < 8; i++) {
 					if (strcmp(value, facility_list[i].name) == 0) {
