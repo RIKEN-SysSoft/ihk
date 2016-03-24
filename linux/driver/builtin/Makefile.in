@@ -5,7 +5,7 @@ KMODDIR=@KMODDIR@
 
 obj-m += ihk_builtin.o
 
-ccflags-y := -I$(src)/../../include -I$(src)/../../../ikc/include
+ccflags-y := -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(src)/../../../ikc/include
 
 ihk_builtin-y = ihk_builtin_driver.o dmacore.o dmacore_intr.o startup.o
 

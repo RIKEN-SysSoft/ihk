@@ -8,6 +8,8 @@
 #ifndef __HEADER_IHK_HOST_DRIVER_H
 #define __HEADER_IHK_HOST_DRIVER_H
 
+#include "ihk/archdefs.h"
+
 /** \brief Status of a manycore kernel instance */
 enum ihk_os_status {
 	IHK_OS_STATUS_NOT_BOOTED,
@@ -475,10 +477,11 @@ struct ihk_device_ops {
 #define IHK_OS_FLAG_SHARABLE  1
 
 /** \brief Caching of the mapped area must be disabled. */
+#define IHK_MAP_FLAG_CACHE  0
 #define IHK_MAP_FLAG_NOCACHE  1
 
 /** \brief Default IKC queue mapping attribute */
-#define IHK_IKC_QUEUE_PT_ATTR IHK_MAP_FLAG_NOCACHE
+//#define IHK_IKC_QUEUE_PT_ATTR IHK_MAP_FLAG_NOCACHE
 
 /** \brief Device registration structure */
 struct ihk_register_device_data {
