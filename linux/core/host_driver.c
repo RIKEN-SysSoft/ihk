@@ -1682,6 +1682,21 @@ struct device *ihk_os_get_linux_device(ihk_os_t ihk_os)
 	return os->lindev;
 } /* ihk_os_get_linux_device() */
 
+struct ihk_cpu_topology *ihk_device_get_cpu_topology(ihk_device_t dev, int hw_id)
+{
+	return __ihk_device_get_cpu_topology(dev, hw_id);
+}
+
+struct ihk_node_topology *ihk_device_get_node_topology(ihk_device_t dev, int node)
+{
+	return __ihk_device_get_node_topology(dev, node);
+}
+
+int ihk_device_linux_cpu_to_hw_id(ihk_device_t dev, int cpu)
+{
+	return __ihk_device_linux_cpu_to_hw_id(dev, cpu);
+}
+
 EXPORT_SYMBOL(ihk_register_device);
 EXPORT_SYMBOL(ihk_unregister_device);
 EXPORT_SYMBOL(ihk_device_create_os);
@@ -1713,3 +1728,6 @@ EXPORT_SYMBOL(ihk_device_get_dma_info);
 EXPORT_SYMBOL(ihk_dma_request);
 EXPORT_SYMBOL(ihk_os_register_release_handler);
 EXPORT_SYMBOL(ihk_os_get_linux_device);
+EXPORT_SYMBOL(ihk_device_get_cpu_topology);
+EXPORT_SYMBOL(ihk_device_get_node_topology);
+EXPORT_SYMBOL(ihk_device_linux_cpu_to_hw_id);

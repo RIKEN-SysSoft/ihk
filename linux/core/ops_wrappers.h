@@ -208,4 +208,20 @@ IHK_DEV_OPS_BEGIN(int, get_dma_info, struct ihk_dma_info *info)
 	IHK_OPS_BODY(get_dma_info, info);
 }
 
+IHK_DEV_OPS_BEGIN(struct ihk_cpu_topology *, get_cpu_topology, int hw_id)
+{
+	IHK_OPS_BODY_PTR(get_cpu_topology, hw_id);
+}
+
+IHK_DEV_OPS_BEGIN(struct ihk_node_topology *, get_node_topology, int node)
+{
+	IHK_OPS_BODY_VOID(get_node_topology, node);
+	return ERR_PTR(-EINVAL);
+}
+
+IHK_DEV_OPS_BEGIN(int, linux_cpu_to_hw_id, int cpu)
+{
+	IHK_OPS_BODY(linux_cpu_to_hw_id, cpu);
+}
+
 #endif

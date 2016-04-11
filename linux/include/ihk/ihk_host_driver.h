@@ -459,6 +459,18 @@ struct ihk_device_ops {
 	 * \param info Structure to store DMA information
 	 */
 	int (*get_dma_info)(ihk_device_t, void *, struct ihk_dma_info *info);
+	/**
+	 * \brief get topology information of the speicified cpu
+	 */
+	struct ihk_cpu_topology *(*get_cpu_topology)(ihk_device_t ihk_dev, void *priv, int hw_id);
+	/**
+	 * \brief get topology information of the speicified NUMA node
+	 */
+	struct ihk_node_topology *(*get_node_topology)(ihk_device_t ihk_dev, void *priv, int node);
+	/**
+	 * \brief get a hardware ID of the cpu which is specified linux cpu number
+	 */
+	int (*linux_cpu_to_hw_id)(ihk_device_t ihk_dev, void *priv, int cpu);
 };
 
 /**
@@ -797,5 +809,12 @@ void  ihk_os_register_release_handler(struct file *,void (*)(ihk_os_t, void *),
 
 /** \brief get a linux device for the specified mcos */
 struct device *ihk_os_get_linux_device(ihk_os_t os);
+
+/** \brief get topology information of the speicified cpu */
+struct ihk_cpu_topology *ihk_device_get_cpu_topology(ihk_device_t dev, int hw_id);
+/** \brief get topology information of the speicified NUMA node */
+struct ihk_node_topology *ihk_device_get_node_topology(ihk_device_t dev, int node);
+/** \brief get a hardware ID of the cpu which is specified linux cpu number */
+int ihk_device_linux_cpu_to_hw_id(ihk_device_t dev, int cpu);
 
 #endif

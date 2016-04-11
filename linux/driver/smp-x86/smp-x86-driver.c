@@ -2601,12 +2601,573 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	return 0;
 }
 
+static LIST_HEAD(cpu_topology_list);
+static LIST_HEAD(node_topology_list);
+
+static void free_info(void)
+{
+	struct ihk_cpu_topology *cpu;
+	struct ihk_cpu_topology *nextcpu;
+	struct ihk_cache_topology *cache;
+	struct ihk_cache_topology *nextcache;
+	struct ihk_node_topology *node;
+	struct ihk_node_topology *nextnode;
+
+	dprintk("free_info()\n");
+	list_for_each_entry_safe(cpu, nextcpu, &cpu_topology_list, chain) {
+		list_del(&cpu->chain);
+
+		list_for_each_entry_safe(cache, nextcache,
+				&cpu->cache_topology_list, chain) {
+			list_del(&cache->chain);
+
+			kfree(cache->type);
+			kfree(cache->size_str);
+			kfree(cache);
+		}
+
+		kfree(cpu);
+	}
+
+	list_for_each_entry_safe(node, nextnode, &node_topology_list, chain) {
+		list_del(&node->chain);
+
+		kfree(node);
+	}
+
+	dprintk("free_info():\n");
+	return;
+} /* free_info() */
+
+static int read_file(void *buf, size_t size, char *fmt, va_list ap)
+{
+	int error;
+	int er;
+	char *filename = NULL;
+	int n;
+	struct file *fp = NULL;
+	loff_t off;
+	mm_segment_t ofs;
+	ssize_t ss;
+
+	dprintk("read_file(%p,%ld,%s,%p)\n", buf, size, fmt, ap);
+	filename = kmalloc(PATH_MAX, GFP_KERNEL);
+	if (!filename) {
+		error = -ENOMEM;
+		eprintk("ihk:read_file:kmalloc failed. %d\n", error);
+		goto out;
+	}
+
+	n = vsnprintf(filename, PATH_MAX, fmt, ap);
+	if (n >= PATH_MAX) {
+		error = -ENAMETOOLONG;
+		eprintk("ihk:read_file:vsnprintf failed. %d\n", error);
+		goto out;
+	}
+
+	fp = filp_open(filename, O_RDONLY, 0);
+	if (IS_ERR(fp)) {
+		error = PTR_ERR(fp);
+		eprintk("ihk:read_file:filp_open failed. %d\n", error);
+		goto out;
+	}
+
+	off = 0;
+	ofs = get_fs();
+	set_fs(KERNEL_DS);
+	ss = vfs_read(fp, buf, size, &off);
+	set_fs(ofs);
+	if (ss < 0) {
+		error = ss;
+		eprintk("ihk:read_file:vfs_read failed. %d\n", error);
+		goto out;
+	}
+	if (ss >= size) {
+		error = -ENOSPC;
+		eprintk("ihk:read_file:buffer overflow. %d\n", error);
+		goto out;
+	}
+	*(char *)(buf + ss) = '\0';
+
+	error = 0;
+out:
+	if (!IS_ERR_OR_NULL(fp)) {
+		er = filp_close(fp, NULL);
+		if (er) {
+			eprintk("ihk:read_file:filp_close failed. %d\n", er);
+		}
+	}
+	kfree(filename);
+	dprintk("read_file(%p,%ld,%s,%p): %d\n", buf, size, fmt, ap, error);
+	return error;
+} /* read_file() */
+
+static int read_long(long *valuep, char *fmt, ...)
+{
+	int error;
+	char *buf = NULL;
+	va_list ap;
+	int n;
+
+	dprintk("read_long(%p,%s)\n", valuep, fmt);
+	buf = (void *)__get_free_pages(GFP_KERNEL, 0);
+	if (!buf) {
+		error = -ENOMEM;
+		eprintk("ihk:read_long:__get_free_pages failed. %d\n", error);
+		goto out;
+	}
+
+	va_start(ap, fmt);
+	error = read_file(buf, PAGE_SIZE, fmt, ap);
+	va_end(ap);
+	if (error) {
+		eprintk("ihk:read_long:read_file failed. %d\n", error);
+		goto out;
+	}
+
+	n = sscanf(buf, "%ld", valuep);
+	if (n != 1) {
+		error = -EIO;
+		eprintk("ihk:read_long:sscanf failed. %d\n", error);
+		goto out;
+	}
+
+	error = 0;
+out:
+	free_pages((long)buf, 0);
+	dprintk("read_long(%p,%s): %d\n", valuep, fmt, error);
+	return error;
+} /* read_long() */
+
+static int read_bitmap(void *map, int nbits, char *fmt, ...)
+{
+	int error;
+	char *buf = NULL;
+	va_list ap;
+
+	dprintk("read_bitmap(%p,%d,%s)\n", map, nbits, fmt);
+	buf = (void *)__get_free_pages(GFP_KERNEL, 0);
+	if (!buf) {
+		error = -ENOMEM;
+		eprintk("ihk:read_bitmap:__get_free_pages failed. %d\n", error);
+		goto out;
+	}
+
+	va_start(ap, fmt);
+	error = read_file(buf, PAGE_SIZE, fmt, ap);
+	va_end(ap);
+	if (error) {
+		eprintk("ihk:read_bitmap:read_file failed. %d\n", error);
+		goto out;
+	}
+
+	error = bitmap_parse(buf, PAGE_SIZE, map, nbits);
+	if (error) {
+		eprintk("ihk:read_bitmap:bitmap_parse failed. %d\n", error);
+		goto out;
+	}
+
+	error = 0;
+out:
+	free_pages((long)buf, 0);
+	dprintk("read_bitmap(%p,%d,%s): %d\n", map, nbits, fmt, error);
+	return error;
+} /* read_bitmap() */
+
+static int read_string(char **valuep, char *fmt, ...)
+{
+	int error;
+	char *buf = NULL;
+	va_list ap;
+	char *p = NULL;
+	int len;
+
+	dprintk("read_string(%p,%s)\n", valuep, fmt);
+	buf = (void *)__get_free_pages(GFP_KERNEL, 0);
+	if (!buf) {
+		error = -ENOMEM;
+		eprintk("ihk:read_string:"
+				"__get_free_pages failed. %d\n", error);
+		goto out;
+	}
+
+	va_start(ap, fmt);
+	error = read_file(buf, PAGE_SIZE, fmt, ap);
+	va_end(ap);
+	if (error) {
+		eprintk("ihk:read_string:read_file failed. %d\n", error);
+		goto out;
+	}
+
+	p = kstrdup(buf, GFP_KERNEL);
+	if (!p) {
+		error = -ENOMEM;
+		eprintk("ihk:read_string:kstrdup failed. %d\n", error);
+		goto out;
+	}
+
+	len = strlen(p);
+	if (len && (p[len-1] == '\n')) {
+		p[len-1] = '\0';
+	}
+
+	error = 0;
+	*valuep = p;
+	p = NULL;
+
+out:
+	kfree(p);
+	free_pages((long)buf, 0);
+	dprintk("read_string(%p,%s): %d\n", valuep, fmt, error);
+	return error;
+} /* read_string() */
+
+static int collect_cache_topology(struct ihk_cpu_topology *cpu_topo, int index)
+{
+	int error;
+	char *prefix = NULL;
+	int n;
+	struct ihk_cache_topology *p = NULL;
+
+	dprintk("collect_cache_topology(%p,%d)\n", cpu_topo, index);
+	prefix = kmalloc(PATH_MAX, GFP_KERNEL);
+	if (!prefix) {
+		error = -ENOMEM;
+		eprintk("ihk:collect_cache_topology:"
+				"kmalloc failed. %d\n", error);
+		goto out;
+	}
+
+	n = snprintf(prefix, PATH_MAX,
+			"/sys/devices/system/cpu/cpu%d/cache/index%d",
+			cpu_topo->cpu_number, index);
+	if (n >= PATH_MAX) {
+		error = -ENAMETOOLONG;
+		eprintk("ihk:collect_cache_topology:"
+				"snprintf failed. %d\n", error);
+		goto out;
+	}
+
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p) {
+		error = -ENOMEM;
+		eprintk("ihk:collect_cache_topology:"
+				"kzalloc failed. %d\n", error);
+		goto out;
+	}
+
+	p->index = index;
+
+	error = read_long(&p->level, "%s/level", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_long(level) failed. %d\n", error);
+		goto out;
+	}
+
+	error = read_string(&p->type, "%s/type", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_string(type) failed. %d\n", error);
+		goto out;
+	}
+
+	error = read_long(&p->size, "%s/size", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_long(size) failed. %d\n", error);
+		goto out;
+	}
+	p->size *= 1024;	/* XXX */
+
+	error = read_string(&p->size_str, "%s/size", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_string(size) failed. %d\n", error);
+		goto out;
+	}
+
+	error = read_long(&p->coherency_line_size,
+			"%s/coherency_line_size", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_long(coherency_line_size) failed. %d\n",
+				error);
+		goto out;
+	}
+
+	error = read_long(&p->number_of_sets, "%s/number_of_sets", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_long(number_of_sets) failed. %d\n",
+				error);
+		goto out;
+	}
+
+	error = read_long(&p->physical_line_partition,
+			"%s/physical_line_partition", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_long(physical_line_partition) failed."
+				" %d\n", error);
+		goto out;
+	}
+
+	error = read_long(&p->ways_of_associativity,
+			"%s/ways_of_associativity", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_long(ways_of_associativity) failed."
+				" %d\n", error);
+		goto out;
+	}
+
+	error = read_bitmap(&p->shared_cpu_map, nr_cpumask_bits,
+			"%s/shared_cpu_map", prefix);
+	if (error) {
+		eprintk("ihk:collect_cache_topology:"
+				"read_bitmap(shared_cpu_map) failed. %d\n",
+				error);
+		goto out;
+	}
+
+	error = 0;
+	list_add(&p->chain, &cpu_topo->cache_topology_list);
+	p = NULL;
+
+out:
+	if (p) {
+		kfree(p->type);
+		kfree(p->size_str);
+		kfree(p);
+	}
+	kfree(prefix);
+	dprintk("collect_cache_topology(%p,%d): %d\n", cpu_topo, index, error);
+	return error;
+} /* collect_cache_topology() */
+
+static int collect_cpu_topology(int cpu)
+{
+	int error;
+	char *prefix = NULL;
+	int n;
+	struct ihk_cpu_topology *p = NULL;
+	int index;
+	struct cpuinfo_x86 *ci = &cpu_data(cpu);
+
+	dprintk("collect_cpu_topology(%d)\n", cpu);
+	prefix = kmalloc(PATH_MAX, GFP_KERNEL);
+	if (!prefix) {
+		error = -ENOMEM;
+		eprintk("ihk:collect_cpu_topology:"
+				"kmalloc failed. %d\n", error);
+		goto out;
+	}
+
+	n = snprintf(prefix, PATH_MAX, "/sys/devices/system/cpu/cpu%d", cpu);
+	if (n >= PATH_MAX) {
+		error = -ENAMETOOLONG;
+		eprintk("ihk:collect_cpu_topology:"
+				"snprintf failed. %d\n", error);
+		goto out;
+	}
+
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p) {
+		error = -ENOMEM;
+		eprintk("ihk:collect_cpu_topology:"
+				"kzalloc failed. %d\n", error);
+		goto out;
+	}
+
+	INIT_LIST_HEAD(&p->cache_topology_list);
+	p->cpu_number = cpu;
+	p->hw_id = ci->initial_apicid;
+
+	error = read_long(&p->core_id, "%s/topology/core_id", prefix);
+	if (error) {
+		eprintk("ihk:collect_cpu_info:"
+				"read_long(core_id) failed. %d\n", error);
+		goto out;
+	}
+
+	error = read_bitmap(&p->core_siblings, nr_cpumask_bits,
+			"%s/topology/core_siblings", prefix);
+	if (error) {
+		eprintk("ihk:collect_cpu_info:"
+				"read_bitmap(core_siblings) failed. %d\n",
+				error);
+		goto out;
+	}
+
+	error = read_long(&p->physical_package_id,
+			"%s/topology/physical_package_id", prefix);
+	if (error) {
+		eprintk("ihk:collect_cpu_info:"
+				"read_long(physical_package_id) failed. %d\n",
+				error);
+		goto out;
+	}
+
+	error = read_bitmap(&p->thread_siblings, nr_cpumask_bits,
+			"%s/topology/thread_siblings", prefix);
+	if (error) {
+		eprintk("ihk:collect_cpu_info:"
+				"read_bitmap(thread_siblings) failed. %d\n",
+				error);
+		goto out;
+	}
+
+	for (index = 0; index < 10; ++index) {
+		error = collect_cache_topology(p, index);
+		if (error) {
+			dprintk("collect_cpu_info:"
+					"collect_cache_topology(%d) failed."
+					" %d\n", index, error);
+			break;
+		}
+	}
+
+	error = 0;
+	list_add(&p->chain, &cpu_topology_list);
+	p = NULL;
+
+out:
+	kfree(p);
+	kfree(prefix);
+	dprintk("collect_cpu_topology(%d): %d\n", cpu, error);
+	return error;
+} /* collect_cpu_topology() */
+
+static int collect_node_topology(int node)
+{
+	int error;
+	struct ihk_node_topology *p = NULL;
+
+	dprintk("collect_node_topology(%d)\n", node);
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p) {
+		error = -ENOMEM;
+		eprintk("ihk:collect_node_topology:"
+				"kzalloc failed. %d\n", error);
+		goto out;
+	}
+
+	p->node_number = node;
+
+	error = read_bitmap(&p->cpumap, nr_cpumask_bits,
+			"/sys/devices/system/node/node%d/cpumap", node);
+	if (error) {
+		eprintk("ihk:collect_node_topology:"
+				"read_bitmap failed. %d\n", error);
+		goto out;
+	}
+
+	error = 0;
+	list_add(&p->chain, &node_topology_list);
+	p = NULL;
+
+out:
+	kfree(p);
+	dprintk("collect_node_topology(%d): %d\n", node, error);
+	return error;
+} /* collect_node_topology() */
+
+static int collect_topology(void)
+{
+	int error;
+	int cpu;
+	int node;
+
+	dprintk("collect_topology()\n");
+	for_each_cpu(cpu, cpu_online_mask) {
+		error = collect_cpu_topology(cpu);
+		if (error) {
+			eprintk("ihk:collect_topology:"
+					"collect_cpu_topology failed. %d\n",
+					error);
+			goto out;
+		}
+	}
+
+	for_each_online_node(node) {
+		error = collect_node_topology(node);
+		if (error) {
+			eprintk("ihk:collect_topology:"
+					"collect_node_topology failed. %d\n",
+					error);
+			goto out;
+		}
+	}
+
+	error = 0;
+out:
+	dprintk("collect_topology(): %d\n", error);
+	return error;
+} /* collect_topology() */
+
+static struct ihk_cpu_topology *smp_ihk_get_cpu_topology(ihk_device_t dev, void *priv, int hw_id)
+{
+	struct ihk_cpu_topology *topo;
+
+	dprintk("smp_ihk_get_cpu_topology(%p,%p,%#x)\n", dev, priv, hw_id);
+	list_for_each_entry(topo, &cpu_topology_list, chain) {
+		if (topo->hw_id == hw_id) {
+			goto out;
+		}
+	}
+	topo = NULL;
+out:
+	dprintk("smp_ihk_get_cpu_topology(%p,%p,%#x): %p\n", dev, priv, hw_id, topo);
+	return topo;
+} /* smp_ihk_get_cpu_topology() */
+
+static struct ihk_node_topology *smp_ihk_get_node_topology(ihk_device_t dev, void *priv, int node)
+{
+	struct ihk_node_topology *topo;
+
+	dprintk("smp_ihk_get_node_topology(%p,%p,%d)\n", dev, priv, node);
+	if (node >= nr_node_ids) {
+		topo = ERR_PTR(-EINVAL);
+		goto out;
+	}
+
+	list_for_each_entry(topo, &node_topology_list, chain) {
+		if (topo->node_number == node) {
+			goto out;
+		}
+	}
+	topo = NULL;
+out:
+	dprintk("smp_ihk_get_node_topology(%p,%p,%d): %p\n", dev, priv, node, topo);
+	return topo;
+} /* smp_ihk_get_node_topology() */
+
+static int smp_ihk_linux_cpu_to_hw_id(ihk_device_t dev, void *priv, int cpu)
+{
+	struct ihk_cpu_topology *topo;
+	int hw_id;
+
+	dprintk("smp_ihk_linux_cpu_to_hw_id(%p,%p,%d)\n", dev, priv, cpu);
+	list_for_each_entry(topo, &cpu_topology_list, chain) {
+		if (topo->cpu_number == cpu) {
+			hw_id = topo->hw_id;
+			goto out;
+		}
+	}
+	hw_id = -1;
+out:
+	dprintk("smp_ihk_linux_cpu_to_hw_id(%p,%p,%d): %#x\n", dev, priv, cpu, hw_id);
+	return hw_id;
+} /* smp_ihk_linux_cpu_to_hw_id() */
+
 static struct irq_chip ihk_irq_chip = {
 	.name = "ihk_irq",
 };
 
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
+	int error;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
 	int vector = ISA_IRQ_VECTOR(15) + 2;
 #else
@@ -2840,6 +3401,12 @@ retry_trampoline:
 
 	smp_ihk_init_ident_page_table();
 
+	error = collect_topology();
+	if (error) {
+		free_irq(ihk_smp_irq, NULL);
+		return error;
+	}
+
 #if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
 		(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
 	/* NOTE: this is nasty, but we need to decrease the refcount because
@@ -3000,6 +3567,7 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 			va += order_size;
 		}
 	}
+	free_info();
 
 	return 0;
 }
@@ -3020,6 +3588,9 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.release_mem = smp_ihk_release_mem,
 	.query_cpu = smp_ihk_query_cpu,
 	.query_mem = smp_ihk_query_mem,
+	.get_cpu_topology = smp_ihk_get_cpu_topology,
+	.get_node_topology = smp_ihk_get_node_topology,
+	.linux_cpu_to_hw_id = smp_ihk_linux_cpu_to_hw_id,
 };	
 
 /** \brief The driver-specific driver structure
