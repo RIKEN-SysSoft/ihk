@@ -72,6 +72,7 @@
 	do { \
 	if (data->ops->name) { \
 		return data->ops->name(data, data->priv, __VA_ARGS__); \
+	} \
 	} while (0)
 
 IHK_OS_OPS_BEGIN(int, assign_cpu,
