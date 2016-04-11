@@ -61,6 +61,9 @@
 
 #include "bootparam.h"
 
+#define dprintk(...) do { if (0) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
+#define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
+
 #define BUILTIN_OS_STATUS_INITIAL  0
 #define BUILTIN_OS_STATUS_LOADING  1
 #define BUILTIN_OS_STATUS_LOADED   2
