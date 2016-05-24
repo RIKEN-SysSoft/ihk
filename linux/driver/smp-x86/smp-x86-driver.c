@@ -277,6 +277,18 @@ void (*_cpu_hotplug_driver_unlock)(void) =
 #endif
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
+#ifdef IHK_KSYM___default_send_IPI_dest_field
+#if IHK_KSYM___default_send_IPI_dest_field
+typedef void (*void_fn_unsigned_int_int_unsigned_int_t)(void);
+void (*___default_send_IPI_dest_field)(unsigned int mask, 
+	int vector, unsigned int dest)
+	= (void_fn_unsigned_int_int_unsigned_int_t)
+	IHK_KSYM___default_send_IPI_dest_field;
+#endif
+#endif
+#endif
+
 static unsigned long ihk_phys_start = 0;
 module_param(ihk_phys_start, ulong, 0644);
 MODULE_PARM_DESC(ihk_phys_start, "IHK reserved physical memory start address");
@@ -1350,9 +1362,15 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		int i;
 
 		for (i = 0; i < os->cpu_info.n_cpus; ++i) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
+			___default_send_IPI_dest_field(
+					os->cpu_info.hw_ids[i],
+					NMI_VECTOR, APIC_DEST_PHYSICAL);
+#else
 			__default_send_IPI_dest_field(
 					os->cpu_info.hw_ids[i],
 					NMI_VECTOR, APIC_DEST_PHYSICAL);
+#endif
 		}
 		return 0;
 	}
@@ -1417,8 +1435,13 @@ static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	else
 #endif
 	{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
+		___default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
+			APIC_DEST_PHYSICAL);
+#else
 		__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
 			APIC_DEST_PHYSICAL);
+#endif
 	}
 	local_irq_restore(flags);
 

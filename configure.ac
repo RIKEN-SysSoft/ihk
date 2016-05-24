@@ -238,6 +238,7 @@ if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([cpu_hotplug_driver_unlock])
 	IHK_FIND_KSYM([cpu_up])
 	IHK_FIND_KSYM([_cpu_up])
+	IHK_FIND_KSYM([__default_send_IPI_dest_field])
 fi
 
 if test "x$ENABLE_MEMDUMP" != "xno" ; then

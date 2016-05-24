@@ -33,6 +33,10 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to address of kernel symbol __default_send_IPI_dest_field, or 0 if
+   exported */
+#undef IHK_KSYM___default_send_IPI_dest_field
+
 /* Define to address of kernel symbol _cpu_up, or 0 if exported */
 #undef IHK_KSYM__cpu_up
 

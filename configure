@@ -3502,6 +3502,31 @@ _ACEOF
 
   fi
 
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol __default_send_IPI_dest_field" >&5
+$as_echo_n "checking System.map for symbol __default_send_IPI_dest_field... " >&6; }
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " __default_send_IPI_dest_field\$" | cut -d\  -f1`
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab___default_send_IPI_dest_field\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM___default_send_IPI_dest_field $ihk_addr
+_ACEOF
+
+  fi
+
 fi
 
 if test "x$ENABLE_MEMDUMP" != "xno" ; then
