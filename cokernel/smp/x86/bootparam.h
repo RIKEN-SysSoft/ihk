@@ -1,7 +1,7 @@
 #ifndef HEADER_BUILTIN_BOOTPARAM_H
 #define HEADER_BUILTIN_BOOTPARAM_H
 
-#define SHIMOS_MAX_CORES 256
+#define SHIMOS_MAX_CORES 512
 
 #define __NCOREBITS  (sizeof(long) * 8)   /* bits per mask */
 #define CORE_SET(n, p) \
