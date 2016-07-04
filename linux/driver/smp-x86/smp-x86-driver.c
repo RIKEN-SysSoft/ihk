@@ -2014,7 +2014,7 @@ static long smp_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
 }
 
 
-static void smp_ihk_init_ident_page_table(void)
+static int smp_ihk_init_ident_page_table(void)
 {
 	int ident_npages = 0;
 	int i, j, k;
@@ -2034,6 +2034,11 @@ static void smp_ihk_init_ident_page_table(void)
 			ident_npages, ident_npages_order);
 
 	ident_pages = alloc_pages(GFP_DMA | GFP_KERNEL, ident_npages_order);
+	if (!ident_pages) {
+		printk("IHK-SMP: error: allocating identity page tables\n");
+		return ENOMEM;
+	}
+
 	ident_page_table = page_to_phys(ident_pages);
 	ident_page_table_virt = pfn_to_kaddr(page_to_pfn(ident_pages));
 
@@ -2076,6 +2081,7 @@ static void smp_ihk_init_ident_page_table(void)
 	}
 
 	printk("IHK-SMP: identity page tables allocated\n");
+	return 0;
 }
 
 
@@ -3190,7 +3196,7 @@ static struct irq_chip ihk_irq_chip = {
 
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
-	int error;
+	int error = 0;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
 	int vector = ISA_IRQ_VECTOR(15) + 2;
 #else
@@ -3409,8 +3415,9 @@ retry_trampoline:
 	}
 
 	if (vector >= 256) {
-		printk("error: allocating IKC irq vector\n");
-		return EFAULT;
+		printk("IHK-SMP: error: allocating IKC irq vector\n");
+		error = EFAULT;
+		goto error_free_trampoline;
 	}
 
 	ihk_smp_irq = vector;
@@ -3422,12 +3429,16 @@ retry_trampoline:
 	irq_set_chip(vector, &ihk_irq_chip);
 	irq_set_chip_data(vector, NULL);
 
-	smp_ihk_init_ident_page_table();
+	error = smp_ihk_init_ident_page_table();
+	if (error) {
+		printk("IHK-SMP: error: identity page table initialization failed\n");
+		goto error_free_irq;
+	}
 
 	error = collect_topology();
 	if (error) {
-		free_irq(ihk_smp_irq, NULL);
-		return error;
+		printk("IHK-SMP: error: collecting topology information failed\n");
+		goto error_free_irq;
 	}
 
 #if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
@@ -3443,7 +3454,21 @@ retry_trampoline:
 	}
 #endif
 
-	return 0;
+	return error;
+
+error_free_irq:
+	free_irq(ihk_smp_irq, NULL);
+
+error_free_trampoline:
+	if (trampoline_page) {
+		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);
+	}
+	else {
+		if (!using_linux_trampoline)
+			iounmap(trampoline_va);
+	}
+
+	return error;
 }
 
 int ihk_smp_reset_cpu(int phys_apicid) {
