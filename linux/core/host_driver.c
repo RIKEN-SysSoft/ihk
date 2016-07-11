@@ -55,6 +55,9 @@ static DEFINE_SPINLOCK(os_data_lock);
 static struct ihk_host_linux_os_data *os_data[OS_MAX_MINOR];
 static int os_max_minor = 0;
 
+static struct list_head ihk_os_notifiers;
+static spinlock_t ihk_os_notifiers_lock;
+
 extern int ikc_master_init(ihk_os_t os);
 extern void ikc_master_finalize(ihk_os_t os);
 
@@ -244,11 +247,23 @@ static int __ihk_os_ioctl_load(struct ihk_host_linux_os_data *data,
 static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
+	int index = ihk_host_os_get_index(data);
 
 	if (data->ops->boot) {
 		ret = data->ops->boot(data, data->priv, flag);
 		if (ret == 0) {
 			ret = ikc_master_init(data);
+		}
+
+		/* Call OS notifiers */
+		if (ret == 0) {
+			struct ihk_os_notifier *_ion;
+			spin_lock(&ihk_os_notifiers_lock);
+			list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
+				if (_ion->ops && _ion->ops->boot)
+					_ion->ops->boot(index);
+			}
+			spin_unlock(&ihk_os_notifiers_lock);
 		}
 	}
 
@@ -259,6 +274,8 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 static int  __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
+	struct ihk_os_notifier *_ion;
+	int index = ihk_host_os_get_index(data);
 	
 	/* No need for this 
 	void *buf;
@@ -269,6 +286,14 @@ static int  __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 		__ihk_os_unmap_memory(data, data->kmsg_pa, data->kmsg_len);
 	}
 	*/
+
+	/* Call OS notifiers */
+	spin_lock(&ihk_os_notifiers_lock);
+	list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
+		if (_ion->ops && _ion->ops->shutdown)
+			_ion->ops->shutdown(index);
+	}
+	spin_unlock(&ihk_os_notifiers_lock);
 
 	ikc_master_finalize(data);
 
@@ -1258,6 +1283,9 @@ static int __init ihk_host_driver_init(void)
 		goto ERR;
 	}
 
+	INIT_LIST_HEAD(&ihk_os_notifiers);
+	spin_lock_init(&ihk_os_notifiers_lock);
+
 	printk("IHK Initialized: Device number: Device %x, OS %x\n",
 	       mcd_dev_num, mcos_dev_num);
 
@@ -1697,6 +1725,54 @@ int ihk_device_linux_cpu_to_hw_id(ihk_device_t dev, int cpu)
 	return __ihk_device_linux_cpu_to_hw_id(dev, cpu);
 }
 
+int ihk_host_register_os_notifier(struct ihk_os_notifier *ion)
+{
+	int registered = 0;
+	struct ihk_os_notifier *_ion;
+
+	/* Check if registered already and add if not */
+	spin_lock(&ihk_os_notifiers_lock);
+
+	list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
+		if (_ion == ion) {
+			registered = 1;
+			break;
+		}
+	}
+
+	if (!registered) {
+		list_add_tail(&ion->nlist, &ihk_os_notifiers);
+		printk("IHK: OS notifier added\n");
+	}
+
+	spin_unlock(&ihk_os_notifiers_lock);
+	return 0;
+}
+
+int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion)
+{
+	int registered = 0;
+	struct ihk_os_notifier *_ion;
+
+	/* Check if registered already and remove if yes */
+	spin_lock(&ihk_os_notifiers_lock);
+
+	list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
+		if (_ion == ion) {
+			registered = 1;
+			break;
+		}
+	}
+
+	if (registered) {
+		list_del(&ion->nlist);
+		printk("IHK: OS notifier removed\n");
+	}
+
+	spin_unlock(&ihk_os_notifiers_lock);
+	return 0;
+}
+
 EXPORT_SYMBOL(ihk_register_device);
 EXPORT_SYMBOL(ihk_unregister_device);
 EXPORT_SYMBOL(ihk_device_create_os);
@@ -1731,3 +1807,5 @@ EXPORT_SYMBOL(ihk_os_get_linux_device);
 EXPORT_SYMBOL(ihk_device_get_cpu_topology);
 EXPORT_SYMBOL(ihk_device_get_node_topology);
 EXPORT_SYMBOL(ihk_device_linux_cpu_to_hw_id);
+EXPORT_SYMBOL(ihk_host_register_os_notifier);
+EXPORT_SYMBOL(ihk_host_deregister_os_notifier);

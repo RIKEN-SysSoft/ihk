@@ -817,4 +817,17 @@ struct ihk_node_topology *ihk_device_get_node_topology(ihk_device_t dev, int nod
 /** \brief get a hardware ID of the cpu which is specified linux cpu number */
 int ihk_device_linux_cpu_to_hw_id(ihk_device_t dev, int cpu);
 
+/* OS boot/shutdown handler (callback functions) */
+struct ihk_os_notifier_ops {
+	int (*boot)(int os_index);
+	int (*shutdown)(int os_index);
+};
+
+struct ihk_os_notifier {
+	struct list_head nlist;
+	struct ihk_os_notifier_ops *ops;
+};
+
+int ihk_host_register_os_notifier(struct ihk_os_notifier *ion);
+int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
 #endif
