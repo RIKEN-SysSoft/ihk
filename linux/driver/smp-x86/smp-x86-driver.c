@@ -221,16 +221,7 @@ int (*_wakeup_secondary_cpu_via_init)(int phys_apicid,
 #endif
 #endif
 
-#ifdef IHK_KSYM__cpu_up
-#if IHK_KSYM__cpu_up
-typedef int (*int_star_fn_uint_int_t)(unsigned int, int);
-int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) =
-	(int_star_fn_uint_int_t)
-	IHK_KSYM__cpu_up;
-#else // exported
-int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) = _cpu_up;
-#endif
-#elif defined IHK_KSYM_cpu_up
+#ifdef IHK_KSYM_cpu_up
 #if IHK_KSYM_cpu_up
 typedef int (*int_star_fn_uint_t)(unsigned int);
 int (*ihk_cpu_up)(unsigned int cpu) =
@@ -239,7 +230,16 @@ int (*ihk_cpu_up)(unsigned int cpu) =
 #else // exported
 int (*ihk_cpu_up)(unsigned int cpu) = cpu_up;
 #endif
-#endif /* _cpu_up */
+#elif defined IHK_KSYM__cpu_up
+#if IHK_KSYM__cpu_up
+typedef int (*int_star_fn_uint_int_t)(unsigned int, int);
+int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) =
+	(int_star_fn_uint_int_t)
+	IHK_KSYM__cpu_up;
+#else // exported
+int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) = _cpu_up;
+#endif
+#endif /* IHK_KSYM_cpu_up or IHK_KSYM__cpu_up*/
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #ifdef IHK_KSYM_cpu_hotplug_driver_lock 
@@ -2403,10 +2403,10 @@ static int smp_ihk_online_cpu(int cpu_id)
 {
 	int ret;
 
-#ifdef IHK_KSYM__cpu_up
-	ret = ihk_cpu_up(cpu_id, 1);
-#elif defined IHK_KSYM_cpu_up
+#if defined IHK_KSYM_cpu_up
 	ret = ihk_cpu_up(cpu_id);
+#elif defined IHK_KSYM__cpu_up
+	ret = ihk_cpu_up(cpu_id, 1);
 #endif
 	if (ret) {
 		printk("IHK-SMP: WARNING: failed to re-enable CPU %d\n", cpu_id);
