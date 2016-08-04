@@ -1529,7 +1529,7 @@ static int smp_ihk_os_unregister_handler(ihk_os_t os, void *os_priv, int itype,
 	return 0;
 }
 
-static irqreturn_t builtin_irq_handler(int irq, void *data)
+static irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data)
 {
 	struct ihk_host_interrupt_handler *h;
 
@@ -2085,10 +2085,10 @@ static int smp_ihk_init_ident_page_table(void)
 }
 
 
-static irqreturn_t smp_ihk_interrupt(int irq, void *dev_id) 
+static irqreturn_t smp_ihk_irq_handler(int irq, void *dev_id)
 {
 	ack_APIC_irq();
-	builtin_irq_handler(ihk_smp_irq, NULL);
+	smp_ihk_irq_call_handlers(ihk_smp_irq, NULL);
 	return IRQ_HANDLED;
 }
 
@@ -3378,7 +3378,7 @@ retry_trampoline:
 #define IRQF_DISABLED 0x0
 #endif
 		if (request_irq(vector, 
-					smp_ihk_interrupt, IRQF_DISABLED, "IHK-SMP", NULL) != 0) { 
+					smp_ihk_irq_handler, IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
 			printk("IRQ vector %d: request_irq failed\n", vector);
 			continue;
 		}
