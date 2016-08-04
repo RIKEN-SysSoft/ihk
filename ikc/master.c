@@ -65,7 +65,7 @@ IHK_EXPORT_SYMBOL(ihk_ikc_listen_port);
 
 static int ihk_ikc_master_send(ihk_os_t os,
                                uint32_t msg, uint32_t ref,
-                               uint64_t a1, uint64_t a2, uint64_t a3)
+                               uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4)
 {
 	struct ihk_ikc_master_packet packet;
 	struct ihk_ikc_channel_desc *c;
@@ -77,6 +77,7 @@ static int ihk_ikc_master_send(ihk_os_t os,
 	packet.param[0] = a1;
 	packet.param[1] = a2;
 	packet.param[2] = a3;
+	packet.param[3] = a4;
 
 	return ihk_ikc_send(c, &packet, 0);
 }
@@ -85,7 +86,8 @@ int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm,
                    struct ihk_ikc_listen_param *p,
                    unsigned long packet_size,
                    unsigned long *rq, unsigned long *sq,
-                   struct ihk_ikc_channel_desc **newc)
+                   struct ihk_ikc_channel_desc **newc,
+                   unsigned long remote_channel_va)
 {
 	struct ihk_ikc_channel_info ci;
 	struct ihk_ikc_channel_desc *c;
@@ -114,6 +116,7 @@ int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm,
 	}
 	
 	c->handler = ci.packet_handler;
+	c->remote_channel_va = remote_channel_va;
 
 	*newc = c;
 	return 0;
@@ -130,6 +133,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 	struct ihk_ikc_channel_desc *newc = NULL;
 	ihk_spinlock_t *lock;
 	unsigned long flags;
+	unsigned long remote_channel_va = 0;
 
 	switch (packet->msg) {
 	case IHK_IKC_MASTER_MSG_CONNECT:
@@ -148,27 +152,29 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 		} else {
 			rq = packet->param[1];
 			sq = packet->param[2];
+			remote_channel_va = packet->param[3];
 
 			lock = ihk_ikc_get_listener_lock(os);
 			flags = ihk_ikc_spinlock_lock(lock);
 			p = ihk_ikc_get_listener_entry(os, port);
 			r = ihk_ikc_accept(c, *p,
 			                   packet->param[0] >> 32,
-			                   &rq, &sq, &newc);
+			                   &rq, &sq, &newc, remote_channel_va);
 			ihk_ikc_spinlock_unlock(lock, flags);
 		}
 
 		if (r != 0) {
 			ihk_ikc_master_send(os,
 			                    IHK_IKC_MASTER_MSG_CONNECT_REPLY,
-			                    packet->ref, -r, 0, 0);
+			                    packet->ref, -r, 0, 0, 0);
 		} else {
-			kprintf("(Accepted) Remote channeld id = %x\n",
-			        newc->remote_channel_id);
+			kprintf("(Accepted) channel: %p, remote channel: %p\n",
+			        newc, (void *)newc->remote_channel_va);
 			ihk_ikc_enable_channel(newc);
 			ihk_ikc_master_send(os,
 			                    IHK_IKC_MASTER_MSG_CONNECT_REPLY,
-			                    packet->ref, 0, rq, 0);
+			                    packet->ref, 0, rq,
+			                    remote_channel_va, (uint64_t)newc);
 		}
 
 		break;
@@ -281,6 +287,7 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 	int ref, ret;
 	struct ihk_ikc_master_wait_struct wq;
 
+	dkprintf("%s: connecting channel %p\n", __FUNCTION__, c);
 	c = ihk_ikc_create_channel(os, p->port, p->pkt_size, p->queue_size,
 	                           &rq, &sq, 0);
 	if (!c) {
@@ -293,7 +300,7 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 
 	if (ihk_ikc_master_send(os, IHK_IKC_MASTER_MSG_CONNECT, ref,
 	                        ((unsigned long)p->pkt_size << 32) 
-	                        | p->port, sq, rq) == 0) {
+	                        | p->port, sq, rq, (uint64_t)c) == 0) {
 		ret = ihk_ikc_wait_master(&wq);
 		ihk_ikc_wait_finish(os, &wq);
 
@@ -310,6 +317,10 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 			ihk_ikc_set_remote_queue(&c->send, os, wq.res.param[1],
 			                         p->queue_size);
 			c->remote_channel_id = c->send.cache.channel_id;
+			c->remote_channel_va = wq.res.param[3];
+			dkprintf("%s: IHK_IKC_MASTER_MSG_CONNECT_REPLY"
+					" channel: %p, remote_channel_va: %p\n",
+					__FUNCTION__, c, c->remote_channel_va);
 			c->handler = p->handler;
 			c->send.queue->write_cpu = c->recv.queue->read_cpu;
 			dkprintf("(Connected) Remote channeld id = %x\n",
@@ -331,7 +342,7 @@ IHK_EXPORT_SYMBOL(ihk_ikc_connect);
 int __ihk_send_disconnect(struct ihk_ikc_channel_desc *c)
 {
 	return ihk_ikc_master_send(c->remote_os, IHK_IKC_MASTER_MSG_DISCONNECT, 
-	                           c->remote_channel_id, c->channel_id, 0, 0);
+	                           c->remote_channel_id, c->channel_id, 0, 0, 0);
 }
 
 int __ihk_wait_for_disconnect_ack(struct ihk_ikc_channel_desc *c)

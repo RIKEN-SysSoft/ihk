@@ -17,7 +17,7 @@
 struct ihk_ikc_master_packet {
 	uint32_t msg;
 	uint32_t ref;
-	uint64_t param[3];
+	uint64_t param[4];
 };
 
 #define MASTER_IKCQ_SIZE    PAGE_SIZE

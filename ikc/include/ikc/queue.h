@@ -60,6 +60,7 @@ struct ihk_ikc_channel_desc {
 	struct list_head           list;
 	ihk_os_t                   remote_os;
 	int                        remote_channel_id;
+	uint64_t                   remote_channel_va;
 	int                        port;
 	int                        channel_id;
 	struct ihk_ikc_queue_desc  recv, send;
