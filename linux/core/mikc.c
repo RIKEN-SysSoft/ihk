@@ -68,7 +68,7 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		c = kzalloc(sizeof(struct ihk_ikc_channel_desc)
 		            + sizeof(struct ihk_ikc_master_packet), GFP_KERNEL);
 		ihk_ikc_init_desc(c, ihk_os, 0, rq, wq,
-		                  ihk_ikc_master_channel_packet_handler);
+		                  ihk_ikc_master_channel_packet_handler, c);
 
 		c->recv.qphys = rp;
 		c->send.qphys = wp;

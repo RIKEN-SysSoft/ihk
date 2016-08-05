@@ -150,7 +150,8 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
                        ihk_os_t ros, int port,
                        struct ihk_ikc_queue_head *rq,
                        struct ihk_ikc_queue_head *wq,
-                       ihk_ikc_ph_t packet_handler)
+                       ihk_ikc_ph_t packet_handler,
+					   struct ihk_ikc_channel_desc *master)
 {
 	struct list_head *channels = ihk_ikc_get_channel_list(ros);
 	ihk_spinlock_t *lock = ihk_ikc_get_channel_list_lock(ros);
@@ -175,6 +176,7 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
 		c->send.cache = *wq;
 	}
 	c->handler = packet_handler;
+	c->master = master;
 
 	ihk_ikc_spinlock_init(&c->recv.lock);
 	ihk_ikc_spinlock_init(&c->send.lock);
@@ -266,7 +268,8 @@ struct ihk_ikc_channel_desc *ihk_ikc_create_channel(ihk_os_t os,
 		sendq = NULL;
 	}
 
-	ihk_ikc_init_desc(desc, os, port, recvq, sendq, NULL);
+	ihk_ikc_init_desc(desc, os, port, recvq, sendq, NULL,
+			ihk_ikc_get_master_channel(os));
 
 	return desc;
 }

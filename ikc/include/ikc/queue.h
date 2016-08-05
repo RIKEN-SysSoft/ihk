@@ -61,6 +61,7 @@ struct ihk_ikc_channel_desc {
 	ihk_os_t                   remote_os;
 	int                        remote_channel_id;
 	uint64_t                   remote_channel_va;
+	struct ihk_ikc_channel_desc *master;
 	int                        port;
 	int                        channel_id;
 	struct ihk_ikc_queue_desc  recv, send;
@@ -106,7 +107,8 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
                        ihk_os_t ros, int cid,
                        struct ihk_ikc_queue_head *rq,
                        struct ihk_ikc_queue_head *wq,
-                       ihk_ikc_ph_t packet_handler);
+                       ihk_ikc_ph_t packet_handler,
+                       struct ihk_ikc_channel_desc *master);
 struct ihk_ikc_channel_desc *ihk_ikc_find_channel(ihk_os_t os, int id);
 
 static inline int ihk_ikc_channel_enabled(struct ihk_ikc_channel_desc *c)
