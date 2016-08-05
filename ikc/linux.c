@@ -88,7 +88,7 @@ struct ihk_ikc_queue_head *ihk_ikc_alloc_queue(int qpages)
 {
 	int order = fls(qpages) - 1;
 
-	return (void *)__get_free_pages(GFP_KERNEL | GFP_ATOMIC, order);
+	return (void *)__get_free_pages(GFP_ATOMIC, order);
 }
 
 void ihk_ikc_free_queue(struct ihk_ikc_queue_head *q)
@@ -101,7 +101,7 @@ void ihk_ikc_free_queue(struct ihk_ikc_queue_head *q)
 
 void *ihk_ikc_malloc(int size)
 {
-	return kmalloc(size, GFP_KERNEL | GFP_ATOMIC);
+	return kmalloc(size, GFP_ATOMIC);
 }
 void ihk_ikc_free(void *p)
 {
