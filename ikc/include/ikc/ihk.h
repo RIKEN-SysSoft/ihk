@@ -114,5 +114,7 @@ struct ihk_ikc_channel_desc *ihk_ikc_get_master_channel(ihk_os_t os);
 struct list_head *ihk_ikc_get_channel_list(ihk_os_t os);
 ihk_spinlock_t *ihk_ikc_get_channel_list_lock(ihk_os_t ihk_os);
 int ihk_ikc_get_unique_channel_id(ihk_os_t ihk_os);
+void ihk_ikc_notify_remote_read(struct ihk_ikc_channel_desc *c);
+void ihk_ikc_notify_remote_write(struct ihk_ikc_channel_desc *c);
 
 #endif

@@ -50,8 +50,18 @@ static void ikc_work_func(struct work_struct *work)
 /** \brief IKC interrupt handler (interrupt context) */
 static void ihk_ikc_interrupt_handler(ihk_os_t os, void *os_priv, void *priv)
 {
-	/* This should be done in the software irq... */
-	ihk_ikc_linux_schedule_work(priv);
+	struct ihk_ikc_channel_desc *c = ihk_ikc_get_master_channel(os);
+
+	/*
+	 * The master channel is used both for connection management and for
+	 * control packets indicating actual traffic on IKC channels, where
+	 * target channels are referred directly as part of
+	 * IHK_IKC_MASTER_MSG_PACKET_ON_CHANNEL packets.
+	 */
+	while (ihk_ikc_channel_enabled(c) &&
+			!ihk_ikc_queue_is_empty(c->recv.queue)) {
+		ihk_ikc_recv_handler(c, c->handler, os, 0);
+	}
 }
 
 /** \brief Get the master channel for an OS */
@@ -128,4 +138,33 @@ void ihk_ikc_wake_master(struct ihk_ikc_master_wait_struct *ws)
 {
 	wake_up_interruptible(&ws->wait);
 }
+
+int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
+{
+	int r;
+	unsigned long flags;
+
+	local_irq_save(flags);
+retry:
+	/* Add main packet to target channel */
+	if (ihk_ikc_channel_enabled(channel)) {
+		r = ihk_ikc_write_queue(channel->send.queue, p, opt);
+
+		if (r != 0) {
+			kprintf("%s: couldn't append packet -> retrying\n", __FUNCTION__);
+			goto retry;
+		}
+
+		if (!(opt & IKC_NO_NOTIFY)) {
+			ihk_ikc_notify_remote_write(channel);
+		}
+	} else {
+		r = -EINVAL;
+	}
+
+	local_irq_restore(flags);
+	return r;
+}
+
+IHK_EXPORT_SYMBOL(ihk_ikc_send);
 

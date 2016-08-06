@@ -41,6 +41,54 @@ static void ihk_ikc_interrupt_handler(void *priv)
 	}
 	ihk_ikc_spinlock_unlock(&ihk_ikc_channels_lock, flags);
 }
+
+int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
+{
+	int r;
+	unsigned long flags;
+
+	flags = cpu_disable_interrupt_save();
+retry:
+	/* Add main packet to target channel */
+	if (ihk_ikc_channel_enabled(channel)) {
+		r = ihk_ikc_write_queue(channel->send.queue, p, opt);
+		if (!(opt & IKC_NO_NOTIFY) && channel == channel->master) {
+			ihk_ikc_notify_remote_write(channel);
+		}
+	} else {
+		r = -EINVAL;
+	}
+
+	if (r != 0) {
+		kprintf("%s: couldn't append packet -> retrying\n", __FUNCTION__);
+		goto retry;
+	}
+
+	/* Add control packet to master channel unless we are sending
+	 * on the master itself */
+	if (channel != channel->master) {
+		struct ihk_ikc_master_packet packet;
+
+		packet.msg = IHK_IKC_MASTER_MSG_PACKET_ON_CHANNEL;
+		packet.param[3] = channel->remote_channel_va;
+retry_master:
+		r = ihk_ikc_write_queue(channel->master->send.queue, &packet, opt);
+
+		if (r != 0) {
+			kprintf("%s: couldn't append master packet -> retrying\n", __FUNCTION__);
+			goto retry_master;
+		}
+
+		/* Only send IRQ to the original target core */
+		if (!(opt & IKC_NO_NOTIFY)) {
+			ihk_ikc_notify_remote_write(channel);
+		}
+	}
+	cpu_restore_interrupt(flags);
+
+	return r;
+}
+
 struct ihk_ikc_channel_desc *ihk_ikc_get_master_channel(ihk_os_t os)
 {
 	return ihk_mc_get_master_channel();

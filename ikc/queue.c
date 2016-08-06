@@ -316,31 +316,17 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 	ihk_ikc_free(desc);
 }
 
-int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
-{
-	unsigned long flags;
-	int r;
-
-	flags = ihk_ikc_spinlock_lock(&channel->send.lock);
-	if (ihk_ikc_channel_enabled(channel)) {
-		r = ihk_ikc_write_queue(channel->send.queue, p, opt);
-		if (!(opt & IKC_NO_NOTIFY)) {
-			ihk_ikc_notify_remote_write(channel);
-		}
-	} else {
-		r = -EINVAL;
-	}
-	ihk_ikc_spinlock_unlock(&channel->send.lock, flags);
-
-	return r;
-}
 
 int ihk_ikc_recv(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 {
-	unsigned long flags;
 	int r;
+	unsigned long flags;
 
-	flags = ihk_ikc_spinlock_lock(&channel->recv.lock);
+#ifdef IHK_OS_MANYCORE
+	flags = cpu_disable_interrupt_save();
+#else
+	local_irq_save(flags);
+#endif
 	if (ihk_ikc_channel_enabled(channel)) {
 		r = ihk_ikc_read_queue(channel->recv.queue, p, opt);
 		/* XXX: Optimal interrupt */
@@ -350,7 +336,11 @@ int ihk_ikc_recv(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 	} else {
 		r = -EINVAL;
 	}
-	ihk_ikc_spinlock_unlock(&channel->recv.lock, flags);
+#ifdef IHK_OS_MANYCORE
+	cpu_restore_interrupt(flags);
+#else
+	local_irq_restore(flags);
+#endif
 
 	return r;
 }
@@ -380,20 +370,30 @@ static int __ihk_ikc_recv_nocopy(struct ihk_ikc_channel_desc *channel,
 }
 
 int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel, 
-                         ihk_ikc_ph_t h, void *harg, int opt)
+		ihk_ikc_ph_t h, void *harg, int opt)
 {
 	int r = -ENOENT;
+	char *p = ihk_ikc_malloc(channel->recv.queue->pktsize);
+
+	if (!p) {
+		kprintf("%s: error allocating packet\n", __FUNCTION__);
+		return -ENOMEM;
+	}
+
+	if ((r = ihk_ikc_recv(channel, p, opt | IKC_NO_NOTIFY)) != 0) {
+		ihk_ikc_free(p);
+		goto out;
+	}
+
+	/* XXX: Reference to the packet must not be stored by handler */
+	h(channel, p, harg);
+
+	ihk_ikc_free(p);
 
 	if (channel->flag & IKC_FLAG_NO_COPY) {
-		return __ihk_ikc_recv_nocopy(channel, h, harg, opt);
-	} else {
-		while (ihk_ikc_recv(channel, channel->packet_buf,
-		                    opt | IKC_NO_NOTIFY) == 0) {
-			h(channel, channel->packet_buf, harg);
-			r = 0;
-		}
 		ihk_ikc_notify_remote_read(channel);
 	}
+out:
 	return r;
 }
 
@@ -456,7 +456,6 @@ struct ihk_ikc_channel_desc *ihk_ikc_find_channel(ihk_os_t os, int id)
 	return NULL;
 }
 
-IHK_EXPORT_SYMBOL(ihk_ikc_send);
 IHK_EXPORT_SYMBOL(ihk_ikc_recv);
 IHK_EXPORT_SYMBOL(ihk_ikc_recv_handler);
 IHK_EXPORT_SYMBOL(ihk_ikc_enable_channel);

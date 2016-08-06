@@ -136,6 +136,21 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 	unsigned long remote_channel_va = 0;
 
 	switch (packet->msg) {
+	case IHK_IKC_MASTER_MSG_PACKET_ON_CHANNEL:
+	{
+		struct ihk_ikc_channel_desc *c =
+			(struct ihk_ikc_channel_desc *)packet->param[3];
+		if (os == NULL && c->recv.queue->read_cpu != ihk_ikc_get_processor_id()) {
+			kprintf("%s: %p is for CPU %d\n", __FUNCTION__,
+				virt_to_phys(c), c->recv.queue->read_cpu);
+		}
+		if (ihk_ikc_channel_enabled(c) &&
+				!ihk_ikc_queue_is_empty(c->recv.queue)) {
+			ihk_ikc_recv_handler(c, c->handler, os, 0);
+		}
+
+		break;
+	}
 	case IHK_IKC_MASTER_MSG_CONNECT:
 	{
 		/* connect (port | packet size, recv queue, send queue) */

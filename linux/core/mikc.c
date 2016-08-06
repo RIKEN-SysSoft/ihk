@@ -241,7 +241,6 @@ struct ihk_ikc_channel_desc *ihk_os_get_master_channel(ihk_os_t __os)
 {
 	struct ihk_host_linux_os_data *os = __os;
 
-	printk("os(%p)->mchannel = %p\n", os, os->mchannel);
 	return os->mchannel;
 }
 
