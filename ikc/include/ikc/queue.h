@@ -26,6 +26,7 @@ struct ihk_ikc_queue_head {
 	uint32_t        flag;
 /* 16 */
 	uint64_t        read_off;
+	uint64_t        max_read_off;
 	uint64_t        write_off;
 /* 32 : Receiver */
 	uint32_t        channel_id;

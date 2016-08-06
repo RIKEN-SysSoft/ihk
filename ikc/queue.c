@@ -3,9 +3,11 @@
  * \brief IHK-IKC: Queue functions
  *
  * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * Lock-free implementation: Balazs Gerofi <bgerofi@riken.jp>
  */
 #include <ikc/ihk.h>
 #include <ikc/queue.h>
+#include <ikc/msg.h>
 
 //#define DEBUG_QUEUE
 
@@ -53,17 +55,19 @@ int ihk_ikc_init_queue(struct ihk_ikc_queue_head *q,
 	q->pktsize = packetsize;
 	q->pktcount = (size - sizeof(struct ihk_ikc_queue_head)) / packetsize;
 
-	q->read_off = q->write_off = 0;
+	q->read_off = q->max_read_off = q->write_off = 0;
 	q->read_cpu = 0;
 	q->write_cpu = 0;
 	q->queue_size = q->pktsize * q->pktcount;
+	dkprintf("%s: queue %p pktcount: %lu\n",
+		__FUNCTION__, virt_to_phys(q), q->pktcount);
 
 	return 0;
 }
 
 int ihk_ikc_queue_is_empty(struct ihk_ikc_queue_head *q)
 {
-	return q->read_off == q->write_off;
+	return q->read_off == q->max_read_off;
 }
 
 int ihk_ikc_queue_is_full(struct ihk_ikc_queue_head *q)
@@ -72,31 +76,40 @@ int ihk_ikc_queue_is_full(struct ihk_ikc_queue_head *q)
 
 	r = q->read_off;
 	w = q->write_off;
-	if ((r > w && w + q->pktsize == r)
-	    || (r == 0 && w + q->pktsize == q->queue_size)) {
+
+	barrier();
+
+	if ((w - r) == q->pktcount)
 		return 1;
-	} else {
-		return 0;
-	}
+
+	return 0;
 }
 
 int ihk_ikc_read_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
 {
-	uint64_t o;
+	uint64_t r, m;
 
-	if (ihk_ikc_queue_is_empty(q)) {
+retry:
+	r = q->read_off;
+	m = q->max_read_off;
+
+	barrier();
+
+	/* Is the queue empty? */
+	if (r == m) {
 		return -1;
-	} else{
-		memcpyl(packet, (char *)q + sizeof(*q) + q->read_off,
-		        q->pktsize);
-
-		o = q->read_off;
-		o += q->pktsize;
-		if (o >= q->queue_size) {
-			o = 0;
-		}
-		q->read_off = o;
 	}
+
+	/* Try to advance the queue, but see if someone else has done it already */
+	if (!__sync_bool_compare_and_swap(&q->read_off, r, r + 1)) {
+		goto retry;
+	}
+	dkprintf("%s: queue %p r: %lu, m: %lu\n",
+			__FUNCTION__, virt_to_phys(q), r, m);
+
+	memcpyl(packet, (char *)q + sizeof(*q) + ((r % q->pktcount) * q->pktsize),
+			q->pktsize);
+
 	return 0;
 }
 
@@ -105,41 +118,66 @@ int ihk_ikc_read_queue_handler(struct ihk_ikc_queue_head *q,
                                int (*h)(struct ihk_ikc_channel_desc *,
                                         void *, void *), void *harg, int flag)
 {
-	uint64_t o;
+	uint64_t r, m;
 
-	if (ihk_ikc_queue_is_empty(q)) {
+retry:
+	r = q->read_off;
+	m = q->max_read_off;
+
+	barrier();
+
+	/* Is the queue empty? */
+	if (r == m) {
 		return -1;
-	} else{
-		o = q->read_off;
-		o += q->pktsize;
-		if (o >= q->queue_size) {
-			o = 0;
-		}
-
-		h(c, (char *)q + sizeof(*q) + q->read_off, harg);
-
-		q->read_off = o;
 	}
+
+	/* Try to advance the queue, but see if someone else has done it already */
+	if (!__sync_bool_compare_and_swap(&q->read_off, r, r + 1)) {
+		goto retry;
+	}
+	dkprintf("%s: queue %p r: %lu, m: %lu\n",
+			__FUNCTION__, virt_to_phys(q), r, m);
+
+	h(c, (char *)q + sizeof(*q) + ((r % q->pktcount) * q->pktsize), harg);
+
 	return 0;
 }
 
 int ihk_ikc_write_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
 {
-	uint64_t o;
+	uint64_t r, w;
 
-	if (ihk_ikc_queue_is_full(q)) {
-		return -1;
-	} else {
-		memcpyl((char *)q + sizeof(*q) + q->write_off,
-		        packet, q->pktsize);
+retry:
+	r = q->read_off;
+	w = q->write_off;
 
-		o = q->write_off;
-		o += q->pktsize;
-		if (o >= q->queue_size) {
-			o = 0;
-		}
-		q->write_off = o;
+	barrier();
+
+	/* Is the queue full? */
+	if ((w - r) == q->pktcount) {
+		dkprintf("%s: queue %p r: %lu, w: %lu full, retrying\n",
+			__FUNCTION__, virt_to_phys(q), r, w);
+		goto retry;
 	}
+
+	/* Try to advance the queue, but see if someone else has done it already */
+	if (!__sync_bool_compare_and_swap(&q->write_off, w, w + 1)) {
+		goto retry;
+	}
+	dkprintf("%s: queue %p r: %lu, w: %lu\n",
+			__FUNCTION__, virt_to_phys(q), r, w);
+
+	memcpyl((char *)q + sizeof(*q) + ((w % q->pktcount) * q->pktsize),
+			packet, q->pktsize);
+
+	/*
+	 * Advance the max read index so that the element is visible to readers,
+	 * this has to succeed eventually, but we cannot afford to be interrupted
+	 * by another request which would then end up waiting for this hence
+	 * IRQs are disabled during queue operations.
+	 */
+	while (!__sync_bool_compare_and_swap(&q->max_read_off, w, w + 1)) {}
+
 	return 0;
 }
 
