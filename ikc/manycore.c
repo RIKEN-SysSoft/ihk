@@ -10,36 +10,37 @@
 
 struct ihk_ikc_channel_desc *ihk_mc_get_master_channel(void);
 
-static ihk_spinlock_t ihk_ikc_channels_lock;
-static LIST_HEAD(ihk_ikc_channels);
+static ihk_spinlock_t *ihk_ikc_channels_lock;
+static struct list_head *ihk_ikc_channels;
 
 struct list_head *ihk_ikc_get_channel_list(ihk_os_t os)
 {
-	return &ihk_ikc_channels;
+	return &ihk_ikc_channels[ihk_mc_get_processor_id()];
 }
 ihk_spinlock_t *ihk_ikc_get_channel_list_lock(ihk_os_t os)
 {
-	return &ihk_ikc_channels_lock;
+	return &ihk_ikc_channels_lock[ihk_mc_get_processor_id()];
 }
 
 static void ihk_ikc_interrupt_handler(void *priv)
 {
 	/* This should be done in the software irq... */
 	struct ihk_ikc_channel_desc *c;
+	struct list_head *channel_list = ihk_ikc_get_channel_list(NULL);
+	ihk_spinlock_t *channel_list_lock = ihk_ikc_get_channel_list_lock(NULL);
 	unsigned long flags;
 
-	/* XXX: Linear search?, Per-core list of the queues! */
-	flags = ihk_ikc_spinlock_lock(&ihk_ikc_channels_lock);
-	list_for_each_entry(c, &ihk_ikc_channels, list) {
-		if (ihk_ikc_channel_enabled(c) && 
+	flags = ihk_ikc_spinlock_lock(channel_list_lock);
+	list_for_each_entry(c, channel_list, list) {
+		if (ihk_ikc_channel_enabled(c) &&
 		    !ihk_ikc_queue_is_empty(c->recv.queue) &&
 		    c->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
-			ihk_ikc_spinlock_unlock(&ihk_ikc_channels_lock, flags);
+			ihk_ikc_spinlock_unlock(channel_list_lock, flags);
 			ihk_ikc_recv_handler(c, c->handler, NULL, 0);
-			flags = ihk_ikc_spinlock_lock(&ihk_ikc_channels_lock);
+			flags = ihk_ikc_spinlock_lock(channel_list_lock);
 		}
 	}
-	ihk_ikc_spinlock_unlock(&ihk_ikc_channels_lock, flags);
+	ihk_ikc_spinlock_unlock(channel_list_lock, flags);
 }
 
 int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
@@ -99,11 +100,26 @@ static struct ihk_mc_interrupt_handler ihk_ikc_handler = {
 	.priv = NULL,
 };
 
+extern int num_processors;
+
 void ihk_ikc_system_init(ihk_os_t os)
 {
+	int i;
 	INIT_LIST_HEAD(&ihk_ikc_handler.list);
 	ihk_mc_register_interrupt_handler(ihk_mc_get_vector(IHK_GV_IKC),
 	                                  &ihk_ikc_handler);
+
+	ihk_ikc_channels = ihk_ikc_malloc(sizeof(*ihk_ikc_channels) * num_processors);
+	ihk_ikc_channels_lock = ihk_ikc_malloc(sizeof(*ihk_ikc_channels_lock) * num_processors);
+	if (!ihk_ikc_channels || !ihk_ikc_channels_lock) {
+		kprintf("%s: error allocating channels list\n", __FUNCTION__);
+		panic("");
+	}
+
+	for (i = 0; i < num_processors; ++i) {
+		INIT_LIST_HEAD(&ihk_ikc_channels[i]);
+		ihk_ikc_spinlock_init(&ihk_ikc_channels_lock[i]);
+	}
 }
 
 void ihk_ikc_system_exit(ihk_os_t os)
