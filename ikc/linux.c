@@ -9,6 +9,7 @@
 #include <linux/slab.h>
 #include <asm/bitops.h>
 #include <asm/smp.h>
+#include <linux/interrupt.h>
 
 extern struct list_head *ihk_host_os_get_ikc_channel_list(ihk_os_t ihk_os);
 struct ihk_host_interrupt_handler *ihk_host_os_get_ikc_handler(ihk_os_t ihk_os);
@@ -25,31 +26,7 @@ ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work);
 /** \brief Worker thread for IKC interrupts */
 static void ikc_work_func(struct work_struct *work)
 {
-	struct ihk_ikc_channel_desc *c;
-	struct list_head *channels;
 	ihk_os_t os = ihk_ikc_linux_get_os_from_work(work);
-	ihk_spinlock_t *lock;
-	unsigned long flags;
-
-	channels = ihk_ikc_get_channel_list(os);
-	lock = ihk_ikc_get_channel_list_lock(os);
-
-	/* XXX: Linear search? */
-	flags = ihk_ikc_spinlock_lock(lock);
-	list_for_each_entry(c, channels, list) {
-		if (ihk_ikc_channel_enabled(c) && 
-		    !ihk_ikc_queue_is_empty(c->recv.queue)) {
-			ihk_ikc_spinlock_unlock(lock, flags);
-			ihk_ikc_recv_handler(c, c->handler, os, 0);
-			flags = ihk_ikc_spinlock_lock(lock);
-		}
-	}
-	ihk_ikc_spinlock_unlock(lock, flags);
-}
-
-/** \brief IKC interrupt handler (interrupt context) */
-static void ihk_ikc_interrupt_handler(ihk_os_t os, void *os_priv, void *priv)
-{
 	struct ihk_ikc_channel_desc *c = ihk_ikc_get_master_channel(os);
 
 	/*
@@ -62,6 +39,12 @@ static void ihk_ikc_interrupt_handler(ihk_os_t os, void *os_priv, void *priv)
 			!ihk_ikc_queue_is_empty(c->recv.queue)) {
 		ihk_ikc_recv_handler(c, c->handler, os, 0);
 	}
+}
+
+/** \brief IKC interrupt handler (interrupt context) */
+static void ihk_ikc_interrupt_handler(ihk_os_t os, void *os_priv, void *priv)
+{
+	ihk_ikc_linux_schedule_work(priv);
 }
 
 /** \brief Get the master channel for an OS */
@@ -98,7 +81,7 @@ struct ihk_ikc_queue_head *ihk_ikc_alloc_queue(int qpages)
 {
 	int order = fls(qpages) - 1;
 
-	return (void *)__get_free_pages(GFP_ATOMIC, order);
+	return (void *)__get_free_pages(in_interrupt() ? GFP_ATOMIC : GFP_KERNEL, order);
 }
 
 void ihk_ikc_free_queue(struct ihk_ikc_queue_head *q)
@@ -111,7 +94,7 @@ void ihk_ikc_free_queue(struct ihk_ikc_queue_head *q)
 
 void *ihk_ikc_malloc(int size)
 {
-	return kmalloc(size, GFP_ATOMIC);
+	return kmalloc(size, in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
 }
 void ihk_ikc_free(void *p)
 {

@@ -383,6 +383,7 @@ int ihk_ikc_recv(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 	return r;
 }
 
+#if 0
 static int __ihk_ikc_recv_nocopy(struct ihk_ikc_channel_desc *channel,
                                  ihk_ikc_ph_t h, void *harg, int opt)
 {
@@ -406,6 +407,7 @@ static int __ihk_ikc_recv_nocopy(struct ihk_ikc_channel_desc *channel,
 
 	return r;
 }
+#endif
 
 int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel, 
 		ihk_ikc_ph_t h, void *harg, int opt)
@@ -423,10 +425,12 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 		goto out;
 	}
 
-	/* XXX: Reference to the packet must not be stored by handler */
+	/*
+	 * XXX: Handler must free the packet eventually!
+	 *
+	 * (syscall_packet_handler() is the function called for syscalls)
+	 */
 	h(channel, p, harg);
-
-	ihk_ikc_free(p);
 
 	if (channel->flag & IKC_FLAG_NO_COPY) {
 		ihk_ikc_notify_remote_read(channel);
