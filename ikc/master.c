@@ -134,6 +134,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 	ihk_spinlock_t *lock;
 	unsigned long flags;
 	unsigned long remote_channel_va = 0;
+	int ret = 0;
 
 	switch (packet->msg) {
 	case IHK_IKC_MASTER_MSG_PACKET_ON_CHANNEL:
@@ -195,13 +196,15 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 		break;
 	}
 	case IHK_IKC_MASTER_MSG_CONNECT_REPLY:
-		return ihk_ikc_master_reply_handler(os, packet);
+		ret = ihk_ikc_master_reply_handler(os, packet);
+		break;
 
 	case IHK_IKC_MASTER_MSG_DISCONNECT:
 		newc = ihk_ikc_find_channel(os, packet->ref);
 		kprintf("disconnect channel #%d => %p\n", packet->ref, newc);
 		if (!newc) {
-			return -ENOENT;
+			ret = -ENOENT;
+			break;
 		}
 
 		flags = ihk_ikc_spinlock_lock(&newc->recv.lock);
@@ -216,13 +219,17 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 			ihk_ikc_disconnect(newc);
 		}
 
-		return ihk_ikc_master_reply_handler(os, packet);
+		ret = ihk_ikc_master_reply_handler(os, packet);
+		break;
 
 	default:
-		return call_arch_master_packet_handler(os, c, __packet);
+		ret = call_arch_master_packet_handler(os, c, __packet);
+		break;
 	}
 
-	return 0;
+	ihk_ikc_free(packet);
+
+	return ret;
 }
 
 static ihk_atomic_t connect_refnum;
