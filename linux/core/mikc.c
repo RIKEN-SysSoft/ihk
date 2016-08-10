@@ -74,7 +74,12 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		c->send.qphys = wp;
 		c->recv.qrphys = r;
 		c->send.qrphys = w;
-		c->flag |= IKC_FLAG_NO_COPY;
+		/*
+		 * ihk_ikc_interrupt_handler() on the LWK now iterates the channel
+		 * until all packets are purged. This makes the notification IRQ
+		 * on master channel unnecessary.
+		 */
+		//c->flag |= IKC_FLAG_NO_COPY;
 
 		printk("c->remote_os = %p\n", c->remote_os);
 		os->packet_handler = handler;

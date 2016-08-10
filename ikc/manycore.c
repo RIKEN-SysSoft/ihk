@@ -32,7 +32,7 @@ static void ihk_ikc_interrupt_handler(void *priv)
 
 	flags = ihk_ikc_spinlock_lock(channel_list_lock);
 	list_for_each_entry(c, channel_list, list) {
-		if (ihk_ikc_channel_enabled(c) &&
+		while (ihk_ikc_channel_enabled(c) &&
 		    !ihk_ikc_queue_is_empty(c->recv.queue) &&
 		    c->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
 			ihk_ikc_spinlock_unlock(channel_list_lock, flags);
