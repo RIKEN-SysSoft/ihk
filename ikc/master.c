@@ -141,9 +141,10 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 	{
 		struct ihk_ikc_channel_desc *c =
 			(struct ihk_ikc_channel_desc *)packet->param[3];
-		if (os == NULL && c->recv.queue->read_cpu != ihk_ikc_get_processor_id()) {
+		if (os == NULL && c->recv.queue->read_cpu !=
+				ihk_ikc_get_processor_id()) {
 			kprintf("%s: %p is for CPU %d\n", __FUNCTION__,
-				virt_to_phys(c), c->recv.queue->read_cpu);
+					(void *)virt_to_phys(c), c->recv.queue->read_cpu);
 		}
 		if (ihk_ikc_channel_enabled(c) &&
 				!ihk_ikc_queue_is_empty(c->recv.queue)) {
@@ -227,7 +228,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 		break;
 	}
 
-	ihk_ikc_free(packet);
+	ihk_ikc_release_packet(__packet, c);
 
 	return ret;
 }

@@ -56,6 +56,10 @@ enum ihk_ikc_channel_flag {
 	IKC_FLAG_NO_COPY        = 0x10,
 };
 
+struct ihk_ikc_free_packet {
+	struct list_head list;
+};
+
 struct ihk_ikc_channel_desc {
 	struct list_head           all_list;
 	struct list_head           list;
@@ -69,8 +73,12 @@ struct ihk_ikc_channel_desc {
 	ihk_spinlock_t             lock;
 	enum ihk_ikc_channel_flag  flag;
 	ihk_ikc_ph_t               handler;
-	char                       packet_buf[0];
+	struct list_head           packet_pool;
+	ihk_spinlock_t             packet_pool_lock;
 };
+
+struct ihk_ikc_free_packet *ihk_ikc_alloc_packet(struct ihk_ikc_channel_desc *c);
+void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channel_desc *c);
 
 int ihk_ikc_init_queue(struct ihk_ikc_queue_head *q,
                        int id, int type, int size, int packetsize);

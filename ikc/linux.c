@@ -23,10 +23,8 @@ void ihk_ikc_linux_init_work_data(ihk_os_t ihk_os,
 void ihk_ikc_linux_schedule_work(ihk_os_t ihk_os);
 ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work);
 
-/** \brief Worker thread for IKC interrupts */
-static void ikc_work_func(struct work_struct *work)
+static void __ihk_ikc_reception_handler(ihk_os_t os)
 {
-	ihk_os_t os = ihk_ikc_linux_get_os_from_work(work);
 	struct ihk_ikc_channel_desc *c = ihk_ikc_get_master_channel(os);
 
 	/*
@@ -39,6 +37,13 @@ static void ikc_work_func(struct work_struct *work)
 			!ihk_ikc_queue_is_empty(c->recv.queue)) {
 		ihk_ikc_recv_handler(c, c->handler, os, 0);
 	}
+}
+
+/** \brief Worker thread for IKC interrupts */
+static void ikc_work_func(struct work_struct *work)
+{
+	ihk_os_t os = ihk_ikc_linux_get_os_from_work(work);
+	__ihk_ikc_reception_handler(os);
 }
 
 /** \brief IKC interrupt handler (interrupt context) */
@@ -94,7 +99,7 @@ void ihk_ikc_free_queue(struct ihk_ikc_queue_head *q)
 
 void *ihk_ikc_malloc(int size)
 {
-	return kmalloc(size, in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
+	return kmalloc(size, GFP_ATOMIC);
 }
 void ihk_ikc_free(void *p)
 {

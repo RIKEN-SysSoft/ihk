@@ -93,8 +93,6 @@ retry:
 	r = q->read_off;
 	m = q->max_read_off;
 
-	barrier();
-
 	/* Is the queue empty? */
 	if (r == m) {
 		return -1;
@@ -124,7 +122,7 @@ retry:
 	r = q->read_off;
 	m = q->max_read_off;
 
-	barrier();
+	//barrier();
 
 	/* Is the queue empty? */
 	if (r == m) {
@@ -150,8 +148,6 @@ int ihk_ikc_write_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
 retry:
 	r = q->read_off;
 	w = q->write_off;
-
-	barrier();
 
 	/* Is the queue full? */
 	if ((w - r) == q->pktcount) {
@@ -197,6 +193,7 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
 
 	INIT_LIST_HEAD(&c->list);
 	INIT_LIST_HEAD(&c->all_list);
+	INIT_LIST_HEAD(&c->packet_pool);
 
 	c->remote_os = ros;
 	c->port = port;
@@ -218,11 +215,60 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
 
 	ihk_ikc_spinlock_init(&c->recv.lock);
 	ihk_ikc_spinlock_init(&c->send.lock);
+	ihk_ikc_spinlock_init(&c->packet_pool_lock);
 
 	flags = ihk_ikc_spinlock_lock(lock);
 	list_add_tail(&c->list, channels);
 	ihk_ikc_spinlock_unlock(lock, flags);
 }
+
+/*
+ * Packet pool functions.
+ */
+struct ihk_ikc_free_packet *ihk_ikc_alloc_packet(
+	struct ihk_ikc_channel_desc *c)
+{
+	unsigned long flags;
+	struct ihk_ikc_free_packet *p = NULL;
+	struct ihk_ikc_free_packet *p_iter;
+
+	flags = ihk_ikc_spinlock_lock(&c->packet_pool_lock);
+	list_for_each_entry(p_iter, &c->packet_pool, list) {
+		p = p_iter;
+		list_del(&p->list);
+		break;
+	}
+
+	/* No packet? Allocate new */
+	if (!p) {
+retry_alloc:
+		p = (struct ihk_ikc_free_packet *)ihk_ikc_malloc(c->recv.queue->pktsize);
+		if (!p) {
+			kprintf("%s: ERROR allocating packet, retrying\n", __FUNCTION__);
+			goto retry_alloc;
+		}
+		dkprintf("%s: packet %p kmalloc'd on channel %p %s\n",
+			__FUNCTION__, p, c, c == c->master ? "(master)" : "");
+	}
+	else {
+		dkprintf("%s: packet %p obtained from pool on channel %p %s\n",
+			__FUNCTION__, p, c, c == c->master ? "(master)" : "");
+	}
+
+	ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
+	return p;
+}
+
+void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channel_desc *c)
+{
+	unsigned long flags;
+	flags = ihk_ikc_spinlock_lock(&c->packet_pool_lock);
+	list_add_tail(&p->list, &c->packet_pool);
+	ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
+	dkprintf("%s: packet %p released to pool on channel %p %s\n",
+			__FUNCTION__, p, c, c == c->master ? "(master)" : "");
+}
+
 
 void ihk_ikc_channel_set_cpu(struct ihk_ikc_channel_desc *c, int cpu)
 {
@@ -317,6 +363,7 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 	ihk_os_t os = desc->remote_os;
 	int qpages;
 	ihk_spinlock_t *lock = ihk_ikc_get_channel_list_lock(os);
+	struct ihk_ikc_free_packet *p_iter;
 	unsigned long flags;
 
 	flags = ihk_ikc_spinlock_lock(lock);
@@ -350,6 +397,15 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 			ihk_ikc_free_queue(desc->send.queue);
 		}
 	}
+
+	flags = ihk_ikc_spinlock_lock(&desc->packet_pool_lock);
+reiterate:
+	list_for_each_entry(p_iter, &desc->packet_pool, list) {
+		list_del(&p_iter->list);
+		ihk_ikc_free(p_iter);
+		goto reiterate;
+	}
+	ihk_ikc_spinlock_unlock(&desc->packet_pool_lock, flags);
 
 	ihk_ikc_free(desc);
 }
@@ -413,7 +469,8 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 		ihk_ikc_ph_t h, void *harg, int opt)
 {
 	int r = -ENOENT;
-	char *p = ihk_ikc_malloc(channel->recv.queue->pktsize);
+	/* Get free packet from channel pool */
+	char *p = (char *)ihk_ikc_alloc_packet(channel);
 
 	if (!p) {
 		kprintf("%s: error allocating packet\n", __FUNCTION__);
@@ -426,7 +483,8 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 	}
 
 	/*
-	 * XXX: Handler must free the packet eventually!
+	 * XXX: Handler must release the packet eventually using
+	 * ihk_ikc_release_packet().
 	 *
 	 * (syscall_packet_handler() is the function called for syscalls)
 	 */
@@ -505,4 +563,5 @@ IHK_EXPORT_SYMBOL(ihk_ikc_disable_channel);
 IHK_EXPORT_SYMBOL(ihk_ikc_free_channel);
 IHK_EXPORT_SYMBOL(ihk_ikc_find_channel);
 IHK_EXPORT_SYMBOL(ihk_ikc_channel_set_cpu);
+IHK_EXPORT_SYMBOL(ihk_ikc_release_packet);
 
