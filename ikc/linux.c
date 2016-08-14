@@ -11,6 +11,8 @@
 #include <asm/smp.h>
 #include <linux/interrupt.h>
 
+//#define IHK_IKC_RECV_HANDLER_IN_WORKQ
+
 extern struct list_head *ihk_host_os_get_ikc_channel_list(ihk_os_t ihk_os);
 struct ihk_host_interrupt_handler *ihk_host_os_get_ikc_handler(ihk_os_t ihk_os);
 int ihk_ikc_call_master_packet_handler(ihk_os_t ihk_os,
@@ -49,7 +51,17 @@ static void ikc_work_func(struct work_struct *work)
 /** \brief IKC interrupt handler (interrupt context) */
 static void ihk_ikc_interrupt_handler(ihk_os_t os, void *os_priv, void *priv)
 {
+#ifdef IHK_IKC_RECV_HANDLER_IN_WORKQ
 	ihk_ikc_linux_schedule_work(priv);
+#else
+	/*
+	 * Pass packets to mcexec threads directly from IRQ context.
+	 * Implications: we must use GFP_ATOMIC in all allocations and
+	 * cannot sleep on semaphores, etc.
+	 * This buys us ~10000 cycles latency on the KNL.
+	 */
+	__ihk_ikc_reception_handler(os);
+#endif
 }
 
 /** \brief Get the master channel for an OS */
