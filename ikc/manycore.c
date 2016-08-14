@@ -53,9 +53,6 @@ retry:
 	/* Add main packet to target channel */
 	if (ihk_ikc_channel_enabled(channel)) {
 		r = ihk_ikc_write_queue(channel->send.queue, p, opt);
-		if (!(opt & IKC_NO_NOTIFY) && channel == channel->master) {
-			ihk_ikc_notify_remote_write(channel);
-		}
 	} else {
 		r = -EINVAL;
 	}
@@ -79,12 +76,12 @@ retry_master:
 			kprintf("%s: couldn't append master packet -> retrying\n", __FUNCTION__);
 			goto retry_master;
 		}
-
-		/* Only send IRQ to the original target core */
-		if (!(opt & IKC_NO_NOTIFY)) {
-			ihk_ikc_notify_remote_write(channel);
-		}
 	}
+
+	if (!(opt & IKC_NO_NOTIFY)) {
+		ihk_ikc_notify_remote_write(channel);
+	}
+
 	cpu_restore_interrupt(flags);
 
 	return r;
