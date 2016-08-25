@@ -59,7 +59,7 @@
 #include <asm/realmode.h>
 #endif
 
-#include "bootparam.h"
+#include "../../../cokernel/smp/x86/bootparam.h"
 
 #define dprintk(...) do { if (0) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
 #define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
@@ -68,8 +68,6 @@
 #define BUILTIN_OS_STATUS_LOADING  1
 #define BUILTIN_OS_STATUS_LOADED   2
 #define BUILTIN_OS_STATUS_BOOTING  3
-
-//#define BUILTIN_MAX_CPUS SHIMOS_MAX_CORES
 
 #define BUILTIN_COM_VECTOR  0xf1
 
@@ -313,10 +311,6 @@ static unsigned long ihk_trampoline = 0;
 module_param(ihk_trampoline, ulong, 0644);
 MODULE_PARM_DESC(ihk_trampoline, "IHK trampoline page physical address");
 
-#define IHK_SMP_MAXCPUS	512
-
-#define BUILTIN_MAX_CPUS IHK_SMP_MAXCPUS
-
 #define IHK_SMP_CPU_ONLINE		0
 #define IHK_SMP_CPU_AVAILABLE	1
 #define IHK_SMP_CPU_ASSIGNED	2
@@ -331,7 +325,7 @@ struct ihk_smp_cpu {
 	ihk_os_t os;
 };
 
-static struct ihk_smp_cpu ihk_smp_cpus[IHK_SMP_MAXCPUS];
+static struct ihk_smp_cpu ihk_smp_cpus[SMP_MAX_CPUS];
 struct page *trampoline_page;
 unsigned long trampoline_phys;
 int using_linux_trampoline = 0;
@@ -353,50 +347,15 @@ extern const char ihk_smp_trampoline_end[], ihk_smp_trampoline_data[];
 
 /* ----------------------------------------------- */
 
-/** \brief BUILTIN boot parameter structure
- *
- * This structure contains vairous parameters both passed to the manycore 
- * kernel, and passed from the manycore kernel.
- */
-struct builtin_boot_param {
-	/** \brief SHIMOS-specific boot parameters. Memory start, end etc.
-	 * (passed to the manycore) */
-	struct shimos_boot_param bp;
-
-	/** \brief Manycore-physical address of the kernel message buffer
-	 * of the manycore kernel (filled by the manycore) */
-	unsigned long msg_buffer;
-	/** \brief Manycore physical address of the receive queue of 
-	 * the master IKC channel (filled by the manycore) */
-	unsigned long mikc_queue_recv;
-	/** \brief Manycore physical address of the send queue of 
-	 * the master IKC channel (filled by the manycore) */
-	unsigned long mikc_queue_send;
-
-	/** \brief Host physical address of the DMA structure
-	 * (passed to the manycore) */
-	unsigned long dma_address;
-	/** \brief Host physical address of the identity-mapped page table
-	 * (passed to the manycore) */
-	unsigned long ident_table;
-
-	unsigned long ns_per_tsc;
-	unsigned long boot_sec;
-	unsigned long boot_nsec;
-
-	/** \brief Kernel command-line parameter */
-	char kernel_args[256];
-};
-
 /** \brief BUILTIN driver-specific OS structure */
-struct builtin_os_data {
+struct smp_os_data {
 	/** \brief Lock for this structure */
 	spinlock_t lock;
 
 	/** \brief Pointer to the device structure */
 	struct builtin_device_data *dev;
 	/** \brief Allocated CPU core mask */
-	shimos_coreset coremaps;
+	struct smp_coreset coremaps;
 	/** \brief Start address of the allocated memory region */
 	unsigned long mem_start;
 	/** \brief End address of the allocated memory region */
@@ -414,7 +373,7 @@ struct builtin_os_data {
 	/** \brief IHK CPU information */
 	struct ihk_cpu_info cpu_info;
 	/** \brief APIC ID map of the CPU cores */
-	int cpu_hw_ids[BUILTIN_MAX_CPUS];
+	int cpu_hw_ids[SMP_MAX_CPUS];
 
 	/** \brief Kernel command-line parameter.
 	 *
@@ -427,7 +386,7 @@ struct builtin_os_data {
 	 *
 	 * This structure is directly accessed (read and written)
 	 * by the manycore kernel. */
-	struct builtin_boot_param param;
+	struct smp_boot_param param;
 
 	/** \brief Status of the kernel */
 	int status;
@@ -530,7 +489,7 @@ static ihk_dma_channel_t smp_ihk_get_dma_channel(ihk_device_t dev, void *priv,
 }
 
 /** \brief Set the status member of the OS data with lock */
-static void set_os_status(struct builtin_os_data *os, int status)
+static void set_os_status(struct smp_os_data *os, int status)
 {
 	unsigned long flags;
 
@@ -551,7 +510,7 @@ static void set_dev_status(struct builtin_device_data *dev, int status)
 
 /** \brief Create various information structure that should be provided
  * via IHK functions. */
-static void __build_os_info(struct builtin_os_data *os)
+static void __build_os_info(struct smp_os_data *os)
 {
 	int i, c;
 
@@ -562,7 +521,7 @@ static void __build_os_info(struct builtin_os_data *os)
 	os->mem_region.start = os->mem_start;
 	os->mem_region.size = os->mem_end - os->mem_start;
 	
-	for (i = 0, c = 0; i < BUILTIN_MAX_CPUS; i++) {
+	for (i = 0, c = 0; i < SMP_MAX_CPUS; i++) {
 		if (CORE_ISSET(i, os->coremaps)) {
 			os->cpu_hw_ids[c] = i;
 			c++;
@@ -732,7 +691,7 @@ unsigned long x2apic_is_enabled(void)
 /** \brief Boot a kernel. */
 static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	struct builtin_device_data *dev = os->dev;
 	unsigned long flags;
 	struct ihk_smp_trampoline_header *header;
@@ -769,9 +728,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	dprint_var_x8(os->boot_rip);
 
 	memset(&os->param, 0, sizeof(os->param));
-	os->param.bp.start = os->mem_start;
-	os->param.bp.end = os->mem_end;
-	os->param.bp.coreset = os->coremaps;
+	os->param.start = os->mem_start;
+	os->param.end = os->mem_end;
+	os->param.coreset = os->coremaps;
 	os->param.ident_table = ident_page_table;
 	strncpy(os->param.kernel_args, os->kernel_args,
 	        sizeof(os->param.kernel_args));
@@ -797,7 +756,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	header = trampoline_va; 
 	header->page_table = ident_page_table;
 	header->next_ip = os->boot_rip;
-	header->notify_address = __pa(&os->param.bp);
+	header->notify_address = __pa(&os->param);
 	
 	printk("IHK-SMP: booting OS 0x%lx, calling smp_wakeup_secondary_cpu() \n", 
 		(unsigned long)ihk_os);
@@ -808,7 +767,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	struct file *file;
 	loff_t pos = 0;
 	long r;
@@ -997,7 +956,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
                                unsigned long size, long offset)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	unsigned long phys, to_read, flags;
 	void *virt;
 
@@ -1128,13 +1087,13 @@ static size_t max_size_mem_chunk(struct list_head *chunks)
 
 static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	int i;
 	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 	struct chunk *mem_chunk;
 	
 	/* Reset CPU cores used by this OS */
-	for (i = 0; i < IHK_SMP_MAXCPUS; ++i) {
+	for (i = 0; i < SMP_MAX_CPUS; ++i) {
 		
 		if (ihk_smp_cpus[i].os != ihk_os) 
 			continue;
@@ -1179,7 +1138,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
                                      struct ihk_resource *resource)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	int i, ret = 0;
 	unsigned long flags;
 
@@ -1197,7 +1156,7 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		int ihk_smp_nr_allocated_cpus = 0;
 
 		/* Check the number of available CPUs */
-		for (i = 0; i < IHK_SMP_MAXCPUS; i++) {
+		for (i = 0; i < SMP_MAX_CPUS; i++) {
 			if (ihk_smp_cpus[i].status == IHK_SMP_CPU_AVAILABLE) {
 				++ihk_smp_nr_avail_cpus;
 			}
@@ -1210,7 +1169,7 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		}
 
 		/* Assign cores */
-		for (i = 0; i < IHK_SMP_MAXCPUS &&
+		for (i = 0; i < SMP_MAX_CPUS &&
 			ihk_smp_nr_allocated_cpus < resource->cpu_cores; i++) {
 			if (ihk_smp_cpus[i].status != IHK_SMP_CPU_AVAILABLE) {
 				continue;
@@ -1289,7 +1248,7 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 
 error_drop_cores:
 	/* Drop CPU cores for this OS */
-	for (i = 0; i < IHK_SMP_MAXCPUS; ++i) {
+	for (i = 0; i < SMP_MAX_CPUS; ++i) {
 
 		if (ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED ||
 			ihk_smp_cpus[i].os != ihk_os)
@@ -1307,15 +1266,15 @@ error_drop_cores:
 
 static enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	int status;
 
 	status = os->status;
 
 	if (status == BUILTIN_OS_STATUS_BOOTING) {
-		if (os->param.bp.status == 1) {
+		if (os->param.status == 1) {
 			return IHK_OS_STATUS_BOOTED;
-		} else if(os->param.bp.status == 2) {
+		} else if(os->param.status == 2) {
 			/* Restore Linux trampoline once ready */
 			if (using_linux_trampoline) {
 				memcpy(trampoline_va, linux_trampoline_backup, 
@@ -1333,7 +1292,7 @@ static enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 {
 	unsigned long flags;
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -1353,7 +1312,7 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 
 static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 
 	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
 			args->cmd, args->start, args->size, args->buf);
@@ -1428,7 +1387,7 @@ static int smp_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
 static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
                                       int cpu, int v)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	unsigned long flags;
 
 	/* better calcuation or make map */
@@ -1479,7 +1438,7 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
                                        unsigned long *addr,
                                        unsigned long *size)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 
 	switch (type) {
 	case IHK_SPADDR_KMSG:
@@ -1557,14 +1516,14 @@ static irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data)
 static struct ihk_mem_info *smp_ihk_os_get_memory_info(ihk_os_t ihk_os,
                                                        void *priv)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 
 	return &os->mem_info;
 }
 
 static struct ihk_cpu_info *smp_ihk_os_get_cpu_info(ihk_os_t ihk_os, void *priv)
 {
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 
 	return &os->cpu_info;
 }
@@ -1573,7 +1532,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret;
 	int cpu;
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_assign;
 	unsigned long flags;
 
@@ -1634,7 +1593,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 {
 	int ret;
 	int cpu;
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_release;
 	unsigned long flags;
 
@@ -1699,7 +1658,7 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	memset(&cpus_assigned, 0, sizeof(cpus_assigned));
 	memset(query_res, 0, sizeof(query_res));
 
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
 			continue;
 		if (ihk_smp_cpus[cpu].os != ihk_os)
@@ -1754,7 +1713,7 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	size_t mem_size;
 	int numa_id;
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	unsigned long flags;
 	int ret;
 
@@ -1837,7 +1796,7 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 {
 	size_t mem_size;
 	int numa_id;
-	struct builtin_os_data *os = priv;
+	struct smp_os_data *os = priv;
 	unsigned long flags;
 	int ret;
 
@@ -1936,11 +1895,11 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
                              struct ihk_register_os_data *regdata)
 {
 	struct builtin_device_data *data = priv;
-	struct builtin_os_data *os;
+	struct smp_os_data *os;
 
 	*regdata = builtin_os_reg_data;
 
-	os = kzalloc(sizeof(struct builtin_os_data), GFP_KERNEL);
+	os = kzalloc(sizeof(struct smp_os_data), GFP_KERNEL);
 	if (!os) {
 		data->status = 0; /* No other one should reach here */
 		return -ENOMEM;
@@ -2316,7 +2275,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 #else
 	for_each_cpu_mask(cpu, cpus_to_offline) {
 #endif
-		if (cpu > IHK_SMP_MAXCPUS) {
+		if (cpu > SMP_MAX_CPUS) {
 			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
 			ret = -EINVAL;
 			goto err_before_offline;
@@ -2357,7 +2316,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	}
 
 	/* Offline CPU cores */
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
 			continue;
 
@@ -2377,7 +2336,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	}
 
 	/* Offlining CPU cores went well, mark them as available */
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
 			continue;
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
@@ -2390,7 +2349,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	goto out;
 
 err_during_offline:
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
 			continue;
 
@@ -2399,7 +2358,7 @@ err_during_offline:
 	}
 
 err_before_offline:
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
 			continue;
 
@@ -2445,7 +2404,7 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 #else
 	for_each_cpu_mask(cpu, cpus_to_online) {
 #endif
-		if (cpu > IHK_SMP_MAXCPUS) {
+		if (cpu > SMP_MAX_CPUS) {
 			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
 			ret = -EINVAL;
 			goto err;
@@ -2478,7 +2437,7 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	}
 
 	/* Online CPU cores */
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_ONLINE)
 			continue;
 
@@ -2499,7 +2458,7 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 err:
 	/* Something went wrong, what shall we do?
 	 * Mark "to be onlined" cores as available for now */
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_ONLINE)
 			continue;
 
@@ -2518,7 +2477,7 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	memset(&cpus_reserved, 0, sizeof(cpus_reserved));
 	memset(query_res, 0, sizeof(query_res));
 
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE &&
 			ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
 			continue;
@@ -3581,7 +3540,7 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 #endif
 
 	/* Re-enable CPU cores */
-	for (cpu = 0; cpu < IHK_SMP_MAXCPUS; ++cpu) {
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE)
 			continue;
 

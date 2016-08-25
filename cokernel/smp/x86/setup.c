@@ -10,7 +10,7 @@
 static unsigned char stack[8192] __attribute__((aligned(4096)));
 
 unsigned long boot_param_pa;
-struct shimos_boot_param *boot_param;
+struct smp_boot_param *boot_param;
 
 extern void main(void);
 extern void setup_x86(void);
@@ -58,13 +58,13 @@ static void build_ihk_cpu_info(void)
 
 	ihk_cpu_info = early_alloc_page();
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
-	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + SHIMOS_MAX_CORES;
+	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + SMP_MAX_CPUS;
 
 	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 
 	kprintf("CPU: ");
 	s = kprintf_lock();
-	for (i = 0; i < SHIMOS_MAX_CORES; i++) {
+	for (i = 0; i < SMP_MAX_CPUS; i++) {
 		if (CORE_ISSET(i, boot_param->coreset)) {
 			ihk_cpu_info->hw_ids[n] = i;
 			ihk_cpu_info->nodes[n] = 0;
