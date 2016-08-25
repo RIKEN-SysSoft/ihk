@@ -20,8 +20,6 @@ arg2:
 	.quad	0
 trampoline:
 	.quad	0
-ikc_irq:
-	.quad	0
 next_rip:
 	.quad	0
 startup_body:
@@ -42,7 +40,6 @@ startup_body:
 
 	movq	(arg2 - base)(%rbx),%rsi
 	movq	(trampoline - base)(%rbx),%rdx
-	movq	(ikc_irq - base)(%rbx),%rcx
 	
 	movq	(next_rip - base)(%rbx),%r8
 

@@ -27,18 +27,17 @@ unsigned int ihk_ikc_irq_apicid = 0;
  *
  * param_addr (RDI) is set in shimos_trampoline_64.S before jumping
  * into starrtup.S 
- * phys_addr (RSI), ap_trampoline_start (RDX), ihk_ikc_irq (RCX) are set 
- * in startup.S
+ * phys_addr (RSI), ap_trampoline_start (RDX) are set in startup.S
  */
 void arch_start(unsigned long param_addr, unsigned long phys_address, 
-	unsigned long _ap_trampoline, unsigned long _ihk_ikc_irq)
+	unsigned long _ap_trampoline)
 {
 	x86_kernel_phys_base = phys_address;
 	boot_param = phys_to_virt(param_addr);
 	boot_param_pa = param_addr;
 	ap_trampoline = _ap_trampoline;
-	ihk_ikc_irq = _ihk_ikc_irq & 0x00000000ffffffff;
-	ihk_ikc_irq_apicid = (_ihk_ikc_irq >> 32);
+	ihk_ikc_irq = boot_param->ihk_ikc_irq;
+	ihk_ikc_irq_apicid = boot_param->ihk_ikc_irq_apicid;
 
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));

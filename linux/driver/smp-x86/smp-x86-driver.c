@@ -739,6 +739,8 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	getnstimeofday(&now);
 	os->param.boot_sec = now.tv_sec;
 	os->param.boot_nsec = now.tv_nsec;
+	os->param.ihk_ikc_irq = ihk_smp_irq;
+	os->param.ihk_ikc_irq_apicid = ihk_smp_irq_apicid;
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps.set[0],
@@ -943,9 +945,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	startup[3] = 0xffffffffc0000000;
 	startup[4] = phys;
 	startup[5] = trampoline_phys;
-	startup[6] = (unsigned long)ihk_smp_irq | 
-		((unsigned long)ihk_smp_irq_apicid << 32);
-	startup[7] = entry;
+	startup[6] = entry;
 	ihk_smp_unmap_virtual(startup);
 	os->boot_rip = startup_p;
 
