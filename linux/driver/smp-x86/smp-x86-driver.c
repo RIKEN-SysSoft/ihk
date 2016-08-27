@@ -386,7 +386,7 @@ struct smp_os_data {
 	 *
 	 * This structure is directly accessed (read and written)
 	 * by the manycore kernel. */
-	struct smp_boot_param param;
+	struct smp_boot_param *param;
 
 	/** \brief Status of the kernel */
 	int status;
@@ -727,24 +727,24 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	dprint_var_x4(os->boot_cpu);
 	dprint_var_x8(os->boot_rip);
 
-	memset(&os->param, 0, sizeof(os->param));
-	os->param.start = os->mem_start;
-	os->param.end = os->mem_end;
-	os->param.coreset = os->coremaps;
-	os->param.ident_table = ident_page_table;
-	strncpy(os->param.kernel_args, os->kernel_args,
-	        sizeof(os->param.kernel_args));
+	memset(os->param, 0, sizeof(*os->param));
+	os->param->start = os->mem_start;
+	os->param->end = os->mem_end;
+	os->param->coreset = os->coremaps;
+	os->param->ident_table = ident_page_table;
+	strncpy(os->param->kernel_args, os->kernel_args,
+	        sizeof(os->param->kernel_args));
 
-	os->param.ns_per_tsc = 1000000000L / tsc_khz;
+	os->param->ns_per_tsc = 1000000000L / tsc_khz;
 	getnstimeofday(&now);
-	os->param.boot_sec = now.tv_sec;
-	os->param.boot_nsec = now.tv_nsec;
-	os->param.ihk_ikc_irq = ihk_smp_irq;
-	os->param.ihk_ikc_irq_apicid = ihk_smp_irq_apicid;
+	os->param->boot_sec = now.tv_sec;
+	os->param->boot_nsec = now.tv_nsec;
+	os->param->ihk_ikc_irq = ihk_smp_irq;
+	os->param->ihk_ikc_irq_apicid = ihk_smp_irq_apicid;
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps.set[0],
-	        os->param.dma_address
+	        os->param->dma_address
 	);
 
 	/* Make a temporary copy of the Linux trampoline */
@@ -758,7 +758,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	header = trampoline_va; 
 	header->page_table = ident_page_table;
 	header->next_ip = os->boot_rip;
-	header->notify_address = __pa(&os->param);
+	header->notify_address = __pa(os->param);
 	
 	printk("IHK-SMP: booting OS 0x%lx, calling smp_wakeup_secondary_cpu() \n", 
 		(unsigned long)ihk_os);
@@ -1272,9 +1272,9 @@ static enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 	status = os->status;
 
 	if (status == BUILTIN_OS_STATUS_BOOTING) {
-		if (os->param.status == 1) {
+		if (os->param->status == 1) {
 			return IHK_OS_STATUS_BOOTED;
-		} else if(os->param.status == 2) {
+		} else if(os->param->status == 2) {
 			/* Restore Linux trampoline once ready */
 			if (using_linux_trampoline) {
 				memcpy(trampoline_va, linux_trampoline_backup, 
@@ -1442,23 +1442,23 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 
 	switch (type) {
 	case IHK_SPADDR_KMSG:
-		if (os->param.msg_buffer) {
-			*addr = os->param.msg_buffer;
+		if (os->param->msg_buffer) {
+			*addr = os->param->msg_buffer;
 			*size = 8192;
 			return 0;
 		}
 		break;
 
 	case IHK_SPADDR_MIKC_QUEUE_RECV:
-		if (os->param.mikc_queue_recv) {
-			*addr = os->param.mikc_queue_recv;
+		if (os->param->mikc_queue_recv) {
+			*addr = os->param->mikc_queue_recv;
 			*size = MASTER_IKCQ_SIZE;
 			return 0;
 		}
 		break;
 	case IHK_SPADDR_MIKC_QUEUE_SEND:
-		if (os->param.mikc_queue_send) {
-			*addr = os->param.mikc_queue_send;
+		if (os->param->mikc_queue_send) {
+			*addr = os->param->mikc_queue_send;
 			*size = MASTER_IKCQ_SIZE;
 			return 0;
 		}
@@ -1896,14 +1896,34 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 {
 	struct builtin_device_data *data = priv;
 	struct smp_os_data *os;
+	int param_pages_order = 0;
+	struct page *param_pages;
 
 	*regdata = builtin_os_reg_data;
 
 	os = kzalloc(sizeof(struct smp_os_data), GFP_KERNEL);
 	if (!os) {
 		data->status = 0; /* No other one should reach here */
+		printk("IHK-SMP: error: allocating OS structure\n");
 		return -ENOMEM;
 	}
+
+	param_pages_order = 1;
+	while (((size_t)PAGE_SIZE << param_pages_order) < 
+			(sizeof(*os->param) + (PAGE_SIZE - 1))) 
+		++param_pages_order;
+
+	param_pages = alloc_pages(GFP_KERNEL, param_pages_order);
+	if (!param_pages) {
+		kfree(os);
+		printk("IHK-SMP: error: allocating boot parameter structure\n");
+		return -ENOMEM;
+	}
+
+	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
+	kprintf("IHK-SMP: param size: %lu, nr_pages: %lu\n", 
+		sizeof(*os->param), 1UL << param_pages_order);
+
 	spin_lock_init(&os->lock);
 	os->dev = data;
 	regdata->priv = os;
@@ -3412,7 +3432,7 @@ retry_trampoline:
 	}
 
 #if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-		(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+		(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,5)))
 	/* NOTE: this is nasty, but we need to decrease the refcount because
 	 * after Linux 3.0 request_irq holds an extra reference to the module. 
 	 * This causes rmmod to fail and report the module is in use when one
