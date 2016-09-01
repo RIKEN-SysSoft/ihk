@@ -486,7 +486,7 @@ static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
 		len_end = strnlen(&kmsg_buf->str[tail+1], len - tail);
 		len_start = tail;
 	}
-kprintf("kmsg tail: %d, len: %d, len_end: %d len_start: %d head: %d read_top = %d\n", tail, len, len_end, len_start, head, read_top);
+	//kprintf("kmsg tail: %d, len: %d, len_end: %d len_start: %d head: %d read_top = %d\n", tail, len, len_end, len_start, head, read_top);
 
 	/* Print the end of the buffer */
 	if (len_end > 0) {
