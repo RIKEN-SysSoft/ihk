@@ -360,6 +360,8 @@ struct smp_os_data {
 	unsigned long mem_start;
 	/** \brief End address of the allocated memory region */
 	unsigned long mem_end;
+	/** \brief Bitmask of NUMA nodes from where memory is assigned */
+	unsigned long numa_mask;
 
 	/** \brief APIC ID of the bsp of this OS instance */
 	int boot_cpu;
@@ -450,7 +452,7 @@ static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 							start_eip & 0xf;
 	pr_debug("3.\n");
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,5)
 #warning smpboot_setup_warm_reset_vector() has been only tested up to 4.3.0 kernels
 #endif
 #endif
@@ -696,7 +698,92 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	unsigned long flags;
 	struct ihk_smp_trampoline_header *header;
 	struct timespec now;
+	int param_size, param_pages_order = 0;
+	struct page *param_pages;
+	struct ihk_os_mem_chunk *os_mem_chunk;
+	int nr_memory_chunks = 0;
+	int numa_id, linux_numa_id, nr_numa_nodes;
+	struct ihk_smp_numa_node *bp_numa_node;
+	struct ihk_smp_memory_chunk *bp_mem_chunk;
 
+	/* Compute size including numa nodes and memory chunks information */
+	param_size = (sizeof(*os->param) + (PAGE_SIZE - 1));
+	nr_numa_nodes = hweight64(os->numa_mask);
+	param_size += (nr_numa_nodes * sizeof(struct ihk_smp_numa_node));
+
+	/* Count number of memory chunks */
+	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+		if (os_mem_chunk->os != ihk_os)
+			continue;
+		++nr_memory_chunks;
+	}
+
+	param_size += (nr_memory_chunks * sizeof(struct ihk_smp_memory_chunk));
+
+	printk("IHK-SMP: %d memory chunks from %lu NUMA nodes\n",
+		nr_memory_chunks, nr_numa_nodes);
+
+	param_pages_order = 0;
+	while (((size_t)PAGE_SIZE << param_pages_order) < param_size)
+		++param_pages_order;
+
+	param_pages = alloc_pages(GFP_KERNEL, param_pages_order);
+	if (!param_pages) {
+		kfree(os);
+		printk("IHK-SMP: error: allocating boot parameter structure\n");
+		return -ENOMEM;
+	}
+
+	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
+	printk("IHK-SMP: param size: %lu, nr_pages: %lu\n",
+		sizeof(*os->param), 1UL << param_pages_order);
+
+	memset(os->param, 0, param_size);
+	os->param->nr_numa_nodes = nr_numa_nodes;
+	os->param->nr_memory_chunks = nr_memory_chunks;
+
+	bp_numa_node = (struct ihk_smp_numa_node *)((char *)os->param +
+			sizeof(*os->param));
+
+	/* Fill in NUMA nodes information */
+	numa_id = 0;
+	for (linux_numa_id = find_first_bit(&os->numa_mask,
+				(sizeof(os->numa_mask) * 8));
+			linux_numa_id < (sizeof(os->numa_mask) * 8);
+			linux_numa_id = find_next_bit(&os->numa_mask,
+				(sizeof(os->numa_mask) * 8), linux_numa_id + 1)) {
+
+		bp_numa_node->type = IHK_SMP_MEMORY_TYPE_DRAM;
+		bp_numa_node->linux_numa_id = linux_numa_id;
+
+		printk("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
+				os, numa_id, linux_numa_id);
+
+		++bp_numa_node;
+		++numa_id;
+	}
+
+	bp_mem_chunk = (struct ihk_smp_memory_chunk *)bp_numa_node;
+
+	/* Fill in memory chunks information in the order of NUMA nodes */
+	for (linux_numa_id = find_first_bit(&os->numa_mask,
+				(sizeof(os->numa_mask) * 8));
+			linux_numa_id < (sizeof(os->numa_mask) * 8);
+			linux_numa_id = find_next_bit(&os->numa_mask,
+				(sizeof(os->numa_mask) * 8), linux_numa_id + 1)) {
+
+		list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+			if (os_mem_chunk->os != ihk_os ||
+					os_mem_chunk->numa_id != linux_numa_id)
+				continue;
+
+			bp_mem_chunk->start = os_mem_chunk->addr;
+			bp_mem_chunk->end = os_mem_chunk->addr + os_mem_chunk->size;
+			bp_mem_chunk->linux_numa_id = os_mem_chunk->numa_id;
+
+			++bp_mem_chunk;
+		}
+	}
 	spin_lock_irqsave(&dev->lock, flags);
 #if 0
 	if (dev->status != BUILTIN_DEV_STATUS_READY) {
@@ -727,7 +814,6 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	dprint_var_x4(os->boot_cpu);
 	dprint_var_x8(os->boot_rip);
 
-	memset(os->param, 0, sizeof(*os->param));
 	os->param->start = os->mem_start;
 	os->param->end = os->mem_end;
 	os->param->coreset = os->coremaps;
@@ -921,6 +1007,10 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	memset(pdp, '\0', PAGE_SIZE);
 	memset(pde, '\0', PAGE_SIZE);
 
+	/*
+	 * TODO: do this mapping so that holes between memory chunks
+	 * are emitted
+	 */
 	pml4[0] = cr3[0];
 	pml4[(MAP_ST_START >> PTL4_SHIFT) & 511] = cr3[0];
 	pml4[(MAP_KERNEL_START >> PTL4_SHIFT) & 511] = pdp_p | 3;
@@ -1718,6 +1808,8 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	int ret;
 
 	struct ihk_os_mem_chunk *os_mem_chunk;
+	struct ihk_os_mem_chunk *os_mem_chunk_iter;
+	struct ihk_os_mem_chunk *os_mem_chunk_next = NULL;
 	struct chunk *mem_chunk_leftover;
 	struct chunk *mem_chunk_iter;
 
@@ -1754,6 +1846,7 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 			os_mem_chunk->addr = mem_chunk_iter->addr;
 			os_mem_chunk->size = mem_size;
 			os_mem_chunk->os = ihk_os;
+			os_mem_chunk->numa_id = numa_id;
 
 			list_del(&mem_chunk_iter->chain);
 			break;
@@ -1767,7 +1860,23 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		goto out;
 	}
 
-	list_add(&os_mem_chunk->list, &ihk_mem_used_chunks);
+	/* Insert the chunk in physical address ascending order */
+	os_mem_chunk_next = NULL;
+	list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+		if (os_mem_chunk->addr < os_mem_chunk_iter->addr) {
+			os_mem_chunk_next = os_mem_chunk_iter;
+			break;
+		}
+	}
+
+	/* Add in front of next */
+	if (os_mem_chunk_next) {
+		list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
+	}
+	/* Add after the head */
+	else {
+		list_add(&os_mem_chunk->list, &ihk_mem_used_chunks);
+	}
 
 	/* Split if there is any leftover */
 	if (mem_chunk_iter->size > mem_size) {
@@ -1775,12 +1884,18 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 			phys_to_virt(mem_chunk_iter->addr + mem_size);
 		mem_chunk_leftover->addr = mem_chunk_iter->addr + mem_size;
 		mem_chunk_leftover->size = mem_chunk_iter->size - mem_size;
+		mem_chunk_leftover->numa_id = mem_chunk_iter->numa_id;
 
 		add_free_mem_chunk(mem_chunk_leftover);
 	}
 
-	os->mem_start = os_mem_chunk->addr;
-	os->mem_end = os->mem_start + mem_size;
+	if (!os->mem_start || os->mem_start > os_mem_chunk->addr) {
+		os->mem_start = os_mem_chunk->addr;
+	}
+	if (!os->mem_end || os->mem_end < os_mem_chunk->addr + mem_size) {
+		os->mem_end = os->mem_start + mem_size;
+	}
+	set_bit(os_mem_chunk->numa_id, &os->numa_mask);
 
 	dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p\n",
 			os->mem_start, os->mem_end, (os->mem_end - os->mem_start),
@@ -1896,8 +2011,6 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 {
 	struct builtin_device_data *data = priv;
 	struct smp_os_data *os;
-	int param_pages_order = 0;
-	struct page *param_pages;
 
 	*regdata = builtin_os_reg_data;
 
@@ -1907,22 +2020,6 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 		printk("IHK-SMP: error: allocating OS structure\n");
 		return -ENOMEM;
 	}
-
-	param_pages_order = 1;
-	while (((size_t)PAGE_SIZE << param_pages_order) < 
-			(sizeof(*os->param) + (PAGE_SIZE - 1))) 
-		++param_pages_order;
-
-	param_pages = alloc_pages(GFP_KERNEL, param_pages_order);
-	if (!param_pages) {
-		kfree(os);
-		printk("IHK-SMP: error: allocating boot parameter structure\n");
-		return -ENOMEM;
-	}
-
-	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
-	kprintf("IHK-SMP: param size: %lu, nr_pages: %lu\n", 
-		sizeof(*os->param), 1UL << param_pages_order);
 
 	spin_lock_init(&os->lock);
 	os->dev = data;

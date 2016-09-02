@@ -86,8 +86,6 @@ void arch_init(void)
 	boot_param->msg_buffer = virt_to_phys(&kmsg_buf);
 	boot_param->status = 1;
 
-	build_ihk_cpu_info();
-
 	/* This is an early check to instruct the kernel initialization 
 	 * process not to deal with turbo boost support */
 	if (strstr(boot_param->kernel_args, "no_turbo")) {
@@ -96,6 +94,8 @@ void arch_init(void)
 
 	setup_x86();
 	boot_param = map_fixed_area(boot_param_pa, sizeof(*boot_param), 0);
+
+	build_ihk_cpu_info();
 }
 
 void arch_ready(void)
@@ -202,6 +202,53 @@ void ihk_mc_unmap_memory(void *os, unsigned long phys, unsigned long size)
 
 void ihk_mc_setup_dma(void)
 {
+}
+
+int ihk_mc_get_nr_numa_nodes(void)
+{
+	return boot_param->nr_numa_nodes;
+}
+
+int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type)
+{
+	struct ihk_smp_numa_node *node;
+
+	if (id < 0 || id >= boot_param->nr_numa_nodes)
+		return -EINVAL;
+
+	node = (((struct ihk_smp_numa_node *)
+		((char *)boot_param + sizeof(*boot_param))) + id);
+
+	*linux_numa_id = node->linux_numa_id;
+	*type = node->type;
+
+	return 0;
+}
+
+int ihk_mc_get_nr_memory_chunks(void)
+{
+	return boot_param->nr_memory_chunks;
+}
+
+int ihk_mc_get_memory_chunk(int id,
+	unsigned long *start,
+	unsigned long *end,
+	int *linux_numa_id)
+{
+	struct ihk_smp_memory_chunk *chunk;
+
+	if (id < 0 || id >= boot_param->nr_memory_chunks)
+		return -EINVAL;
+
+	chunk = ((struct ihk_smp_memory_chunk *)
+		((char *)boot_param + sizeof(*boot_param) +
+			boot_param->nr_numa_nodes * sizeof(struct ihk_smp_numa_node))) + id;
+
+	*start = chunk->start;
+	*end = chunk->end;
+	*linux_numa_id = chunk->linux_numa_id;
+
+	return 0;
 }
 
 void arch_delay(int us)
