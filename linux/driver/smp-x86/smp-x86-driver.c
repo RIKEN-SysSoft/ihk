@@ -1362,6 +1362,16 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		int i;
 
 		for (i = 0; i < os->cpu_info.n_cpus; ++i) {
+
+#ifdef CONFIG_X86_X2APIC
+		if (x2apic_is_enabled()) {
+		        /* dump on X2APIC environment.*/
+			safe_apic_wait_icr_idle();
+			apic_icr_write(APIC_DM_NMI, os->cpu_info.hw_ids[i]);
+		}
+		else 		
+#endif
+		{
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
 			___default_send_IPI_dest_field(
 					os->cpu_info.hw_ids[i],
@@ -1371,6 +1381,7 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 					os->cpu_info.hw_ids[i],
 					NMI_VECTOR, APIC_DEST_PHYSICAL);
 #endif
+		}
 		}
 		return 0;
 	}
