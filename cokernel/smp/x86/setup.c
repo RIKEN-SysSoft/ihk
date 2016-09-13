@@ -55,7 +55,7 @@ static void build_ihk_cpu_info(void)
 	int i, n = 0;
 	unsigned long s;
 
-	ihk_cpu_info = early_alloc_page();
+	ihk_cpu_info = early_alloc_pages(1);
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
 	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + SMP_MAX_CPUS;
 

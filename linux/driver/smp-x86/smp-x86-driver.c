@@ -1872,10 +1872,16 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	/* Add in front of next */
 	if (os_mem_chunk_next) {
 		list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
+		dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p [in front of 0x%lx]\n",
+				os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+				os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
 	}
-	/* Add after the head */
+	/* Add to the end */
 	else {
-		list_add(&os_mem_chunk->list, &ihk_mem_used_chunks);
+		list_add_tail(&os_mem_chunk->list, &ihk_mem_used_chunks);
+		dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p [tail]\n",
+				os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+				os_mem_chunk->size, numa_id, ihk_os);
 	}
 
 	/* Split if there is any leftover */
@@ -1893,7 +1899,7 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		os->mem_start = os_mem_chunk->addr;
 	}
 	if (!os->mem_end || os->mem_end < os_mem_chunk->addr + mem_size) {
-		os->mem_end = os->mem_start + mem_size;
+		os->mem_end = os_mem_chunk->addr + mem_size;
 	}
 	set_bit(os_mem_chunk->numa_id, &os->numa_mask);
 

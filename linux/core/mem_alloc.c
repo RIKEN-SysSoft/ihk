@@ -19,6 +19,8 @@
 struct ihk_page_allocator_desc {
 	/** \brief Start address of the area that the allocator manages */
 	unsigned long start;
+	/** \brief End address of the area that the allocator manages */
+	unsigned long end;
 	/** \brief Last index in block */
 	unsigned int last;
 	/** \brief Number of blocks */
@@ -29,8 +31,8 @@ struct ihk_page_allocator_desc {
 	unsigned int shift;
 	/** \brief Lock for this structure */
 	spinlock_t lock;
-	/** \brief dummy */
-	unsigned int pad;
+	/** \brief List chain for multiple allocators */
+	struct list_head list;
 	/** \brief Allocation map */
 	unsigned long map[0];
 };
