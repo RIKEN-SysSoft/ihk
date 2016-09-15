@@ -21,13 +21,10 @@ int main(int argc, char **argv)
 	int interval = 1;
 	int facility = LOG_LOCAL6;
 	int i;
-	char pid_file_path[] = "./mcklogd.pid";
 	char buf[512];
 	char command[512];
 	char *envptr;
-	FILE *pid_file;
 	FILE *fp;
-	pid_t pid;
 
 	struct {
 		char name[12];
@@ -86,39 +83,14 @@ int main(int argc, char **argv)
 	openlog("mcklogd", LOG_PID, facility);
 
 	if (flag == FLAG_KILL) {
-		pid_file = fopen(pid_file_path, "r");
-		if (pid_file != NULL) {
-			fscanf(pid_file, "%d\n", &pid);
-			fclose(pid_file);
-		} else {
-			syslog(LOG_ERR, "failed to open pidfile.\n");
-			return -1;
-		}
-		if (pid) {
-			if (kill(pid, SIGKILL) == 0) {
-				syslog(LOG_INFO, "mcklogd stopped.\n");
-			} else {
-				syslog(LOG_ERR, "no mcklogd started.\n");
-				return -1;
-			}
-			return 0;
-		}
+		syslog(LOG_ERR, "mcklogd not support -k option.\n");
+		return 0;
 	}
 	if (flag == FLAG_DAEMONIZE) {
 		if (daemon(nochdir, noclose) == -1) {
 			syslog(LOG_ERR, "failed to launch mcklogd.\n");
 			return -1;
 		}
-	}
-
-	pid = getpid();
-	pid_file = fopen(pid_file_path, "w+");
-	if (pid_file != NULL) {
-		fprintf(pid_file, "%d\n", pid);
-		fclose(pid_file);
-	} else {
-		syslog(LOG_ERR, "failed to record process id to file.\n");
-		return -1;
 	}
 
 	envptr = getenv("SBINDIR");
