@@ -2380,6 +2380,22 @@ static int smp_ihk_offline_cpu(int cpu_id)
 	return 0;
 }
 
+static int smp_ihk_online_cpu(int cpu_id)
+{
+	int ret;
+
+#if defined IHK_KSYM_cpu_up
+	ret = ihk_cpu_up(cpu_id);
+#elif defined IHK_KSYM__cpu_up
+	ret = ihk_cpu_up(cpu_id, 1);
+#endif
+	if (ret) {
+		printk("IHK-SMP: WARNING: failed to re-enable CPU %d\n", cpu_id);
+	}
+
+	return 0;
+}
+
 static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int ret;
@@ -2476,7 +2492,7 @@ err_during_offline:
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
 			continue;
 
-		/* TODO: actually online CPU core */
+		smp_ihk_online_cpu(cpu);
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
 	}
 
@@ -2491,23 +2507,6 @@ err_before_offline:
 out:
 	return ret;
 }
-
-static int smp_ihk_online_cpu(int cpu_id)
-{
-	int ret;
-
-#if defined IHK_KSYM_cpu_up
-	ret = ihk_cpu_up(cpu_id);
-#elif defined IHK_KSYM__cpu_up
-	ret = ihk_cpu_up(cpu_id, 1);
-#endif
-	if (ret) {
-		printk("IHK-SMP: WARNING: failed to re-enable CPU %d\n", cpu_id);
-	}
-
-	return 0;
-}
-
 
 static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
