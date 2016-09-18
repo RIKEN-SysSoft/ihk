@@ -52,30 +52,34 @@ static struct ihk_mc_cpu_info *ihk_cpu_info;
 
 static void build_ihk_cpu_info(void)
 {
-	int i, n = 0;
-	unsigned long s;
+	int node_id, i, n = 0;
+	struct smp_coreset *coreset;
 
-	ihk_cpu_info = early_alloc_pages(1);
+	ihk_cpu_info = early_alloc_pages((
+				(sizeof(*ihk_cpu_info) + boot_param->nr_cpus *
+				 (sizeof(ihk_cpu_info->hw_ids) + sizeof(ihk_cpu_info->nodes))) +
+				PAGE_SIZE - 1) >> PAGE_SHIFT);
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
-	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + SMP_MAX_CPUS;
+	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + boot_param->nr_cpus;
 
-	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
+	for (node_id = 0; node_id < ihk_mc_get_nr_numa_nodes(); ++node_id) {
+		ihk_mc_get_numa_node(node_id, NULL, NULL, &coreset);
 
-	kprintf("CPU: ");
-	s = kprintf_lock();
-	for (i = 0; i < SMP_MAX_CPUS; i++) {
-		if (CORE_ISSET(i, boot_param->coreset)) {
-			ihk_cpu_info->hw_ids[n] = i;
-			ihk_cpu_info->nodes[n] = 0;
+		for (i = 0; i < SMP_MAX_CPUS; i++) {
+			if (CORE_ISSET(i, *coreset)) {
+				ihk_cpu_info->hw_ids[n] = i;
+				ihk_cpu_info->nodes[n] = node_id;
 
-			__kprintf("%d ", ihk_cpu_info->hw_ids[n]);
-			n++;
+				n++;
+			}
 		}
 	}
-	__kprintf("\n");
-	kprintf_unlock(s);
 
 	ihk_cpu_info->ncpus = n;
+
+	if (ihk_cpu_info->ncpus != boot_param->nr_cpus) {
+		kprintf("%s: WARNING: inconsistent CPU number?\n", __FUNCTION__);
+	}
 }
 
 extern char *strstr(const char *haystack, const char *needle);
@@ -95,6 +99,7 @@ void arch_init(void)
 	setup_x86();
 	boot_param = map_fixed_area(boot_param_pa, sizeof(*boot_param), 0);
 
+	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 	build_ihk_cpu_info();
 }
 
@@ -209,7 +214,8 @@ int ihk_mc_get_nr_numa_nodes(void)
 	return boot_param->nr_numa_nodes;
 }
 
-int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type)
+int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type,
+		struct smp_coreset **cpu_hw_ids)
 {
 	struct ihk_smp_numa_node *node;
 
@@ -219,8 +225,9 @@ int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type)
 	node = (((struct ihk_smp_numa_node *)
 		((char *)boot_param + sizeof(*boot_param))) + id);
 
-	*linux_numa_id = node->linux_numa_id;
-	*type = node->type;
+	if (linux_numa_id) *linux_numa_id = node->linux_numa_id;
+	if (type) *type = node->type;
+	if (cpu_hw_ids) *cpu_hw_ids = &node->cpu_hw_ids;
 
 	return 0;
 }
@@ -244,9 +251,9 @@ int ihk_mc_get_memory_chunk(int id,
 		((char *)boot_param + sizeof(*boot_param) +
 			boot_param->nr_numa_nodes * sizeof(struct ihk_smp_numa_node))) + id;
 
-	*start = chunk->start;
-	*end = chunk->end;
-	*linux_numa_id = chunk->linux_numa_id;
+	if (start) *start = chunk->start;
+	if (end) *end = chunk->end;
+	if (linux_numa_id) *linux_numa_id = chunk->linux_numa_id;
 
 	return 0;
 }

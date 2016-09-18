@@ -37,6 +37,7 @@ struct ihk_smp_memory_chunk {
 struct ihk_smp_numa_node {
 	int type;
 	int linux_numa_id;
+	struct smp_coreset cpu_hw_ids;
 };
 
 /*
@@ -68,6 +69,7 @@ struct smp_boot_param {
 	unsigned int ihk_ikc_irq;
 	unsigned int ihk_ikc_irq_apicid;
 	char kernel_args[256];
+	int nr_cpus;
 	int nr_numa_nodes;
 	int nr_memory_chunks;
 };

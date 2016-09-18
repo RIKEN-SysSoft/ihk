@@ -29,6 +29,7 @@
 #include <linux/cpu.h>
 #include <linux/radix-tree.h>
 #include <linux/irq.h>
+#include <linux/topology.h>
 #include <asm/hw_irq.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
@@ -705,8 +706,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	int numa_id, linux_numa_id, nr_numa_nodes;
 	struct ihk_smp_numa_node *bp_numa_node;
 	struct ihk_smp_memory_chunk *bp_mem_chunk;
+	int cpu;
 
-	/* Compute size including numa nodes and memory chunks information */
+	/* Compute size including numa nodes, memory chunks and CPU information */
 	param_size = (sizeof(*os->param) + (PAGE_SIZE - 1));
 	nr_numa_nodes = hweight64(os->numa_mask);
 	param_size += (nr_numa_nodes * sizeof(struct ihk_smp_numa_node));
@@ -720,7 +722,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	param_size += (nr_memory_chunks * sizeof(struct ihk_smp_memory_chunk));
 
-	printk("IHK-SMP: %d memory chunks from %lu NUMA nodes\n",
+	printk("IHK-SMP: %d memory chunks from %d NUMA nodes\n",
 		nr_memory_chunks, nr_numa_nodes);
 
 	param_pages_order = 0;
@@ -745,6 +747,17 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	bp_numa_node = (struct ihk_smp_numa_node *)((char *)os->param +
 			sizeof(*os->param));
 
+	/* Figure out number of cores */
+	os->param->nr_cpus = 0;
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
+			continue;
+		if (ihk_smp_cpus[cpu].os != ihk_os)
+			continue;
+
+		++os->param->nr_cpus;
+	}
+
 	/* Fill in NUMA nodes information */
 	numa_id = 0;
 	for (linux_numa_id = find_first_bit(&os->numa_mask,
@@ -758,6 +771,19 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 		printk("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
 				os, numa_id, linux_numa_id);
+
+		/* Fill in CPU cores on this NUMA node 
+		 * TODO: topology (i.e., socket, caches) information? */
+		for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+			if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
+					ihk_smp_cpus[cpu].os != ihk_os ||
+					cpu_to_node(cpu) != linux_numa_id)
+				continue;
+
+			CORE_SET(ihk_smp_cpus[cpu].apic_id, bp_numa_node->cpu_hw_ids);
+			printk("IHK-SMP: OS: %p, NUMA[%d (Linux NUMA: %d)]: CPU APIC: %d\n",
+					os, numa_id, linux_numa_id, ihk_smp_cpus[cpu].apic_id);
+		}
 
 		++bp_numa_node;
 		++numa_id;
