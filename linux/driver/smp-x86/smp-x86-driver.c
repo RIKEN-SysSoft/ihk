@@ -1691,6 +1691,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		}
 
 		CORE_SET(ihk_smp_cpus[cpu].apic_id, os->coremaps);
+		set_bit(cpu_to_node(cpu), &os->numa_mask);
 
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
 		ihk_smp_cpus[cpu].os = ihk_os;

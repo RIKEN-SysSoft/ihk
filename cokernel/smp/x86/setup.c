@@ -48,12 +48,12 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	while (1);
 }
 
-static struct ihk_mc_cpu_info *ihk_cpu_info;
+static struct ihk_mc_cpu_info *ihk_cpu_info = NULL;
 
 static void build_ihk_cpu_info(void)
 {
 	int node_id, i, n = 0;
-	struct smp_coreset *coreset;
+	struct smp_coreset *cpu_hw_ids;
 
 	ihk_cpu_info = early_alloc_pages((
 				(sizeof(*ihk_cpu_info) + boot_param->nr_cpus *
@@ -63,10 +63,10 @@ static void build_ihk_cpu_info(void)
 	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + boot_param->nr_cpus;
 
 	for (node_id = 0; node_id < ihk_mc_get_nr_numa_nodes(); ++node_id) {
-		ihk_mc_get_numa_node(node_id, NULL, NULL, &coreset);
+		ihk_mc_get_numa_node(node_id, NULL, NULL, &cpu_hw_ids);
 
 		for (i = 0; i < SMP_MAX_CPUS; i++) {
-			if (CORE_ISSET(i, *coreset)) {
+			if (CORE_ISSET(i, *cpu_hw_ids)) {
 				ihk_cpu_info->hw_ids[n] = i;
 				ihk_cpu_info->nodes[n] = node_id;
 
@@ -78,7 +78,17 @@ static void build_ihk_cpu_info(void)
 	ihk_cpu_info->ncpus = n;
 
 	if (ihk_cpu_info->ncpus != boot_param->nr_cpus) {
-		kprintf("%s: WARNING: inconsistent CPU number?\n", __FUNCTION__);
+		kprintf("%s: WARNING: inconsistent number of CPUs\n", __FUNCTION__);
+	}
+}
+
+int ihk_mc_get_numa_id(void)
+{
+	if (ihk_cpu_info) {
+		return ihk_cpu_info->nodes[ihk_mc_get_processor_id()];
+	}
+	else {
+		return 0;
 	}
 }
 
