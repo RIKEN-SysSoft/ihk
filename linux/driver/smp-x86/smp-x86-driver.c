@@ -10,6 +10,7 @@
  * Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #include <config.h>
+#include <linux/string.h>
 #include <linux/version.h>
 #include <linux/sched.h>
 #include <linux/mm.h>
@@ -1206,6 +1207,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	struct smp_os_data *os = priv;
 	int i;
 	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	struct ihk_os_mem_chunk *next_chunk = NULL;
 	struct chunk *mem_chunk;
 	
 	/* Reset CPU cores used by this OS */
@@ -1223,28 +1225,31 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	/* Drop memory chunk used by this OS */
-	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-		if (os_mem_chunk->os == ihk_os) {
-			list_del(&os_mem_chunk->list);
+	list_for_each_entry_safe(os_mem_chunk, next_chunk,
+			&ihk_mem_used_chunks, list) {
 
-			mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
-			mem_chunk->addr = os_mem_chunk->addr;
-			mem_chunk->size = os_mem_chunk->size;
-			mem_chunk->numa_id = os_mem_chunk->numa_id;
-			INIT_LIST_HEAD(&mem_chunk->chain);
+		if (os_mem_chunk->os != ihk_os) {
+			continue;
+		}
 
-			printk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
+		list_del(&os_mem_chunk->list);
+
+		mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+		mem_chunk->addr = os_mem_chunk->addr;
+		mem_chunk->size = os_mem_chunk->size;
+		mem_chunk->numa_id = os_mem_chunk->numa_id;
+		INIT_LIST_HEAD(&mem_chunk->chain);
+
+		printk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
 				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 				mem_chunk->size);
 
-			add_free_mem_chunk(mem_chunk);
-			merge_mem_chunks(&ihk_mem_free_chunks);
+		add_free_mem_chunk(mem_chunk);
+		merge_mem_chunks(&ihk_mem_free_chunks);
 
-			kfree(os_mem_chunk);
-			break;
-		}
+		kfree(os_mem_chunk);
 	}
-	
+
 	os->status = BUILTIN_OS_STATUS_INITIAL;
 
 	return 0;
@@ -1825,33 +1830,16 @@ static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
 	return 0;
 }
 
-
-static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
+		size_t mem_size, int numa_id)
 {
-	size_t mem_size;
-	int numa_id;
-	struct smp_os_data *os = priv;
-	unsigned long flags;
-	int ret;
-
+	int ret = 0;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 	struct ihk_os_mem_chunk *os_mem_chunk_iter;
 	struct ihk_os_mem_chunk *os_mem_chunk_next = NULL;
 	struct chunk *mem_chunk_leftover;
 	struct chunk *mem_chunk_iter;
 
-	spin_lock_irqsave(&os->lock, flags);
-	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
-		spin_unlock_irqrestore(&os->lock, flags);
-		return -EBUSY;
-	}
-	spin_unlock_irqrestore(&os->lock, flags);
-
-	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
-	if (ret != 0) {
-		printk("IHK-SMP: os_assign_mem: error: parsing memory string\n");
-		return ret;
-	}
 
 	/* Do the assignment */
 	os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
@@ -1940,6 +1928,44 @@ out:
 	return ret;
 }
 
+static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	size_t mem_size;
+	int numa_id;
+	struct smp_os_data *os = priv;
+	unsigned long flags;
+	int ret = 0;
+	char *mem_string = (char *)arg;
+	char *mem_token;
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		return -EBUSY;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	mem_token = strsep(&mem_string, ",");
+	while (mem_token) {
+
+		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		if (ret != 0) {
+			printk("IHK-SMP: os_assign_mem: error: parsing memory string\n");
+			return ret;
+		}
+
+		ret = __smp_ihk_os_assign_mem(ihk_os, os, mem_size, numa_id);
+		if (ret != 0) {
+			printk("IHK-SMP: os_assign_mem: error: assigning memory chunk\n");
+			return ret;
+		}
+
+		mem_token = strsep(&mem_string, ",");
+	}
+
+	return ret;
+}
+
 static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	size_t mem_size;
@@ -1966,15 +1992,11 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 	return ret;
 }
 
-/* FIXME: use some max NUMA domain macro */
-unsigned long query_mem_per_numa[1024];
-
 static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
-	int i;
+	int q_len = 0;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 
-	memset(query_mem_per_numa, 0, sizeof(query_mem_per_numa));
 	memset(query_res, 0, sizeof(query_res));
 
 	/* Collect memory information */
@@ -1982,15 +2004,14 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		if (os_mem_chunk->os != ihk_os) 
 			continue;
 
-		query_mem_per_numa[os_mem_chunk->numa_id] += os_mem_chunk->size;
-	}
-
-	for (i = 0; i < 1024; ++i) {
-		if (!query_mem_per_numa[i]) 
-			continue;
-
-		sprintf(query_res, "%lu@%d", query_mem_per_numa[i], i);
-		break;
+		if (q_len) {
+			q_len += sprintf(query_res + q_len, ",%lu@%d",
+					os_mem_chunk->size, os_mem_chunk->numa_id);
+		}
+		else {
+			q_len = sprintf(query_res, "%lu@%d",
+					os_mem_chunk->size, os_mem_chunk->numa_id);
+		}
 	}
 
 	if (strlen(query_res) > 0) {
@@ -2259,7 +2280,7 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	struct chunk *q;
 	void *va;
 	size_t remain;
-	int ret;
+	int ret = 0;
 	struct list_head tmp_chunks;
 
 	INIT_LIST_HEAD(&tmp_chunks);
@@ -2651,16 +2672,28 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
 	size_t mem_size;
 	int numa_id;
-	int ret;
+	int ret = 0;
+	char *mem_string = (char *)arg;
+	char *mem_token;
 
-	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
-	if (ret != 0) {
-		printk("IHK-SMP: reserve_mem: error: parsing memory string\n");
-		return ret;
+	mem_token = strsep(&mem_string, ",");
+	while (mem_token) {
+
+		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		if (ret != 0) {
+			printk("IHK-SMP: reserve_mem: error: parsing memory string\n");
+			return ret;
+		}
+
+		/* Do the reservation */
+		ret = __ihk_smp_reserve_mem(mem_size, numa_id);
+		if (ret != 0) {
+			printk("IHK-SMP: reserve_mem: error: reserving memory\n");
+			return ret;
+		}
+
+		mem_token = strsep(&mem_string, ",");
 	}
-
-	/* Do the reservation */
-	ret = __ihk_smp_reserve_mem(mem_size, numa_id);
 
 	return ret;
 }
@@ -2715,28 +2748,22 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
-	int i;
+	int q_len = 0;
 	struct chunk *mem_chunk;
-	struct ihk_os_mem_chunk *os_mem_chunk;
 
-	memset(query_mem_per_numa, 0, sizeof(query_mem_per_numa));
 	memset(query_res, 0, sizeof(query_res));
 
 	/* Collect memory information */
 	list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
-		query_mem_per_numa[mem_chunk->numa_id] += mem_chunk->size;
-	}
 
-	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-		query_mem_per_numa[os_mem_chunk->numa_id] += os_mem_chunk->size;
-	}
-
-	for (i = 0; i < 1024; ++i) {
-		if (!query_mem_per_numa[i]) 
-			continue;
-
-		sprintf(query_res, "%lu@%d", query_mem_per_numa[i], i);
-		break;
+		if (q_len) {
+			q_len += sprintf(query_res + q_len, ",%lu@%d",
+					mem_chunk->size, mem_chunk->numa_id);
+		}
+		else {
+			q_len = sprintf(query_res, "%lu@%d",
+					mem_chunk->size, mem_chunk->numa_id);
+		}
 	}
 
 	if (strlen(query_res) > 0) {
