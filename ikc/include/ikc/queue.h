@@ -26,15 +26,15 @@ struct ihk_ikc_queue_head {
 	uint32_t        flag;
 /* 16 */
 	uint64_t        read_off;
+	uint64_t        max_read_off;
+/* 32 */
 	uint64_t        write_off;
-/* 32 : Receiver */
-	uint32_t        channel_id;
-	uint32_t        dummy;
 	uint64_t        queue_size;
 /* 48 */
+	uint32_t        channel_id;
 	uint32_t        read_cpu;
 	uint32_t        write_cpu;
-	uint64_t        dummy2;
+	uint32_t        dummy2;
 /* 64 */
 };
 
@@ -55,20 +55,29 @@ enum ihk_ikc_channel_flag {
 	IKC_FLAG_NO_COPY        = 0x10,
 };
 
+struct ihk_ikc_free_packet {
+	struct list_head list;
+};
+
 struct ihk_ikc_channel_desc {
 	struct list_head           all_list;
 	struct list_head           list;
 	ihk_os_t                   remote_os;
 	int                        remote_channel_id;
 	uint64_t                   remote_channel_va;
+	struct ihk_ikc_channel_desc *master;
 	int                        port;
 	int                        channel_id;
 	struct ihk_ikc_queue_desc  recv, send;
 	ihk_spinlock_t             lock;
 	enum ihk_ikc_channel_flag  flag;
 	ihk_ikc_ph_t               handler;
-	char                       packet_buf[0];
+	struct list_head           packet_pool;
+	ihk_spinlock_t             packet_pool_lock;
 };
+
+struct ihk_ikc_free_packet *ihk_ikc_alloc_packet(struct ihk_ikc_channel_desc *c);
+void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channel_desc *c);
 
 int ihk_ikc_init_queue(struct ihk_ikc_queue_head *q,
                        int id, int type, int size, int packetsize);
@@ -106,7 +115,8 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
                        ihk_os_t ros, int cid,
                        struct ihk_ikc_queue_head *rq,
                        struct ihk_ikc_queue_head *wq,
-                       ihk_ikc_ph_t packet_handler);
+                       ihk_ikc_ph_t packet_handler,
+                       struct ihk_ikc_channel_desc *master);
 struct ihk_ikc_channel_desc *ihk_ikc_find_channel(ihk_os_t os, int id);
 
 static inline int ihk_ikc_channel_enabled(struct ihk_ikc_channel_desc *c)

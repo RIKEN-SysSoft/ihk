@@ -68,13 +68,18 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		c = kzalloc(sizeof(struct ihk_ikc_channel_desc)
 		            + sizeof(struct ihk_ikc_master_packet), GFP_KERNEL);
 		ihk_ikc_init_desc(c, ihk_os, 0, rq, wq,
-		                  ihk_ikc_master_channel_packet_handler);
+		                  ihk_ikc_master_channel_packet_handler, c);
 
 		c->recv.qphys = rp;
 		c->send.qphys = wp;
 		c->recv.qrphys = r;
 		c->send.qrphys = w;
-		c->flag |= IKC_FLAG_NO_COPY;
+		/*
+		 * ihk_ikc_interrupt_handler() on the LWK now iterates the channel
+		 * until all packets are purged. This makes the notification IRQ
+		 * on master channel unnecessary.
+		 */
+		//c->flag |= IKC_FLAG_NO_COPY;
 
 		printk("c->remote_os = %p\n", c->remote_os);
 		os->packet_handler = handler;
@@ -241,7 +246,6 @@ struct ihk_ikc_channel_desc *ihk_os_get_master_channel(ihk_os_t __os)
 {
 	struct ihk_host_linux_os_data *os = __os;
 
-	printk("os(%p)->mchannel = %p\n", os, os->mchannel);
 	return os->mchannel;
 }
 
