@@ -50,6 +50,18 @@
 
 #define FLAG_IHK_OS_SHUTDOWN_FORCE    0x40000000
 
+#define PHYS_CHUNKS_DESC_SIZE 8192
+
+struct dump_mem_chunk {
+	unsigned long addr;
+	unsigned long size;
+};
+
+typedef struct dump_mem_chunks_s {
+	int nr_chunks;
+	struct dump_mem_chunk chunks[];
+} dump_mem_chunks_t;
+
 typedef struct dumpargs_s {
 	int cmd;
 #define DUMP_NMI 1

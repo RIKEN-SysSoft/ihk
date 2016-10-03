@@ -1467,8 +1467,22 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 	}
 
 	if (args->cmd == DUMP_QUERY) {
-		args->start = os->mem_start;
-		args->size = os->mem_end - os->mem_start;
+		int i = 0;
+		struct ihk_os_mem_chunk *os_mem_chunk;
+		dump_mem_chunks_t *mem_chunks = args->buf;
+
+		/* Collect memory information */
+		list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+			if (os_mem_chunk->os != ihk_os)
+				continue;
+
+			mem_chunks->chunks[i].addr = os_mem_chunk->addr;
+			mem_chunks->chunks[i].size = os_mem_chunk->size;
+			++i;
+		}
+
+		mem_chunks->nr_chunks = i;
+
 		return 0;
 	}
 
