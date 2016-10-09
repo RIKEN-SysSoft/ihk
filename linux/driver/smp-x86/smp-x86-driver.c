@@ -19,6 +19,9 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/fs.h>
+#include <asm/segment.h>
+#include <asm/uaccess.h>
+#include <linux/buffer_head.h>
 #include <linux/errno.h>
 #include <linux/pci.h>
 #include <linux/miscdevice.h>
@@ -218,62 +221,6 @@ enum uv_system_type (*_get_uv_system_type)(void) =
 int (*_wakeup_secondary_cpu_via_init)(int phys_apicid, 
 	unsigned long start_eip) = 
 	IHK_KSYM_wakeup_secondary_cpu_via_init;
-#endif
-#endif
-
-#ifdef IHK_KSYM_cpu_up
-#if IHK_KSYM_cpu_up
-typedef int (*int_star_fn_uint_t)(unsigned int);
-int (*ihk_cpu_up)(unsigned int cpu) =
-	(int_star_fn_uint_t)
-	IHK_KSYM_cpu_up;
-#else // exported
-int (*ihk_cpu_up)(unsigned int cpu) = cpu_up;
-#endif
-#elif defined IHK_KSYM__cpu_up
-#if IHK_KSYM__cpu_up
-typedef int (*int_star_fn_uint_int_t)(unsigned int, int);
-int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) =
-	(int_star_fn_uint_int_t)
-	IHK_KSYM__cpu_up;
-#else // exported
-int (*ihk_cpu_up)(unsigned int cpu, int tasks_frozen) = _cpu_up;
-#endif
-#endif /* IHK_KSYM_cpu_up or IHK_KSYM__cpu_up*/
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-#ifdef IHK_KSYM_cpu_hotplug_driver_lock 
-#if IHK_KSYM_cpu_hotplug_driver_lock 
-typedef void (*void_fn_void_t)(void);
-void (*_cpu_hotplug_driver_lock)(void) = 
-	(void_fn_void_t)
-	IHK_KSYM_cpu_hotplug_driver_lock;
-#else // exported
-#include <linux/cpu.h>
-void (*_cpu_hotplug_driver_lock)(void) = 
-	cpu_hotplug_driver_lock;
-#endif
-#else // static
-#include <linux/cpu.h>
-void (*_cpu_hotplug_driver_lock)(void) = 
-	cpu_hotplug_driver_lock;
-#endif	
-
-#ifdef IHK_KSYM_cpu_hotplug_driver_unlock
-#if IHK_KSYM_cpu_hotplug_driver_unlock
-#ifndef void_fn_void_t
-typedef void (*void_fn_void_t)(void);
-#endif
-void (*_cpu_hotplug_driver_unlock)(void) = 
-	(void_fn_void_t)
-	IHK_KSYM_cpu_hotplug_driver_unlock;
-#else // exported
-void (*_cpu_hotplug_driver_unlock)(void) = 
-	cpu_hotplug_driver_unlock;
-#endif
-#else // static
-void (*_cpu_hotplug_driver_unlock)(void) = 
-	cpu_hotplug_driver_unlock;
 #endif
 #endif
 
@@ -2408,54 +2355,48 @@ out:
 	return ret;
 }
 
+static int _smp_ihk_write_cpu_sys_file(int cpu_id, char *val)
+{
+	struct file* filp = NULL;
+	mm_segment_t oldfs;
+	int ret, err = 0;
+	char path[256];
+
+	sprintf(path, "/sys/devices/system/cpu/cpu%d/online", cpu_id);
+
+	oldfs = get_fs();
+
+	set_fs(get_ds());
+	filp = filp_open(path, O_RDWR, 0);
+	if (IS_ERR(filp)) {
+		set_fs(oldfs);
+		err = PTR_ERR(filp);
+		printk("%s: error opening %s\n", __FUNCTION__, path);
+		return -1;
+	}
+
+	ret = kernel_write(filp, val, 1, 0);
+	if (ret != 1) {
+		filp_close(filp, NULL);
+		set_fs(oldfs);
+		printk("%s: error writing %s\n", __FUNCTION__, path);
+		return -1;
+	}
+
+	filp_close(filp, NULL);
+	set_fs(oldfs);
+	return 0;
+}
+
+
 static int smp_ihk_offline_cpu(int cpu_id)
 {
-	int ret;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-	struct device *dev = get_cpu_device(cpu_id);
-#else
-	struct sys_device *dev = get_cpu_sysdev(cpu_id);
-	struct cpu *cpu = container_of(dev, struct cpu, sysdev);
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-	ret = dev->bus->offline(dev);
-	if (!ret) {
-		kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
-		dev->offline = true;
-	}
-#else
-	_cpu_hotplug_driver_lock();
-
-	ret = cpu_down(cpu->sysdev.id);
-	if (!ret)
-		kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
-
-	_cpu_hotplug_driver_unlock();
-#endif
-
-	if (ret < 0) {
-		printk("IHK-SMP: error: hot-unplugging CPU %d\n", cpu_id);
-		return -EFAULT;
-	}
-
-	return 0;
+	return _smp_ihk_write_cpu_sys_file(cpu_id, "0");
 }
 
 static int smp_ihk_online_cpu(int cpu_id)
 {
-	int ret;
-
-#if defined IHK_KSYM_cpu_up
-	ret = ihk_cpu_up(cpu_id);
-#elif defined IHK_KSYM__cpu_up
-	ret = ihk_cpu_up(cpu_id, 1);
-#endif
-	if (ret) {
-		printk("IHK-SMP: WARNING: failed to re-enable CPU %d\n", cpu_id);
-	}
-
-	return 0;
+	return _smp_ihk_write_cpu_sys_file(cpu_id, "1");
 }
 
 static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)

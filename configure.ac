@@ -234,10 +234,6 @@ if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([dummy_irq_chip])
 	IHK_FIND_KSYM([get_uv_system_type])
 	IHK_FIND_KSYM([wakeup_secondary_cpu_via_init])
-	IHK_FIND_KSYM([cpu_hotplug_driver_lock])
-	IHK_FIND_KSYM([cpu_hotplug_driver_unlock])
-	IHK_FIND_KSYM([cpu_up])
-	IHK_FIND_KSYM([_cpu_up])
 	IHK_FIND_KSYM([__default_send_IPI_dest_field])
 fi
 
