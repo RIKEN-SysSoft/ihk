@@ -52,8 +52,8 @@ static struct ihk_mc_cpu_info *ihk_cpu_info = NULL;
 
 static void build_ihk_cpu_info(void)
 {
-	int node_id, i, n = 0;
-	struct smp_coreset *cpu_hw_ids;
+	int i;
+	struct ihk_smp_boot_param_cpu *bp_cpu;
 
 	ihk_cpu_info = early_alloc_pages((
 				(sizeof(*ihk_cpu_info) + boot_param->nr_cpus *
@@ -62,24 +62,14 @@ static void build_ihk_cpu_info(void)
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
 	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + boot_param->nr_cpus;
 
-	for (node_id = 0; node_id < ihk_mc_get_nr_numa_nodes(); ++node_id) {
-		ihk_mc_get_numa_node(node_id, NULL, NULL, &cpu_hw_ids);
-
-		for (i = 0; i < SMP_MAX_CPUS; i++) {
-			if (CORE_ISSET(i, *cpu_hw_ids)) {
-				ihk_cpu_info->hw_ids[n] = i;
-				ihk_cpu_info->nodes[n] = node_id;
-
-				n++;
-			}
-		}
+	bp_cpu = (struct ihk_smp_boot_param_cpu *)(boot_param + 1);
+	for (i = 0; i < boot_param->nr_cpus; ++i) {
+		ihk_cpu_info->hw_ids[i] = bp_cpu->hw_id;
+		ihk_cpu_info->nodes[i] = bp_cpu->numa_id;
+		++bp_cpu;
 	}
 
-	ihk_cpu_info->ncpus = n;
-
-	if (ihk_cpu_info->ncpus != boot_param->nr_cpus) {
-		kprintf("%s: WARNING: inconsistent number of CPUs\n", __FUNCTION__);
-	}
+	ihk_cpu_info->ncpus = boot_param->nr_cpus;
 }
 
 int ihk_mc_get_numa_id(void)
@@ -224,20 +214,19 @@ int ihk_mc_get_nr_numa_nodes(void)
 	return boot_param->nr_numa_nodes;
 }
 
-int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type,
-		struct smp_coreset **cpu_hw_ids)
+int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type)
 {
-	struct ihk_smp_numa_node *node;
+	struct ihk_smp_boot_param_numa_node *node;
 
 	if (id < 0 || id >= boot_param->nr_numa_nodes)
 		return -EINVAL;
 
-	node = (((struct ihk_smp_numa_node *)
-		((char *)boot_param + sizeof(*boot_param))) + id);
+	node = (((struct ihk_smp_boot_param_numa_node *)
+		((char *)boot_param + sizeof(*boot_param) + 
+		boot_param->nr_cpus * sizeof(struct ihk_smp_boot_param_cpu))) + id);
 
 	if (linux_numa_id) *linux_numa_id = node->linux_numa_id;
 	if (type) *type = node->type;
-	if (cpu_hw_ids) *cpu_hw_ids = &node->cpu_hw_ids;
 
 	return 0;
 }
@@ -248,22 +237,24 @@ int ihk_mc_get_nr_memory_chunks(void)
 }
 
 int ihk_mc_get_memory_chunk(int id,
-	unsigned long *start,
-	unsigned long *end,
-	int *linux_numa_id)
+		unsigned long *start,
+		unsigned long *end,
+		int *numa_id)
 {
-	struct ihk_smp_memory_chunk *chunk;
+	struct ihk_smp_boot_param_memory_chunk *chunk;
 
 	if (id < 0 || id >= boot_param->nr_memory_chunks)
 		return -EINVAL;
 
-	chunk = ((struct ihk_smp_memory_chunk *)
-		((char *)boot_param + sizeof(*boot_param) +
-			boot_param->nr_numa_nodes * sizeof(struct ihk_smp_numa_node))) + id;
+	chunk = ((struct ihk_smp_boot_param_memory_chunk *)
+			((char *)boot_param + sizeof(*boot_param) +
+			 boot_param->nr_cpus * sizeof(struct ihk_smp_boot_param_cpu) +
+			 boot_param->nr_numa_nodes *
+			 sizeof(struct ihk_smp_boot_param_numa_node))) + id;
 
 	if (start) *start = chunk->start;
 	if (end) *end = chunk->end;
-	if (linux_numa_id) *linux_numa_id = chunk->linux_numa_id;
+	if (numa_id) *numa_id = chunk->numa_id;
 
 	return 0;
 }

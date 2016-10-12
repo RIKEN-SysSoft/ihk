@@ -309,7 +309,8 @@ struct smp_os_data {
 	unsigned long mem_start;
 	/** \brief End address of the allocated memory region */
 	unsigned long mem_end;
-	/** \brief Bitmask of NUMA nodes from where memory is assigned */
+	/** \brief Bitmask of NUMA nodes from where memory or
+	 * CPUs are assigned */
 	unsigned long numa_mask;
 
 	/** \brief APIC ID of the bsp of this OS instance */
@@ -332,6 +333,14 @@ struct smp_os_data {
 	 * it does not change while the kernel is running.
 	 */
 	char kernel_args[256];
+
+	/* LWK NUMA id to Linux NUMA id mapping */
+	int *numa_mapping;
+	int nr_numa_nodes;
+
+	/* LWK CPU id to Linux CPU id mapping */
+	int *cpu_mapping;
+	int nr_cpus;
 
 	/** \brief Boot parameter for the kernel
 	 *
@@ -639,6 +648,45 @@ unsigned long x2apic_is_enabled(void)
 	return msr & (1 << 10); /* x2APIC enabled? */
 }
 
+/*
+ * CPU and NUMA node mapping conversion functions.
+ */
+static int lwk_cpu_2_linux_cpu(struct smp_os_data *os, int cpu_id)
+{
+	return (cpu_id < os->nr_cpus) ? os->cpu_mapping[cpu_id] : -1;
+}
+
+static int linux_cpu_2_lwk_cpu(struct smp_os_data *os, int cpu_id)
+{
+	int i;
+
+	for (i = 0; i < os->nr_cpus; ++i) {
+		if (os->cpu_mapping[i] == cpu_id)
+			return i;
+	}
+
+	return -1;
+}
+
+static int lwk_numa_2_linux_numa(struct smp_os_data *os, int numa_id)
+{
+	return (numa_id < os->nr_numa_nodes) ?
+		os->numa_mapping[numa_id] : -1;
+}
+
+static int linux_numa_2_lwk_numa(struct smp_os_data *os, int numa_id)
+{
+	int i;
+
+	for (i = 0; i < os->nr_numa_nodes; ++i) {
+		if (os->numa_mapping[i] == numa_id)
+			return i;
+	}
+
+	return -1;
+}
+
+
 /** \brief Boot a kernel. */
 static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
@@ -651,15 +699,52 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	struct page *param_pages;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 	int nr_memory_chunks = 0;
-	int numa_id, linux_numa_id, nr_numa_nodes;
-	struct ihk_smp_numa_node *bp_numa_node;
-	struct ihk_smp_memory_chunk *bp_mem_chunk;
-	int cpu;
+	int numa_id, linux_numa_id, nr_numa_nodes, nr_cpus;
+	struct ihk_smp_boot_param_cpu *bp_cpu;
+	struct ihk_smp_boot_param_numa_node *bp_numa_node;
+	struct ihk_smp_boot_param_memory_chunk *bp_mem_chunk;
+	int cpu, lwk_cpu;
+	struct smp_coreset cpu_coremap;
+	
+	/* Compute size including CPUs, NUMA nodes and memory chunks */
+	param_size = (sizeof(*os->param));
 
-	/* Compute size including numa nodes, memory chunks and CPU information */
-	param_size = (sizeof(*os->param) + (PAGE_SIZE - 1));
+	/* Figure out number of cores */
+	nr_cpus = 0;
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
+				ihk_smp_cpus[cpu].os != ihk_os)
+			continue;
+
+		++nr_cpus;
+	}
+
+	param_size += nr_cpus * sizeof(struct ihk_smp_boot_param_cpu);
+
+	/* NUMA nodes */
 	nr_numa_nodes = hweight64(os->numa_mask);
-	param_size += (nr_numa_nodes * sizeof(struct ihk_smp_numa_node));
+	param_size += (nr_numa_nodes * sizeof(struct ihk_smp_boot_param_numa_node));
+
+	os->numa_mapping = kmalloc(nr_numa_nodes * sizeof(int), GFP_KERNEL);
+	if (!os->numa_mapping) {
+		printk("IHK-SMP: error allocating NUMA mapping\n");
+		return -1;
+	}
+
+	/* Fill in LWK NUMA mapping */
+	numa_id = 0;
+	for (linux_numa_id = find_first_bit(&os->numa_mask,
+				(sizeof(os->numa_mask) * 8));
+			linux_numa_id < (sizeof(os->numa_mask) * 8);
+			linux_numa_id = find_next_bit(&os->numa_mask,
+				(sizeof(os->numa_mask) * 8), linux_numa_id + 1)) {
+
+		os->numa_mapping[numa_id] = linux_numa_id;
+		dprintf("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
+				os, numa_id, linux_numa_id);
+
+		++numa_id;
+	}
 
 	/* Count number of memory chunks */
 	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
@@ -668,11 +753,14 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		++nr_memory_chunks;
 	}
 
-	param_size += (nr_memory_chunks * sizeof(struct ihk_smp_memory_chunk));
+	param_size += (nr_memory_chunks *
+			sizeof(struct ihk_smp_boot_param_memory_chunk));
 
-	printk("IHK-SMP: %d memory chunks from %d NUMA nodes\n",
+	dprintf("IHK-SMP: %d memory chunks from %d NUMA nodes\n",
 		nr_memory_chunks, nr_numa_nodes);
 
+	/* Allocate boot parameter pages */
+	param_size = (param_size + PAGE_SIZE - 1) & PAGE_MASK;
 	param_pages_order = 0;
 	while (((size_t)PAGE_SIZE << param_pages_order) < param_size)
 		++param_pages_order;
@@ -685,26 +773,62 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
-	printk("IHK-SMP: param size: %lu, nr_pages: %lu\n",
+	dprintf("IHK-SMP: param size: %lu, nr_pages: %lu\n",
 		sizeof(*os->param), 1UL << param_pages_order);
 
 	memset(os->param, 0, param_size);
+	os->param->nr_cpus = nr_cpus;
 	os->param->nr_numa_nodes = nr_numa_nodes;
 	os->param->nr_memory_chunks = nr_memory_chunks;
 
-	bp_numa_node = (struct ihk_smp_numa_node *)((char *)os->param +
+	os->nr_cpus = nr_cpus;
+	os->nr_numa_nodes = nr_numa_nodes;
+
+	bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
 			sizeof(*os->param));
 
-	/* Figure out number of cores */
-	os->param->nr_cpus = 0;
+	/* Fill in CPU mapping */
+	memset(&cpu_coremap, 0, sizeof(struct smp_coreset));
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
-			continue;
-		if (ihk_smp_cpus[cpu].os != ihk_os)
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
+				ihk_smp_cpus[cpu].os != ihk_os)
 			continue;
 
-		++os->param->nr_cpus;
+		CORE_SET(cpu, cpu_coremap);
 	}
+
+	os->cpu_mapping = kmalloc(nr_cpus * sizeof(int), GFP_KERNEL);
+	if (!os->cpu_mapping) {
+		printk("IHK-SMP: error allocating CPU mapping\n");
+		return -1;
+	}
+
+	/* Fill in CPU cores information */
+	lwk_cpu = 0;
+	while ((cpu = find_first_bit(cpu_coremap.set, SMP_MAX_CPUS)) 
+			< SMP_MAX_CPUS) {
+
+		CORE_CLR(cpu, cpu_coremap);
+	}
+
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
+				ihk_smp_cpus[cpu].os != ihk_os)
+			continue;
+
+		bp_cpu->numa_id = linux_numa_2_lwk_numa(os, cpu_to_node(cpu));
+		bp_cpu->hw_id = ihk_smp_cpus[cpu].apic_id;
+
+		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU APIC: %d\n",
+				os, cpu_to_node(cpu), ihk_smp_cpus[cpu].apic_id);
+
+		++bp_cpu;
+
+		os->cpu_mapping[lwk_cpu] = cpu;
+		++lwk_cpu;
+	}
+
+	bp_numa_node = (struct ihk_smp_boot_param_numa_node *)bp_cpu;
 
 	/* Fill in NUMA nodes information */
 	numa_id = 0;
@@ -717,27 +841,14 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		bp_numa_node->type = IHK_SMP_MEMORY_TYPE_DRAM;
 		bp_numa_node->linux_numa_id = linux_numa_id;
 
-		printk("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
+		dprintf("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
 				os, numa_id, linux_numa_id);
-
-		/* Fill in CPU cores on this NUMA node 
-		 * TODO: topology (i.e., socket, caches) information? */
-		for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-			if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
-					ihk_smp_cpus[cpu].os != ihk_os ||
-					cpu_to_node(cpu) != linux_numa_id)
-				continue;
-
-			CORE_SET(ihk_smp_cpus[cpu].apic_id, bp_numa_node->cpu_hw_ids);
-			printk("IHK-SMP: OS: %p, NUMA[%d (Linux NUMA: %d)]: CPU APIC: %d\n",
-					os, numa_id, linux_numa_id, ihk_smp_cpus[cpu].apic_id);
-		}
 
 		++bp_numa_node;
 		++numa_id;
 	}
 
-	bp_mem_chunk = (struct ihk_smp_memory_chunk *)bp_numa_node;
+	bp_mem_chunk = (struct ihk_smp_boot_param_memory_chunk *)bp_numa_node;
 
 	/* Fill in memory chunks information in the order of NUMA nodes */
 	for (linux_numa_id = find_first_bit(&os->numa_mask,
@@ -753,7 +864,8 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 			bp_mem_chunk->start = os_mem_chunk->addr;
 			bp_mem_chunk->end = os_mem_chunk->addr + os_mem_chunk->size;
-			bp_mem_chunk->linux_numa_id = os_mem_chunk->numa_id;
+			bp_mem_chunk->numa_id =
+				linux_numa_2_lwk_numa(os, os_mem_chunk->numa_id);
 
 			++bp_mem_chunk;
 		}
@@ -825,6 +937,12 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	udelay(300);
 	
 	return smp_wakeup_secondary_cpu(os->boot_cpu, trampoline_phys);
+	
+	/* Never reach these.. */
+	linux_numa_2_lwk_numa(os, 0);
+	linux_cpu_2_lwk_cpu(os, 0);
+	lwk_numa_2_linux_numa(os, 0);
+	lwk_cpu_2_linux_cpu(os, 0);
 }
 
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)

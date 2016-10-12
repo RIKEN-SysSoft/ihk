@@ -26,34 +26,43 @@ static inline int CORE_ISSET_ANY(struct smp_coreset *p)
 	return 0;
 }
 
-struct ihk_smp_memory_chunk {
+struct ihk_smp_boot_param_cpu {
+	int numa_id;
+	int hw_id;
+};
+
+struct ihk_smp_boot_param_memory_chunk {
 	unsigned long start, end;
-	int linux_numa_id;
+	int numa_id;
 };
 
 #define IHK_SMP_MEMORY_TYPE_DRAM          0x01
 #define IHK_SMP_MEMORY_TYPE_HBM           0x02
 
-struct ihk_smp_numa_node {
+struct ihk_smp_boot_param_numa_node {
 	int type;
 	int linux_numa_id;
-	struct smp_coreset cpu_hw_ids;
 };
 
 /*
  * smp_boot_param holds various boot time arguments.
  * The layout in the memory is the following:
- * [[struct smp_boot_param][struct ihk_smp_numa_node] ...
- * [struct ihk_smp_numa_node][struct ihk_smp_memory_chunk] ...
- * [struct ihk_smp_memory_chunk]],
- * where the number of numa nodes and the number of memory ranges are determined
- * by the nr_numa_nodes and nr_memory_chunks fields, respectively.
+ * [[struct smp_boot_param]
+ * [struct ihk_smp_boot_param_cpu] ... [struct ihk_smp_boot_param_cpu]
+ * [struct ihk_smp_boot_param_numa_node] ...
+ * [struct ihk_smp_boot_param_numa_node]
+ * [struct ihk_smp_boot_param_memory_chunk] ...
+ * [struct ihk_smp_boot_param_memory_chunk]],
+ * where the number of CPUs, the number of numa nodes and
+ * the number of memory ranges are determined by the nr_cpus,
+ * nr_numa_nodes and nr_memory_chunks fields, respectively.
  */
 struct smp_boot_param {
 	/*
 	 * [start, end] covers all assigned ranges, including holes
 	 * in between so that a straight mapping can be set up at boot time,
-	 * but actual valid memory ranges are in the ihk_smp_memory_chunk structures.
+	 * but actual valid memory ranges are described in the
+	 * ihk_smp_boot_param_memory_chunk structures.
 	 */
 	unsigned long start, end;
 	unsigned long status;
