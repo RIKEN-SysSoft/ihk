@@ -603,12 +603,18 @@ struct ihk_mem_info {
 	struct ihk_mem_region *fixed;
 	/** \brief Array of memory regions mappable to the host */
 	struct ihk_mem_region *mappable;
+	/** \brief Number of NUMA nodes */
+	int n_numa_nodes;
+	/** \brief Mapping of LWK NUMA ids to Linux NUMA ids */
+	int *numa_mapping;
 };
 
 /** \brief CPU information used in IHK functions */
 struct ihk_cpu_info {
 	/** \brief Number of CPU cores */
 	int n_cpus;
+	/** \brief Array of the Linux core ID of the CPU cores */
+	int *mapping;
 	/** \brief Array of the hardware ID of the CPU cores */
 	int *hw_ids;
 };

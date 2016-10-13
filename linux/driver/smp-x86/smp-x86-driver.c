@@ -339,7 +339,7 @@ struct smp_os_data {
 	int nr_numa_nodes;
 
 	/* LWK CPU id to Linux CPU id mapping */
-	int *cpu_mapping;
+	int cpu_mapping[SMP_MAX_CPUS];
 	int nr_cpus;
 
 	/** \brief Boot parameter for the kernel
@@ -472,22 +472,18 @@ static void set_dev_status(struct builtin_device_data *dev, int status)
  * via IHK functions. */
 static void __build_os_info(struct smp_os_data *os)
 {
-	int i, c;
-
 	os->mem_info.n_mappable = os->mem_info.n_available = 1;
 	os->mem_info.n_fixed = 0;
 	os->mem_info.available = os->mem_info.mappable = &os->mem_region;
 	os->mem_info.fixed = NULL;
 	os->mem_region.start = os->mem_start;
 	os->mem_region.size = os->mem_end - os->mem_start;
-	
-	for (i = 0, c = 0; i < SMP_MAX_CPUS; i++) {
-		if (CORE_ISSET(i, os->cpu_hw_ids_map)) {
-			os->cpu_hw_ids[c] = i;
-			c++;
-		}
-	}
-	os->cpu_info.n_cpus = c;
+
+	os->mem_info.n_numa_nodes = os->nr_numa_nodes;
+	os->mem_info.numa_mapping = os->numa_mapping;
+
+	os->cpu_info.n_cpus = os->nr_cpus;
+	os->cpu_info.mapping = os->cpu_mapping;
 	os->cpu_info.hw_ids = os->cpu_hw_ids;
 }
 
@@ -797,12 +793,6 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		CORE_SET(cpu, cpu_coremap);
 	}
 
-	os->cpu_mapping = kmalloc(nr_cpus * sizeof(int), GFP_KERNEL);
-	if (!os->cpu_mapping) {
-		printk("IHK-SMP: error allocating CPU mapping\n");
-		return -1;
-	}
-
 	/* Fill in CPU cores information */
 	lwk_cpu = 0;
 	while ((cpu = find_first_bit(cpu_coremap.set, SMP_MAX_CPUS)) 
@@ -825,6 +815,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		++bp_cpu;
 
 		os->cpu_mapping[lwk_cpu] = cpu;
+		os->cpu_hw_ids[lwk_cpu] = ihk_smp_cpus[cpu].apic_id;
 		++lwk_cpu;
 	}
 
