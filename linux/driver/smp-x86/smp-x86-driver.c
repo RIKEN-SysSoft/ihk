@@ -304,7 +304,7 @@ struct smp_os_data {
 	/** \brief Pointer to the device structure */
 	struct builtin_device_data *dev;
 	/** \brief Allocated CPU core mask */
-	struct smp_coreset coremaps;
+	struct smp_coreset cpu_hw_ids_map;
 	/** \brief Start address of the allocated memory region */
 	unsigned long mem_start;
 	/** \brief End address of the allocated memory region */
@@ -482,7 +482,7 @@ static void __build_os_info(struct smp_os_data *os)
 	os->mem_region.size = os->mem_end - os->mem_start;
 	
 	for (i = 0, c = 0; i < SMP_MAX_CPUS; i++) {
-		if (CORE_ISSET(i, os->coremaps)) {
+		if (CORE_ISSET(i, os->cpu_hw_ids_map)) {
 			os->cpu_hw_ids[c] = i;
 			c++;
 		}
@@ -902,7 +902,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->param->start = os->mem_start;
 	os->param->end = os->mem_end;
-	os->param->coreset = os->coremaps;
+	os->param->coreset = os->cpu_hw_ids_map;
 	os->param->ident_table = ident_page_table;
 	strncpy(os->param->kernel_args, os->kernel_args,
 	        sizeof(os->param->kernel_args));
@@ -915,7 +915,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	os->param->ihk_ikc_irq_apicid = ihk_smp_irq_apicid;
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
-	        os->boot_cpu, os->mem_start, os->mem_end, os->coremaps.set[0],
+	        os->boot_cpu, os->mem_start, os->mem_end, os->cpu_hw_ids_map.set[0],
 	        os->param->dma_address
 	);
 
@@ -973,7 +973,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	unsigned long startup_p;
 	unsigned long *startup;
 
-	if (!CORE_ISSET_ANY(&os->coremaps) || os->mem_end - os->mem_start < 0) {
+	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->mem_end - os->mem_start < 0) {
 		printk("builtin: OS is not ready to boot.\n");
 		return -EINVAL;
 	}
@@ -1145,7 +1145,7 @@ static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 	dprint_func_enter;
 
 	/* We just load from the lowest address of the private memory */
-	if (!CORE_ISSET_ANY(&os->coremaps) || os->mem_end - os->mem_start < 0) {
+	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->mem_end - os->mem_start < 0) {
 		printk("builtin: OS is not ready to boot.\n");
 		return -EINVAL;
 	}
@@ -1363,7 +1363,7 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 
 			printk("IHK-SMP: CPU APIC %d assigned.\n",
 					ihk_smp_cpus[i].apic_id);
-			CORE_SET(ihk_smp_cpus[i].apic_id, os->coremaps);
+			CORE_SET(ihk_smp_cpus[i].apic_id, os->cpu_hw_ids_map);
 
 			ihk_smp_cpus[i].status = IHK_SMP_CPU_ASSIGNED;
 			ihk_smp_cpus[i].os = ihk_os;
@@ -1774,7 +1774,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 			goto err;
 		}
 
-		CORE_SET(ihk_smp_cpus[cpu].apic_id, os->coremaps);
+		CORE_SET(ihk_smp_cpus[cpu].apic_id, os->cpu_hw_ids_map);
 		set_bit(cpu_to_node(cpu), &os->numa_mask);
 
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
@@ -1834,7 +1834,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 #endif
 
 		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
-		CORE_CLR(ihk_smp_cpus[cpu].apic_id, os->coremaps);
+		CORE_CLR(ihk_smp_cpus[cpu].apic_id, os->cpu_hw_ids_map);
 
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
