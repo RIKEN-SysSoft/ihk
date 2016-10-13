@@ -3201,7 +3201,6 @@ static int collect_cpu_topology(int cpu)
 	int n;
 	struct ihk_cpu_topology *p = NULL;
 	int index;
-	struct cpuinfo_x86 *ci = &cpu_data(cpu);
 
 	dprintk("collect_cpu_topology(%d)\n", cpu);
 	prefix = kmalloc(PATH_MAX, GFP_KERNEL);
@@ -3230,7 +3229,7 @@ static int collect_cpu_topology(int cpu)
 
 	INIT_LIST_HEAD(&p->cache_topology_list);
 	p->cpu_number = cpu;
-	p->hw_id = ci->initial_apicid;
+	p->hw_id = per_cpu(x86_cpu_to_apicid, cpu);
 
 	error = read_long(&p->core_id, "%s/topology/core_id", prefix);
 	if (error) {
