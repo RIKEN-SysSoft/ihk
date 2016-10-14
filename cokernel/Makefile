@@ -1,7 +1,7 @@
 IHKBASE = $(CURDIR)
 ECHO_SUFFIX = [IHK]
 
-IHK_OBJS += string.o vsprintf.o abort.o page_alloc.o mikc.o ikc.o gencore.o bitops.o
+IHK_OBJS += string.o vsprintf.o abort.o page_alloc.o mikc.o ikc.o gencore.o bitops.o bitmap.o
 
 DESTOBJS = $(addprefix $O/,$(IHK_OBJS))
 SUBOPTS = CC=$(CC) LD=$(LD) V=$(V) TARGET=$(TARGET) IHKBASE=$(IHKBASE)
