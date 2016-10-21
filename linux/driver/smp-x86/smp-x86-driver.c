@@ -34,6 +34,7 @@
 #include <linux/radix-tree.h>
 #include <linux/irq.h>
 #include <linux/topology.h>
+#include <linux/ctype.h>
 #include <asm/hw_irq.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
@@ -695,27 +696,15 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	struct page *param_pages;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 	int nr_memory_chunks = 0;
-	int numa_id, linux_numa_id, nr_numa_nodes, nr_cpus;
+	int numa_id, linux_numa_id, nr_numa_nodes;
 	struct ihk_smp_boot_param_cpu *bp_cpu;
 	struct ihk_smp_boot_param_numa_node *bp_numa_node;
 	struct ihk_smp_boot_param_memory_chunk *bp_mem_chunk;
-	int cpu, lwk_cpu;
-	struct smp_coreset cpu_coremap;
-	
+	int lwk_cpu;
+
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
-
-	/* Figure out number of cores */
-	nr_cpus = 0;
-	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
-				ihk_smp_cpus[cpu].os != ihk_os)
-			continue;
-
-		++nr_cpus;
-	}
-
-	param_size += nr_cpus * sizeof(struct ihk_smp_boot_param_cpu);
+	param_size += os->nr_cpus * sizeof(struct ihk_smp_boot_param_cpu);
 
 	/* NUMA nodes */
 	nr_numa_nodes = hweight64(os->numa_mask);
@@ -773,16 +762,18 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		sizeof(*os->param), 1UL << param_pages_order);
 
 	memset(os->param, 0, param_size);
-	os->param->nr_cpus = nr_cpus;
+	os->param->nr_cpus = os->nr_cpus;
 	os->param->nr_numa_nodes = nr_numa_nodes;
 	os->param->nr_memory_chunks = nr_memory_chunks;
 
-	os->nr_cpus = nr_cpus;
 	os->nr_numa_nodes = nr_numa_nodes;
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
 			sizeof(*os->param));
 
+	/* NOTE: CPU mapping is determined by the CPU assign operation
+	 * so that the order can be controlled by the user */
+#if 0
 	/* Fill in CPU mapping */
 	memset(&cpu_coremap, 0, sizeof(struct smp_coreset));
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
@@ -795,28 +786,22 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	/* Fill in CPU cores information */
 	lwk_cpu = 0;
-	while ((cpu = find_first_bit(cpu_coremap.set, SMP_MAX_CPUS)) 
+	while ((cpu = find_first_bit(cpu_coremap.set, SMP_MAX_CPUS))
 			< SMP_MAX_CPUS) {
 
 		CORE_CLR(cpu, cpu_coremap);
 	}
+#endif
 
-	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
-				ihk_smp_cpus[cpu].os != ihk_os)
-			continue;
-
-		bp_cpu->numa_id = linux_numa_2_lwk_numa(os, cpu_to_node(cpu));
-		bp_cpu->hw_id = ihk_smp_cpus[cpu].apic_id;
+	/* Pass in CPU information according to CPU mapping */
+	for (lwk_cpu = 0; lwk_cpu < os->nr_cpus; ++lwk_cpu) {
+		bp_cpu->numa_id = linux_numa_2_lwk_numa(os, cpu_to_node(os->cpu_mapping[lwk_cpu]));
+		bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
 
 		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU APIC: %d\n",
 				os, cpu_to_node(cpu), ihk_smp_cpus[cpu].apic_id);
 
 		++bp_cpu;
-
-		os->cpu_mapping[lwk_cpu] = cpu;
-		os->cpu_hw_ids[lwk_cpu] = ihk_smp_cpus[cpu].apic_id;
-		++lwk_cpu;
 	}
 
 	bp_numa_node = (struct ihk_smp_boot_param_numa_node *)bp_cpu;
@@ -1719,6 +1704,105 @@ static struct ihk_cpu_info *smp_ihk_os_get_cpu_info(ihk_os_t ihk_os, void *priv)
 	return &os->cpu_info;
 }
 
+/*
+ * Parse the CPU list string and assign CPUs in the order of designation.
+ * NOTE: The string must be valid.
+ */
+static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
+{
+	unsigned a, b;
+	int c, old_c, totaldigits, ndigits;
+	const char __user __force *ubuf = (const char __user __force *)buf;
+	int at_start, in_range;
+	int is_user = 1;
+
+	totaldigits = c = 0;
+	do {
+		at_start = 1;
+		in_range = 0;
+		a = b = 0;
+		ndigits = totaldigits;
+
+		/* Get the next cpu# or a range of cpu#'s */
+		for (;;) {
+			old_c = c;
+			if (is_user) {
+				if (__get_user(c, ubuf++))
+					return -EFAULT;
+			} else
+				c = *buf++;
+
+			/* End of string? */
+			if (!c)
+				break;
+
+			if (isspace(c))
+				continue;
+
+			/* A '\0' or a ',' signal the end of a cpu# or range */
+			if (c == '\0' || c == ',')
+				break;
+			/*
+			* whitespaces between digits are not allowed,
+			* but it's ok if whitespaces are on head or tail.
+			* when old_c is whilespace,
+			* if totaldigits == ndigits, whitespace is on head.
+			* if whitespace is on tail, it should not run here.
+			* as c was ',' or '\0',
+			* the last code line has broken the current loop.
+			*/
+			if ((totaldigits != ndigits) && isspace(old_c))
+				return -EINVAL;
+
+			if (c == '-') {
+				if (at_start || in_range)
+					return -EINVAL;
+				b = 0;
+				in_range = 1;
+				at_start = 1;
+				continue;
+			}
+
+			if (!isdigit(c))
+				return -EINVAL;
+
+			b = b * 10 + (c - '0');
+			if (!in_range)
+				a = b;
+			at_start = 0;
+			totaldigits++;
+		}
+		if (ndigits == totaldigits)
+			continue;
+		/* if no digit is after '-', it's wrong*/
+		if (at_start && in_range)
+			return -EINVAL;
+		if (!(a <= b))
+			return -EINVAL;
+
+		/* Assign CPUs and update CPU mapping */
+		while (a <= b) {
+			int cpu = a;
+			printk("IHK-SMP: assigned CPU %d to OS %p\n", a, ihk_os);
+
+			CORE_SET(ihk_smp_cpus[cpu].apic_id, os->cpu_hw_ids_map);
+			set_bit(cpu_to_node(cpu), &os->numa_mask);
+
+			ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
+			ihk_smp_cpus[cpu].os = ihk_os;
+
+			os->cpu_mapping[os->nr_cpus] = cpu;
+			os->cpu_hw_ids[os->nr_cpus] = ihk_smp_cpus[cpu].apic_id;
+			os->nr_cpus++;
+
+			a++;
+		}
+	}
+	while (c);
+
+	return 0;
+}
+
 static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret;
@@ -1736,8 +1820,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 	memset(&cpus_to_assign, 0, sizeof(cpus_to_assign));
 
-	/* Parse CPU list provided by user
-	 * FIXME: validate userspace buffer */
+	/* Validate CPU list provided by user */
 	cpulist_parse((char *)arg, &cpus_to_assign);
 
 	/* Check if cores to be assigned are available */
@@ -1753,29 +1836,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		}
 	}
 
-	/* Do the assignment */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
-	for_each_cpu(cpu, &cpus_to_assign) {
-#else
-	for_each_cpu_mask(cpu, cpus_to_assign) {
-#endif
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
-			printk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
-			ret = -EINVAL;
-			goto err;
-		}
-
-		CORE_SET(ihk_smp_cpus[cpu].apic_id, os->cpu_hw_ids_map);
-		set_bit(cpu_to_node(cpu), &os->numa_mask);
-
-		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
-		ihk_smp_cpus[cpu].os = ihk_os;
-
-		printk("IHK-SMP: CPU APIC %d assigned to %p.\n",
-				ihk_smp_cpus[cpu].apic_id, ihk_os);
-	}
-
-	ret = 0;
+	ret = __assign_cpus(ihk_os, os, (char *)arg);
 
 err:
 	return ret;
@@ -1798,8 +1859,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 
 	memset(&cpus_to_release, 0, sizeof(cpus_to_release));
 
-	/* Parse CPU list provided by user
-	 * FIXME: validate userspace buffer */
+	/* Parse CPU list provided by user */
 	cpulist_parse((char *)arg, &cpus_to_release);
 
 	/* Check if cores to be released are assigned to this OS */
@@ -1823,6 +1883,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 #else
 	for_each_cpu_mask(cpu, cpus_to_release) {
 #endif
+		int lwk_cpu;
 
 		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
 		CORE_CLR(ihk_smp_cpus[cpu].apic_id, os->cpu_hw_ids_map);
@@ -1830,8 +1891,26 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-		printk("IHK-SMP: CPU APIC %d released from 0x%p.\n",
-				ihk_smp_cpus[cpu].apic_id, os);
+		/* Update CPU mapping */
+		for (lwk_cpu = 0; lwk_cpu < os->nr_cpus; ++lwk_cpu) {
+			int _lwk_cpu;
+
+			if (os->cpu_mapping[lwk_cpu] != cpu)
+				continue;
+
+			/* Shift down the rest of the array */
+			for (_lwk_cpu = lwk_cpu + 1;
+				_lwk_cpu < os->nr_cpus; ++_lwk_cpu) {
+				os->cpu_mapping[_lwk_cpu - 1] = os->cpu_mapping[_lwk_cpu];
+				os->cpu_hw_ids[_lwk_cpu - 1] = os->cpu_hw_ids[_lwk_cpu];
+			}
+
+			--os->nr_cpus;
+			break;
+		}
+
+		printk("IHK-SMP: CPU APIC %d released from %p\n",
+				ihk_smp_cpus[cpu].apic_id, ihk_os);
 	}
 
 	ret = 0;
@@ -1840,7 +1919,7 @@ err:
 	return ret;
 }
 
-char query_res[1024];
+char query_res[8192];
 
 static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
@@ -2183,6 +2262,7 @@ static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
 		ret = ihk_smp_map_virtual(phys, size);
 		if (!ret) {
 			printk("WARNING: ihk_smp_map_virtual() returned NULL!\n");
+			dump_stack();
 		}
 
 		return ret;
