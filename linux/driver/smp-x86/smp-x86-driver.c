@@ -3021,6 +3021,42 @@ out:
 	return error;
 } /* read_file() */
 
+static int file_readable(char *fmt, ...)
+{
+	int error;
+	va_list ap;
+	int n;
+	char *filename = NULL;
+	struct file *fp = NULL;
+
+	filename = kmalloc(PATH_MAX, GFP_KERNEL);
+	if (!filename) {
+		error = -ENOMEM;
+		eprintk("%s: kmalloc failed. %d\n",
+				__FUNCTION__, error);
+		return 0;
+	}
+
+	va_start(ap, fmt);
+	n = vsnprintf(filename, PATH_MAX, fmt, ap);
+	va_end(ap);
+
+	if (n >= PATH_MAX) {
+		error = -ENAMETOOLONG;
+		eprintk("%s: vsnprintf failed. %d\n",
+				__FUNCTION__, error);
+		return 0;
+	}
+
+	fp = filp_open(filename, O_RDONLY, 0);
+	if (IS_ERR(fp)) {
+		return 0;
+	}
+
+	error = filp_close(fp, NULL);
+	return 1;
+}
+
 static int read_long(long *valuep, char *fmt, ...)
 {
 	int error;
@@ -3164,6 +3200,12 @@ static int collect_cache_topology(struct ihk_cpu_topology *cpu_topo, int index)
 		error = -ENAMETOOLONG;
 		eprintk("ihk:collect_cache_topology:"
 				"snprintf failed. %d\n", error);
+		goto out;
+	}
+
+	if (!file_readable("%s/level", prefix)) {
+		/* File doesn't exist, it's not an error */
+		error = 0;
 		goto out;
 	}
 
