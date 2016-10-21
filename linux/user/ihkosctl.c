@@ -249,7 +249,7 @@ static int do_release(int fd)
 static int do_query(int fd)
 {
 	int ret; 
-	char query_result[1024];
+	char query_result[8192];
 
 	/* Old code.. */
 	if (__argc < 3) {
@@ -401,8 +401,6 @@ static int do_dump(int osfd) {
 	bfd_boolean ok;
 	asection *scn;
 	dumpargs_t args;
-	uintptr_t start;
-	uintptr_t end;
 	unsigned long phys_size, phys_offset;
 	int error, i;
 	size_t bsize;
