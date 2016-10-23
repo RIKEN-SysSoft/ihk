@@ -1984,95 +1984,158 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 {
 	int ret = 0;
 	struct ihk_os_mem_chunk *os_mem_chunk;
+	struct ihk_os_mem_chunk *os_mem_chunk_tba_iter;
+	struct ihk_os_mem_chunk *os_mem_chunk_tba_next = NULL;
 	struct ihk_os_mem_chunk *os_mem_chunk_iter;
 	struct ihk_os_mem_chunk *os_mem_chunk_next = NULL;
 	struct chunk *mem_chunk_leftover;
 	struct chunk *mem_chunk_iter;
+	struct chunk *mem_chunk_max;
+	struct chunk *mem_chunk_match;
+	size_t mem_size_left = mem_size;
+	struct list_head to_be_assigned_chunks;
 
+	INIT_LIST_HEAD(&to_be_assigned_chunks);
 
-	/* Do the assignment */
-	os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
+	while (mem_size_left) {
+		mem_size = mem_size_left;
 
-	if (!os_mem_chunk) {
-		printk("IHK-SMP: error: allocating os_mem_chunk\n");
-		return -ENOMEM;
-	}
+		/* Allocate OS memory chunk descriptor */
+		os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
 
-	os_mem_chunk->addr = 0;
-	os_mem_chunk->numa_id = numa_id;
-	INIT_LIST_HEAD(&os_mem_chunk->list);
-
-	/* Find a big enough free memory chunk on this NUMA node */
-	list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
-		if (mem_chunk_iter->size >= mem_size &&
-				mem_chunk_iter->numa_id == numa_id) {
-
-			os_mem_chunk->addr = mem_chunk_iter->addr;
-			os_mem_chunk->size = mem_size;
-			os_mem_chunk->os = ihk_os;
-			os_mem_chunk->numa_id = numa_id;
-
-			list_del(&mem_chunk_iter->chain);
-			break;
+		if (!os_mem_chunk) {
+			printk("IHK-SMP: error: allocating os_mem_chunk\n");
+			ret = -ENOMEM;
+			goto out;
 		}
-	}
 
-	if (!os_mem_chunk->addr) {
-		printk("IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
-		kfree(os_mem_chunk);
-		ret = -ENOMEM;
-		goto out;
-	}
+		os_mem_chunk->addr = 0;
+		os_mem_chunk->numa_id = numa_id;
+		INIT_LIST_HEAD(&os_mem_chunk->list);
 
-	/* Insert the chunk in physical address ascending order */
-	os_mem_chunk_next = NULL;
-	list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
-		if (os_mem_chunk->addr < os_mem_chunk_iter->addr) {
-			os_mem_chunk_next = os_mem_chunk_iter;
-			break;
+		/* Find the biggest chunk or an exact match on this NUMA node */
+		mem_chunk_max = NULL;
+		mem_chunk_match = NULL;
+		list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+			if (mem_chunk_iter->numa_id != numa_id) {
+				continue;
+			}
+
+			if (!mem_chunk_match && (mem_chunk_iter->size == mem_size)) {
+				mem_chunk_match = mem_chunk_iter;
+				break;
+			}
+
+			if (!mem_chunk_max || (mem_chunk_max->size < mem_chunk_iter->size)) {
+				mem_chunk_max = mem_chunk_iter;
+			}
 		}
+
+		if (!mem_chunk_max && !mem_chunk_match) {
+			printk("IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
+			kfree(os_mem_chunk);
+			ret = -ENOMEM;
+			goto out;
+		}
+
+		os_mem_chunk->os = ihk_os;
+		os_mem_chunk->numa_id = numa_id;
+
+		/* Exact match? */
+		if (mem_chunk_match) {
+			os_mem_chunk->addr = mem_chunk_match->addr;
+			os_mem_chunk->size = mem_chunk_match->size;
+
+			list_del(&mem_chunk_match->chain);
+		}
+		else {
+			os_mem_chunk->addr = mem_chunk_max->addr;
+			os_mem_chunk->size = mem_size < mem_chunk_max->size ?
+				mem_size : mem_chunk_max->size;
+
+			list_del(&mem_chunk_max->chain);
+
+			/* Split if there is any leftover */
+			if (mem_chunk_max->size > mem_size) {
+				mem_chunk_leftover = (struct chunk*)
+					phys_to_virt(mem_chunk_max->addr + mem_size);
+				mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size;
+				mem_chunk_leftover->size = mem_chunk_max->size - mem_size;
+				mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+
+				add_free_mem_chunk(mem_chunk_leftover);
+			}
+		}
+
+		list_add_tail(&os_mem_chunk->list, &to_be_assigned_chunks);
+		mem_size_left -= os_mem_chunk->size;
 	}
 
-	/* Add in front of next */
-	if (os_mem_chunk_next) {
-		list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
-		dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p [in front of 0x%lx]\n",
-				os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
-				os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
-	}
-	/* Add to the end */
-	else {
-		list_add_tail(&os_mem_chunk->list, &ihk_mem_used_chunks);
-		dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p [tail]\n",
-				os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
-				os_mem_chunk->size, numa_id, ihk_os);
-	}
+	/* We got all pieces we need, add them to the OS instance */
+	list_for_each_entry_safe(os_mem_chunk_tba_iter, os_mem_chunk_tba_next,
+			&to_be_assigned_chunks, list) {
 
-	/* Split if there is any leftover */
-	if (mem_chunk_iter->size > mem_size) {
-		mem_chunk_leftover = (struct chunk*)
-			phys_to_virt(mem_chunk_iter->addr + mem_size);
-		mem_chunk_leftover->addr = mem_chunk_iter->addr + mem_size;
-		mem_chunk_leftover->size = mem_chunk_iter->size - mem_size;
-		mem_chunk_leftover->numa_id = mem_chunk_iter->numa_id;
+		list_del(&os_mem_chunk_tba_iter->list);
+		os_mem_chunk = os_mem_chunk_tba_iter;
 
-		add_free_mem_chunk(mem_chunk_leftover);
-	}
 
-	if (!os->mem_start || os->mem_start > os_mem_chunk->addr) {
-		os->mem_start = os_mem_chunk->addr;
-	}
-	if (!os->mem_end || os->mem_end < os_mem_chunk->addr + mem_size) {
-		os->mem_end = os_mem_chunk->addr + mem_size;
-	}
-	set_bit(os_mem_chunk->numa_id, &os->numa_mask);
+		/* Insert the chunk in physical address ascending order */
+		os_mem_chunk_next = NULL;
+		list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+			if (os_mem_chunk->addr < os_mem_chunk_iter->addr) {
+				os_mem_chunk_next = os_mem_chunk_iter;
+				break;
+			}
+		}
 
-	dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p\n",
-			os->mem_start, os->mem_end, (os->mem_end - os->mem_start),
-			numa_id, ihk_os);
+		/* Add in front of next */
+		if (os_mem_chunk_next) {
+			list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
+			dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p [in front of 0x%lx]\n",
+					os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+					os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
+		}
+		/* Add to the end */
+		else {
+			list_add_tail(&os_mem_chunk->list, &ihk_mem_used_chunks);
+			dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p [tail]\n",
+					os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+					os_mem_chunk->size, numa_id, ihk_os);
+		}
+
+		/* Update OS start and end addresses */
+		if (!os->mem_start || os->mem_start > os_mem_chunk->addr) {
+			os->mem_start = os_mem_chunk->addr;
+		}
+		if (!os->mem_end || os->mem_end < os_mem_chunk->addr + mem_size) {
+			os->mem_end = os_mem_chunk->addr + mem_size;
+		}
+		set_bit(os_mem_chunk->numa_id, &os->numa_mask);
+
+		dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p\n",
+				os->mem_start, os->mem_end, (os->mem_end - os->mem_start),
+				numa_id, ihk_os);
+	}
 
 	ret = 0;
+
 out:
+	/* Release all chunks which were to be assigned (error path) */
+	list_for_each_entry_safe(os_mem_chunk_tba_iter, os_mem_chunk_tba_next,
+			&to_be_assigned_chunks, list) {
+
+		list_del(&os_mem_chunk_tba_iter->list);
+		os_mem_chunk = os_mem_chunk_tba_iter;
+
+		mem_chunk_leftover = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+		mem_chunk_leftover->addr = os_mem_chunk->addr;
+		mem_chunk_leftover->size = os_mem_chunk->size;
+		mem_chunk_leftover->numa_id = os_mem_chunk->numa_id;
+
+		add_free_mem_chunk(mem_chunk_leftover);
+		merge_mem_chunks(&ihk_mem_free_chunks);
+		kfree(os_mem_chunk);
+	}
 
 	return ret;
 }
@@ -2421,6 +2484,42 @@ void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 
 int shimos_nchunks = 16;
 
+static int __smp_ihk_free_mem_from_list(struct list_head *list)
+{
+	struct chunk *mem_chunk;
+	struct chunk *mem_chunk_next;
+	unsigned long size_left;
+	unsigned long va;
+
+	/* Drop all memory for now.. */
+	list_for_each_entry_safe(mem_chunk,
+			mem_chunk_next, list, chain) {
+		unsigned long pa = mem_chunk->addr;
+#ifdef IHK_DEBUG
+		unsigned long size = mem_chunk->size;
+#endif
+
+		list_del(&mem_chunk->chain);
+
+		va = (unsigned long)phys_to_virt(pa);
+		size_left = mem_chunk->size;
+		while (size_left > 0) {
+			/* NOTE: memory was allocated via __get_free_pages() in 4MB blocks */
+			int order = 10;
+			int order_size = 4194304;
+
+			free_pages(va, order);
+			pr_debug("0x%lx, page order: %d freed\n", va, order);
+			size_left -= order_size;
+			va += order_size;
+		}
+
+		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
+	}
+
+	return 0;
+}
+
 int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
 	const int order = 10;		/* 4 MiB a chunk */
@@ -2428,8 +2527,6 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	size_t allocated;
 	struct chunk *p;
 	struct chunk *q;
-	void *va;
-	size_t remain;
 	int ret = 0;
 	struct list_head tmp_chunks;
 
@@ -2447,6 +2544,10 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 
 		pg = alloc_pages_node(numa_id, GFP_KERNEL | __GFP_COMP, order);
 		if (!pg) {
+			/*
+			 * We ran out of memory before finding a single contigous
+			 * chunk, but do we have enough in multiple chunks?
+			 */
 			if (allocated >= want) break;
 
 			printk(KERN_ERR "IHK-SMP: error: __alloc_pages_node() failed\n");
@@ -2528,18 +2629,7 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 
 out:
 	/* Free leftover tmp_chunks */
-	list_for_each_entry_safe(p, q, &tmp_chunks, chain) {
-		list_del(&p->chain);
-
-		va = phys_to_virt(p->addr);
-		remain = p->size;
-
-		while (remain > 0) {
-			free_pages((uintptr_t)va, order);
-			va += PAGE_SIZE << order;
-			remain -= PAGE_SIZE << order;
-		}
-	}
+	__smp_ihk_free_mem_from_list(&tmp_chunks);
 
 	return ret;
 }
@@ -2847,10 +2937,6 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	//size_t mem_size;
 	//int numa_id;
 	int ret = 0;
-	struct chunk *mem_chunk;
-	struct chunk *mem_chunk_next;
-	unsigned long size_left;
-	unsigned long va;
 
 	/*
 	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
@@ -2861,31 +2947,7 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	*/
 	/* Find out if there is enough free memory to be released */
 
-	/* Drop all memory for now.. */
-	list_for_each_entry_safe(mem_chunk, mem_chunk_next, 
-			&ihk_mem_free_chunks, chain) {
-		unsigned long pa = mem_chunk->addr;
-#ifdef IHK_DEBUG
-		unsigned long size = mem_chunk->size;
-#endif
-
-		list_del(&mem_chunk->chain);
-
-		va = (unsigned long)phys_to_virt(pa);
-		size_left = mem_chunk->size;
-		while (size_left > 0) {
-			/* NOTE: memory was allocated via __get_free_pages() in 4MB blocks */
-			int order = 10;
-			int order_size = 4194304;
-
-			free_pages(va, order);
-			pr_debug("0x%lx, page order: %d freed\n", va, order); 
-			size_left -= order_size;
-			va += order_size;
-		}
-
-		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
-	}
+	ret = __smp_ihk_free_mem_from_list(&ihk_mem_free_chunks);
 
 	return ret;
 }
