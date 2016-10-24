@@ -1783,7 +1783,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 		/* Assign CPUs and update CPU mapping */
 		while (a <= b) {
 			int cpu = a;
-			printk("IHK-SMP: assigned CPU %d to OS %p\n", a, ihk_os);
+			printk(KERN_INFO "IHK-SMP: assigned CPU %d to OS %p\n", a, ihk_os);
 
 			CORE_SET(ihk_smp_cpus[cpu].apic_id, os->cpu_hw_ids_map);
 			set_bit(cpu_to_node(cpu), &os->numa_mask);
@@ -1909,7 +1909,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 			break;
 		}
 
-		printk("IHK-SMP: CPU APIC %d released from %p\n",
+		printk(KERN_INFO "IHK-SMP: CPU APIC %d released from %p\n",
 				ihk_smp_cpus[cpu].apic_id, ihk_os);
 	}
 
@@ -2004,7 +2004,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
 
 		if (!os_mem_chunk) {
-			printk("IHK-SMP: error: allocating os_mem_chunk\n");
+			printk(KERN_ERR "IHK-SMP: error: allocating os_mem_chunk\n");
 			ret = -ENOMEM;
 			goto out;
 		}
@@ -2032,7 +2032,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		}
 
 		if (!mem_chunk_max && !mem_chunk_match) {
-			printk("IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
+			printk(KERN_ERR "IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
 			kfree(os_mem_chunk);
 			ret = -ENOMEM;
 			goto out;
@@ -2091,14 +2091,14 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		/* Add in front of next */
 		if (os_mem_chunk_next) {
 			list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
-			dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p [in front of 0x%lx]\n",
+			dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [in front of 0x%lx]\n",
 					os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
 					os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
 		}
 		/* Add to the end */
 		else {
 			list_add_tail(&os_mem_chunk->list, &ihk_mem_used_chunks);
-			dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p [tail]\n",
+			dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [tail]\n",
 					os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
 					os_mem_chunk->size, numa_id, ihk_os);
 		}
@@ -2112,7 +2112,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		}
 		set_bit(os_mem_chunk->numa_id, &os->numa_mask);
 
-		dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to 0x%p\n",
+		printk(KERN_INFO "IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ Linux NUMA node %d assigned to %p\n",
 				os->mem_start, os->mem_end, (os->mem_end - os->mem_start),
 				numa_id, ihk_os);
 	}
@@ -2732,7 +2732,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_TO_OFFLINE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-		printk("IHK-SMP: CPU %d to be offlined, APIC: %d\n",
+		printk(KERN_INFO "IHK-SMP: CPU %d to be offlined, APIC: %d\n",
 			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
 	}
 
@@ -2752,7 +2752,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 
 		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
 
-		printk("IHK-SMP: CPU %d offlined successfully, APIC: %d\n",
+		printk(KERN_INFO "IHK-SMP: CPU %d offlined successfully, APIC: %d\n",
 			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
 	}
 
@@ -2762,7 +2762,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 			continue;
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
 
-		printk("IHK-SMP: CPU %d reserved successfully, APIC: %d\n",
+		printk(KERN_INFO "IHK-SMP: CPU %d reserved successfully, APIC: %d\n",
 			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
 	}
 
@@ -3672,7 +3672,7 @@ retry_trampoline:
 			trampoline_va = pfn_to_kaddr(page_to_pfn(trampoline_page));
 		}
 
-		printk("IHK-SMP: trampoline_page phys: 0x%lx\n", trampoline_phys);
+		printk(KERN_INFO "IHK-SMP: trampoline_page phys: 0x%lx\n", trampoline_phys);
 	}
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
@@ -3690,7 +3690,7 @@ retry_trampoline:
 #endif
 
 		if (test_bit(vector, used_vectors)) {
-			printk("IRQ vector %d: used\n", vector);
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: used\n", vector);
 			continue;
 		}
 
@@ -3711,12 +3711,12 @@ retry_trampoline:
 		
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
 			if (vectors[vector] != VECTOR_UNUSED) {
-				printk("IRQ vector %d \n", vector);
+				printk(KERN_INFO "IHK-SMP: IRQ vector %d \n", vector);
 				continue;
 			}
 #else
 			if (vectors[vector] != -1) {
-				printk("IRQ vector %d: used %d\n", vector, vectors[vector]);
+				printk(KERN_INFO "IHK-SMP: IRQ vector %d: used %d\n", vector, vectors[vector]);
 				continue;
 			}
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
@@ -3726,8 +3726,6 @@ retry_trampoline:
 		/* If no descriptor, create one */
 		desc = _irq_to_desc(vector);
 		if (!desc) {
-			printk("IRQ vector %d: no descriptor, allocating\n", vector);
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 			desc = _alloc_desc(vector, first_online_node, THIS_MODULE);
 			desc->irq_data.chip = _dummy_irq_chip;
@@ -3735,7 +3733,7 @@ retry_trampoline:
 #else
 			desc = _irq_to_desc_alloc_node(vector, first_online_node);
 			if (!desc) {
-				printk("IRQ vector %d: still no descriptor??\n", vector);	
+				printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
 				continue;
 			}
 			desc->chip = _dummy_irq_chip;
@@ -3744,21 +3742,21 @@ retry_trampoline:
 		
 		desc = _irq_to_desc(vector);
 		if (!desc) {
-			printk("IRQ vector %d: still no descriptor??\n", vector);	
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: no descriptor\n", vector);
 			continue;
 		}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 		if (desc->status_use_accessors & IRQ_NOREQUEST) {
 			
-			printk("IRQ vector %d: not allowed to request, fake it\n", vector);
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
 			
 			desc->status_use_accessors &= ~IRQ_NOREQUEST;
 		}
 #else
 		if (desc->status & IRQ_NOREQUEST) {
 			
-			printk("IRQ vector %d: not allowed to request, fake it\n", vector);
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
 			
 			desc->status &= ~IRQ_NOREQUEST;
 		}
@@ -3772,7 +3770,7 @@ retry_trampoline:
 #endif
 		if (request_irq(vector, 
 					smp_ihk_irq_handler, IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
-			printk("IRQ vector %d: request_irq failed\n", vector);
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
 			continue;
 		}
 
@@ -3793,12 +3791,12 @@ retry_trampoline:
 		
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
 			if (vectors[vector] == VECTOR_UNUSED) {
-				printk("fixed vector_irq for %d\n", vector);
+				printk(KERN_INFO "IHK-SMP: fixed vector_irq for %d\n", vector);
 				vectors[vector] = desc;
 			}
 #else
 			if (vectors[vector] == -1) {
-				printk("fixed vector_irq for %d\n", vector);
+				printk(KERN_INFO "IHK-SMP: fixed vector_irq for %d\n", vector);
 				vectors[vector] = vector;
 			}
 #endif
@@ -3808,7 +3806,7 @@ retry_trampoline:
 	}
 
 	if (vector >= 256) {
-		printk("IHK-SMP: error: allocating IKC irq vector\n");
+		printk(KERN_ERR "IHK-SMP: error: allocating IKC irq vector\n");
 		error = EFAULT;
 		goto error_free_trampoline;
 	}
@@ -3816,7 +3814,7 @@ retry_trampoline:
 	ihk_smp_irq = vector;
 	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, 
 		ihk_ikc_irq_core);
-	printk("IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n", 
+	printk(KERN_INFO "IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n", 
 		ihk_smp_irq, ihk_ikc_irq_core, ihk_smp_irq_apicid);
 
 	irq_set_chip(vector, &ihk_irq_chip);
@@ -3824,13 +3822,13 @@ retry_trampoline:
 
 	error = smp_ihk_init_ident_page_table();
 	if (error) {
-		printk("IHK-SMP: error: identity page table initialization failed\n");
+		printk(KERN_ERR "IHK-SMP: error: identity page table initialization failed\n");
 		goto error_free_irq;
 	}
 
 	error = collect_topology();
 	if (error) {
-		printk("IHK-SMP: error: collecting topology information failed\n");
+		printk(KERN_ERR "IHK-SMP: error: collecting topology information failed\n");
 		goto error_free_irq;
 	}
 
@@ -3868,7 +3866,7 @@ int ihk_smp_reset_cpu(int phys_apicid) {
 	unsigned long send_status;
 	int maxlvt;
 
-	printk("IHK-SMP: resetting CPU %d.\n", phys_apicid);
+	printk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", phys_apicid);
 
 	maxlvt = _lapic_get_maxlvt();
 

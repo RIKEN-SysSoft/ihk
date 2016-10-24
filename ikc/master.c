@@ -159,7 +159,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 		unsigned long rq, sq;
 		int port, r;
 
- 		kprintf("Connect msg: %x, %llx, %llx, %llx\n",
+ 		dkprintf("Connect msg: %x, %llx, %llx, %llx\n",
 		        packet->ref, packet->param[0], packet->param[1],
 		        packet->param[2]);
 
@@ -185,7 +185,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 			                    IHK_IKC_MASTER_MSG_CONNECT_REPLY,
 			                    packet->ref, -r, 0, 0, 0);
 		} else {
-			kprintf("(Accepted) channel: %p, remote channel: %p\n",
+			dkprintf("(Accepted) channel: %p, remote channel: %p\n",
 			        newc, (void *)newc->remote_channel_va);
 			ihk_ikc_enable_channel(newc);
 			ihk_ikc_master_send(os,
@@ -202,7 +202,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 
 	case IHK_IKC_MASTER_MSG_DISCONNECT:
 		newc = ihk_ikc_find_channel(os, packet->ref);
-		kprintf("disconnect channel #%d => %p\n", packet->ref, newc);
+		dkprintf("disconnect channel #%d => %p\n", packet->ref, newc);
 		if (!newc) {
 			ret = -ENOENT;
 			break;
@@ -215,7 +215,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 		if (!(newc->flag & IKC_FLAG_DESTROYING)) {
 			/* It will not sleep 
 			 * because it's already marked acked */
-			kprintf("Disconnect ack: %x\n",
+			dkprintf("Disconnect ack: %x\n",
 			        newc->remote_channel_id);
 			ihk_ikc_disconnect(newc);
 		}

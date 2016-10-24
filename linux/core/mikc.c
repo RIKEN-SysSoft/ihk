@@ -28,6 +28,16 @@
 #include <ikc/msg.h>
 #include "host_linux.h"
 
+//#define DEBUG_IKC
+
+#ifdef DEBUG_IKC
+#define	dkprintf(...) kprintf(__VA_ARGS__)
+#define	ekprintf(...) kprintf(__VA_ARGS__)
+#else
+#define dkprintf(...) do { if (0) printk(__VA_ARGS__); } while (0)
+#define	ekprintf(...) printk(__VA_ARGS__)
+#endif
+
 static int arch_master_handler(struct ihk_ikc_channel_desc *c,
                                void *__packet, void *__os);
 /**
@@ -57,7 +67,7 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		ihk_os_get_special_address(ihk_os, IHK_SPADDR_MIKC_QUEUE_SEND,
 		                           &w, &wsz);
 
-		printk("MIKC rq: 0x%lX, wq: 0x%lX\n", r, w);
+		dprintf("MIKC rq: 0x%lX, wq: 0x%lX\n", r, w);
 
 		rp = ihk_device_map_memory(os->dev_data, r, rsz);
 		wp = ihk_device_map_memory(os->dev_data, w, wsz);
@@ -81,7 +91,7 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		 */
 		//c->flag |= IKC_FLAG_NO_COPY;
 
-		printk("c->remote_os = %p\n", c->remote_os);
+		dprintf("c->remote_os = %p\n", c->remote_os);
 		os->packet_handler = handler;
 
 		return c;
@@ -97,17 +107,17 @@ int ikc_master_init(ihk_os_t __os)
 	struct ihk_host_linux_os_data *os = __os;
 	struct ihk_ikc_master_packet packet;
 
-	printk("ikc_master_init\n");
+	dprintf("ikc_master_init\n");
 
 	os->mchannel = 
 		ihk_host_ikc_init_first(os, arch_master_handler);
-	printk("os(%p)->mchannel = %p\n", os, os->mchannel);
+	dprintf("os(%p)->mchannel = %p\n", os, os->mchannel);
 	if (!os->mchannel) {
 		return -EINVAL;
 	} else {
 		ihk_ikc_enable_channel(os->mchannel);
 		
-		printk("ikc_master_init done.\n");
+		dprintf("ikc_master_init done.\n");
 
 		/* ack send */
 		packet.msg = IHK_IKC_MASTER_MSG_INIT_ACK;
