@@ -2107,13 +2107,13 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		if (!os->mem_start || os->mem_start > os_mem_chunk->addr) {
 			os->mem_start = os_mem_chunk->addr;
 		}
-		if (!os->mem_end || os->mem_end < os_mem_chunk->addr + mem_size) {
-			os->mem_end = os_mem_chunk->addr + mem_size;
+		if (!os->mem_end || os->mem_end < os_mem_chunk->addr + os_mem_chunk->size) {
+			os->mem_end = os_mem_chunk->addr + os_mem_chunk->size;
 		}
 		set_bit(os_mem_chunk->numa_id, &os->numa_mask);
 
-		printk(KERN_INFO "IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ Linux NUMA node %d assigned to %p\n",
-				os->mem_start, os->mem_end, (os->mem_end - os->mem_start),
+		printk(KERN_INFO "IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p\n",
+				os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size, os_mem_chunk->size,
 				numa_id, ihk_os);
 	}
 
