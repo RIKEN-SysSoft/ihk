@@ -49,8 +49,8 @@ static int usage(char **arg)
 	fprintf(stderr, "    ioctl\n");
 	fprintf(stderr, "    clear_kmsg\n");
 	fprintf(stderr, "    clear_kmsg_write\n");
-	fprintf(stderr, "    reserve cpu|mem\n");
-	fprintf(stderr, "    release cpu|mem\n");
+	fprintf(stderr, "    reserve cpu|mem [resources]\n");
+	fprintf(stderr, "    release cpu|mem [resources]\n");
 	fprintf(stderr, "    query cpu|mem\n");
 
 	return 0;
@@ -248,7 +248,7 @@ static int do_release(int fd)
 {
 	int ret;
 
-	if (__argc < 4) {
+	if (__argc < 5) {
 		usage(__argv);
 		return -1;
 	}

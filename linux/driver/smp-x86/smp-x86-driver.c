@@ -2801,6 +2801,10 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 
 	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
 
+	if (!arg) {
+		return -EINVAL;
+	}
+
 	/* Parse CPU list provided by user
 	 * FIXME: validate userspace buffer */
 	cpulist_parse((char *)arg, &cpus_to_online);
