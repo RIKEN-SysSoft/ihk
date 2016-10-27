@@ -231,6 +231,27 @@ int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type)
 	return 0;
 }
 
+int ihk_mc_get_numa_distance(int i, int j)
+{
+	int *distance;
+
+	if (i < 0 || i >= boot_param->nr_numa_nodes ||
+		j < 0 || j >= boot_param->nr_numa_nodes) {
+		return -1;
+	}
+
+	distance = (int *)((char *)boot_param + sizeof(*boot_param) +
+			 boot_param->nr_cpus *
+				sizeof(struct ihk_smp_boot_param_cpu) +
+			 boot_param->nr_numa_nodes *
+				sizeof(struct ihk_smp_boot_param_numa_node) +
+			 boot_param->nr_memory_chunks *
+				sizeof(struct ihk_smp_boot_param_memory_chunk));
+	distance += (i * boot_param->nr_numa_nodes + j);
+
+	return *distance;
+}
+
 int ihk_mc_get_nr_memory_chunks(void)
 {
 	return boot_param->nr_memory_chunks;

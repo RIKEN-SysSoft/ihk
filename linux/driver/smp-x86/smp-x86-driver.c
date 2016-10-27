@@ -701,6 +701,8 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	struct ihk_smp_boot_param_numa_node *bp_numa_node;
 	struct ihk_smp_boot_param_memory_chunk *bp_mem_chunk;
 	int lwk_cpu;
+	int *ihk_smp_boot_numa_distance;
+	int i, j;
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
@@ -709,6 +711,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	/* NUMA nodes */
 	nr_numa_nodes = hweight64(os->numa_mask);
 	param_size += (nr_numa_nodes * sizeof(struct ihk_smp_boot_param_numa_node));
+
+	/* NUMA distances */
+	param_size += nr_numa_nodes * nr_numa_nodes * sizeof(int);
 
 	os->numa_mapping = kmalloc(nr_numa_nodes * sizeof(int), GFP_KERNEL);
 	if (!os->numa_mapping) {
@@ -773,29 +778,10 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	/* NOTE: CPU mapping is determined by the CPU assign operation
 	 * so that the order can be controlled by the user */
-#if 0
-	/* Fill in CPU mapping */
-	memset(&cpu_coremap, 0, sizeof(struct smp_coreset));
-	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
-				ihk_smp_cpus[cpu].os != ihk_os)
-			continue;
-
-		CORE_SET(cpu, cpu_coremap);
-	}
-
-	/* Fill in CPU cores information */
-	lwk_cpu = 0;
-	while ((cpu = find_first_bit(cpu_coremap.set, SMP_MAX_CPUS))
-			< SMP_MAX_CPUS) {
-
-		CORE_CLR(cpu, cpu_coremap);
-	}
-#endif
-
 	/* Pass in CPU information according to CPU mapping */
 	for (lwk_cpu = 0; lwk_cpu < os->nr_cpus; ++lwk_cpu) {
-		bp_cpu->numa_id = linux_numa_2_lwk_numa(os, cpu_to_node(os->cpu_mapping[lwk_cpu]));
+		bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
+				cpu_to_node(os->cpu_mapping[lwk_cpu]));
 		bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
 
 		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU APIC: %d\n",
@@ -846,6 +832,19 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 			++bp_mem_chunk;
 		}
 	}
+
+	/* Fill in NUMA distances */
+	ihk_smp_boot_numa_distance = (int *)bp_mem_chunk;
+	for (i = 0; i < nr_numa_nodes; ++i) {
+		for (j = 0; j < nr_numa_nodes; ++j) {
+			*ihk_smp_boot_numa_distance =
+				node_distance(
+						lwk_numa_2_linux_numa(os, i),
+						lwk_numa_2_linux_numa(os, j));
+			++ihk_smp_boot_numa_distance;
+		}
+	}
+
 	spin_lock_irqsave(&dev->lock, flags);
 #if 0
 	if (dev->status != BUILTIN_DEV_STATUS_READY) {
@@ -1292,6 +1291,10 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	os->status = BUILTIN_OS_STATUS_INITIAL;
+	if (os->numa_mapping) {
+		kfree(os->numa_mapping);
+		os->numa_mapping = NULL;
+	}
 
 	return 0;
 }
