@@ -2532,6 +2532,10 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	struct chunk *q;
 	int ret = 0;
 	struct list_head tmp_chunks;
+	nodemask_t nodemask;
+
+	memset(&nodemask, 0, sizeof(nodemask));
+	__node_set(numa_id, &nodemask);
 
 	INIT_LIST_HEAD(&tmp_chunks);
 
@@ -2545,7 +2549,8 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
 		struct page *pg;
 
-		pg = alloc_pages_node(numa_id, GFP_KERNEL | __GFP_COMP, order);
+		pg = __alloc_pages_nodemask(GFP_KERNEL | __GFP_COMP, order,
+				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
 		if (!pg) {
 			/*
 			 * We ran out of memory before finding a single contigous
