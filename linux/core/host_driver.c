@@ -545,9 +545,10 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 		return -EINVAL;
 	}
 
-	/* XXX: How to share the structure definition with manycore ihk? */
-	*(int *)data->kmsg_buf = 0;
-
+	memset(((struct ihk_kmsg_buf *) data->kmsg_buf)->str,'\0',((struct ihk_kmsg_buf *)data->kmsg_buf)->len);
+	((struct ihk_kmsg_buf *) data->kmsg_buf)->head = 0;
+	((struct ihk_kmsg_buf *) data->kmsg_buf)->tail = 0;
+	
 	return 0;
 }
 
