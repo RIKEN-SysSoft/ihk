@@ -2704,7 +2704,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 #else
 	for_each_cpu_mask(cpu, cpus_to_offline) {
 #endif
-		if (cpu > SMP_MAX_CPUS) {
+		if (cpu > SMP_MAX_CPUS || cpu > nr_cpu_ids) {
 			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
 			ret = -EINVAL;
 			goto err_before_offline;
