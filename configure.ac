@@ -69,6 +69,7 @@ case $WITH_TARGET in
 	ARCH=`uname -m`
 	AC_PROG_CC
 	XCC=$CC
+	CFLAGS="$CFLAGS -ffreestanding -fno-tree-loop-distribute-patterns"
 	;;
     builtin-mic)
 	ARCH=k1om
@@ -266,6 +267,7 @@ AC_SUBST(BINDIR)
 AC_SUBST(SBINDIR)
 AC_SUBST(KMODDIR)
 AC_SUBST(MANDIR)
+AC_SUBST(CFLAGS)
 
 AC_SUBST(IHK_VERSION)
 AC_SUBST(MCKERNEL_VERSION)
@@ -288,6 +290,7 @@ AC_CONFIG_FILES([
 	linux/driver/attached/mic/Makefile
 	linux/user/ihkconfig.1:linux/user/ihkconfig.1in
 	linux/user/ihkosctl.1:linux/user/ihkosctl.1in
+	cokernel/Makefile.common
 ])
 
 AC_OUTPUT
