@@ -10,7 +10,9 @@ $(if $(O),,$(error IHK Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
 
 CFLAGS += -I$(SRC)/include -D__KERNEL__
-include Makefile.common
+
+BUILD_IHK_COKERNEL ?= .
+include $(BUILD_IHK_COKERNEL)/Makefile.common
 
 IHK_SRCDIRS += $(SRC)/../lib $(TARGETDIR)
 DEPSRCS = $(foreach d,$(IHK_SRCDIRS),$(wildcard $(d)/*.c $(d)/*.S))
