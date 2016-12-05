@@ -92,8 +92,8 @@ void arch_init(void)
 
 	/* This is an early check to instruct the kernel initialization 
 	 * process not to deal with turbo boost support */
-	if (strstr(boot_param->kernel_args, "no_turbo")) {
-		no_turbo = 1;
+	if (strstr(boot_param->kernel_args, "turbo")) {
+		no_turbo = 0;
 	}
 
 	setup_x86();
