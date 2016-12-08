@@ -48,6 +48,9 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 	int r;
 	unsigned long flags;
 
+	if(!channel || !p)
+		return -EINVAL;
+
 	flags = cpu_disable_interrupt_save();
 retry:
 	/* Add main packet to target channel */

@@ -102,7 +102,7 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 }
 
 /** \brief Initializes a master channel */
-int ikc_master_init(ihk_os_t __os)
+int ihk_ikc_master_init(ihk_os_t __os)
 {
 	struct ihk_host_linux_os_data *os = __os;
 	struct ihk_ikc_master_packet packet;
@@ -127,16 +127,6 @@ int ikc_master_init(ihk_os_t __os)
 	}
 }
 
-/** \brief Destroys an IKC channel */
-void ihk_ikc_destroy_channel(ihk_os_t __os, struct ihk_ikc_channel_desc *c)
-{
-	if (!c) {
-		return;
-	}
-	ihk_ikc_disable_channel(c);
-	ihk_ikc_free_channel(c);
-}
-
 /** \brief Called when the kernel is going to shutdown. It finalizes
  * the master channel. */
 void ikc_master_finalize(ihk_os_t __os)
@@ -150,7 +140,7 @@ void ikc_master_finalize(ihk_os_t __os)
 	}
 
 	if (os->mchannel) {
-		ihk_ikc_destroy_channel(os, os->mchannel);
+		ihk_ikc_destroy_channel(os->mchannel);
 	}
 	ihk_ikc_system_exit(os);
 

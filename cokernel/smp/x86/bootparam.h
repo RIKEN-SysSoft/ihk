@@ -29,6 +29,7 @@ static inline int CORE_ISSET_ANY(struct smp_coreset *p)
 struct ihk_smp_boot_param_cpu {
 	int numa_id;
 	int hw_id;
+	int linux_cpu_id;
 };
 
 struct ihk_smp_boot_param_memory_chunk {
@@ -68,6 +69,7 @@ struct smp_boot_param {
 	unsigned long status;
 	struct smp_coreset coreset;
 	unsigned long msg_buffer;
+	unsigned long msg_buffer_size;
 	unsigned long mikc_queue_recv, mikc_queue_send;
 
 	unsigned long dma_address;

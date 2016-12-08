@@ -783,6 +783,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 				cpu_to_node(os->cpu_mapping[lwk_cpu]));
 		bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
+		bp_cpu->linux_cpu_id = os->cpu_mapping[lwk_cpu];
 
 		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU APIC: %d\n",
 				os, cpu_to_node(cpu), ihk_smp_cpus[cpu].apic_id);
@@ -1623,7 +1624,7 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 	case IHK_SPADDR_KMSG:
 		if (os->param->msg_buffer) {
 			*addr = os->param->msg_buffer;
-			*size = 8192;
+			*size = os->param->msg_buffer_size;
 			return 0;
 		}
 		break;

@@ -58,7 +58,7 @@ static int os_max_minor = 0;
 static struct list_head ihk_os_notifiers;
 static spinlock_t ihk_os_notifiers_lock;
 
-extern int ikc_master_init(ihk_os_t os);
+extern int ihk_ikc_master_init(ihk_os_t os);
 extern void ikc_master_finalize(ihk_os_t os);
 
 struct ihk_kmsg_buf {
@@ -252,7 +252,7 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 	if (data->ops->boot) {
 		ret = data->ops->boot(data, data->priv, flag);
 		if (ret == 0) {
-			ret = ikc_master_init(data);
+			ret = ihk_ikc_master_init(data);
 		}
 
 		/* Call OS notifiers */

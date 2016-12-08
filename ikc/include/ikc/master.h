@@ -15,7 +15,6 @@
 struct ihk_ikc_channel_info;
 
 struct ihk_ikc_listen_param {
-	struct list_head list;
 	int (*handler)(struct ihk_ikc_channel_info *);
 
 	int port;
@@ -38,11 +37,8 @@ struct ihk_ikc_connect_param {
 struct ihk_ikc_channel_info {
 /* filled by master packet handler */
 	struct ihk_ikc_channel_desc *channel;
-	struct ihk_ikc_listen_param *listen_param;
-
 /* filled by listen handler */
 	ihk_ikc_ph_t packet_handler;
-	void *handler_private;
 };
 
 struct ihk_ikc_master_wait_struct {
@@ -57,5 +53,6 @@ struct ihk_ikc_master_wait_struct {
 int ihk_ikc_listen_port(ihk_os_t os, struct ihk_ikc_listen_param *param);
 int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p);
 int ihk_ikc_disconnect(struct ihk_ikc_channel_desc *c);
+void ihk_ikc_destroy_channel(struct ihk_ikc_channel_desc *c);
 
 #endif
