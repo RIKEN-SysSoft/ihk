@@ -281,7 +281,7 @@ static int do_query(int fd)
 	int ret;
 	char query_result[1024];
 
-	if (__argc < 3) {
+	if (__argc < 4) {
 		usage(__argv);
 		return -1;
 	}
