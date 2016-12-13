@@ -229,7 +229,7 @@ int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type)
 	struct ihk_smp_boot_param_numa_node *node;
 
 	if (id < 0 || id >= boot_param->nr_numa_nodes)
-		return -EINVAL;
+		return -1;
 
 	node = (((struct ihk_smp_boot_param_numa_node *)
 		((char *)boot_param + sizeof(*boot_param) + 
@@ -275,7 +275,7 @@ int ihk_mc_get_memory_chunk(int id,
 	struct ihk_smp_boot_param_memory_chunk *chunk;
 
 	if (id < 0 || id >= boot_param->nr_memory_chunks)
-		return -EINVAL;
+		return -1;
 
 	chunk = ((struct ihk_smp_boot_param_memory_chunk *)
 			((char *)boot_param + sizeof(*boot_param) +
@@ -298,7 +298,7 @@ int ihk_mc_get_nr_cores(void)
 int ihk_mc_get_core(int id, unsigned long *linux_core_id, unsigned long *apic_id, int *numa_id)
 {
 	if (id < 0 || id >= boot_param->nr_cpus)
-		return -EINVAL;
+		return -1;
 
 	if(linux_core_id) *linux_core_id = ihk_cpu_info->linux_cpu_ids[id];
 	if(apic_id) *apic_id = ihk_cpu_info->hw_ids[id];

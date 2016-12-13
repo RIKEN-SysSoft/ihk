@@ -43,7 +43,7 @@ int ihk_ikc_listen_port(ihk_os_t os, struct ihk_ikc_listen_param *param)
 	unsigned long flags;
 	int port;
 
-	if (!os || !param) {
+	if (!param) {
 		return -EINVAL;
 	}
 

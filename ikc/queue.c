@@ -468,9 +468,15 @@ static int __ihk_ikc_recv_nocopy(struct ihk_ikc_channel_desc *channel,
 int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel, 
 		ihk_ikc_ph_t h, void *harg, int opt)
 {
+	char *p = NULL;
 	int r = -ENOENT;
+
+	if (!channel) {
+		return -EINVAL;
+	}
+
 	/* Get free packet from channel pool */
-	char *p = (char *)ihk_ikc_alloc_packet(channel);
+	p = (char *)ihk_ikc_alloc_packet(channel);
 
 	if (!p) {
 		kprintf("%s: error allocating packet\n", __FUNCTION__);

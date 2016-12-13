@@ -109,6 +109,10 @@ int ihk_ikc_master_init(ihk_os_t __os)
 
 	dprintf("ikc_master_init\n");
 
+	if (!os) {
+		return -EINVAL;
+	}
+
 	os->mchannel = 
 		ihk_host_ikc_init_first(os, arch_master_handler);
 	dprintf("os(%p)->mchannel = %p\n", os, os->mchannel);
