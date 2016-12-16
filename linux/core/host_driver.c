@@ -143,6 +143,20 @@ void  ihk_os_register_release_handler(struct file *file,
 	ifile->param = param;
 }
 
+void ihk_os_set_mcos_private_data(struct file *file, void *data)
+{
+	struct ihk_file *ifile = file->private_data;
+
+	ifile->mcos_data = data;
+}
+
+void *ihk_os_get_mcos_private_data(struct file *file)
+{
+	struct ihk_file *ifile = file->private_data;
+
+	return ifile->mcos_data;
+}
+
 /** \brief load_memory operation for an OS device file */
 static int __ihk_os_load_memory(struct ihk_host_linux_os_data *data,
                                 char *buf, unsigned long size, long offset)
@@ -1804,6 +1818,8 @@ EXPORT_SYMBOL(ihk_device_get_dma_channel);
 EXPORT_SYMBOL(ihk_device_get_dma_info);
 EXPORT_SYMBOL(ihk_dma_request);
 EXPORT_SYMBOL(ihk_os_register_release_handler);
+EXPORT_SYMBOL(ihk_os_set_mcos_private_data);
+EXPORT_SYMBOL(ihk_os_get_mcos_private_data);
 EXPORT_SYMBOL(ihk_os_get_linux_device);
 EXPORT_SYMBOL(ihk_device_get_cpu_topology);
 EXPORT_SYMBOL(ihk_device_get_node_topology);
