@@ -48,6 +48,10 @@ static void *memcpyl(void *dest, const void *src, size_t n)
 int ihk_ikc_init_queue(struct ihk_ikc_queue_head *q,
                        int id, int type, int size, int packetsize)
 {
+	if (!q) {
+		return -EINVAL;
+	}
+
 	memset(q, 0, sizeof(*q));
 
 	q->id = id;
@@ -67,12 +71,19 @@ int ihk_ikc_init_queue(struct ihk_ikc_queue_head *q,
 
 int ihk_ikc_queue_is_empty(struct ihk_ikc_queue_head *q)
 {
+	if (!q) {
+		return -EINVAL;
+	}
 	return q->read_off == q->max_read_off;
 }
 
 int ihk_ikc_queue_is_full(struct ihk_ikc_queue_head *q)
 {
 	uint64_t r, w;
+
+	if (!q) {
+		return -EINVAL;
+	}
 
 	r = q->read_off;
 	w = q->write_off;
@@ -88,6 +99,10 @@ int ihk_ikc_queue_is_full(struct ihk_ikc_queue_head *q)
 int ihk_ikc_read_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
 {
 	uint64_t r, m;
+
+	if(!q || !packet) {
+		return -EINVAL;
+	}
 
 retry:
 	r = q->read_off;
@@ -145,6 +160,9 @@ int ihk_ikc_write_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
 {
 	uint64_t r, w;
 
+	if(!q || !packet) {
+		return -EINVAL;
+	}
 retry:
 	r = q->read_off;
 	w = q->write_off;
@@ -415,6 +433,10 @@ int ihk_ikc_recv(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 {
 	int r;
 	unsigned long flags;
+
+	if (!channel || !p) {
+		return -EINVAL;
+	}
 
 #ifdef IHK_OS_MANYCORE
 	flags = cpu_disable_interrupt_save();
