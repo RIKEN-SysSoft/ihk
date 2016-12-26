@@ -1261,7 +1261,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[i].os = (ihk_os_t)0;
 
-		printk("IHK-SMP: CPU %d has been deassigned, APIC: %d\n", 
+		dprintk("IHK-SMP: CPU %d has been deassigned, APIC: %d\n", 
 			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
 	}
 
@@ -1281,7 +1281,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		mem_chunk->numa_id = os_mem_chunk->numa_id;
 		INIT_LIST_HEAD(&mem_chunk->chain);
 
-		printk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
+		dprintk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
 				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 				mem_chunk->size);
 
