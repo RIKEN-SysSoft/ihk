@@ -2701,7 +2701,20 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 
 	/* Parse CPU list provided by user
 	 * FIXME: validate userspace buffer */
-	cpulist_parse((char *)arg, &cpus_to_offline);
+	if (cpulist_parse((char *)arg, &cpus_to_offline) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	/* Ugly, but for_each_cpu doesn't look beyond nr_cpu_ids */
+	for (cpu = nr_cpu_ids;
+			cpu < sizeof(cpus_to_offline) * BITS_PER_BYTE; ++cpu) {
+		if (cpu_isset(cpu, cpus_to_offline)) {
+			printk("%s: invalid CPU requested: %d\n",
+					__FUNCTION__, cpu);
+			return -EINVAL;
+		}
+	}
 
 	/* Collect cores to be offlined */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
@@ -2709,7 +2722,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 #else
 	for_each_cpu_mask(cpu, cpus_to_offline) {
 #endif
-		if (cpu > SMP_MAX_CPUS || cpu > nr_cpu_ids) {
+		if (cpu > SMP_MAX_CPUS) {
 			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
 			ret = -EINVAL;
 			goto err_before_offline;
