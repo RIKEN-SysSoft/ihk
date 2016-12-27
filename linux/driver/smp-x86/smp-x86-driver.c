@@ -2629,16 +2629,14 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 			list_add_tail(&p->chain, &q->chain);
 		}
 
+		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+				" (len: %lu) @ NUMA node: %d is available\n",
+				p->addr, p->addr + p->size, p->size, p->numa_id);
 		allocated += max;
 	}
 
 	/* Merge free chunks in case this wasn't the first reservation */
 	merge_mem_chunks(&ihk_mem_free_chunks);
-
-	list_for_each_entry(p, &ihk_mem_free_chunks, chain) {
-		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx (len: %lu) @ NUMA node: %d is available\n",
-				p->addr, p->addr + p->size, p->size, p->numa_id);
-	}
 
 	ret = 0;
 
