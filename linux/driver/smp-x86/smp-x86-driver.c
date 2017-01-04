@@ -878,7 +878,6 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->param->start = os->mem_start;
 	os->param->end = os->mem_end;
-	os->param->coreset = os->cpu_hw_ids_map;
 	os->param->ident_table = ident_page_table;
 	strncpy(os->param->kernel_args, os->kernel_args,
 	        sizeof(os->param->kernel_args));

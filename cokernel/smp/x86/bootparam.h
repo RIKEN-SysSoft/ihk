@@ -67,7 +67,6 @@ struct smp_boot_param {
 	 */
 	unsigned long start, end;
 	unsigned long status;
-	struct smp_coreset coreset;
 	unsigned long msg_buffer;
 	unsigned long msg_buffer_size;
 	unsigned long mikc_queue_recv, mikc_queue_send;

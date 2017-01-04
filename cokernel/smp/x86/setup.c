@@ -99,7 +99,8 @@ void arch_init(void)
 	}
 
 	setup_x86();
-	boot_param = map_fixed_area(boot_param_pa, sizeof(*boot_param), 0);
+	/* TODO: pass the actual length in trampoline code */
+	boot_param = map_fixed_area(boot_param_pa, 8192, 0);
 
 	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 	build_ihk_cpu_info();
@@ -109,6 +110,7 @@ void arch_ready(void)
 {
 	/* Make it ready */
 	boot_param->status = 2;
+	barrier();
 }
 
 void arch_set_mikc_queue(void *rq, void *wq)
