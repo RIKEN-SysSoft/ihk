@@ -751,6 +751,8 @@ ihk_device_t ihk_host_find_dev(int index);
  */
 ihk_os_t ihk_host_find_os(int index, ihk_device_t dev);
 
+void ihk_host_print_os_kmsg(ihk_os_t os);
+
 /**
  * \brief Set the user data to a OS instance.
  *

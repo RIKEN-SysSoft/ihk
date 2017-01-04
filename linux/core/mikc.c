@@ -56,7 +56,7 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 	ihk_ikc_system_init(ihk_os);
 	os->ikc_initialized = 1;
 
-	if (ihk_os_wait_for_status(ihk_os, IHK_OS_STATUS_READY, 0, 150) == 0) {
+	if (ihk_os_wait_for_status(ihk_os, IHK_OS_STATUS_READY, 0, 200) == 0) {
 		/* XXX: 
 		 * We assume this address is remote, 
 		 * but the local is possible... */
@@ -96,7 +96,8 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 
 		return c;
 	} else {
-		printk("IHK: OS does not become ready.\n");
+		printk("IHK: OS does not become ready, kernel msg:\n");
+		ihk_host_print_os_kmsg(ihk_os);
 		return NULL;
 	}
 }

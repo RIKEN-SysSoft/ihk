@@ -1643,6 +1643,67 @@ ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
 	}
 }
 
+void ihk_host_print_os_kmsg(ihk_os_t os)
+{
+	int tail, len, len_end, len_start, head, mode, read_top;
+	int printed = 0;
+	struct ihk_kmsg_buf *kmsg_buf;
+
+	if (!os)
+		return;
+
+	kmsg_buf = (struct ihk_kmsg_buf *)
+		((struct ihk_host_linux_os_data *)os)->kmsg_buf;
+
+	if (!kmsg_buf) {
+		mutex_lock(&((struct ihk_host_linux_os_data *)os)->kmsg_mutex);
+		__ihk_os_init_kmsg(os);
+		mutex_unlock(&((struct ihk_host_linux_os_data *)os)->kmsg_mutex);
+		kmsg_buf = (struct ihk_kmsg_buf *)
+			((struct ihk_host_linux_os_data *)os)->kmsg_buf;
+
+		if (!kmsg_buf) {
+			printk("%s: failed to initialize kmsg\n", __FUNCTION__);
+			return;
+		}
+	}
+
+	tail = kmsg_buf->tail;
+	len = kmsg_buf->len;
+	head = kmsg_buf->head;
+	mode = kmsg_buf->mode;
+	if (mode != 0) {
+		read_top = head;
+		if (head > tail) {
+			len_end = strnlen(&kmsg_buf->str[head], len - head);
+			len_start = tail;
+		} else {
+			len_end = tail - head;
+			len_start = 0;
+		}
+	} else {
+		read_top = tail + 1;
+		len_end = strnlen(&kmsg_buf->str[tail+1], len - tail);
+		len_start = tail;
+	}
+
+	/* Print the end of the buffer */
+	if (len_end > 0) {
+		printk("%s", &kmsg_buf->str[read_top]);
+		printed = 1;
+	}
+
+	/* Then the front of it */
+	if (len_start > 0) {
+		printk("%s", kmsg_buf->str);
+		printed = 1;
+	}
+
+	if (!printed) {
+		printk("%s: kmsg buffer is empty\n", __FUNCTION__);
+	}
+}
+
 void ihk_host_os_set_usrdata(ihk_os_t ihk_os, void *data)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
@@ -1801,6 +1862,7 @@ EXPORT_SYMBOL(ihk_os_get_special_address);
 EXPORT_SYMBOL(ihk_os_wait_for_status);
 EXPORT_SYMBOL(ihk_host_find_dev);
 EXPORT_SYMBOL(ihk_host_find_os);
+EXPORT_SYMBOL(ihk_host_print_os_kmsg);
 EXPORT_SYMBOL(ihk_host_os_set_usrdata);
 EXPORT_SYMBOL(ihk_host_os_get_usrdata);
 EXPORT_SYMBOL(ihk_host_os_get_index);
