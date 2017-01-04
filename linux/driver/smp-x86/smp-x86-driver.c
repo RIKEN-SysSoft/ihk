@@ -2555,7 +2555,9 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
 		struct page *pg;
 
-		pg = __alloc_pages_nodemask(GFP_KERNEL | __GFP_COMP, order,
+		pg = __alloc_pages_nodemask(
+				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN,
+				order,
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
 		if (!pg) {
 			/*
