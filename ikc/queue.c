@@ -136,8 +136,7 @@ int ihk_ikc_read_queue_handler(struct ihk_ikc_queue_head *q,
 retry:
 	r = q->read_off;
 	m = q->max_read_off;
-
-	//barrier();
+	barrier();
 
 	/* Is the queue empty? */
 	if (r == m) {
@@ -166,6 +165,7 @@ int ihk_ikc_write_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
 retry:
 	r = q->read_off;
 	w = q->write_off;
+	barrier();
 
 	/* Is the queue full? */
 	if ((w - r) == q->pktcount) {
