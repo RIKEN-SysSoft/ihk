@@ -2710,7 +2710,11 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	/* Ugly, but for_each_cpu doesn't look beyond nr_cpu_ids */
 	for (cpu = nr_cpu_ids;
 			cpu < sizeof(cpus_to_offline) * BITS_PER_BYTE; ++cpu) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+		if (cpumask_test_cpu(cpu, &cpus_to_offline)) {
+#else
 		if (cpu_isset(cpu, cpus_to_offline)) {
+#endif
 			printk("%s: invalid CPU requested: %d\n",
 					__FUNCTION__, cpu);
 			return -EINVAL;
