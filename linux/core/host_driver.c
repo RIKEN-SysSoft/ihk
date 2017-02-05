@@ -656,6 +656,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_release_cpu(data, arg);
 		break;
 
+	case IHK_OS_IKC_MAP:
+		ret = __ihk_os_ikc_map(data, arg);
+		break;
+
 	case IHK_OS_QUERY_CPU:
 		ret = __ihk_os_query_cpu(data, arg);
 		break;

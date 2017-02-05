@@ -50,6 +50,7 @@ static int usage(char **arg)
 	fprintf(stderr, "    release cpu|mem \n");
 	fprintf(stderr, "            cpu (cpu_list) \n");
 	fprintf(stderr, "            mem (size@NUMA) \n");
+	fprintf(stderr, "    ikc_map (cpu_list:cpu+cpu_list:cpu+..) \n");
 	fprintf(stderr, "    query [cpu|mem]\n");
 	fprintf(stderr, "    query_free_mem\n");
 	fprintf(stderr, "    kargs (kernel arg)\n");
@@ -180,6 +181,25 @@ static int do_reserve_mem(int fd)
 	}
 	dprintf("ret[mem] = %d\n", r);
 	return r;
+}
+
+static int do_ikc_map(int fd)
+{
+	int ret;
+
+	if (__argc < 4) {
+		usage(__argv);
+		return -1;
+	}
+
+	ret = ioctl(fd, IHK_OS_IKC_MAP, __argv[3]);
+
+	if (ret != 0) {
+		fprintf(stderr, "error: setting up IKC map: %s\n", __argv[3]);
+	}
+
+	dprintf("ret = %d\n", ret);
+	return ret;
 }
 
 static int do_assign(int fd)
@@ -727,6 +747,7 @@ int main(int argc, char **argv)
 	else HANDLER(reserve_mem)
 	else HANDLER(assign)
 	else HANDLER(release)
+	else HANDLER(ikc_map)
 	else HANDLER(query)
 	else HANDLER(query_free_mem)
 	else HANDLER(kargs)

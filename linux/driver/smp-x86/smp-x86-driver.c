@@ -1961,6 +1961,38 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 }
 
 
+static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret = 0;
+	struct smp_os_data *os = priv;
+	cpumask_t cpus_to_map;
+	int target_cpu;
+	unsigned long flags;
+	char *string = (char *)arg;
+	char *token;
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		ret = -EBUSY;
+		goto out;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	token = strsep(&string, "+");
+	while (token) {
+
+		memset(&cpus_to_map, 0, sizeof(cpus_to_map));
+		printk("%s: %s\n", __FUNCTION__, token);
+
+		token = strsep(&string, "+");
+	}
+
+out:
+	return ret;
+}
+
+
 static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
 {
 	char *oldp;
@@ -2268,6 +2300,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.get_cpu_info = smp_ihk_os_get_cpu_info,
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
+	.ikc_map = smp_ihk_os_ikc_map,
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,
