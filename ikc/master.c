@@ -376,6 +376,7 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 					__FUNCTION__, c, c->remote_channel_va);
 			c->handler = p->handler;
 			c->send.queue->write_cpu = c->recv.queue->read_cpu;
+			c->send.intr_cpu = p->intr_cpu;
 			dkprintf("(Connected) Remote channeld id = %x\n",
 			        c->remote_channel_id);
 			ihk_ikc_enable_channel(c);
