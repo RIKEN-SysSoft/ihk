@@ -1078,6 +1078,7 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 	struct ihk_host_linux_os_data *os = NULL;
 	struct ihk_register_os_data drv_data;
 	int ret;
+	int i;
 
 	os = kzalloc(sizeof(*os), GFP_KERNEL);
 	if (!os) {
@@ -1095,6 +1096,16 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 	spin_lock_init(&os->wait_lock);
 	spin_lock_init(&os->event_list_lock);
 	INIT_LIST_HEAD(&os->ikc_channels);
+
+/* Comment: Linux側の割り込み処理channel_list のinit */
+	os->intr_list = kmalloc(sizeof(*os->intr_list) * nr_cpu_ids, GFP_KERNEL);
+	os->intr_list_lock = kmalloc(sizeof(*os->intr_list_lock) * nr_cpu_ids, GFP_KERNEL);
+
+	for (i = 0; i < nr_cpu_ids; i++) {
+		INIT_LIST_HEAD(&os->intr_list[i]);
+		spin_lock_init(&os->intr_list_lock[i]);
+	}
+
 	INIT_LIST_HEAD(&os->wait_list);
 	INIT_LIST_HEAD(&os->aux_call_list);
 	INIT_LIST_HEAD(&os->event_list);

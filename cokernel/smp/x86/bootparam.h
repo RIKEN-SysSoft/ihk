@@ -30,6 +30,7 @@ struct ihk_smp_boot_param_cpu {
 	int numa_id;
 	int hw_id;
 	int linux_cpu_id;
+	int ikc_cpu;
 };
 
 struct ihk_smp_boot_param_memory_chunk {
@@ -87,7 +88,7 @@ struct smp_boot_param {
 	unsigned long boot_sec;
 	unsigned long boot_nsec;
 	unsigned int ihk_ikc_irq;
-	unsigned int ihk_ikc_irq_apicid;
+	unsigned int ihk_ikc_irq_apicids[SMP_MAX_CPUS];
 	char kernel_args[256];
 	int nr_cpus;
 	int nr_numa_nodes;

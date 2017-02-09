@@ -205,12 +205,13 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
                        ihk_ikc_ph_t packet_handler,
 					   struct ihk_ikc_channel_desc *master)
 {
-	struct list_head *channels = ihk_ikc_get_channel_list(ros);
-	ihk_spinlock_t *lock = ihk_ikc_get_channel_list_lock(ros);
+/* Comment: list_head 関連の追加・名前変更への対応 */
+	struct list_head *all_list = ihk_ikc_get_channel_list(ros);
+	ihk_spinlock_t *all_lock = ihk_ikc_get_channel_list_lock(ros);
 	unsigned long flags;
 
-	INIT_LIST_HEAD(&c->list);
-	INIT_LIST_HEAD(&c->all_list);
+	INIT_LIST_HEAD(&c->list_all);
+	INIT_LIST_HEAD(&c->list_intr);
 	INIT_LIST_HEAD(&c->packet_pool);
 
 	c->remote_os = ros;
@@ -235,9 +236,9 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
 	ihk_ikc_spinlock_init(&c->send.lock);
 	ihk_ikc_spinlock_init(&c->packet_pool_lock);
 
-	flags = ihk_ikc_spinlock_lock(lock);
-	list_add_tail(&c->list, channels);
-	ihk_ikc_spinlock_unlock(lock, flags);
+	flags = ihk_ikc_spinlock_lock(all_lock);
+	list_add_tail(&c->list_all, all_list);
+	ihk_ikc_spinlock_unlock(all_lock, flags);
 }
 
 /*
@@ -385,7 +386,7 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 	unsigned long flags;
 
 	flags = ihk_ikc_spinlock_lock(lock);
-	list_del(&desc->list);
+	list_del(&desc->list_all);
 	ihk_ikc_spinlock_unlock(lock, flags);
 
 	if (desc->recv.queue) {
@@ -573,7 +574,7 @@ struct ihk_ikc_channel_desc *ihk_ikc_find_channel(ihk_os_t os, int id)
 	unsigned long flags;
 
 	flags = ihk_ikc_spinlock_lock(lock);
-	list_for_each_entry(c, channels, list) {
+	list_for_each_entry(c, channels, list_all) {
 		if (c->channel_id == id) {
 			ihk_ikc_spinlock_unlock(lock, flags);
 			return c;

@@ -85,6 +85,12 @@ struct ihk_host_linux_os_data {
 	spinlock_t ikc_channel_lock;
 	/** \brief List of the channels available */
 	struct list_head ikc_channels;
+/* Comment: Linux側の割り込み処理channel_list の宣言 */
+	/** \brief Lock for the intr_list */
+	spinlock_t *intr_list_lock;
+	/** \brief List of the interrupt channel */
+	struct list_head *intr_list;
+
 	/** \brief Interrupt handler */
 	struct ihk_host_interrupt_handler ikc_handler;
 	/** \brief Worker thread for the IKC interrupt handler */

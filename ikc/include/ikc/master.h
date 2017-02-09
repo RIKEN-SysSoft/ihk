@@ -21,7 +21,6 @@ struct ihk_ikc_listen_param {
 	int pkt_size;
 	int queue_size;
 	int magic;
-	int recv_cpu;
 };
 
 struct ihk_ikc_connect_param {
@@ -29,6 +28,8 @@ struct ihk_ikc_connect_param {
 	int pkt_size;
 	int queue_size;
 	int magic;
+/* Comment: connect側で割り込み先のCPUを指定 */
+	int intr_cpu;
 	ihk_ikc_ph_t               handler;
 
 	struct ihk_ikc_channel_desc *channel;
