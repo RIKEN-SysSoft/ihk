@@ -273,6 +273,7 @@ struct ihk_smp_cpu {
 	int apic_id;
 	int status;
 	ihk_os_t os;
+	int ikc_map_cpu;
 };
 
 static struct ihk_smp_cpu ihk_smp_cpus[SMP_MAX_CPUS];
@@ -805,11 +806,11 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 				cpu_to_node(os->cpu_mapping[lwk_cpu]));
 		bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
 		bp_cpu->linux_cpu_id = os->cpu_mapping[lwk_cpu];
-/* Comment: 現在は仮の処理 ihkconfig ikc_map処理で指定された情報を設定する必要がある */
-		bp_cpu->ikc_cpu = lwk_cpu % 5;
+		bp_cpu->ikc_cpu = ihk_smp_cpus[lwk_cpu_2_linux_cpu(os, lwk_cpu)].ikc_map_cpu;
 
-		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU APIC: %d\n",
-				os, cpu_to_node(cpu), ihk_smp_cpus[cpu].apic_id);
+		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU APIC: %d, IKC CPU: %d\n",
+				os, cpu_to_node(os->cpu_mapping[lwk_cpu]), 
+				bp_cpu->hw_id, bp_cpu->ikc_cpu);
 
 		++bp_cpu;
 	}
@@ -1937,6 +1938,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 
 			ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
 			ihk_smp_cpus[cpu].os = ihk_os;
+			ihk_smp_cpus[cpu].ikc_map_cpu = 0;
 
 			os->cpu_mapping[os->nr_cpus] = cpu;
 			os->cpu_hw_ids[os->nr_cpus] = ihk_smp_cpus[cpu].apic_id;
@@ -2184,9 +2186,38 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 	token = strsep(&string, "+");
 	while (token) {
+		char *cpu_list;
+		char *ikc_cpu;
+		int cpu;
+
+		cpu_list = strsep(&token, ":");
+		if (!cpu_list) {
+			ret = -EINVAL;
+			goto out;
+		}
 
 		memset(&cpus_to_map, 0, sizeof(cpus_to_map));
-		printk("%s: %s\n", __FUNCTION__, token);
+		cpulist_parse(cpu_list, &cpus_to_map);
+
+		ikc_cpu = strsep(&token, ":");
+		if (!ikc_cpu) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		printk("%s: %s -> %s\n", __FUNCTION__, cpu_list, ikc_cpu);
+		/* Store IKC target CPU */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+		for_each_cpu(cpu, &cpus_to_map) {
+#else
+		for_each_cpu_mask(cpu, cpus_to_map) {
+#endif
+			/* TODO: check if CPU belongs to OS */
+			if (kstrtoint(ikc_cpu, 10, &ihk_smp_cpus[cpu].ikc_map_cpu)) {
+				ret = -EINVAL;
+				goto out;
+			}
+		}
 
 		token = strsep(&string, "+");
 	}
@@ -4277,11 +4308,6 @@ retry_trampoline:
 	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, 
 		ihk_ikc_irq_core);
 
-	for (i = 0; i < nr_cpu_ids; i++) {
-		printk(KERN_INFO "IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n", 
-			ihk_smp_irq, i, per_cpu(x86_bios_cpu_apicid, i));
-	}
-		
 	irq_set_chip(vector, &ihk_irq_chip);
 	irq_set_chip_data(vector, NULL);
 
