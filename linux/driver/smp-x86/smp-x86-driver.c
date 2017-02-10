@@ -790,6 +790,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	memset(os->param, 0, param_size);
 	os->param->nr_cpus = os->nr_cpus;
+	os->param->nr_linux_cpus = nr_cpu_ids;
 	os->param->nr_numa_nodes = nr_numa_nodes;
 	os->param->nr_memory_chunks = nr_memory_chunks;
 
