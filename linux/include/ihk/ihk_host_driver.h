@@ -641,6 +641,8 @@ struct ihk_cpu_info {
 	int *mapping;
 	/** \brief Array of the hardware ID of the CPU cores */
 	int *hw_ids;
+	int *ikc_map;
+	int ikc_mapped;
 };
 
 /** \brief Get information of memory which the OS kernel uses */

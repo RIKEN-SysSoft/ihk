@@ -347,6 +347,9 @@ struct smp_os_data {
 
 	/* LWK CPU id to Linux CPU id mapping */
 	int cpu_mapping[SMP_MAX_CPUS];
+	/* LWK CPU to Linux CPU mapping for IKC IRQ */
+	int cpu_ikc_map[SMP_MAX_CPUS];
+	int cpu_ikc_mapped;
 	int nr_cpus;
 
 	/** \brief Boot parameter for the kernel
@@ -508,6 +511,8 @@ static void __build_os_info(struct smp_os_data *os)
 	os->cpu_info.n_cpus = os->nr_cpus;
 	os->cpu_info.mapping = os->cpu_mapping;
 	os->cpu_info.hw_ids = os->cpu_hw_ids;
+	os->cpu_info.ikc_map = os->cpu_ikc_map;
+	os->cpu_info.ikc_mapped = os->cpu_ikc_mapped;
 }
 
 struct ihk_smp_trampoline_header {
@@ -808,6 +813,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
 		bp_cpu->linux_cpu_id = os->cpu_mapping[lwk_cpu];
 		bp_cpu->ikc_cpu = ihk_smp_cpus[lwk_cpu_2_linux_cpu(os, lwk_cpu)].ikc_map_cpu;
+		os->cpu_ikc_map[lwk_cpu] = bp_cpu->ikc_cpu;
 
 		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU APIC: %d, IKC CPU: %d\n",
 				os, cpu_to_node(os->cpu_mapping[lwk_cpu]), 
@@ -2222,6 +2228,8 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 		token = strsep(&string, "+");
 	}
+	/* Mapping has been requested */
+	os->cpu_ikc_mapped = 1;
 
 out:
 	return ret;
