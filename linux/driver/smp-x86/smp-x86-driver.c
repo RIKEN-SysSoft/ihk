@@ -313,9 +313,9 @@ struct smp_os_data {
 	/** \brief Bitmask of NUMA nodes from where memory or
 	 * CPUs are assigned */
 
-  /* Memory chunk for kernel image and bootstrap page table */
-  unsigned long bootstrap_mem_start, bootstrap_mem_end; 
-  int bootstrap_numa_id;
+	/* Memory chunk for kernel image and bootstrap page table */
+	unsigned long bootstrap_mem_start, bootstrap_mem_end; 
+	int bootstrap_numa_id;
 
 	unsigned long numa_mask;
 
@@ -952,30 +952,50 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	extern char startup_data_end[];
 	unsigned long startup_p;
 	unsigned long *startup;
-	struct ihk_os_mem_chunk *os_mem_chunk;
+	struct ihk_os_mem_chunk *os_mem_chunk_iter;
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 
-#if 1
+	/* Update bootstrap_numa_id with the lowest NUMA id if not set */
+	/* TODO: add IHK API to set bootstrap_numa_id */
+	if (os->bootstrap_numa_id == -1) {
+		int min_numa_id = -1;
+
+		list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+			if (min_numa_id != -1 &&
+					min_numa_id <= os_mem_chunk_iter->numa_id) {
+				continue;
+			}
+
+			min_numa_id = os_mem_chunk_iter->numa_id;
+		}
+
+		os->bootstrap_numa_id = min_numa_id;
+		printk("%s: bootstrap_numa_id: %d\n",
+				__FUNCTION__, os->bootstrap_numa_id);
+	}
+
 	/* Find the bootstrap memory chunk for image and page table */
-#define BOOTSTRAP_NUMA_ID 0
-	
-	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-	  if (os_mem_chunk->os != ihk_os || os_mem_chunk->numa_id != BOOTSTRAP_NUMA_ID)
-	    continue;
-	  os->bootstrap_mem_start = os_mem_chunk->addr;
-	  os->bootstrap_mem_end = os_mem_chunk->addr + os_mem_chunk->size;
-	  os->bootstrap_numa_id = linux_numa_2_lwk_numa(os, os_mem_chunk->numa_id);
-	  break;
-	}
-	if(os_mem_chunk == NULL) {
-	  printk("NUMA-node for image not found\n");
-	    return -EINVAL;
-	}
-	printk("memory area for bootstrap: %lx - %lx\n", os->bootstrap_mem_start, os->bootstrap_mem_end);
-#endif
+	list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+		if (os_mem_chunk_iter->os != ihk_os ||
+				os_mem_chunk_iter->numa_id != os->bootstrap_numa_id) {
+			continue;
+		}
 
-	//if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->mem_end - os->mem_start < 0) {
-	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->bootstrap_mem_end - os->bootstrap_mem_start < 0) {
-		printk("builtin: OS is not ready to boot.\n");
+		os_mem_chunk = os_mem_chunk_iter;
+		os->bootstrap_mem_start = os_mem_chunk->addr;
+		os->bootstrap_mem_end = os_mem_chunk->addr + os_mem_chunk->size;
+		break;
+	}
+
+	if (os_mem_chunk == NULL) {
+		printk("%s: couldn't find NUMA node to load kernel image\n",
+				__FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) ||
+			os->bootstrap_mem_end - os->bootstrap_mem_start < 0) {
+		printk("%s: OS is not ready to boot\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -993,21 +1013,18 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		printk("open failed: %s\n", fn);
 		return -ENOENT;
 	}
-	//elf64 = ihk_smp_map_virtual(os->mem_end - PAGE_SIZE, PAGE_SIZE); 
-	elf64 = ihk_smp_map_virtual(os->bootstrap_mem_end - PAGE_SIZE, PAGE_SIZE); 
+
+	elf64 = ihk_smp_map_virtual(os->bootstrap_mem_end - PAGE_SIZE, PAGE_SIZE);
 	if (!elf64) {
 		printk("error: ioremap() returns NULL\n");
 		return -EINVAL;
 	}
+
 	fs = get_fs();
 	set_fs(get_ds());
-#if 0
-	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n", 
-		(unsigned long)ihk_os, os->mem_end - PAGE_SIZE);
-#else
-	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n", 
+	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n",
 		(unsigned long)ihk_os, os->bootstrap_mem_end - PAGE_SIZE);
-#endif
+
 	r = vfs_read(file, (char *)elf64, PAGE_SIZE, &pos);
 	set_fs(fs);
 	if (r <= 0) {
@@ -1028,7 +1045,6 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	}
 	entry = elf64->e_entry;
 	elf64p = (Elf64_Phdr *)(((char *)elf64) + elf64->e_phoff);
-	//phys = (os->mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
 	phys = (os->bootstrap_mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
 	maxoffset = phys;
 
@@ -1053,20 +1069,15 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		while(pos < end){
 			long l = end - pos;
 
-			if(l > PAGE_SIZE)
+			if (l > PAGE_SIZE)
 				l = PAGE_SIZE;
-#if 0
-			if (offset + PAGE_SIZE > os->mem_end) {
-				printk("builtin: OS is too big to load.\n");
-				return -E2BIG;
-			}
-#else
+
 			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
-#endif
-			buf = ihk_smp_map_virtual(offset, PAGE_SIZE); 
+
+			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
 			fs = get_fs();
 			set_fs(get_ds());
 			r = vfs_read(file, buf, l, &pos);
@@ -1083,43 +1094,36 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 			}
 			offset += PAGE_SIZE;
 		}
-		for(size = (size + PAGE_SIZE - 1) & PAGE_MASK; size < psize; size += PAGE_SIZE){
 
-#if 0
-			if (offset + PAGE_SIZE > os->mem_end) {
-				printk("builtin: OS is too big to load.\n");
-				return -E2BIG;
-			}
-#else
+		for (size = (size + PAGE_SIZE - 1) & PAGE_MASK;
+				size < psize; size += PAGE_SIZE) {
+
 			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
-#endif
-			buf = ihk_smp_map_virtual(offset, PAGE_SIZE); 
+
+			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
 			memset(buf, '\0', PAGE_SIZE);
 			ihk_smp_unmap_virtual(buf);
 			offset += PAGE_SIZE;
 		}
-		if(offset > maxoffset)
+
+		if (offset > maxoffset)
 			maxoffset = offset;
 	}
+
 	fput(file);
 	ihk_smp_unmap_virtual(elf64);
 
-#if 0
-	pml4_p = os->mem_end - PAGE_SIZE;
-#else
 	pml4_p = os->bootstrap_mem_end - PAGE_SIZE;
-#endif
 	pdp_p = pml4_p - PAGE_SIZE;
 	pde_p = pdp_p - PAGE_SIZE;
 
-
 	cr3 = ident_page_table_virt;
-	pml4 = ihk_smp_map_virtual(pml4_p, PAGE_SIZE); 
-	pdp = ihk_smp_map_virtual(pdp_p, PAGE_SIZE); 
-	pde = ihk_smp_map_virtual(pde_p, PAGE_SIZE); 
+	pml4 = ihk_smp_map_virtual(pml4_p, PAGE_SIZE);
+	pdp = ihk_smp_map_virtual(pdp_p, PAGE_SIZE);
+	pde = ihk_smp_map_virtual(pde_p, PAGE_SIZE);
 
 	memset(pml4, '\0', PAGE_SIZE);
 	memset(pdp, '\0', PAGE_SIZE);
@@ -2389,6 +2393,9 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 	spin_lock_init(&os->lock);
 	os->dev = data;
 	regdata->priv = os;
+	/* Put the image into the smallest NUMA id if value is -1,
+	 * use the designated NUMA node otherwise */
+	os->bootstrap_numa_id = -1;
 
 	return 0;
 }
