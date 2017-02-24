@@ -11,6 +11,7 @@ static unsigned char stack[8192] __attribute__((aligned(4096)));
 
 unsigned long boot_param_pa;
 struct smp_boot_param *boot_param;
+unsigned long bootstrap_mem_end;
 
 extern void main(void);
 extern void setup_x86(void);
@@ -38,6 +39,7 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	ap_trampoline = _ap_trampoline;
 	ihk_ikc_irq = boot_param->ihk_ikc_irq;
 	ihk_ikc_irq_apicid = boot_param->ihk_ikc_irq_apicid;
+	bootstrap_mem_end = boot_param->bootstrap_mem_end;
 
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
