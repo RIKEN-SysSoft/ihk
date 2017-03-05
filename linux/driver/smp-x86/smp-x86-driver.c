@@ -955,6 +955,8 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	unsigned long *startup;
 	struct ihk_os_mem_chunk *os_mem_chunk_iter;
 	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	os->bootstrap_mem_start = 0;
+	os->bootstrap_mem_end = 0;
 
 	/* Update bootstrap_numa_id with the lowest NUMA id if not set */
 	/* TODO: add IHK API to set bootstrap_numa_id */
@@ -971,8 +973,6 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		}
 
 		os->bootstrap_numa_id = min_numa_id;
-		printk("%s: bootstrap_numa_id: %d\n",
-				__FUNCTION__, os->bootstrap_numa_id);
 	}
 
 	/* Find the bootstrap memory chunk for image and page table */
@@ -982,10 +982,13 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 			continue;
 		}
 
-		os_mem_chunk = os_mem_chunk_iter;
-		os->bootstrap_mem_start = os_mem_chunk->addr;
-		os->bootstrap_mem_end = os_mem_chunk->addr + os_mem_chunk->size;
-		break;
+		/* Find the largest memory chunk on the bootstrap NUMA node */
+		if ((os->bootstrap_mem_end - os->bootstrap_mem_start) <
+				os_mem_chunk_iter->size) {
+			os_mem_chunk = os_mem_chunk_iter;
+			os->bootstrap_mem_start = os_mem_chunk->addr;
+			os->bootstrap_mem_end = os_mem_chunk->addr + os_mem_chunk->size;
+		}
 	}
 
 	if (os_mem_chunk == NULL) {
@@ -993,6 +996,11 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 				__FUNCTION__);
 		return -EINVAL;
 	}
+
+	printk("IHK-SMP: bootstrap addr: 0x%lx, chunk size: %lu @ NUMA: %d\n",
+			os->bootstrap_mem_start,
+			os->bootstrap_mem_end - os->bootstrap_mem_start,
+			os->bootstrap_numa_id);
 
 	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) ||
 			os->bootstrap_mem_end - os->bootstrap_mem_start < 0) {
