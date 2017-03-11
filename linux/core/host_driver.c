@@ -606,6 +606,46 @@ static long __ihk_os_ioctl_call_aux(struct ihk_host_linux_os_data *os,
 	return -ENOSYS;
 }
 
+static int __ihk_os_ioctl_perm(unsigned int request)
+{
+	int ret = 0;
+	kuid_t euid;
+
+	switch (request) {
+	case IHK_OS_QUERY_STATUS:
+	case IHK_OS_QUERY_FREE_MEM:
+	case IHK_OS_ALLOC_CPU:
+	case IHK_OS_ALLOC_MEM:
+	case IHK_OS_RESERVE_CPU:
+	case IHK_OS_RESERVE_MEM:
+	case IHK_OS_READ_KMSG:
+	case IHK_OS_CLEAR_KMSG:
+	case IHK_OS_QUERY_CPU:
+	case IHK_OS_QUERY_MEM:
+		break;
+	default:
+		if (request >= IHK_OS_DEBUG_START && 
+			request <= IHK_OS_DEBUG_END) {
+			break;
+		}
+		else if (request >= IHK_OS_AUX_CALL_START &&
+		           request <= IHK_OS_AUX_CALL_END) {
+			break;
+		}
+
+		euid = current_euid();
+		dprintf("%s: request=0x%x, euid=%u\n",
+			__FUNCTION__, request, euid.val);
+		if (euid.val) {
+			ret = -EPERM;
+		}
+		break;
+	}
+	dprintf("%s: request=0x%x, ret=%d\n", __FUNCTION__, request, ret);
+
+	return ret;
+}
+
 /** \brief ioctl handling for a OS file */
 static long ihk_host_os_ioctl(struct file *file, unsigned int request,
                               unsigned long arg)
@@ -618,6 +658,13 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 	data = ifile->osdata;
 
 /*	dprintf("IHK: ioctl request = %x, arg = %lx\n", request, arg); */
+
+	ret = __ihk_os_ioctl_perm(request);
+	if (ret) {
+		dprintf("%s: __ihk_os_ioctl_perm(0x%x) error(%d)\n",
+			__FUNCTION__, request, ret);
+		return ret;
+	}
 
 	switch (request) {
 	case IHK_OS_LOAD:
