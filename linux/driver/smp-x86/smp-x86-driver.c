@@ -357,6 +357,7 @@ struct smp_os_data {
 	 * This structure is directly accessed (read and written)
 	 * by the manycore kernel. */
 	struct smp_boot_param *param;
+	int param_pages_order;
 
 	/** \brief Status of the kernel */
 	int status;
@@ -790,6 +791,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
+	os->param_pages_order = param_pages_order;
 	dprintf("IHK-SMP: param size: %lu, nr_pages: %lu\n",
 		sizeof(*os->param), 1UL << param_pages_order);
 
@@ -1391,6 +1393,10 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	if (os->numa_mapping) {
 		kfree(os->numa_mapping);
 		os->numa_mapping = NULL;
+	}
+
+	if (os->param && os->param_pages_order) {
+		free_pages(os->param, os->param_pages_order);
 	}
 
 	return 0;
