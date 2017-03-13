@@ -3038,8 +3038,7 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	memset(query_res, 0, sizeof(query_res));
 
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE &&
-			ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
 			continue;
 
 		cpumask_set_cpu(cpu, &cpus_reserved);
