@@ -3063,27 +3063,56 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 	size_t mem_size;
 	int numa_id;
 	int ret = 0;
-	char *mem_string = (char *)arg;
+	char *to_free, *mem_string;
 	char *mem_token;
 
+	to_free = mem_string = kstrdup((char *)arg, GFP_KERNEL);
+	if (mem_string == NULL) {
+		printk("IHK-SMP: reserve_mem: error: copying mem_string, not enough memory.\n");
+		return -ENOMEM;
+	}
+	
+	/* check mem size */
 	mem_token = strsep(&mem_string, ",");
 	while (mem_token) {
-
 		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: reserve_mem: error: parsing memory string\n");
-			return ret;
+			break;
 		}
+		if (mem_size % (1024 * 1024 * 4) != 0) {
+			printk("IHK-SMP: reserve_mem: error: mem_size must be in multiples of %d bytes.\n",
+			        1024 * 1024 * 4);
+			ret = -1;
+			break;
+		}
+		mem_token = strsep(&mem_string, ",");
+	}
+	kfree(to_free);
 
-		/* Do the reservation */
+	if (ret != 0) {
+		return ret;
+	}
+
+	to_free = mem_string = kstrdup((char *)arg, GFP_KERNEL);
+	if (mem_string == NULL) {
+		printk("IHK-SMP: reserve_mem: error: copying mem_string, not enough memory.\n");
+		return -ENOMEM;
+	}
+
+	/* Do the reservation */
+	mem_token = strsep(&mem_string, ",");
+	while (mem_token) {
+		smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
 		ret = __ihk_smp_reserve_mem(mem_size, numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: reserve_mem: error: reserving memory\n");
-			return ret;
+			break;
 		}
 
 		mem_token = strsep(&mem_string, ",");
 	}
+	kfree(to_free);
 
 	return ret;
 }
