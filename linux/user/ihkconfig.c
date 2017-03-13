@@ -50,7 +50,8 @@ static int usage(char **arg)
 	fprintf(stderr, "    clear_kmsg\n");
 	fprintf(stderr, "    clear_kmsg_write\n");
 	fprintf(stderr, "    reserve cpu|mem [resources]\n");
-	fprintf(stderr, "    release cpu|mem [resources]\n");
+	fprintf(stderr, "    release cpu [resources]\n");
+	fprintf(stderr, "    release mem\n");
 	fprintf(stderr, "    query cpu|mem\n");
 
 	return 0;
@@ -248,12 +249,16 @@ static int do_release(int fd)
 {
 	int ret;
 
-	if (__argc < 5) {
+	if (__argc < 4) {
 		usage(__argv);
 		return -1;
 	}
 
 	if (!strcmp(__argv[3], "cpu")) {
+		if (__argc < 5) {
+			usage(__argv);
+			return -1;
+		}
 		ret = ioctl(fd, IHK_DEVICE_RELEASE_CPU, __argv[4]);
 
 		if (ret != 0) {
@@ -261,7 +266,7 @@ static int do_release(int fd)
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM, __argv[4]);
+		ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM, 0);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: releasing memory: %s\n", __argv[4]);

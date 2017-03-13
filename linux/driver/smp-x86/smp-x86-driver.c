@@ -2758,9 +2758,6 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		allocated += max;
 	}
 
-	/* Merge free chunks in case this wasn't the first reservation */
-	merge_mem_chunks(&ihk_mem_free_chunks);
-
 	ret = 0;
 
 out:
