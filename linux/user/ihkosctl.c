@@ -49,7 +49,7 @@ static int usage(char **arg)
 	fprintf(stderr, "           mem (size@NUMA) \n");
 	fprintf(stderr, "    release cpu|mem \n");
 	fprintf(stderr, "            cpu (cpu_list) \n");
-	fprintf(stderr, "            mem (size@NUMA) \n");
+	fprintf(stderr, "            mem\n");
 	fprintf(stderr, "    ikc_map (cpu_list:cpu+cpu_list:cpu+..) \n");
 	fprintf(stderr, "    query [cpu|mem]\n");
 	fprintf(stderr, "    query_free_mem\n");

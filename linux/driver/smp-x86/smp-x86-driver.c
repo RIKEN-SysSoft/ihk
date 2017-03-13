@@ -1355,7 +1355,6 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 				mem_chunk->size);
 
 		add_free_mem_chunk(mem_chunk);
-		merge_mem_chunks(&ihk_mem_free_chunks);
 
 		kfree(os_mem_chunk);
 	}
@@ -2291,11 +2290,11 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
-	size_t mem_size;
-	int numa_id;
 	struct smp_os_data *os = priv;
 	unsigned long flags;
-	int ret;
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	struct ihk_os_mem_chunk *next_chunk = NULL;
+	struct chunk *mem_chunk;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -2304,15 +2303,32 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
-	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
-	if (ret != 0) {
-		printk("IHK-SMP: os_assign_mem: error: parsing memory string\n");
-		return ret;
+	/* Drop memory chunk used by this OS */
+	list_for_each_entry_safe(os_mem_chunk, next_chunk,
+			&ihk_mem_used_chunks, list) {
+
+		if (os_mem_chunk->os != ihk_os) {
+			continue;
+		}
+
+		list_del(&os_mem_chunk->list);
+
+		mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+		mem_chunk->addr = os_mem_chunk->addr;
+		mem_chunk->size = os_mem_chunk->size;
+		mem_chunk->numa_id = os_mem_chunk->numa_id;
+		INIT_LIST_HEAD(&mem_chunk->chain);
+
+		dprintk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
+				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+				mem_chunk->size);
+
+		add_free_mem_chunk(mem_chunk);
+
+		kfree(os_mem_chunk);
 	}
 
-	/* Do the release */
-
-	return ret;
+	return 0;
 }
 
 static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
