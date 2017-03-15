@@ -1,3 +1,4 @@
+/* linux.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
 /**
  * \file ikc/linux.c
  * \brief IHK-IKC: Wrapper functions in IHK-Host in Linux for IHK-IKC

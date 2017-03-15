@@ -1,4 +1,4 @@
-/* ihk.h COPYRIGHT FUJITSU LIMITED 2015 */
+/* ihk.h COPYRIGHT FUJITSU LIMITED 2015-2016 */
 /**
  * \file ikc/include/ikc/ihk.h
  * \brief IHK-IKC: IHK wrapper functions.

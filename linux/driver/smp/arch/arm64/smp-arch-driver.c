@@ -1,4 +1,4 @@
-/* smp-arch-driver.c COPYRIGHT FUJITSU LIMITED 2015-2016 */
+/* smp-arch-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
 /**
  * \file smp-arch-driver.c
  * \brief
