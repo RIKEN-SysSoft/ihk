@@ -1,3 +1,4 @@
+# Makefile.in COPYRIGHT FUJITSU LIMITED 2015-2016
 IKC_OBJS += queue.o master.o
 
 ifeq ($(CONFIG_IHK),)
@@ -10,6 +11,9 @@ IKC_OBJS += manycore.o
 
 $(if $(O),,$(error IHK-IKC Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
+
+# POSTK_DEBUG_ARCH_DEP_24
+default: all
 
 include $(IHKBASE)/Makefile.common
 

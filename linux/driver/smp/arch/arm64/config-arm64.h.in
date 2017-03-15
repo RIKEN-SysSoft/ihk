@@ -1,0 +1,67 @@
+/* config.h.in COPYRIGHT FUJITSU LIMITED 2015 */
+/* linux/driver/smp/arch/arm64/config-arm64.h.in.  Generated from configure.ac by autoheader.  */
+#ifndef HEADER_SMP_CONFIG_ARM64_H
+#define HEADER_SMP_CONFIG_ARM64_H
+
+/* Define to address of kernel symbol irq-gic.c:gic_data, or 0 if exported */
+#undef IHK_KSYM_gic_data_gicv2
+
+/* Define to address of kernel symbol irq-gic-v3.c:gic_data, or 0 if exported */
+#undef IHK_KSYM_gic_data_gicv3
+
+/* Define to address of kernel symbol irq-gic.c:gic_raise_softirq, or 0 if exported */
+#undef IHK_KSYM_gic_raise_softirq_gicv2
+
+/* Define to address of kernel symbol irq-gic-v3.c:gic_raise_softirq, or 0 if exported */
+#undef IHK_KSYM_gic_raise_softirq_gicv3
+
+/* Define to address of kernel symbol __irq_domain_alloc_irqs, or 0 if exported */
+#undef IHK_KSYM___irq_domain_alloc_irqs
+
+/* Define to address of kernel symbol irq_domain_free_irqs, or 0 if exported */
+#undef IHK_KSYM_irq_domain_free_irqs
+
+/* Define to address of kernel symbol psci_ops, or 0 if exported */
+#undef IHK_KSYM_psci_ops
+
+/* Define to address of kernel symbol __cpu_logical_map, or 0 if exported */
+#undef IHK_KSYM___cpu_logical_map
+
+/* Define to address of kernel symbol dummy_irq_chip, or 0 if exported */
+#undef IHK_KSYM_dummy_irq_chip
+
+/* Define to address of kernel symbol get_uv_system_type, or 0 if exported */
+#undef IHK_KSYM_get_uv_system_type
+
+/* Define to address of kernel symbol init_deasserted, or 0 if exported */
+#undef IHK_KSYM_init_deasserted
+
+/* Define to address of kernel symbol irq_to_desc, or 0 if exported */
+#undef IHK_KSYM_irq_to_desc
+
+/* Define to address of kernel symbol invoke_psci_fn, or 0 if exported */
+#undef IHK_KSYM_invoke_psci_fn
+
+/* Define to address of kernel symbol __invoke_psci_fn_hvc, or 0 if exported */
+#undef IHK_KSYM___invoke_psci_fn_hvc
+
+/* Define to address of kernel symbol __invoke_psci_fn_smc, or 0 if exported */
+#undef IHK_KSYM___invoke_psci_fn_smc
+
+/* Define to address of kernel symbol cpu_pmu */
+#undef IHK_KSYM_cpu_pmu
+#undef IHK_KSYM___oprofile_cpu_pmu
+
+/* Define to address of kernel symbol __irq_set_affinity */
+#undef IHK_KSYM___irq_set_affinity
+
+/* Define to address of kernel symbol arch_timer_use_virtual, or 0 if exported */
+#undef IHK_KSYM_arch_timer_use_virtual
+
+/* Define to address of kernel symbol arch_timer_uses_ppi, or 0 if exported */
+#undef IHK_KSYM_arch_timer_uses_ppi
+
+/* Define to address of kernel symbol arch_timer_rate */
+#undef IHK_KSYM_arch_timer_rate
+
+#endif /* HEADER_SMP_CONFIG_ARM64_H */

@@ -1,3 +1,4 @@
+# Makefile.common COPYRIGHT FUJITSU LIMITED 2015-2016
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O2 -g
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include -Wno-unused-function -I$(IHKBASE)/../ikc/include
 CFLAGS += -DIHK_OS_MANYCORE
@@ -27,6 +28,9 @@ rm_cmd = $(call echo_cmd,CLEAN,)$(RM)
 define make_implicit_src
 $$(O)/%.o: $1/%.c
 	$$(cc_cmd)
+# POSTK_DEBUG_ARCH_DEP_2, build *.S add __ASSEMBLY__ define
 $$(O)/%.o: $1/%.S
-	$$(cc_cmd)
+	$$(cc_cmd) -D__ASSEMBLY__
+#$$(O)/%.o: $1/%.S
+#	$$(cc_cmd)
 endef

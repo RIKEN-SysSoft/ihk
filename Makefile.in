@@ -1,3 +1,4 @@
+# Makefile.in COPYRIGHT FUJITSU LIMITED 2015
 TARGET = @TARGET@
 
 all::
@@ -9,8 +10,8 @@ all::
 	    builtin*) \
 		(cd linux/driver/builtin; make modules) \
 		;; \
-	    smp-x86) \
-		(cd linux/driver/smp-x86; make modules) \
+	    smp*) \
+		(cd linux/driver/smp; make modules) \
 		;; \
 	    *) \
 		echo "unknown target $(TARGET)" >&2 \
@@ -28,8 +29,8 @@ install::
 	    builtin*) \
 		(cd linux/driver/builtin; make install) \
 		;; \
-	    smp-x86) \
-		(cd linux/driver/smp-x86; make install) \
+	    smp*) \
+		(cd linux/driver/smp; make install) \
 		;; \
 	    *) \
 		echo "unknown target $(TARGET)" >&2 \
@@ -47,8 +48,8 @@ clean::
 	    builtin*) \
 		(cd linux/driver/builtin; make clean) \
 		;; \
-	    smp-x86) \
-		(cd linux/driver/smp-x86; make clean) \
+	    smp*) \
+		(cd linux/driver/smp; make clean) \
 		;; \
 	    *) \
 		echo "unknown target $(TARGET)" >&2 \

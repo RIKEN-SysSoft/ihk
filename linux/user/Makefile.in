@@ -1,3 +1,4 @@
+# Makefile.in COPYRIGHT FUJITSU LIMITED 2015-2016
 CC=@CC@
 ARCH=@ARCH@
 IHKBASE ?= @abs_srcdir@/../..
@@ -7,6 +8,9 @@ MANDIR=@MANDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
 TARGET=ihkconfig ihkosctl memdump pagetable maccess memdump-mic mcklogd
+
+CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
 
 .PHONY: all clean install
 

@@ -1,3 +1,4 @@
+# configure.ac COPYRIGHT FUJITSU LIMITED 2015-2016
 AC_PREREQ(2.63)
 m4_define([IHK_VERSION_m4],[0.9.0])dnl
 m4_define([MCKERNEL_VERSION_m4],[0.9.0])dnl
@@ -25,7 +26,7 @@ AC_ARG_WITH([kernelsrc],
 
 AC_ARG_WITH([target],
   AS_HELP_STRING(
-    [--with-target={attached-mic | builtin-mic | builtin-x86 | smp-x86}],[target, default is attached-mic]),
+    [--with-target={attached-mic | builtin-mic | builtin-x86 | smp-x86 | smp-arm64}],[target, default is attached-mic]),
   [WITH_TARGET=$withval],[WITH_TARGET=yes])
 
 AC_ARG_ENABLE([memdump],
@@ -65,8 +66,16 @@ fi
 test "x$prefix" = xNONE && prefix="$ac_default_prefix"
 
 case $WITH_TARGET in
-    attached-mic | builtin-x86 | smp-x86)
-	ARCH=`uname -m`
+# POSTK_DEBUG_ARCH_DEP_30, Expansion of the branch.
+    attached-mic | builtin-x86 | smp-*)
+	case $WITH_TARGET in
+	    attached-mic | builtin-x86 | smp-x86)
+		ARCH=`uname -m`
+		;;
+	    smp-arm64)
+		ARCH=arm64
+		;;
+	esac
 	AC_PROG_CC
 	XCC=$CC
 	;;
@@ -140,6 +149,20 @@ case $WITH_TARGET in
 		MANDIR="$prefix/smp-x86/man"
 	fi
 	;;
+    smp-arm64)
+	if test "X$BINDIR" = X; then
+		BINDIR="$prefix/bin"
+	fi
+	if test "X$SBINDIR" = X; then
+		SBINDIR="$prefix/sbin"
+	fi
+	if test "X$KMODDIR" = X; then
+		KMODDIR="$prefix/kmod"
+	fi
+	if test "X$MANDIR" = X; then
+		MANDIR="$prefix/smp-arm64/man"
+	fi
+	;;
     *)
 	AC_MSG_ERROR([target $WITH_TARGET is unknwon])
 	;;
@@ -149,7 +172,8 @@ case $ENABLE_MEMDUMP in
 	yes|no|auto)
 		;;
 	default)
-		if test "x$WITH_TARGET" = "xsmp-x86" ; then
+# POSTK_DEBUG_ARCH_DEP_30, Expansion of the branch.
+		if test "x$WITH_TARGET" = "xsmp-*"; then
 			ENABLE_MEMDUMP=auto
 		else
 			ENABLE_MEMDUMP=no
@@ -200,9 +224,22 @@ IHK_LINUX_SYMTAB_CMD="cat $IHK_LINUX_SYMTAB"
 # If not found, leave IHK_KSYM_foo undefined
 # If found to be exported, "#define IHK_KSYM_foo 0"
 # If found not to be exported, "#define IHK_KSYM_foo 0x<value>"
+
+# POSTK_DEBUG_ARCH_DEP_10, Enhance IHK_FIND_KSYM macro feature.
 AC_DEFUN([IHK_FIND_KSYM],[
   AC_MSG_CHECKING([[System.map for symbol $1]])
+  symbol_src=$2
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " $1\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     AC_MSG_RESULT([not found])
   else
@@ -215,10 +252,30 @@ AC_DEFUN([IHK_FIND_KSYM],[
       fi
     ])
     AC_MSG_RESULT([$ihk_result])
-    AC_DEFINE_UNQUOTED(IHK_KSYM_[]$1,$ihk_addr,
-			[Define to address of kernel symbol $1, or 0 if exported])
+    AC_DEFINE_UNQUOTED(IHK_KSYM_[]$1$3,$ihk_addr,
+			[Define to address of kernel symbol $1$3, or 0 if exported])
   fi
 ])
+# <older version>
+# AC_DEFUN([IHK_FIND_KSYM],[
+#   AC_MSG_CHECKING([[System.map for symbol $1]])
+#   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " $1\$" | cut -d\  -f1`
+#   if test -z $ihk_addr; then
+#     AC_MSG_RESULT([not found])
+#   else
+#     ihk_result=$ihk_addr
+#     ihk_addr="0x$ihk_addr"
+#     m4_ifval([$2],[],[
+#       if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_$1\$" >/dev/null`; then
+# 	ihk_result="exported"
+# 	ihk_addr="0"
+#       fi
+#     ])
+#     AC_MSG_RESULT([$ihk_result])
+#     AC_DEFINE_UNQUOTED(IHK_KSYM_[]$1,$ihk_addr,
+# 			[Define to address of kernel symbol $1, or 0 if exported])
+#   fi
+# ])
 
 if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([x86_trampoline_base])
@@ -235,10 +292,35 @@ if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([get_uv_system_type])
 	IHK_FIND_KSYM([wakeup_secondary_cpu_via_init])
 	IHK_FIND_KSYM([__default_send_IPI_dest_field])
+elif test "$TARGET" = "smp-arm64"; then
+	IHK_FIND_KSYM([gic_data], [irq-gic.c], [_gicv2])
+	IHK_FIND_KSYM([gic_data], [irq-gic-v3.c], [_gicv3])
+	IHK_FIND_KSYM([gic_raise_softirq], [irq-gic.c], [_gicv2])
+	IHK_FIND_KSYM([gic_raise_softirq], [irq-gic-v3.c], [_gicv3])
+	IHK_FIND_KSYM([__irq_domain_alloc_irqs])
+	IHK_FIND_KSYM([irq_domain_free_irqs])
+	IHK_FIND_KSYM([irq_to_desc])
+	IHK_FIND_KSYM([alloc_desc])
+	IHK_FIND_KSYM([irq_desc_tree])
+	IHK_FIND_KSYM([irq_to_desc_alloc_node])
+	IHK_FIND_KSYM([psci_ops])
+	IHK_FIND_KSYM([__cpu_logical_map])
+	IHK_FIND_KSYM([invoke_psci_fn])
+	IHK_FIND_KSYM([__invoke_psci_fn_hvc])
+	IHK_FIND_KSYM([__invoke_psci_fn_smc])
+	IHK_FIND_KSYM([acpi_gic_ver])
+	IHK_FIND_KSYM([cpu_pmu])
+	IHK_FIND_KSYM([__oprofile_cpu_pmu])
+	IHK_FIND_KSYM([__irq_set_affinity])
+	IHK_FIND_KSYM([arch_timer_use_virtual])
+	IHK_FIND_KSYM([arch_timer_uses_ppi])
+	IHK_FIND_KSYM([arch_timer_rate])
 fi
 
 if test "x$ENABLE_MEMDUMP" != "xno" ; then
 	enableval=yes
+# POSTK_DEBUG_ARCH_DEP_32, AC_CHECK_LIB for libiberty
+	AC_CHECK_LIB([iberty],[hex_init],[],[enableval=no])
 	AC_CHECK_LIB([bfd],[bfd_init],[],[enableval=no])
 	AC_CHECK_HEADER([bfd.h],[],[enableval=no])
 
@@ -275,7 +357,14 @@ AC_SUBST(MCKERNEL_RELEASE_DATE)
 AC_SUBST(DCFA_RESEASE_DATE)
 AC_SUBST(uncomment_if_ENABLE_MEMDUMP)
 
-AC_CONFIG_HEADERS([linux/driver/smp-x86/config.h linux/user/config.h])
+case "$TARGET" in
+smp*)
+	AC_CONFIG_HEADERS([linux/driver/smp/config.h linux/user/config.h])
+	arch=`echo "$TARGET" | sed -e 's/smp-//'`
+	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
+	;;
+esac
+
 AC_CONFIG_FILES([
 	Makefile
 	linux/core/Makefile
@@ -284,10 +373,11 @@ AC_CONFIG_FILES([
 	ikc/Makefile
 	linux/user/Makefile
 	linux/driver/builtin/Makefile
-	linux/driver/smp-x86/Makefile
+	linux/driver/smp/Makefile
 	linux/driver/attached/mic/Makefile
 	linux/user/ihkconfig.1:linux/user/ihkconfig.1in
 	linux/user/ihkosctl.1:linux/user/ihkosctl.1in
+	cokernel/smp/arm64/Makefile.predefines
 ])
 
 AC_OUTPUT

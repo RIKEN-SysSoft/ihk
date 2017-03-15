@@ -1,3 +1,4 @@
+/* maccess.c COPYRIGHT FUJITSU LIMITED 2015-2016 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <ihk/rdtsc.h>
@@ -7,8 +8,11 @@ static unsigned long rdtsc(void)
 {
 	unsigned int low, high;
 
+/* POSTK_DEBUG_ARCH_DEP_7 */
+#ifdef __x86_64
 	asm volatile("rdtsc" : "=a"(low), "=d"(high));
- 
+#endif /* __x86_64 */ 
+
 	return (low | ((unsigned long)high << 32));
 }
 #endif

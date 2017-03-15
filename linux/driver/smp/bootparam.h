@@ -1,3 +1,4 @@
+/* bootparam.h COPYRIGHT FUJITSU LIMITED 2016 */
 #ifndef HEADER_BUILTIN_BOOTPARAM_H
 #define HEADER_BUILTIN_BOOTPARAM_H
 
@@ -11,6 +12,8 @@
 #define CORE_ISSET(n, p) \
 	(((p).set[(n)/__NCOREBITS] & ((long)1 << ((n) % __NCOREBITS)))?1:0)
 #define CORE_ZERO(p)      memset(&(p).set, 0, sizeof((p).set))
+
+#ifndef __ASSEMBLY__
 
 typedef struct {
 	unsigned long set[SHIMOS_MAX_CORES / __NCOREBITS];
@@ -34,4 +37,6 @@ struct shimos_boot_param {
 
 extern struct shimos_boot_param *boot_param;
 
-#endif
+#endif /* !__ASSEMBLY__ */
+
+#endif /* !HEADER_BUILTIN_BOOTPARAM_H */
