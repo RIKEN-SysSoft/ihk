@@ -397,6 +397,22 @@ struct ihk_os_mem_chunk {
 static struct list_head ihk_mem_free_chunks;
 static struct list_head ihk_mem_used_chunks;
 
+static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
+                                       enum ihk_special_addr_type type,
+                                       unsigned long *addr,
+                                       unsigned long *size);
+static unsigned long smp_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
+                                           unsigned long remote_phys,
+                                           unsigned long size);
+static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
+                                 unsigned long phys, unsigned long size,
+                                 void *virt, int flags);
+static int smp_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
+                                  void *virt, unsigned long size);
+static int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
+                                unsigned long local_phys,
+                                unsigned long size);
+
 #if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 #else
 /* origin: arch/x86/kernel/smpboot.c */
@@ -1544,21 +1560,33 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	return 0;
 }
 
-static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
+static int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 {
 	struct smp_os_data *os = priv;
+	int i;
+	unsigned long rpa;
+	unsigned long size;
+	int *nmi_mode;
+	unsigned long pa;
+	unsigned long psize;
 
-	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
-			args->cmd, args->start, args->size, args->buf);
+	if (smp_ihk_os_get_special_addr(ihk_os, priv, IHK_SPADDR_NMI_MODE,
+				        &rpa, &size)) {
+		return -EINVAL;
+	}
 
-	if (args->cmd == DUMP_NMI) {
-		int i;
+	psize = PAGE_SIZE;
+	pa = smp_ihk_os_map_memory(ihk_os, priv, rpa, psize);
+	nmi_mode = smp_ihk_map_virtual(ihk_os, priv, pa, psize,
+					  NULL, 0);
+	*nmi_mode = mode;
+	smp_ihk_unmap_virtual(ihk_os, priv, nmi_mode, psize);
+	smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
 
-		for (i = 0; i < os->cpu_info.n_cpus; ++i) {
+	for (i = 0; i < os->cpu_info.n_cpus; i++) {
 
 #ifdef CONFIG_X86_X2APIC
 		if (x2apic_is_enabled()) {
-		        /* dump on X2APIC environment.*/
 			safe_apic_wait_icr_idle();
 			apic_icr_write(APIC_DM_NMI, os->cpu_info.hw_ids[i]);
 		}
@@ -1575,7 +1603,19 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 					NMI_VECTOR, APIC_DEST_PHYSICAL);
 #endif
 		}
-		}
+	}
+	return 0;
+}
+
+static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
+{
+	struct smp_os_data *os = priv;
+
+	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
+			args->cmd, args->start, args->size, args->buf);
+
+	if (args->cmd == DUMP_NMI) {
+		smp_ihk_os_send_nmi(ihk_os, priv, 0);
 		return 0;
 	}
 
@@ -1600,6 +1640,22 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 	}
 
 	if (args->cmd == DUMP_READ) {
+		void *va;
+
+		va = phys_to_virt(args->start);
+		if (copy_to_user(args->buf, va, args->size)) {
+			return -EFAULT;
+		}
+		return 0;
+	}
+
+	if (args->cmd == DUMP_QUERY_ALL) {
+		args->start = os->mem_start;
+		args->size = os->mem_end - os->mem_start;
+		return 0;
+	}
+
+	if (args->cmd == DUMP_READ_ALL) {
 		void *va;
 
 		va = phys_to_virt(args->start);
@@ -1708,6 +1764,20 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 		if (os->param->mikc_queue_send) {
 			*addr = os->param->mikc_queue_send;
 			*size = MASTER_IKCQ_SIZE;
+			return 0;
+		}
+		break;
+	case IHK_SPADDR_MONITOR:
+		if (os->param->monitor) {
+			*addr = os->param->monitor;
+			*size = os->param->monitor_size;
+			return 0;
+		}
+		break;
+	case IHK_SPADDR_NMI_MODE:
+		if (os->param->nmi_mode_addr) {
+			*addr = os->param->nmi_mode_addr;
+			*size = sizeof(int);
 			return 0;
 		}
 		break;
@@ -2363,7 +2433,17 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	return 0;
 }
 
+static int smp_ihk_os_freeze(ihk_os_t ihk_os, void *priv)
+{
+	smp_ihk_os_send_nmi(ihk_os, priv, 1);
+	return 0;
+}
 
+static int smp_ihk_os_thaw(ihk_os_t ihk_os, void *priv)
+{
+	smp_ihk_os_send_nmi(ihk_os, priv, 2);
+	return 0;
+}
 
 static struct ihk_os_ops smp_ihk_os_ops = {
 	.load_mem = smp_ihk_os_load_mem,
@@ -2390,7 +2470,10 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,
+	.ikc_map = smp_ihk_os_ikc_map,
 	.query_mem = smp_ihk_os_query_mem,
+	.freeze = smp_ihk_os_freeze,
+	.thaw = smp_ihk_os_thaw,
 };	
 
 static struct ihk_register_os_data builtin_os_reg_data = {

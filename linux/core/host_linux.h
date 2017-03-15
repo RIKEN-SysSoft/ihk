@@ -72,6 +72,13 @@ struct ihk_host_linux_os_data {
 	/** \brief Size of the kernel message buffer */
 	unsigned long kmsg_len;
 
+	/** \brief monitor */
+	struct ihk_os_monitor *monitor;
+	/** \brief Size of the monitor */
+	unsigned long monitor_len;
+	/** \brief Host physical address to monitor  */
+	unsigned long monitor_pa;
+
 	/** \brief Flag whether the IKC is already initialized or not */
 	int ikc_initialized;
 	/** \brief Lock for the channel list */
@@ -107,6 +114,11 @@ struct ihk_host_linux_os_data {
 
 	/** \brief linux struct device for /dev/mcos* */
 	struct device *lindev;
+
+	/** \brief lock for event list */
+	spinlock_t event_list_lock;
+	/** \brief event list */
+	struct list_head event_list;
 };
 
 /** \brief Structure that manages a kernel instance fd in Linux */

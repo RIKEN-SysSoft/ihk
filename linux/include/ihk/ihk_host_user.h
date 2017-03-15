@@ -31,6 +31,9 @@
 #define IHK_OS_ALLOC_MEM              0x112a11
 #define IHK_OS_RESERVE_CPU            0x112a12
 #define IHK_OS_RESERVE_MEM            0x112a13
+#define IHK_OS_STATUS                 0x112a14
+#define IHK_OS_REGISTER_EVENT         0x112a15
+#define IHK_OS_EVENT_SIGNAL           0x112a16
 
 #define IHK_OS_READ_KMSG              0x112a20
 #define IHK_OS_CLEAR_KMSG             0x112a21
@@ -42,7 +45,12 @@
 #define IHK_OS_QUERY_CPU              0x112a26
 #define IHK_OS_QUERY_MEM              0x112a27
 #define IHK_OS_IKC_MAP                0x112a28
+#define IHK_OS_FREEZE                 0x112a30
+#define IHK_OS_THAW                   0x112a31
 
+#define IHK_GET_EVENTFD_MEM     0x112a29
+#define IHK_GET_EVENTFD_CPU     0x112a30
+  
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff
 
@@ -68,11 +76,15 @@ typedef struct dumpargs_s {
 #define DUMP_NMI 1
 #define DUMP_QUERY 2
 #define DUMP_READ 3
+#define DUMP_QUERY_ALL 4
+#define DUMP_READ_ALL 5
 	int pad;
 	long start;
 	long size;
 	void *buf;
 	void *spare[4];
 } dumpargs_t;
+#define DUMP_ALL_MEM 0
+#define DUMP_CHUNK_MEM 1
 
 #endif

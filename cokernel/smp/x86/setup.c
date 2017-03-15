@@ -207,6 +207,21 @@ int ihk_set_kmsg(unsigned long addr, unsigned long size)
 	return 0;
 }	
 
+int ihk_set_monitor(unsigned long addr, unsigned long size)
+{
+	boot_param->monitor = addr;
+	boot_param->monitor_size = size;
+	
+	return 0;
+}
+
+int ihk_set_nmi_mode_addr(unsigned long addr)
+{
+	boot_param->nmi_mode_addr = addr;
+	
+	return 0;
+}
+
 unsigned long ihk_mc_map_memory(void *os, unsigned long phys,
                                 unsigned long size)
 {

@@ -15,6 +15,8 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <errno.h>
+#include <dirent.h>
+#include "ihklib.h"
 
 int __argc;
 char **__argv;
@@ -53,6 +55,8 @@ static int usage(char **arg)
 	fprintf(stderr, "    release cpu [resources]\n");
 	fprintf(stderr, "    release mem\n");
 	fprintf(stderr, "    query cpu|mem\n");
+	fprintf(stderr, "    getinfo\n");
+	fprintf(stderr, "    getoslist\n");
 
 	return 0;
 }
@@ -341,6 +345,136 @@ static int do_ioctl(int fd)
 	return r;
 }
 
+static int do_getinfo(int fd)
+{
+	ihk_mem_chunk *ihk_chunk;
+	ihk_mem_chunk *os_chunk;
+	ihk_info *info;
+	int ret;
+	int i;
+
+	close(fd);
+	info = (ihk_info *) malloc (sizeof(ihk_info));
+	if (info == NULL) {
+		perror("info malloc");
+		exit(-1);
+	}
+
+	info->reserved_mem_chunks = NULL;
+	info->assigned_mem_chunks = NULL;
+	info->num_reserved_mem_chunks = 0;
+	info->num_assigned_mem_chunks = 0;
+
+	ret = ihk_getihk_info(info);
+	if (ret == -1) {
+		perror("ihk_getihk_info(1st) failed");
+		exit(-1);
+	}
+
+	ihk_chunk = (ihk_mem_chunk *) malloc (info->num_reserved_mem_chunks * sizeof(ihk_mem_chunk));
+	if (ihk_chunk == NULL) {
+		perror("ihk_chunk malloc");
+		exit(-1);
+	}
+	info->reserved_mem_chunks = ihk_chunk;
+
+	os_chunk = (ihk_mem_chunk *) malloc (info->num_assigned_mem_chunks * sizeof(ihk_mem_chunk));
+	if (os_chunk == NULL) {
+		perror("ihk_chunk malloc");
+		exit(-1);
+	}
+	info->assigned_mem_chunks  = os_chunk;
+
+	ret = ihk_getihk_info(info);
+	if (ret == -1) {
+		perror("ihk_getihk_info(2nd) failed");
+		exit(-1);
+	}
+
+	printf("Reserved_mem:");
+	for (i = 0; i < info->num_reserved_mem_chunks; i++) {
+		if (i == 0) {
+			printf("%lu@%d",
+					(info->reserved_mem_chunks + i * sizeof(ihk_mem_chunk))->size,
+					(info->reserved_mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+		} 
+		else {
+			printf(",%lu@%d",
+					(info->reserved_mem_chunks + i * sizeof(ihk_mem_chunk))->size,
+					(info->reserved_mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+		}
+	}
+	printf("\n");
+
+	printf("Reserved_cpu:");
+	printf("%016lx%016lx\n", info->reserved_cpu_set.__bits[0], info->reserved_cpu_set.__bits[1]);
+
+	printf("Assigned_mem:");
+	for (i = 0; i < info->num_assigned_mem_chunks; i++) {
+		if (i == 0) {
+			printf("%lu@%d",
+					(info->assigned_mem_chunks + i * sizeof(ihk_mem_chunk))->size,
+					(info->assigned_mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+		} 
+		else {
+			printf(",%lu@%d",
+					(info->assigned_mem_chunks + i * sizeof(ihk_mem_chunk))->size,
+					(info->assigned_mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+		}
+	}
+	printf("\n");
+
+	printf("Assigned_cpu:");
+	printf("%016lx%016lx\n", info->assigned_cpu_set.__bits[0], info->assigned_cpu_set.__bits[1]);
+
+	printf("Number_of_OS_instances:%d\n", info->num_os);
+
+	free(ihk_chunk);
+	free(os_chunk);
+	free(info);
+	return 0;
+}
+
+static int do_getoslist(int fd)
+{
+	int *oslist;
+	ihk_info *info;
+	int ret;
+	int i;
+
+	info = (ihk_info *) malloc (sizeof(ihk_info));
+	if (info  == NULL) {
+		perror("Error: Invalid argument");
+		exit(-1);
+	}
+	info->reserved_mem_chunks = NULL;
+	info->assigned_mem_chunks = NULL;
+	ret = ihk_getihk_info(info);
+	if (ret  == -1) {
+		perror("Error: Invalid argument");
+		exit(-1);
+	}
+
+	oslist = (int *) malloc(info->num_os * sizeof(int));
+	ret = ihk_getoslist(oslist, info->num_os);
+	if (ret  == -1) {
+		perror("Error: Invalid argument");
+		exit(-1);
+	}
+	
+	for (i = 0; i < info->num_os; i++) {
+		if (i == 0) { 
+			printf ("%d", oslist[i]);
+		} 
+		else {
+			printf (",%d", oslist[i]);
+		}	
+	}		
+	printf ("\n");
+	free(oslist);
+	return 0;
+}
+
 #define HANDLER(name) if (!strcmp(argv[2], #name)) { int r = do_##name(fd); close(fd); return r; }
 int main(int argc, char **argv)
 {
@@ -375,6 +509,8 @@ int main(int argc, char **argv)
 	else HANDLER(reserve)
 	else HANDLER(release)
 	else HANDLER(query)
+	else HANDLER(getinfo)
+	else HANDLER(getoslist)
 	else {
 		fprintf(stderr, "Unknown action : %s\n", argv[2]);
 		usage(argv);

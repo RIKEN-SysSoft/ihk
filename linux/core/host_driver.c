@@ -28,12 +28,23 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/file.h>
+#include <linux/eventfd.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
 #include <asm/spinlock.h>
 #include <ihk/misc/debug.h>
 #include "host_linux.h"
 #include "ops_wrappers.h"
+
+#define DEBUG_IKC
+
+#ifdef DEBUG_IKC
+#define dkprintf(...) kprintf(__VA_ARGS__)
+#define ekprintf(...) kprintf(__VA_ARGS__)
+#else
+#define dkprintf(...) do { if (0) printk(__VA_ARGS__); } while (0)
+#define ekprintf(...) printk(__VA_ARGS__)
+#endif
 
 
 #define DEV_MAX_MINOR 64
@@ -69,6 +80,14 @@ struct ihk_kmsg_buf {
 		ihk_spinlock_t lock;
 		char str[0];
 };
+
+struct ihk_event {
+	struct list_head list;
+	struct eventfd_ctx *event;
+};
+#define IHK_OS_MONITOR_KERNEL_FREEZING 8
+#define IHK_OS_MONITOR_KERNEL_FROZEN 9
+#define IHK_OS_MONITOR_KERNEL_THAW 10
 
 /*
  * OS character device file operations.
@@ -552,6 +571,96 @@ static int __ihk_os_set_kargs(struct ihk_host_linux_os_data *data,
 	return error;
 }
 
+static int __ihk_os_status(struct ihk_host_linux_os_data *data,
+		char __user *buf)
+{
+	unsigned long rpa, pa, size, psize;
+	int n;
+	int i;
+	int status;
+
+	status = __ihk_os_query_status(data);
+	if (data->monitor == NULL) {
+		if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
+			dprintf("get_special_addr: failed.\n");
+			return -EINVAL;
+		}
+
+		psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+		pa = __ihk_os_map_memory(data, rpa, psize);
+
+#ifdef CONFIG_MIC
+		if ((long)pa <= 0) {
+			return -EINVAL;
+		}
+
+		data->monitor = ioremap_nocache(pa, psize);
+#else
+		data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize, NULL, 0);
+#endif
+		data->monitor_pa = pa;
+		data->monitor_len = size;
+	}
+
+	size = data->monitor_len;
+	n = size / sizeof(struct ihk_os_monitor);
+	for (i = 0; i < n; i++) {
+if(status == IHK_OS_MONITOR_KERNEL_FREEZING || status == IHK_OS_MONITOR_KERNEL_FROZEN)
+continue;
+		if (data->monitor[i].status == IHK_OS_MONITOR_KERNEL_FREEZING) {
+			status = IHK_OS_MONITOR_KERNEL_FREEZING;
+//			break;
+		}
+		if (data->monitor[i].status == IHK_OS_MONITOR_KERNEL_FROZEN) {
+			status = IHK_OS_MONITOR_KERNEL_FROZEN;
+//			break;
+		}
+	}
+	if (status != IHK_OS_STATUS_READY) {
+	    dkprintf("function = %s (status=%d) \n",__FUNCTION__,status);
+		return status;
+	}
+
+	if(data->monitor == NULL){
+		if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
+			dprintf("get_special_addr: failed.\n");
+			return -EINVAL;
+		}
+
+		psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+		pa = __ihk_os_map_memory(data, rpa, psize);
+
+#ifdef CONFIG_MIC
+		if ((long)pa <= 0) {
+			return -EINVAL;
+		}
+
+		data->monitor = ioremap_nocache(pa, psize);
+#else
+		data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize, NULL, 0);
+#endif
+		data->monitor_pa = pa;
+		data->monitor_len = size;
+	}
+
+	size = data->monitor_len;
+	n = size / sizeof(struct ihk_os_monitor);
+	for(i = 0; i < n; i++){
+		if(data->monitor[i].status == IHK_OS_MONITOR_PANIC){
+			status = IHK_OS_STATUS_FAILED;
+			break;
+		}
+		if(data->monitor[i].status == IHK_OS_MONITOR_KERNEL){
+			if(data->monitor[i].counter ==
+				data->monitor[i].ocounter)
+				status = IHK_OS_STATUS_HUNGUP;
+		}
+		data->monitor[i].ocounter = data->monitor[i].counter;
+	}
+
+	return status;
+}
+
 /** \brief Clear the kernel message buffer. */
 static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 {
@@ -564,6 +673,43 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 	((struct ihk_kmsg_buf *) data->kmsg_buf)->tail = 0;
 	
 	return 0;
+}
+
+static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned long uarg)
+{
+	struct ihk_event *ep;
+	int fd = (long)uarg;
+	struct eventfd_ctx *event;
+	struct file *filp;
+	unsigned long flags;
+
+	filp = eventfd_fget(fd);
+	if (IS_ERR(filp)) {
+		return PTR_ERR(filp);
+	}
+	event = eventfd_ctx_fileget(filp);
+	if (IS_ERR(event)) {
+		return PTR_ERR(event);
+	}
+	ep = kzalloc(sizeof(struct ihk_event), GFP_KERNEL);
+	ep->event = event;
+	spin_lock_irqsave(&os->event_list_lock, flags);
+	list_add_tail(&ep->list, &os->event_list);
+	spin_unlock_irqrestore(&os->event_list_lock, flags);
+	return 0;
+}
+
+void ihk_os_event_signal(ihk_os_t data)
+{
+	unsigned long flags;
+	struct ihk_event *ep;
+	struct ihk_host_linux_os_data *os = (struct ihk_host_linux_os_data *)data;
+
+	spin_lock_irqsave(&os->event_list_lock, flags);
+	list_for_each_entry(ep, &os->event_list, list) {
+		eventfd_signal(ep->event, 1);
+	}
+	spin_unlock_irqrestore(&os->event_list_lock, flags);
 }
 
 static int __ihk_os_dump(struct ihk_host_linux_os_data *data, void __user *uargsp) {
@@ -581,6 +727,28 @@ static int __ihk_os_dump(struct ihk_host_linux_os_data *data, void __user *uargs
 	if (copy_to_user(uargsp, &args, sizeof(args))) {
 		return -EFAULT;
 	}
+	return error;
+}
+
+static int __ihk_os_freeze(struct ihk_host_linux_os_data *data)
+{
+	int error = 0;
+
+	if (data->ops->freeze) {
+		error = (*data->ops->freeze)(data, data->priv);
+	}
+
+	return error;
+}
+
+static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
+{
+	int error = 0;
+
+	if (data->ops->thaw) {
+		error = (*data->ops->thaw)(data, data->priv);
+	}
+
 	return error;
 }
 
@@ -739,12 +907,35 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_read_kmsg(data, (char * __user)arg);
 		break;
 
+	case IHK_OS_STATUS:
+		ret = __ihk_os_status(data, (char * __user)arg);
+		break;
+
 	case IHK_OS_CLEAR_KMSG:
 		ret = __ihk_os_clear_kmsg(data);
 		break;
 
 	case IHK_OS_DUMP:
 		ret = __ihk_os_dump(data, (char __user *)arg);
+		break;
+
+	case IHK_OS_REGISTER_EVENT:
+		ret = __ihk_os_register_event(data, arg);
+		break;
+
+	case IHK_OS_EVENT_SIGNAL:
+		ihk_os_event_signal(data);
+		ret = 0;
+		break;
+
+	case IHK_OS_FREEZE:
+		ret = __ihk_os_freeze(data);
+		dkprintf("__ihk_os_freeze(ret=%d)\n",ret);
+		break;
+
+	case IHK_OS_THAW:
+		ret = __ihk_os_thaw(data);
+		dkprintf("__ihk_os_thaw  (ret=%d)\n",ret);
 		break;
 
 	default:
@@ -898,9 +1089,11 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 
 	spin_lock_init(&os->listener_lock);
 	spin_lock_init(&os->wait_lock);
+	spin_lock_init(&os->event_list_lock);
 	INIT_LIST_HEAD(&os->ikc_channels);
 	INIT_LIST_HEAD(&os->wait_list);
 	INIT_LIST_HEAD(&os->aux_call_list);
+	INIT_LIST_HEAD(&os->event_list);
 
 	if (data->ops->create_os && 
 	    (ret = data->ops->create_os(data, data->priv, arg, 
@@ -1017,6 +1210,15 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 	if (ret != 0) {
 		return -EINVAL;
 	}
+
+	while (!list_empty(&os->event_list)) {
+		struct ihk_event *ep;
+		ep = list_first_entry(&os->event_list, struct ihk_event, list);
+		eventfd_ctx_put(ep->event);
+		list_del(&ep->list);
+		kfree(ep);
+	}
+
 	os_data[os->minor] = NULL;
 
 	cdev_del(&os->cdev);
@@ -1939,3 +2141,4 @@ EXPORT_SYMBOL(ihk_device_get_node_topology);
 EXPORT_SYMBOL(ihk_device_linux_cpu_to_hw_id);
 EXPORT_SYMBOL(ihk_host_register_os_notifier);
 EXPORT_SYMBOL(ihk_host_deregister_os_notifier);
+EXPORT_SYMBOL(ihk_os_event_signal);
