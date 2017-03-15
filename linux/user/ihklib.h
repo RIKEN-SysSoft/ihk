@@ -5,8 +5,8 @@
 #include <bfd.h>
 #define PATH_SYS_NODE "/sys/devices/system/node"
 #define PATH_DEV "/dev"
-#define IHKCONFIG_CMD "@SBINDIR@/ihkconfig"
-#define IHKOSCTL_CMD "@SBINDIR@/ihkosctl"
+#define IHKCONFIG_CMD "/home/shirasawa/kncc19-smp-x86/freezer/mic/sbin/ihkconfig"
+#define IHKOSCTL_CMD "/home/shirasawa/kncc19-smp-x86/freezer/mic/sbin/ihkosctl"
 
 /* rusage sysfs path */
 #define PATH_SYS_RSS	"/tmp/mcos/mcos%d_sys/fs/cgroup/memory/memory.stat"
@@ -38,20 +38,12 @@
 
 #include <ihk/affinity.h> 
 
-<<<<<<< HEAD
-typedef struct ihk_mem_chunk {
-=======
 typedef struct {
->>>>>>> create rusage branch.
 	unsigned long size;
 	int numa_node_number;
 } ihk_mem_chunk;
 
-<<<<<<< HEAD
-typedef struct ihk_info {
-=======
 typedef struct {
->>>>>>> create rusage branch.
 	ihk_mem_chunk *reserved_mem_chunks;
 	int num_reserved_mem_chunks;
 	cpu_set_t reserved_cpu_set;
@@ -102,13 +94,7 @@ enum ihk_os_status {
 	IHK_STATUS_FROZEN,
 };
 
-enum ihk_perf_event {
-	PERF_EVENT_ENABLE,
-	PERF_EVENT_DISABLE,
-	PERF_EVENT_DESTROY,
-};
-
-typedef struct ihkconfig {
+typedef struct {
 	enum ihk_resource_type resource_type;
 	cpu_set_t cpu_set;
 	ihk_mem_chunk *mem_chunks;
@@ -117,7 +103,7 @@ typedef struct ihkconfig {
 	int numa_node;
 } ihkconfig;
 
-typedef struct ihkosctl {
+typedef struct {
 	enum ihk_resource_type resource_type;
 	cpu_set_t cpu_set;
 	ihk_mem_chunk *mem_chunks;
@@ -130,14 +116,14 @@ typedef struct ihkosctl {
 	int numa_node;
 } ihkosctl;
 
-typedef struct ihk_osinfo {
+typedef struct {
 	ihk_mem_chunk *mem_chunks;
 	int num_mem_chunks;
 	cpu_set_t mask;
 	enum ihk_os_status status;
 } ihk_osinfo;
 
-typedef struct ihk_rusage {
+typedef struct {
 	unsigned long rss;
 	unsigned long cache;
 	unsigned long rss_huge;
@@ -157,7 +143,7 @@ typedef struct ihk_rusage {
 	int max_num_threads;
 } ihk_rusage;
 
-typedef struct ihk_perf_event_attr {
+typedef struct {
 	unsigned long config; 
 	unsigned disabled:1;
 	unsigned pinned:1;
@@ -216,12 +202,9 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl);
 int ihk_getrusage (int index, ihk_rusage *rusage);
 int ihk_getosinfo (int index, ihk_osinfo *osinfo);
 
-int ihk_setperfevent (int index, ihk_perf_event_attr *attr, int n);
+int ihk_setperfevent(int index, ihk_perf_event_attr attr[], int n);
 int ihk_perfctl(int index, int comm);
 int ihk_getperfevent(int index, unsigned long *counter, int n);
-
-int ihk_freeze (int index);
-int ihk_thaw (int index);
 
 #endif
 
