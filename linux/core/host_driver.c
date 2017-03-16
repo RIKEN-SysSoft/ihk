@@ -790,6 +790,9 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_CLEAR_KMSG:
 	case IHK_OS_QUERY_CPU:
 	case IHK_OS_QUERY_MEM:
+	case IHK_OS_STATUS:
+	case IHK_OS_FREEZE:
+	case IHK_OS_THAW:
 		break;
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
