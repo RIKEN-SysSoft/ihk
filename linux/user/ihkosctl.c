@@ -4,7 +4,8 @@
  * \brief
  *  configures the OSs on coprocessors
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
- *	Copyright (C) 2011 - 2012  Taku Shimosawa
+ * \author Balazs Gerofi  <bgerofi@riken.jp> \par
+ * Copyright (C) 2011-2017 RIKEN AICS>
  */
 #include <config.h>
 #include <stdio.h>
@@ -205,21 +206,29 @@ static int do_ikc_map(int fd)
 static int do_assign(int fd)
 {
 	int ret;
+	ihk_resource_req_t req;
 
 	if (__argc < 5) {
 		usage(__argv);
 		return -1;
 	}
 
+	req.string = __argv[4];
+	req.string_len = strlen(__argv[4]);
+	if (!req.string || !req.string_len) {
+		usage(__argv);
+		return -1;
+	}
+
 	if (!strcmp(__argv[3], "cpu")) {
-		ret = ioctl(fd, IHK_OS_ASSIGN_CPU, __argv[4]);
+		ret = ioctl(fd, IHK_OS_ASSIGN_CPU, &req);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: assigning CPUs: %s\n", __argv[4]);
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ioctl(fd, IHK_OS_ASSIGN_MEM, __argv[4]);
+		ret = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: assigning memory: %s\n", __argv[4]);

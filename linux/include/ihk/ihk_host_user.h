@@ -3,7 +3,8 @@
  * \brief
  *	 IHK-Host: ioctl request numbers
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
- * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \author Balazs Gerofi  <bgerofi@riken.jp> \par
+ * Copyright (C) 2011-2017 RIKEN AICS>
  */
 #ifndef __HEADER_IHK_HOST_USER_H
 #define __HEADER_IHK_HOST_USER_H
@@ -74,5 +75,11 @@ typedef struct dumpargs_s {
 	void *buf;
 	void *spare[4];
 } dumpargs_t;
+
+typedef struct ihk_resource_req_s {
+	char *string;
+	int string_len;
+} ihk_resource_req_t;
+
 
 #endif

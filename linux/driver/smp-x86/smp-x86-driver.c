@@ -1784,9 +1784,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 {
 	unsigned a, b;
 	int c, old_c, totaldigits, ndigits;
-	const char __user __force *ubuf = (const char __user __force *)buf;
 	int at_start, in_range;
-	int is_user = 1;
 
 	totaldigits = c = 0;
 	do {
@@ -1798,11 +1796,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 		/* Get the next cpu# or a range of cpu#'s */
 		for (;;) {
 			old_c = c;
-			if (is_user) {
-				if (__get_user(c, ubuf++))
-					return -EFAULT;
-			} else
-				c = *buf++;
+			c = *buf++;
 
 			/* End of string? */
 			if (!c)
@@ -1872,9 +1866,6 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 	}
 	while (c);
 
-	printk(KERN_INFO "IHK-SMP: assigned CPUs: %s to OS %p\n",
-		(const char __user __force *)buf, ihk_os);
-
 	return 0;
 }
 
@@ -1885,6 +1876,8 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_assign;
 	unsigned long flags;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -1893,10 +1886,36 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
+
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
 	memset(&cpus_to_assign, 0, sizeof(cpus_to_assign));
 
 	/* Validate CPU list provided by user */
-	cpulist_parse((char *)arg, &cpus_to_assign);
+	if (cpulist_parse(req_string, &cpus_to_assign) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	/* Check if cores to be assigned are available */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
@@ -1905,15 +1924,22 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	for_each_cpu_mask(cpu, cpus_to_assign) {
 #endif
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
-			dprintk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
+			printk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
 			ret = -EINVAL;
-			goto err;
+			goto out;
 		}
 	}
 
-	ret = __assign_cpus(ihk_os, os, (char *)arg);
+	ret = __assign_cpus(ihk_os, os, req_string);
+	if (ret) {
+		printk("%s: error: assigning CPUs: %s\n", __FUNCTION__, req_string);
+		goto out;
+	}
 
-err:
+	printk(KERN_INFO "IHK-SMP: CPUs: %s assigned to OS %p\n", req_string, ihk_os);
+
+out:
+	if (req_string) kfree(req_string);
 	return ret;
 }
 
@@ -1924,6 +1950,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_release;
 	unsigned long flags;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -1932,10 +1960,36 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
+
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
 	memset(&cpus_to_release, 0, sizeof(cpus_to_release));
 
 	/* Parse CPU list provided by user */
-	cpulist_parse((char *)arg, &cpus_to_release);
+	if (cpulist_parse(req_string, &cpus_to_release) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	/* Check if cores to be released are assigned to this OS */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
@@ -1948,7 +2002,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 			printk("IHK-SMP: error: CPU core %d is not assigned to %p\n", 
 				cpu, ihk_os);
 			ret = -EINVAL;
-			goto err;
+			goto out;
 		}
 	}
 
@@ -1993,7 +2047,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 
 	ret = 0;
 
-err:
+out:
+	if (req_string) kfree(req_string);
 	return ret;
 }
 
@@ -2035,7 +2090,6 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	int ret = 0;
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_map;
-	int target_cpu;
 	unsigned long flags;
 	char *string = (char *)arg;
 	char *token;
@@ -2257,8 +2311,10 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	struct smp_os_data *os = priv;
 	unsigned long flags;
 	int ret = 0;
-	char *mem_string = (char *)arg;
+	char *mem_string;
 	char *mem_token;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -2267,24 +2323,49 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
+
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	mem_string = req_string;
 	mem_token = strsep(&mem_string, ",");
 	while (mem_token) {
 
 		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: os_assign_mem: error: parsing memory string\n");
-			return ret;
+			goto out;
 		}
 
 		ret = __smp_ihk_os_assign_mem(ihk_os, os, mem_size, numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: os_assign_mem: error: assigning memory chunk\n");
-			return ret;
+			goto out;
 		}
 
 		mem_token = strsep(&mem_string, ",");
 	}
 
+out:
+	if (req_string) kfree(req_string);
 	return ret;
 }
 
@@ -2304,6 +2385,7 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 	spin_unlock_irqrestore(&os->lock, flags);
 
 	/* Drop memory chunk used by this OS */
+	/* TODO: parse user string */
 	list_for_each_entry_safe(os_mem_chunk, next_chunk,
 			&ihk_mem_used_chunks, list) {
 
@@ -2815,15 +2897,39 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int ret;
 	int cpu;
-	cpumask_t cpus_to_offline;;
+	cpumask_t cpus_to_offline;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
+
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
+
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
 
 	memset(&cpus_to_offline, 0, sizeof(cpus_to_offline));
 
-	/* Parse CPU list provided by user
-	 * FIXME: validate userspace buffer */
-	if (cpulist_parse((char *)arg, &cpus_to_offline) < 0) {
+	/* Parse CPU list provided by user */
+	if (cpulist_parse(req_string, &cpus_to_offline) < 0) {
 		printk("%s: invalid CPUs requested\n", __FUNCTION__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	/* Ugly, but for_each_cpu doesn't look beyond nr_cpu_ids */
@@ -2916,8 +3022,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
 	}
 
-	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n",
-			(char *)arg);
+	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n", req_string);
 	ret = 0;
 	goto out;
 
@@ -2939,6 +3044,7 @@ err_before_offline:
 	}
 
 out:
+	if (req_string) kfree(req_string);
 	return ret;
 }
 
@@ -2946,17 +3052,40 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int ret;
 	int cpu;
-	cpumask_t cpus_to_online;;
+	cpumask_t cpus_to_online;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
-	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
 
-	if (!arg) {
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
-	/* Parse CPU list provided by user
-	 * FIXME: validate userspace buffer */
-	cpulist_parse((char *)arg, &cpus_to_online);
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
+
+	/* Parse CPU list provided by user */
+	if (cpulist_parse(req_string, &cpus_to_online) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	/* Collect cores to be onlined */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
@@ -3026,6 +3155,8 @@ err:
 	}
 
 out:
+	if (req_string) kfree(req_string);
+
 	return ret;
 }
 
@@ -3062,16 +3193,36 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 	size_t mem_size;
 	int numa_id;
 	int ret = 0;
-	char *to_free, *mem_string;
+	char *mem_string;
 	char *mem_token;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
-	to_free = mem_string = kstrdup((char *)arg, GFP_KERNEL);
-	if (mem_string == NULL) {
-		printk("IHK-SMP: reserve_mem: error: copying mem_string, not enough memory.\n");
-		return -ENOMEM;
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
 	}
-	
-	/* check mem size */
+
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	mem_string = req_string;
+
+	/* Check mem size */
 	mem_token = strsep(&mem_string, ",");
 	while (mem_token) {
 		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
@@ -3079,25 +3230,28 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 			printk("IHK-SMP: reserve_mem: error: parsing memory string\n");
 			break;
 		}
+
 		if (mem_size % (1024 * 1024 * 4) != 0) {
-			printk("IHK-SMP: reserve_mem: error: mem_size must be in multiples of %d bytes.\n",
-			        1024 * 1024 * 4);
+			printk("%s: error: mem_size must be in multiples of %d bytes\n",
+					__FUNCTION__, 1024 * 1024 * 4);
 			ret = -1;
 			break;
 		}
+
 		mem_token = strsep(&mem_string, ",");
 	}
-	kfree(to_free);
 
 	if (ret != 0) {
-		return ret;
+		goto out;
 	}
 
-	to_free = mem_string = kstrdup((char *)arg, GFP_KERNEL);
-	if (mem_string == NULL) {
-		printk("IHK-SMP: reserve_mem: error: copying mem_string, not enough memory.\n");
-		return -ENOMEM;
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
 	}
+
+	mem_string = req_string;
 
 	/* Do the reservation */
 	mem_token = strsep(&mem_string, ",");
@@ -3111,26 +3265,19 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 		mem_token = strsep(&mem_string, ",");
 	}
-	kfree(to_free);
+
+out:
+	if (req_string) kfree(req_string);
 
 	return ret;
 }
 
 static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
-	//size_t mem_size;
-	//int numa_id;
-	int ret = 0;
+	int ret;
 
-	/*
-	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
-	if (ret != 0) {
-		printk("IHK-SMP: release_mem: error: parsing memory string\n");
-		return ret;
-	}
-	*/
-	/* Find out if there is enough free memory to be released */
-
+	/* Release everything for now */
+	/* TODO: parse input string */
 	ret = __smp_ihk_free_mem_from_list(&ihk_mem_free_chunks);
 
 	return ret;
@@ -4223,7 +4370,7 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 static struct builtin_device_data builtin_data;
 
 static struct ihk_register_device_data builtin_dev_reg_data = {
-	.name = "builtin",
+	.name = "SMP",
 	.flag = 0,
 	.priv = &builtin_data,
 	.ops = &smp_ihk_device_ops,
