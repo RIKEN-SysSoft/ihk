@@ -751,6 +751,8 @@ ihk_device_t ihk_host_find_dev(int index);
  */
 ihk_os_t ihk_host_find_os(int index, ihk_device_t dev);
 
+void ihk_host_print_os_kmsg(ihk_os_t os);
+
 /**
  * \brief Set the user data to a OS instance.
  *
@@ -812,6 +814,12 @@ ihk_dma_channel_t ihk_device_get_dma_channel(ihk_device_t data, int channel);
 int ihk_dma_request(ihk_dma_channel_t ihk_ch, struct ihk_dma_request *req);
 void  ihk_os_register_release_handler(struct file *,void (*)(ihk_os_t, void *),
                                       void *);
+
+/** \brief set mcos private data */
+void ihk_os_set_mcos_private_data(struct file *,void *);
+
+/** \brief get mcos private data */
+void *ihk_os_get_mcos_private_data(struct file *);
 
 /** \brief get a linux device for the specified mcos */
 struct device *ihk_os_get_linux_device(ihk_os_t os);

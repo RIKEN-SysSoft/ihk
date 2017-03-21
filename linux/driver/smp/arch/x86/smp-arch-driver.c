@@ -1334,7 +1334,7 @@ int ihk_smp_reset_cpu(int phys_apicid)
 	unsigned long send_status;
 	int maxlvt;
 
-	printk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", phys_apicid);
+	dprintk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", phys_apicid);
 
 	maxlvt = _lapic_get_maxlvt();
 

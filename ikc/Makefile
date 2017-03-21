@@ -11,7 +11,8 @@ IKC_OBJS += manycore.o
 $(if $(O),,$(error IHK-IKC Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
 
-include $(IHKBASE)/Makefile.common
+BUILD_IHK_COKERNEL ?= $(IHKBASE)
+include $(BUILD_IHK_COKERNEL)/Makefile.common
 
 .PHONY: all clean depend
 

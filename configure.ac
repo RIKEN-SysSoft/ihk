@@ -78,6 +78,7 @@ case $WITH_TARGET in
 	esac
 	AC_PROG_CC
 	XCC=$CC
+	CFLAGS="$CFLAGS -ffreestanding -fno-tree-loop-distribute-patterns"
 	;;
     builtin-mic)
 	ARCH=k1om
@@ -348,6 +349,7 @@ AC_SUBST(BINDIR)
 AC_SUBST(SBINDIR)
 AC_SUBST(KMODDIR)
 AC_SUBST(MANDIR)
+AC_SUBST(CFLAGS)
 
 AC_SUBST(IHK_VERSION)
 AC_SUBST(MCKERNEL_VERSION)
@@ -378,6 +380,7 @@ AC_CONFIG_FILES([
 	linux/user/ihkconfig.1:linux/user/ihkconfig.1in
 	linux/user/ihkosctl.1:linux/user/ihkosctl.1in
 	cokernel/smp/arm64/Makefile.predefines
+	cokernel/Makefile.common
 ])
 
 AC_OUTPUT

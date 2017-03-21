@@ -149,6 +149,9 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 	int r;
 	unsigned long flags;
 
+	if(!channel || !p)
+		return -EINVAL;
+
 	local_irq_save(flags);
 retry:
 	/* Add main packet to target channel */

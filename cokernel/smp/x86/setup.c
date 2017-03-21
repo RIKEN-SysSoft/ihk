@@ -57,15 +57,18 @@ static void build_ihk_cpu_info(void)
 
 	ihk_cpu_info = early_alloc_pages((
 				(sizeof(*ihk_cpu_info) + boot_param->nr_cpus *
-				 (sizeof(ihk_cpu_info->hw_ids) + sizeof(ihk_cpu_info->nodes))) +
-				PAGE_SIZE - 1) >> PAGE_SHIFT);
+				 (sizeof(ihk_cpu_info->hw_ids) + sizeof(ihk_cpu_info->nodes) + 
+                  sizeof(ihk_cpu_info->linux_cpu_ids)) +
+				PAGE_SIZE - 1) >> PAGE_SHIFT));
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
 	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + boot_param->nr_cpus;
+	ihk_cpu_info->linux_cpu_ids = (int *)(ihk_cpu_info->nodes) + boot_param->nr_cpus;
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)(boot_param + 1);
 	for (i = 0; i < boot_param->nr_cpus; ++i) {
 		ihk_cpu_info->hw_ids[i] = bp_cpu->hw_id;
 		ihk_cpu_info->nodes[i] = bp_cpu->numa_id;
+		ihk_cpu_info->linux_cpu_ids[i] = bp_cpu->linux_cpu_id;
 		++bp_cpu;
 	}
 
@@ -87,17 +90,17 @@ extern char *strstr(const char *haystack, const char *needle);
 void arch_init(void)
 {
 	/* Ack boot (trampoline code shall be free'd) */
-	boot_param->msg_buffer = virt_to_phys(&kmsg_buf);
 	boot_param->status = 1;
 
 	/* This is an early check to instruct the kernel initialization 
 	 * process not to deal with turbo boost support */
-	if (strstr(boot_param->kernel_args, "no_turbo")) {
-		no_turbo = 1;
+	if (strstr(boot_param->kernel_args, "turbo")) {
+		no_turbo = 0;
 	}
 
 	setup_x86();
-	boot_param = map_fixed_area(boot_param_pa, sizeof(*boot_param), 0);
+	/* TODO: pass the actual length in trampoline code */
+	boot_param = map_fixed_area(boot_param_pa, 8192, 0);
 
 	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 	build_ihk_cpu_info();
@@ -107,6 +110,7 @@ void arch_ready(void)
 {
 	/* Make it ready */
 	boot_param->status = 2;
+	barrier();
 }
 
 void arch_set_mikc_queue(void *rq, void *wq)
@@ -188,10 +192,18 @@ void ihk_mc_get_boot_time(unsigned long *tv_sec, unsigned long *tv_nsec)
 	*tv_nsec = boot_param->boot_nsec;
 }
 
-char *ihk_mc_get_kernel_args(void)
+char *ihk_get_kargs(void)
 {
 	return boot_param->kernel_args;
 }
+
+int ihk_set_kmsg(unsigned long addr, unsigned long size)
+{
+	boot_param->msg_buffer = addr;
+	boot_param->msg_buffer_size = size;
+
+	return 0;
+}	
 
 unsigned long ihk_mc_map_memory(void *os, unsigned long phys,
                                 unsigned long size)
@@ -219,7 +231,7 @@ int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type)
 	struct ihk_smp_boot_param_numa_node *node;
 
 	if (id < 0 || id >= boot_param->nr_numa_nodes)
-		return -EINVAL;
+		return -1;
 
 	node = (((struct ihk_smp_boot_param_numa_node *)
 		((char *)boot_param + sizeof(*boot_param) + 
@@ -265,7 +277,7 @@ int ihk_mc_get_memory_chunk(int id,
 	struct ihk_smp_boot_param_memory_chunk *chunk;
 
 	if (id < 0 || id >= boot_param->nr_memory_chunks)
-		return -EINVAL;
+		return -1;
 
 	chunk = ((struct ihk_smp_boot_param_memory_chunk *)
 			((char *)boot_param + sizeof(*boot_param) +
@@ -276,6 +288,23 @@ int ihk_mc_get_memory_chunk(int id,
 	if (start) *start = chunk->start;
 	if (end) *end = chunk->end;
 	if (numa_id) *numa_id = chunk->numa_id;
+
+	return 0;
+}
+
+int ihk_mc_get_nr_cores(void)
+{
+	return boot_param->nr_cpus;
+}
+
+int ihk_mc_get_core(int id, unsigned long *linux_core_id, unsigned long *apic_id, int *numa_id)
+{
+	if (id < 0 || id >= boot_param->nr_cpus)
+		return -1;
+
+	if(linux_core_id) *linux_core_id = ihk_cpu_info->linux_cpu_ids[id];
+	if(apic_id) *apic_id = ihk_cpu_info->hw_ids[id];
+	if(numa_id) *numa_id = ihk_cpu_info->nodes[id];
 
 	return 0;
 }

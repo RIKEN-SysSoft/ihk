@@ -58,7 +58,7 @@ static int os_max_minor = 0;
 static struct list_head ihk_os_notifiers;
 static spinlock_t ihk_os_notifiers_lock;
 
-extern int ikc_master_init(ihk_os_t os);
+extern int ihk_ikc_master_init(ihk_os_t os);
 extern void ikc_master_finalize(ihk_os_t os);
 
 struct ihk_kmsg_buf {
@@ -141,6 +141,20 @@ void  ihk_os_register_release_handler(struct file *file,
 
 	ifile->release_handler = handler;
 	ifile->param = param;
+}
+
+void ihk_os_set_mcos_private_data(struct file *file, void *data)
+{
+	struct ihk_file *ifile = file->private_data;
+
+	ifile->mcos_data = data;
+}
+
+void *ihk_os_get_mcos_private_data(struct file *file)
+{
+	struct ihk_file *ifile = file->private_data;
+
+	return ifile->mcos_data;
 }
 
 /** \brief load_memory operation for an OS device file */
@@ -252,7 +266,7 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 	if (data->ops->boot) {
 		ret = data->ops->boot(data, data->priv, flag);
 		if (ret == 0) {
-			ret = ikc_master_init(data);
+			ret = ihk_ikc_master_init(data);
 		}
 
 		/* Call OS notifiers */
@@ -1629,6 +1643,67 @@ ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
 	}
 }
 
+void ihk_host_print_os_kmsg(ihk_os_t os)
+{
+	int tail, len, len_end, len_start, head, mode, read_top;
+	int printed = 0;
+	struct ihk_kmsg_buf *kmsg_buf;
+
+	if (!os)
+		return;
+
+	kmsg_buf = (struct ihk_kmsg_buf *)
+		((struct ihk_host_linux_os_data *)os)->kmsg_buf;
+
+	if (!kmsg_buf) {
+		mutex_lock(&((struct ihk_host_linux_os_data *)os)->kmsg_mutex);
+		__ihk_os_init_kmsg(os);
+		mutex_unlock(&((struct ihk_host_linux_os_data *)os)->kmsg_mutex);
+		kmsg_buf = (struct ihk_kmsg_buf *)
+			((struct ihk_host_linux_os_data *)os)->kmsg_buf;
+
+		if (!kmsg_buf) {
+			printk("%s: failed to initialize kmsg\n", __FUNCTION__);
+			return;
+		}
+	}
+
+	tail = kmsg_buf->tail;
+	len = kmsg_buf->len;
+	head = kmsg_buf->head;
+	mode = kmsg_buf->mode;
+	if (mode != 0) {
+		read_top = head;
+		if (head > tail) {
+			len_end = strnlen(&kmsg_buf->str[head], len - head);
+			len_start = tail;
+		} else {
+			len_end = tail - head;
+			len_start = 0;
+		}
+	} else {
+		read_top = tail + 1;
+		len_end = strnlen(&kmsg_buf->str[tail+1], len - tail);
+		len_start = tail;
+	}
+
+	/* Print the end of the buffer */
+	if (len_end > 0) {
+		printk("%s", &kmsg_buf->str[read_top]);
+		printed = 1;
+	}
+
+	/* Then the front of it */
+	if (len_start > 0) {
+		printk("%s", kmsg_buf->str);
+		printed = 1;
+	}
+
+	if (!printed) {
+		printk("%s: kmsg buffer is empty\n", __FUNCTION__);
+	}
+}
+
 void ihk_host_os_set_usrdata(ihk_os_t ihk_os, void *data)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
@@ -1787,6 +1862,7 @@ EXPORT_SYMBOL(ihk_os_get_special_address);
 EXPORT_SYMBOL(ihk_os_wait_for_status);
 EXPORT_SYMBOL(ihk_host_find_dev);
 EXPORT_SYMBOL(ihk_host_find_os);
+EXPORT_SYMBOL(ihk_host_print_os_kmsg);
 EXPORT_SYMBOL(ihk_host_os_set_usrdata);
 EXPORT_SYMBOL(ihk_host_os_get_usrdata);
 EXPORT_SYMBOL(ihk_host_os_get_index);
@@ -1804,6 +1880,8 @@ EXPORT_SYMBOL(ihk_device_get_dma_channel);
 EXPORT_SYMBOL(ihk_device_get_dma_info);
 EXPORT_SYMBOL(ihk_dma_request);
 EXPORT_SYMBOL(ihk_os_register_release_handler);
+EXPORT_SYMBOL(ihk_os_set_mcos_private_data);
+EXPORT_SYMBOL(ihk_os_get_mcos_private_data);
 EXPORT_SYMBOL(ihk_os_get_linux_device);
 EXPORT_SYMBOL(ihk_device_get_cpu_topology);
 EXPORT_SYMBOL(ihk_device_get_node_topology);

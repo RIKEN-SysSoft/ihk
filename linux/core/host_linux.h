@@ -117,6 +117,8 @@ struct ihk_file {
 	void (*release_handler)(ihk_os_t osdata, void *param);
 	/** \brief param for handler */
 	void *param;
+	/** \brief mcos private data */
+	void *mcos_data;
 };
 
 #endif

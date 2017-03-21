@@ -461,9 +461,11 @@ ihk_armpmu_get_irq_affinity(int irqs[], const struct arm_pmu *armpmu, const stru
 	for (hwid = 0; hwid < SMP_MAX_CPUS; hwid++) {
 		int irq;
 
+/*
 		if (!(CORE_ISSET(hwid, bp->coreset))) {
 			continue;
 		}
+*/
 
 		if (pmu_device->num_resources <= hwid) {
 			pr_err("failed to get core number.\n");
@@ -489,9 +491,11 @@ ihk_armpmu_set_irq_affinity(const int irqs[], const struct smp_os_data *os)
 	virtid = 0;
 	for (hwid = 0; hwid < SMP_MAX_CPUS; hwid++) {
 		int irq;
+/*
 		if (!(CORE_ISSET(hwid, bp->coreset))) {
 			continue;
 		}
+*/
 		irq  = irqs[virtid];
 
 		/*
@@ -1744,7 +1748,7 @@ int ihk_smp_reset_cpu(int hw_id)
 	int ret = 0;
 	int i;
 
-	printk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", hw_id);
+	dprintk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", hw_id);
 
 	for (i = 0; i < SMP_MAX_CPUS; i++) {
 		if ((ihk_smp_cpus[i].hw_id != hw_id) ||

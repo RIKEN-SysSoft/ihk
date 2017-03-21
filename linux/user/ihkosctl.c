@@ -414,6 +414,13 @@ static int do_dump(int osfd) {
 	char *date;
 	struct passwd *pw;
 	dump_mem_chunks_t *mem_chunks;
+	int interactive = 0;
+
+	if (__argc > 4 &&
+			(!strcmp("--interactive", __argv[4]) ||
+			 !strcmp("-i", __argv[4]))) {
+		interactive = 1;
+	}
 
 	mem_chunks = malloc(PHYS_CHUNKS_DESC_SIZE);
 	if (!mem_chunks) {
@@ -588,7 +595,13 @@ static int do_dump(int osfd) {
 		return 1;
 	}
 
-	ok = bfd_set_section_size(abfd, scn, phys_size);
+	if (interactive) {
+		ok = bfd_set_section_size(abfd, scn, 4096);
+	}
+	else {
+		ok = bfd_set_section_size(abfd, scn, phys_size);
+	}
+
 	if (!ok) {
 		bfd_perror("bfd_set_section_size");
 		return 1;
@@ -637,6 +650,9 @@ static int do_dump(int osfd) {
 		}
 	}
 
+	if (interactive)
+		goto out;
+
 	scn = bfd_get_section_by_name(abfd, "physmem");
 	phys_offset = 0;
 	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
@@ -671,6 +687,7 @@ static int do_dump(int osfd) {
 		}
 	}
 
+out:
 	ok = bfd_close(abfd);
 	if (!ok) {
 		bfd_perror("bfd_close");

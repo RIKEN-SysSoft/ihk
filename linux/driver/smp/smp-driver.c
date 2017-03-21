@@ -312,6 +312,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 				cpu_to_node(os->cpu_mapping[lwk_cpu]));
 		bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
+		bp_cpu->linux_cpu_id = os->cpu_mapping[lwk_cpu];
 
 		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU HWID: %d\n",
 				os, cpu_to_node(cpu), ihk_smp_cpus[cpu].hw_id);
@@ -406,7 +407,6 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->param->start = os->mem_start;
 	os->param->end = os->mem_end;
-	os->param->coreset = os->cpu_hw_ids_map;
 	os->param->ident_table = ident_page_table;
 	strncpy(os->param->kernel_args, os->kernel_args,
 	        sizeof(os->param->kernel_args));
@@ -725,7 +725,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[i].os = (ihk_os_t)0;
 
-		printk("IHK-SMP: CPU %d has been deassigned, HWID: %d\n",
+		dprintk("IHK-SMP: CPU %d has been deassigned, HWID: %d\n",
 		       ihk_smp_cpus[i].id, ihk_smp_cpus[i].hw_id);
 	}
 
@@ -744,7 +744,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		mem_chunk->numa_id = os_mem_chunk->numa_id;
 		INIT_LIST_HEAD(&mem_chunk->chain);
 
-		printk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
+		dprintk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
 				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 				mem_chunk->size);
 
@@ -947,7 +947,7 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 	case IHK_SPADDR_KMSG:
 		if (os->param->msg_buffer) {
 			*addr = os->param->msg_buffer;
-			*size = IHK_KMSG_SIZE;
+			*size = os->param->msg_buffer_size;
 			return 0;
 		}
 		break;
@@ -1110,7 +1110,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 		/* Assign CPUs and update CPU mapping */
 		while (a <= b) {
 			int cpu = a;
-			printk(KERN_INFO "IHK-SMP: assigned CPU %d to OS %p\n", a, ihk_os);
+			dprintk(KERN_INFO "IHK-SMP: assigned CPU %d to OS %p\n", a, ihk_os);
 
 			CORE_SET(ihk_smp_cpus[cpu].hw_id, os->cpu_hw_ids_map);
 			set_bit(cpu_to_node(cpu), &os->numa_mask);
@@ -1126,6 +1126,9 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 		}
 	}
 	while (c);
+
+	printk(KERN_INFO "IHK-SMP: assigned CPUs: %s to OS %p\n",
+		(const char __user __force *)buf, ihk_os);
 
 	return 0;
 }
@@ -1176,8 +1179,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	for_each_cpu_mask(cpu, cpus_to_assign) {
 #endif
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
-			printk("IHK-SMP: error: CPU core %d is not available for assignment\n",
-			       cpu);
+			dprintk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
 			ret = -EINVAL;
 			goto err;
 		}
@@ -1275,9 +1277,12 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 			break;
 		}
 
-		printk(KERN_INFO "IHK-SMP: CPU HWID %d released from %p\n",
+		dprintk(KERN_INFO "IHK-SMP: CPU HWID %d released from %p\n",
 				ihk_smp_cpus[cpu].hw_id, ihk_os);
 	}
+
+	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
+		(const char __user *)arg, ihk_os);
 
 err:
 	return ret;
@@ -1804,8 +1809,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 
 	INIT_LIST_HEAD(&tmp_chunks);
 
-	printk(KERN_INFO "IHK-SMP: __ihk_smp_reserve_mem: %lu bytes\n",
-	       ihk_mem);
+	dprintk(KERN_INFO "IHK-SMP: __ihk_smp_reserve_mem: %lu bytes\n", ihk_mem);
 
 	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
 	allocated = 0;
@@ -1815,7 +1819,9 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
 		struct page *pg;
 
-		pg = __alloc_pages_nodemask(GFP_KERNEL | __GFP_COMP, order,
+		pg = __alloc_pages_nodemask(
+				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN,
+				order,
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
 		if (!pg) {
 			/*
@@ -1888,16 +1894,14 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 			list_add_tail(&p->chain, &q->chain);
 		}
 
+		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+				" (len: %lu) @ NUMA node: %d is available\n",
+				p->addr, p->addr + p->size, p->size, p->numa_id);
 		allocated += max;
 	}
 
 	/* Merge free chunks in case this wasn't the first reservation */
 	merge_mem_chunks(&ihk_mem_free_chunks);
-
-	list_for_each_entry(p, &ihk_mem_free_chunks, chain) {
-		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx (len: %lu) @ NUMA node: %d is available\n",
-			p->addr, p->addr + p->size, p->size, p->numa_id);
-	}
 
 	ret = 0;
 
@@ -1974,13 +1978,38 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		kfree(karg);
 		return -EFAULT;
 	}
-	cpulist_parse(karg, &cpus_to_offline);
+	if (cpulist_parse(karg, &cpus_to_offline) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		kfree(karg);
+		return -EINVAL;
+	}
 	kfree(karg);
 #else /* POSTK_DEBUG_ARCH_DEP_46 */
 	/* Parse CPU list provided by user
 	 * FIXME: validate userspace buffer */
-	cpulist_parse((char *)arg, &cpus_to_offline);
+	if (cpulist_parse((char *)arg, &cpus_to_offline) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		return -EINVAL;
+	}
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
+
+	/* Ugly, but for_each_cpu doesn't look beyond nr_cpu_ids */
+	for (cpu = nr_cpu_ids;
+			cpu < sizeof(cpus_to_offline) * BITS_PER_BYTE; ++cpu) {
+#ifdef POSTK_DEBUG_ARCH_DEP_54 /* cpu_set() & cpu_isset() linux version depend fix. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
+		if (cpu_isset(cpu, cpus_to_offline)) {
+#else /* LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0) */
+		if (cpumask_test_cpu(cpu, &cpus_to_offline)) {
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_54 */
+		if (cpu_isset(cpu, cpus_to_offline)) {
+#endif /* POSTK_DEBUG_ARCH_DEP_54 */
+			printk("%s: invalid CPU requested: %d\n",
+					__FUNCTION__, cpu);
+			return -EINVAL;
+		}
+	}
 
 	/* Collect cores to be offlined */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
@@ -2027,7 +2056,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_TO_OFFLINE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-		printk(KERN_INFO "IHK-SMP: CPU %d to be offlined, HWID: %d\n",
+		dprintk(KERN_INFO "IHK-SMP: CPU %d to be offlined, HWID: %d\n",
 		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
@@ -2046,7 +2075,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		
 		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
 
-		printk(KERN_INFO "IHK-SMP: CPU %d offlined successfully, HWID: %d\n",
+		dprintk(KERN_INFO "IHK-SMP: CPU %d offlined successfully, HWID: %d\n",
 		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
@@ -2056,10 +2085,12 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 			continue;
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
 
-		printk(KERN_INFO "IHK-SMP: CPU %d reserved successfully, HWID: %d\n",
+		dprintk(KERN_INFO "IHK-SMP: CPU %d reserved successfully, HWID: %d\n",
 		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
+	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n",
+			(char *)arg);
 	ret = 0;
 	goto out;
 
@@ -2154,7 +2185,7 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_TO_ONLINE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-		printk("IHK-SMP: CPU %d to be onlined, HWID: %d\n",
+		dprintk("IHK-SMP: CPU %d to be onlined, HWID: %d\n",
 		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
@@ -2170,7 +2201,7 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-		printk("IHK-SMP: CPU %d onlined successfully, HWID: %d\n",
+		dprintk("IHK-SMP: CPU %d onlined successfully, HWID: %d\n",
 		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 

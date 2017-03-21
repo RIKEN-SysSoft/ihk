@@ -29,10 +29,6 @@
 #	error "IHK_SMP_CHUNK_BASE_SIZE undifined"
 #endif
 
-#ifndef IHK_KMSG_SIZE
-#	error "IHK_KMSG_SIZE undifined"
-#endif
-
 int ihk_smp_get_hw_id(int cpu);
 int smp_wakeup_secondary_cpu(int hw_id, unsigned long start_eip);
 #ifdef POSTK_DEBUG_ARCH_DEP_29

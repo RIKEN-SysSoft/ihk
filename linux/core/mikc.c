@@ -57,7 +57,7 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 	ihk_ikc_system_init(ihk_os);
 	os->ikc_initialized = 1;
 
-	if (ihk_os_wait_for_status(ihk_os, IHK_OS_STATUS_READY, 0, 150) == 0) {
+	if (ihk_os_wait_for_status(ihk_os, IHK_OS_STATUS_READY, 0, 200) == 0) {
 		/* XXX: 
 		 * We assume this address is remote, 
 		 * but the local is possible... */
@@ -97,18 +97,23 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 
 		return c;
 	} else {
-		printk("IHK: OS does not become ready.\n");
+		printk("IHK: OS does not become ready, kernel msg:\n");
+		ihk_host_print_os_kmsg(ihk_os);
 		return NULL;
 	}
 }
 
 /** \brief Initializes a master channel */
-int ikc_master_init(ihk_os_t __os)
+int ihk_ikc_master_init(ihk_os_t __os)
 {
 	struct ihk_host_linux_os_data *os = __os;
 	struct ihk_ikc_master_packet packet;
 
 	dprintf("ikc_master_init\n");
+
+	if (!os) {
+		return -EINVAL;
+	}
 
 	os->mchannel = 
 		ihk_host_ikc_init_first(os, arch_master_handler);
@@ -128,16 +133,6 @@ int ikc_master_init(ihk_os_t __os)
 	}
 }
 
-/** \brief Destroys an IKC channel */
-void ihk_ikc_destroy_channel(ihk_os_t __os, struct ihk_ikc_channel_desc *c)
-{
-	if (!c) {
-		return;
-	}
-	ihk_ikc_disable_channel(c);
-	ihk_ikc_free_channel(c);
-}
-
 /** \brief Called when the kernel is going to shutdown. It finalizes
  * the master channel. */
 void ikc_master_finalize(ihk_os_t __os)
@@ -151,7 +146,7 @@ void ikc_master_finalize(ihk_os_t __os)
 	}
 
 	if (os->mchannel) {
-		ihk_ikc_destroy_channel(os, os->mchannel);
+		ihk_ikc_destroy_channel(os->mchannel);
 	}
 	ihk_ikc_system_exit(os);
 

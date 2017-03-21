@@ -18,7 +18,8 @@ CFLAGS += -I$(SRC)/include -D__KERNEL__
 # POSTK_DEBUG_ARCH_DEP_24
 default: all
 
-include Makefile.common
+BUILD_IHK_COKERNEL ?= .
+include $(BUILD_IHK_COKERNEL)/Makefile.common
 
 IHK_SRCDIRS += $(SRC)/../lib $(TARGETDIR)
 DEPSRCS = $(foreach d,$(IHK_SRCDIRS),$(wildcard $(d)/*.c $(d)/*.S))

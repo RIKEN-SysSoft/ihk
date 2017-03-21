@@ -41,8 +41,13 @@ int ihk_ikc_listen_port(ihk_os_t os, struct ihk_ikc_listen_param *param)
 	struct ihk_ikc_listen_param **p;
 	ihk_spinlock_t *lock;
 	unsigned long flags;
-	int port = param->port;
+	int port;
 
+	if (!param) {
+		return -EINVAL;
+	}
+
+	port = param->port;
 	if (port < 0 || port >= IHK_IKC_MAX_PORT) {
 		return -EINVAL;
 	}
@@ -65,7 +70,8 @@ IHK_EXPORT_SYMBOL(ihk_ikc_listen_port);
 
 static int ihk_ikc_master_send(ihk_os_t os,
                                uint32_t msg, uint32_t ref,
-                               uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4)
+                               uint64_t a1, uint64_t a2, uint64_t a3,
+                               uint64_t a4, uint64_t a5)
 {
 	struct ihk_ikc_master_packet packet;
 	struct ihk_ikc_channel_desc *c;
@@ -78,6 +84,7 @@ static int ihk_ikc_master_send(ihk_os_t os,
 	packet.param[1] = a2;
 	packet.param[2] = a3;
 	packet.param[3] = a4;
+	packet.param[4] = a5;
 
 	return ihk_ikc_send(c, &packet, 0);
 }
@@ -87,13 +94,17 @@ int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm,
                    unsigned long packet_size,
                    unsigned long *rq, unsigned long *sq,
                    struct ihk_ikc_channel_desc **newc,
-                   unsigned long remote_channel_va)
+                   unsigned long remote_channel_va,
+                   int magic)
 {
 	struct ihk_ikc_channel_info ci;
 	struct ihk_ikc_channel_desc *c;
 	int r;
 
 	if (!p || !p->handler) {
+		return -ECONNREFUSED;
+	}
+	if (p->magic != magic ) {
 		return -ECONNREFUSED;
 	}
 	if (packet_size != p->pkt_size) {
@@ -136,11 +147,19 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 	unsigned long remote_channel_va = 0;
 	int ret = 0;
 
+	if (!c || !packet) {
+		return -EINVAL;
+	}
+
 	switch (packet->msg) {
 	case IHK_IKC_MASTER_MSG_PACKET_ON_CHANNEL:
 	{
 		struct ihk_ikc_channel_desc *c =
 			(struct ihk_ikc_channel_desc *)packet->param[3];
+		if (!c) {
+			ret = -ENOENT;
+			break;
+		}
 		if (os == NULL && c->recv.queue->read_cpu !=
 				ihk_ikc_get_processor_id()) {
 			kprintf("%s: %p is for CPU %d\n", __FUNCTION__,
@@ -176,22 +195,24 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 			p = ihk_ikc_get_listener_entry(os, port);
 			r = ihk_ikc_accept(c, *p,
 			                   packet->param[0] >> 32,
-			                   &rq, &sq, &newc, remote_channel_va);
+			                   &rq, &sq, &newc,
+			                   remote_channel_va, packet->param[4]);
 			ihk_ikc_spinlock_unlock(lock, flags);
 		}
 
 		if (r != 0) {
 			ihk_ikc_master_send(os,
 			                    IHK_IKC_MASTER_MSG_CONNECT_REPLY,
-			                    packet->ref, -r, 0, 0, 0);
+			                    packet->ref, -r, 0, 0, 0, 0);
 		} else {
 			dkprintf("(Accepted) channel: %p, remote channel: %p\n",
 			        newc, (void *)newc->remote_channel_va);
+			newc->remote_channel_id = packet->ref;
 			ihk_ikc_enable_channel(newc);
 			ihk_ikc_master_send(os,
 			                    IHK_IKC_MASTER_MSG_CONNECT_REPLY,
 			                    packet->ref, 0, rq,
-			                    remote_channel_va, (uint64_t)newc);
+			                    remote_channel_va, (uint64_t)newc, 0);
 		}
 
 		break;
@@ -201,7 +222,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 		break;
 
 	case IHK_IKC_MASTER_MSG_DISCONNECT:
-		newc = ihk_ikc_find_channel(os, packet->ref);
+		newc = (struct ihk_ikc_channel_desc *)packet->param[3];
 		dkprintf("disconnect channel #%d => %p\n", packet->ref, newc);
 		if (!newc) {
 			ret = -ENOENT;
@@ -232,8 +253,6 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 
 	return ret;
 }
-
-static ihk_atomic_t connect_refnum;
 
 struct list_head *ihk_ikc_get_master_wait_list(ihk_os_t os);
 ihk_spinlock_t *ihk_ikc_get_master_wait_lock(ihk_os_t os);
@@ -310,20 +329,24 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 	int ref, ret;
 	struct ihk_ikc_master_wait_struct wq;
 
+	if (!p) {
+		return -EINVAL;
+	}
+
 	dkprintf("%s: connecting channel %p\n", __FUNCTION__, c);
 	c = ihk_ikc_create_channel(os, p->port, p->pkt_size, p->queue_size,
 	                           &rq, &sq, 0);
 	if (!c) {
 		return -ENOMEM;
 	}
-	ref = ihk_atomic_inc_return(&connect_refnum);
+	ref = c->channel_id;
 
 	ihk_ikc_wait_reply_prepare(os, &wq, IHK_IKC_MASTER_MSG_CONNECT_REPLY,
 	                           ref);
 
 	if (ihk_ikc_master_send(os, IHK_IKC_MASTER_MSG_CONNECT, ref,
 	                        ((unsigned long)p->pkt_size << 32) 
-	                        | p->port, sq, rq, (uint64_t)c) == 0) {
+	                        | p->port, sq, rq, (uint64_t)c, (uint64_t)p->magic) == 0) {
 		ret = ihk_ikc_wait_master(&wq);
 		ihk_ikc_wait_finish(os, &wq);
 
@@ -365,7 +388,8 @@ IHK_EXPORT_SYMBOL(ihk_ikc_connect);
 int __ihk_send_disconnect(struct ihk_ikc_channel_desc *c)
 {
 	return ihk_ikc_master_send(c->remote_os, IHK_IKC_MASTER_MSG_DISCONNECT, 
-	                           c->remote_channel_id, c->channel_id, 0, 0, 0);
+	                           c->remote_channel_id,
+	                           c->channel_id, 0, 0, c->remote_channel_va, 0);
 }
 
 int __ihk_wait_for_disconnect_ack(struct ihk_ikc_channel_desc *c)
@@ -399,6 +423,10 @@ int ihk_ikc_disconnect(struct ihk_ikc_channel_desc *c)
 	unsigned long flags, cflag;
 	int r = 0;
 
+	if (!c) {
+		return -EINVAL;
+	}
+
 	flags = ihk_ikc_spinlock_lock(&c->lock);
 	c->flag &= ~IKC_FLAG_ENABLED;
 	if (c->flag & IKC_FLAG_DESTROYING) {
@@ -419,3 +447,12 @@ int ihk_ikc_disconnect(struct ihk_ikc_channel_desc *c)
 }
 IHK_EXPORT_SYMBOL(ihk_ikc_disconnect);
 
+void ihk_ikc_destroy_channel(struct ihk_ikc_channel_desc *c)
+{
+    if (!c) {
+        return;
+    }
+    ihk_ikc_disable_channel(c);
+    ihk_ikc_free_channel(c);
+}
+IHK_EXPORT_SYMBOL(ihk_ikc_destroy_channel);
