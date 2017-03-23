@@ -424,7 +424,6 @@ static unsigned long ihk_smp_psci_method = PSCI_METHOD_INVALID;	/* psci_method v
 static int
 ihk_armpmu_get_irq_affinity(int irqs[], const struct arm_pmu *armpmu, const struct smp_os_data *os)
 {
-	const struct smp_boot_param* bp = os->param;
 	struct platform_device* pmu_device;
 	int hwid, virtid, irq;
 
@@ -461,11 +460,9 @@ ihk_armpmu_get_irq_affinity(int irqs[], const struct arm_pmu *armpmu, const stru
 	for (hwid = 0; hwid < SMP_MAX_CPUS; hwid++) {
 		int irq;
 
-/*
-		if (!(CORE_ISSET(hwid, bp->coreset))) {
+		if (!(CORE_ISSET(hwid, os->cpu_hw_ids_map))) {
 			continue;
 		}
-*/
 
 		if (pmu_device->num_resources <= hwid) {
 			pr_err("failed to get core number.\n");
@@ -485,17 +482,15 @@ ihk_armpmu_get_irq_affinity(int irqs[], const struct arm_pmu *armpmu, const stru
 static int
 ihk_armpmu_set_irq_affinity(const int irqs[], const struct smp_os_data *os)
 {
-	const struct smp_boot_param* bp = os->param;
 	int hwid, virtid;
 
 	virtid = 0;
 	for (hwid = 0; hwid < SMP_MAX_CPUS; hwid++) {
 		int irq;
-/*
-		if (!(CORE_ISSET(hwid, bp->coreset))) {
+		if (!(CORE_ISSET(hwid, os->cpu_hw_ids_map))) {
 			continue;
 		}
-*/
+		
 		irq  = irqs[virtid];
 
 		/*
