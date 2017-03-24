@@ -87,8 +87,8 @@ ihk_device_t ihk_os_to_dev(ihk_os_t);
 #define ihk_ikc_get_channel_list_lock ihk_os_get_ikc_channel_lock
 #define ihk_ikc_get_channel_list      ihk_os_get_ikc_channel_list
 
-#define ihk_ikc_get_intr_channel      ihk_os_get_intr_channel
-#define ihk_ikc_set_intr_channel      ihk_os_set_intr_channel
+#define ihk_ikc_get_regular_channel      ihk_os_get_regular_channel
+#define ihk_ikc_set_regular_channel      ihk_os_set_regular_channel
 #endif
 
 #include <ikc/queue.h>
@@ -116,8 +116,8 @@ struct ihk_ikc_channel_desc *ihk_ikc_get_master_channel(ihk_os_t os);
 struct list_head *ihk_ikc_get_channel_list(ihk_os_t os);
 ihk_spinlock_t *ihk_ikc_get_channel_list_lock(ihk_os_t ihk_os);
 
-struct ihk_ikc_channel_desc *ihk_ikc_get_intr_channel(ihk_os_t os, int cpu);
-void ihk_ikc_set_intr_channel(ihk_os_t os, struct ihk_ikc_channel_desc *c, int cpu);
+struct ihk_ikc_channel_desc *ihk_ikc_get_regular_channel(ihk_os_t os, int cpu);
+void ihk_ikc_set_regular_channel(ihk_os_t os, struct ihk_ikc_channel_desc *c, int cpu);
 
 int ihk_ikc_get_unique_channel_id(ihk_os_t ihk_os);
 void ihk_ikc_notify_remote_read(struct ihk_ikc_channel_desc *c);

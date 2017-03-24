@@ -42,6 +42,10 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_NMI_MODE = 5,
 };
 
+/** \brief Type of a ihk interrupt */
+#define INTR_TYPE_IKC_MASTER 0
+#define INTR_TYPE_IKC_REGULAR 1
+
 /** \brief Type of an IHK device */
 typedef void *ihk_device_t;
 /** \brief Type of an IHK kernel */
@@ -264,6 +268,13 @@ struct ihk_os_ops {
 	 *  \param CPU list in the same format as for reserve operation.
 	 **/
 	int (*release_cpu)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Get the IRQ number of IKC
+	 *
+	 *  \return IRQ number of IKC
+	 *  \param itype Type of an interrupt
+	 **/
+	int (*get_ikc_irq)(ihk_os_t, void *, int itype);
 
 	/** \brief Define IKC CPU mapping.
 	*
@@ -693,10 +704,8 @@ struct ihk_resource {
 
 /** \brief Desciptor of the interrupt handlers */
 struct ihk_host_interrupt_handler {
-	/** \brief List head. Internal use. */
-	struct list_head list;
 	/** \brief Pointer to the handler */
-	void (*func)(ihk_os_t os, void *os_priv, void *priv);
+	void (*func)(ihk_os_t os, void *os_priv, void *priv, int irq);
 	/** \brief Private value passed to the handler as the third argument */
 	void *priv;
 	/** \brief Related OS instance. Internal use. */

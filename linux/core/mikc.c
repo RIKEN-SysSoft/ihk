@@ -170,20 +170,26 @@ spinlock_t *ihk_os_get_ikc_channel_lock(ihk_os_t ihk_os)
 	return &os->ikc_channel_lock;
 }
 
-/** \brief Get the interrupted channel (called from IHK-IKC) */
-struct ihk_ikc_channel_desc *ihk_os_get_intr_channel(ihk_os_t ihk_os, int cpu)
+/** \brief Get the regular channel (called from IHK-IKC) */
+struct ihk_ikc_channel_desc *ihk_os_get_regular_channel(ihk_os_t ihk_os, int cpu)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
 
-	return os->intr_channels[cpu];
+	if (cpu < 0 || cpu >= nr_cpu_ids)
+		return NULL;
+
+	return os->regular_channels[cpu];
 }
 
-/** \brief Set the interrupted channel (called from IHK-IKC) */
-void ihk_os_set_intr_channel(ihk_os_t ihk_os, struct ihk_ikc_channel_desc *c, int cpu)
+/** \brief Set the regular channel (called from IHK-IKC) */
+void ihk_os_set_regular_channel(ihk_os_t ihk_os, struct ihk_ikc_channel_desc *c, int cpu)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
 
-	os->intr_channels[cpu] = c;
+	if (cpu < 0 || cpu >= nr_cpu_ids)
+		return;
+
+	os->regular_channels[cpu] = c;
 }
 
 /** \brief Get the interrupt handler of the IKC (called from IHK-IKC) */
@@ -198,9 +204,16 @@ struct ihk_host_interrupt_handler *ihk_host_os_get_ikc_handler(ihk_os_t ihk_os)
  *  (called from IHK-IKC) */
 int ihk_ikc_send_interrupt(struct ihk_ikc_channel_desc *channel)
 {
+	int vector;
+
+	if (channel == channel->master)
+		vector = 0xd0;
+	else
+		vector = 0xd1;
+
 	return ihk_os_issue_interrupt(channel->remote_os, 
 	                              channel->send.queue->read_cpu,
-	                              0xd1);
+	                              vector);
 }
 
 /** \brief Get the lock for the list of listeners (called from IHK-IKC) */
@@ -304,3 +317,4 @@ ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work)
 {
 	return container_of(work, struct ihk_host_linux_os_data, ikc_work);
 }
+
