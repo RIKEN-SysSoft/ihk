@@ -81,7 +81,6 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		                  ihk_ikc_master_channel_packet_handler, c);
 
 		ihk_ikc_channel_set_cpu(c, 0);
-		ihk_ikc_add_intr_channel(ihk_os, c, 0);
 
 		c->recv.qphys = rp;
 		c->send.qphys = wp;
@@ -171,20 +170,20 @@ spinlock_t *ihk_os_get_ikc_channel_lock(ihk_os_t ihk_os)
 	return &os->ikc_channel_lock;
 }
 
-/** \brief Get the list of interrupt channel (called from IHK-IKC) */
-struct list_head *ihk_os_get_intr_list(ihk_os_t ihk_os, int cpu)
+/** \brief Get the interrupted channel (called from IHK-IKC) */
+struct ihk_ikc_channel_desc *ihk_os_get_intr_channel(ihk_os_t ihk_os, int cpu)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
 
-	return &os->intr_list[cpu];
+	return os->intr_channels[cpu];
 }
 
-/** \brief Get the lock for the interrupt channel list (called from IHK-IKC) */
-spinlock_t *ihk_os_get_intr_list_lock(ihk_os_t ihk_os, int cpu)
+/** \brief Set the interrupted channel (called from IHK-IKC) */
+void ihk_os_set_intr_channel(ihk_os_t ihk_os, struct ihk_ikc_channel_desc *c, int cpu)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
 
-	return &os->intr_list_lock[cpu];
+	os->intr_channels[cpu] = c;
 }
 
 /** \brief Get the interrupt handler of the IKC (called from IHK-IKC) */

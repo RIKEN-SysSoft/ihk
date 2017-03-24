@@ -85,10 +85,6 @@ struct ihk_host_linux_os_data {
 	spinlock_t ikc_channel_lock;
 	/** \brief List of the channels available */
 	struct list_head ikc_channels;
-	/** \brief Lock for the intr_list */
-	spinlock_t *intr_list_lock;
-	/** \brief List of the interrupt channel */
-	struct list_head *intr_list;
 
 	/** \brief Interrupt handler */
 	struct ihk_host_interrupt_handler ikc_handler;
@@ -97,6 +93,8 @@ struct ihk_host_linux_os_data {
 
 	/** \brief IKC master channel between the host and this kernel */
 	struct ihk_ikc_channel_desc *mchannel;
+	/** \brief IKC systemcall channels between the host and this kernel */
+	struct ihk_ikc_channel_desc **intr_channels;
 	/** \brief Lock for listeners */
 	spinlock_t listener_lock;
 	/** \brief Array of the listeners */

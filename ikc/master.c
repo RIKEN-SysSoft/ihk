@@ -119,6 +119,7 @@ int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm,
 	ci.channel = c;
 	
 	ihk_ikc_channel_set_cpu(c, intr_cpu);
+	ihk_ikc_set_intr_channel(cm->remote_os, c, intr_cpu);
 
 	if ((r = p->handler(&ci)) != 0) {
 		ihk_ikc_free_channel(c);
@@ -458,15 +459,3 @@ void ihk_ikc_destroy_channel(struct ihk_ikc_channel_desc *c)
     ihk_ikc_free_channel(c);
 }
 IHK_EXPORT_SYMBOL(ihk_ikc_destroy_channel);
-
-void ihk_ikc_add_intr_channel(ihk_os_t os, struct ihk_ikc_channel_desc *c, int cpu)
-{
-	struct list_head *intr_list = ihk_ikc_get_intr_list(os, cpu);
-	ihk_spinlock_t *lock = ihk_ikc_get_intr_list_lock(os, cpu);
-	unsigned long flags;
-
-	flags = ihk_ikc_spinlock_lock(lock);
-	list_add_tail(&c->list_intr, intr_list);
-	ihk_ikc_spinlock_unlock(lock, flags);
-}
-IHK_EXPORT_SYMBOL(ihk_ikc_add_intr_channel);

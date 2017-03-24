@@ -27,21 +27,18 @@ ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work);
 
 static void __ihk_ikc_reception_handler(ihk_os_t os)
 {
-	struct ihk_ikc_channel_desc *c;
-	struct list_head *intr_list = ihk_ikc_get_intr_list(os, smp_processor_id());
-	ihk_spinlock_t *intr_list_lock = ihk_ikc_get_intr_list_lock(os, smp_processor_id());
-	unsigned long flags;
+	struct ihk_ikc_channel_desc *m_channel = ihk_ikc_get_master_channel(os);
+	struct ihk_ikc_channel_desc *intr_channel = ihk_ikc_get_intr_channel(os, smp_processor_id());
 
-	flags = ihk_ikc_spinlock_lock(intr_list_lock);
-	list_for_each_entry(c, intr_list, list_intr) {
-		while (ihk_ikc_channel_enabled(c) &&
-	  	     !ihk_ikc_queue_is_empty(c->recv.queue)) {
-			ihk_ikc_spinlock_unlock(intr_list_lock, flags);
-			ihk_ikc_recv_handler(c, c->handler, os, 0);
-			flags = ihk_ikc_spinlock_lock(intr_list_lock);
-		}
+	while (ihk_ikc_channel_enabled(m_channel) &&
+  	       !ihk_ikc_queue_is_empty(m_channel->recv.queue)) {
+		ihk_ikc_recv_handler(m_channel, m_channel->handler, os, 0);
 	}
-	ihk_ikc_spinlock_unlock(intr_list_lock, flags);
+
+	while (ihk_ikc_channel_enabled(intr_channel) &&
+  	       !ihk_ikc_queue_is_empty(intr_channel->recv.queue)) {
+		ihk_ikc_recv_handler(intr_channel, intr_channel->handler, os, 0);
+	}
 }
 
 /** \brief Worker thread for IKC interrupts */

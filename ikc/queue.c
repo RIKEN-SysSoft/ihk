@@ -210,7 +210,6 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
 	unsigned long flags;
 
 	INIT_LIST_HEAD(&c->list_all);
-	INIT_LIST_HEAD(&c->list_intr);
 	INIT_LIST_HEAD(&c->packet_pool);
 
 	c->remote_os = ros;
