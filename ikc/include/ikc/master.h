@@ -28,7 +28,6 @@ struct ihk_ikc_connect_param {
 	int pkt_size;
 	int queue_size;
 	int magic;
-/* Comment: connect側で割り込み先のCPUを指定 */
 	int intr_cpu;
 	ihk_ikc_ph_t               handler;
 

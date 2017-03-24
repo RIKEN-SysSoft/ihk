@@ -13,7 +13,6 @@ struct ihk_ikc_channel_desc *ihk_mc_get_master_channel(void);
 static ihk_spinlock_t *ihk_ikc_channels_lock;
 static struct list_head *ihk_ikc_channels;
 
-/* Comment: McKernel側の割り込み処理channel_list */
 static ihk_spinlock_t *intr_list_lock;
 static struct list_head *intr_list;
 
@@ -26,7 +25,6 @@ ihk_spinlock_t *ihk_ikc_get_channel_list_lock(ihk_os_t os)
 	return &ihk_ikc_channels_lock[ihk_mc_get_processor_id()];
 }
 
-/* Comment: 割り込み処理channel_list と lockの取得関数 (McKernel側) */
 struct list_head *ihk_ikc_get_intr_list(ihk_os_t os, int cpu)
 {
 	return &intr_list[cpu];
@@ -38,8 +36,6 @@ ihk_spinlock_t *ihk_ikc_get_intr_list_lock(ihk_os_t os, int cpu)
 
 static void ihk_ikc_interrupt_handler(void *priv)
 {
-/* Comment: 自CPUで割り込み処理が必要なchannelのリストを取得し、
-   それぞれのchannelにパケットが届いていれば処理する */
 	/* This should be done in the software irq... */
 	struct ihk_ikc_channel_desc *c;
 	struct list_head *intr_list = ihk_ikc_get_intr_list(NULL, ihk_mc_get_processor_id());
@@ -61,8 +57,6 @@ static void ihk_ikc_interrupt_handler(void *priv)
 
 int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 {
-/* Comment: master_channel での送信通知を廃止
-   通信を行うchannelの宛先CPUに直接割り込みを行う */
 	int r;
 	unsigned long flags;
 
@@ -115,7 +109,6 @@ void ihk_ikc_system_init(ihk_os_t os)
 	ihk_ikc_channels = ihk_ikc_malloc(sizeof(*ihk_ikc_channels) * num_processors);
 	ihk_ikc_channels_lock = ihk_ikc_malloc(sizeof(*ihk_ikc_channels_lock) * num_processors);
 
-/* Comment: 割り込み処理channel_list のinit */
 	intr_list = ihk_ikc_malloc(sizeof(*intr_list) * num_processors);
 	intr_list_lock = ihk_ikc_malloc(sizeof(*intr_list_lock) * num_processors);
 

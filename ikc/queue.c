@@ -205,7 +205,6 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
                        ihk_ikc_ph_t packet_handler,
 					   struct ihk_ikc_channel_desc *master)
 {
-/* Comment: list_head 関連の追加・名前変更への対応 */
 	struct list_head *all_list = ihk_ikc_get_channel_list(ros);
 	ihk_spinlock_t *all_lock = ihk_ikc_get_channel_list_lock(ros);
 	unsigned long flags;

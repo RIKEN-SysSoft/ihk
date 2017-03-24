@@ -60,8 +60,6 @@ int ihk_ikc_listen_port(ihk_os_t os, struct ihk_ikc_listen_param *param)
 		ihk_ikc_spinlock_unlock(lock, flags);
 		return -EBUSY;
 	}
-/* Comment: 受信するCPUはlisten_param で指定しない
-   connect_param で指定する */
 	*p = param;
 	ihk_ikc_spinlock_unlock(lock, flags);
 
@@ -90,7 +88,6 @@ static int ihk_ikc_master_send(ihk_os_t os,
 	return ihk_ikc_send(c, &packet, 0);
 }
 
-/* Comment: 引数に割り込みを受けるCPU(int intr_cpu)を追加 */
 int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm, 
                    struct ihk_ikc_listen_param *p,
                    unsigned long packet_size,
@@ -121,7 +118,6 @@ int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm,
 	memset(&ci, 0, sizeof(ci));
 	ci.channel = c;
 	
-/* Comment: 割り込みを受けるCPU を設定 */
 	ihk_ikc_channel_set_cpu(c, intr_cpu);
 
 	if ((r = p->handler(&ci)) != 0) {
@@ -196,7 +192,6 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 			lock = ihk_ikc_get_listener_lock(os);
 			flags = ihk_ikc_spinlock_lock(lock);
 			p = ihk_ikc_get_listener_entry(os, port);
-/* Comment: acceptの変更に対応 */
 			r = ihk_ikc_accept(c, *p,
 			                   packet->param[0] >> 32,
 			                   &rq, &sq, &newc,
@@ -349,7 +344,6 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 	ihk_ikc_wait_reply_prepare(os, &wq, IHK_IKC_MASTER_MSG_CONNECT_REPLY,
 	                           ref);
 
-/* Comment: connect_param にintr_cpu を追加した対応 */
 	if (ihk_ikc_master_send(os, IHK_IKC_MASTER_MSG_CONNECT, ref,
 	                        ((unsigned long)p->pkt_size << 32) | p->port,
 	                        sq, rq, (uint64_t)c,
@@ -465,7 +459,6 @@ void ihk_ikc_destroy_channel(struct ihk_ikc_channel_desc *c)
 }
 IHK_EXPORT_SYMBOL(ihk_ikc_destroy_channel);
 
-/* Comment: 割り込み処理channel_list へのchannel追加関数 */
 void ihk_ikc_add_intr_channel(ihk_os_t os, struct ihk_ikc_channel_desc *c, int cpu)
 {
 	struct list_head *intr_list = ihk_ikc_get_intr_list(os, cpu);

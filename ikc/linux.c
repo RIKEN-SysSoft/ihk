@@ -27,8 +27,6 @@ ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work);
 
 static void __ihk_ikc_reception_handler(ihk_os_t os)
 {
-/* Comment: 自CPUで処理する必要があるchannelのリストを取得し、
-   それぞれのchannelにパケットが届いていれば処理する */
 	struct ihk_ikc_channel_desc *c;
 	struct list_head *intr_list = ihk_ikc_get_intr_list(os, smp_processor_id());
 	ihk_spinlock_t *intr_list_lock = ihk_ikc_get_intr_list_lock(os, smp_processor_id());

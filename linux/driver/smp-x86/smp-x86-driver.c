@@ -4057,7 +4057,6 @@ static struct irq_chip ihk_irq_chip = {
 	.name = "ihk_irq",
 };
 
-/* Comment: 既存のvector 関連の処理を関数化 */
 static int
 vector_is_used(int vector, int core) {
 	int rtn = 0;
@@ -4139,7 +4138,6 @@ release_vector(int vector, int core) {
 #endif
 }
 
-/* Comment: 割り込みハンドラの登録を、全CPUに実施 */
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 	int error = 0;

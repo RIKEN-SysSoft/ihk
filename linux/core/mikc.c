@@ -80,8 +80,6 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		ihk_ikc_init_desc(c, ihk_os, 0, rq, wq,
 		                  ihk_ikc_master_channel_packet_handler, c);
 
-/* Comment: Linux側のmaster_channelをCPU番号0で待ち受けるよう設定し、
-   待ち受け処理用channel_list に追加 */
 		ihk_ikc_channel_set_cpu(c, 0);
 		ihk_ikc_add_intr_channel(ihk_os, c, 0);
 
@@ -173,7 +171,6 @@ spinlock_t *ihk_os_get_ikc_channel_lock(ihk_os_t ihk_os)
 	return &os->ikc_channel_lock;
 }
 
-/* Comment: 割り込み用channel_list の取得関数 (Linux側) */
 /** \brief Get the list of interrupt channel (called from IHK-IKC) */
 struct list_head *ihk_os_get_intr_list(ihk_os_t ihk_os, int cpu)
 {
