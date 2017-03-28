@@ -1039,9 +1039,13 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 {
 	unsigned a, b;
 	int c, old_c, totaldigits, ndigits;
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	int at_start, in_range;
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	const char __user __force *ubuf = (const char __user __force *)buf;
 	int at_start, in_range;
 	int is_user = 1;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 	totaldigits = c = 0;
 	do {
@@ -1053,11 +1057,15 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 		/* Get the next cpu# or a range of cpu#'s */
 		for (;;) {
 			old_c = c;
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+			c = *buf++;
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
 			if (is_user) {
 				if (__get_user(c, ubuf++))
 					return -EFAULT;
 			} else
 				c = *buf++;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 			/* End of string? */
 			if (!c)
@@ -1127,8 +1135,13 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 	}
 	while (c);
 
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	printk(KERN_INFO "IHK-SMP: assigned CPUs: %s to OS %p\n",
+		buf, ihk_os);
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	printk(KERN_INFO "IHK-SMP: assigned CPUs: %s to OS %p\n",
 		(const char __user __force *)buf, ihk_os);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 	return 0;
 }
@@ -1162,11 +1175,10 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 
 	if (copy_from_user(karg, (char __user *)arg, len)) {
-		kfree(karg);
-		return -EFAULT;
+		ret = -EFAULT;
+		goto err;
 	}
 	cpulist_parse(karg, &cpus_to_assign);
-	kfree(karg);
 #else /* POSTK_DEBUG_ARCH_DEP_46 */
 	/* Validate CPU list provided by user */
 	cpulist_parse((char *)arg, &cpus_to_assign);
@@ -1185,9 +1197,16 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		}
 	}
 
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	ret = __assign_cpus(ihk_os, os, karg);
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	ret = __assign_cpus(ihk_os, os, (char *)arg);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 err:
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	kfree(karg);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	return ret;
 }
 
@@ -1220,11 +1239,10 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 
 	if (copy_from_user(karg, (char __user *)arg, len)) {
-		kfree(karg);
-		return -EFAULT;
+		ret = -EFAULT;
+		goto err;
 	}
 	cpulist_parse(karg, &cpus_to_release);
-	kfree(karg);
 #else /* POSTK_DEBUG_ARCH_DEP_46 */
 	/* Parse CPU list provided by user */
 	cpulist_parse((char *)arg, &cpus_to_release);
@@ -1281,10 +1299,18 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 				ihk_smp_cpus[cpu].hw_id, ihk_os);
 	}
 
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
+		karg, ihk_os);
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
 		(const char __user *)arg, ihk_os);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 err:
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	kfree(karg);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	return ret;
 }
 
@@ -1983,7 +2009,6 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		kfree(karg);
 		return -EINVAL;
 	}
-	kfree(karg);
 #else /* POSTK_DEBUG_ARCH_DEP_46 */
 	/* Parse CPU list provided by user
 	 * FIXME: validate userspace buffer */
@@ -2007,7 +2032,12 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 #endif /* POSTK_DEBUG_ARCH_DEP_54 */
 			printk("%s: invalid CPU requested: %d\n",
 					__FUNCTION__, cpu);
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+			ret = -EINVAL;
+			goto out;
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
 			return -EINVAL;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 		}
 	}
 
@@ -2089,8 +2119,12 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n", karg);
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n",
 			(char *)arg);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	ret = 0;
 	goto out;
 
@@ -2112,6 +2146,9 @@ err_before_offline:
 	}
 
 out:
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	kfree(karg);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	return ret;
 }
 
