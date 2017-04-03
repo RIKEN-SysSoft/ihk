@@ -87,8 +87,7 @@ struct smp_boot_param {
 	unsigned long ns_per_tsc;
 	unsigned long boot_sec;
 	unsigned long boot_nsec;
-	unsigned int ihk_ikc_master_irq;
-	unsigned int ihk_ikc_regular_irq;
+	unsigned int ihk_ikc_irq;
 	unsigned int ihk_ikc_irq_apicids[SMP_MAX_CPUS];
 	char kernel_args[256];
 	int nr_linux_cpus;

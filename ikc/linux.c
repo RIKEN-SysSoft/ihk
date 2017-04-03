@@ -19,36 +19,49 @@ int ihk_ikc_call_master_packet_handler(ihk_os_t ihk_os,
                                        struct ihk_ikc_channel_desc *c,
                                        void *packet);
 struct ihk_ikc_channel_desc *ihk_os_get_master_channel(ihk_os_t __os);
-int ihk_os_get_ikc_irq(ihk_os_t os, int itype);
 
 void ihk_ikc_linux_init_work_data(ihk_os_t ihk_os,
                                   void (*f)(struct work_struct *));
 void ihk_ikc_linux_schedule_work(ihk_os_t ihk_os);
 ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work);
 
-/*
- * Pass packets to mcexec threads directly from IRQ context.
- * Implications: we must use GFP_ATOMIC in all allocations and
- * cannot sleep on semaphores, etc.
- * This buys us ~10000 cycles latency on the KNL.
- */
-static void __ihk_ikc_reception_handler(ihk_os_t os, void *os_priv, void *priv, int irq)
+static void __ihk_ikc_reception_handler(ihk_os_t os)
 {
-	struct ihk_ikc_channel_desc *recv_channel;
+	struct ihk_ikc_channel_desc *m_channel = ihk_ikc_get_master_channel(os);
+	struct ihk_ikc_channel_desc *intr_channel = ihk_ikc_get_intr_channel(os, smp_processor_id());
 
-	if (irq == ihk_os_get_ikc_irq(os, INTR_TYPE_IKC_MASTER)) {
-		recv_channel = ihk_ikc_get_master_channel(os);
+	while (ihk_ikc_channel_enabled(m_channel) &&
+  	       !ihk_ikc_queue_is_empty(m_channel->recv.queue)) {
+		ihk_ikc_recv_handler(m_channel, m_channel->handler, os, 0);
 	}
-	else if (irq == ihk_os_get_ikc_irq(os, INTR_TYPE_IKC_REGULAR)) {
-		recv_channel = ihk_ikc_get_regular_channel(os, smp_processor_id());
-	}
-	else
-		return;
 
-	while (ihk_ikc_channel_enabled(recv_channel) &&
-  	       !ihk_ikc_queue_is_empty(recv_channel->recv.queue)) {
-		ihk_ikc_recv_handler(recv_channel, recv_channel->handler, os, 0);
+	while (ihk_ikc_channel_enabled(intr_channel) &&
+  	       !ihk_ikc_queue_is_empty(intr_channel->recv.queue)) {
+		ihk_ikc_recv_handler(intr_channel, intr_channel->handler, os, 0);
 	}
+}
+
+/** \brief Worker thread for IKC interrupts */
+static void ikc_work_func(struct work_struct *work)
+{
+	ihk_os_t os = ihk_ikc_linux_get_os_from_work(work);
+	__ihk_ikc_reception_handler(os);
+}
+
+/** \brief IKC interrupt handler (interrupt context) */
+static void ihk_ikc_interrupt_handler(ihk_os_t os, void *os_priv, void *priv)
+{
+#ifdef IHK_IKC_RECV_HANDLER_IN_WORKQ
+	ihk_ikc_linux_schedule_work(priv);
+#else
+	/*
+	 * Pass packets to mcexec threads directly from IRQ context.
+	 * Implications: we must use GFP_ATOMIC in all allocations and
+	 * cannot sleep on semaphores, etc.
+	 * This buys us ~10000 cycles latency on the KNL.
+	 */
+	__ihk_ikc_reception_handler(os);
+#endif
 }
 
 /** \brief Get the master channel for an OS */
@@ -60,14 +73,16 @@ struct ihk_ikc_channel_desc *ihk_ikc_get_master_channel(ihk_os_t os)
 /** \brief Initialize the IKC stuffs of an OS */
 void ihk_ikc_system_init(ihk_os_t os)
 {
-	struct ihk_host_interrupt_handler *ikc_h;
+	struct ihk_host_interrupt_handler *h;
 	
-	ikc_h = ihk_host_os_get_ikc_handler(os);
+	h = ihk_host_os_get_ikc_handler(os);
+	
+	INIT_LIST_HEAD(&h->list);
+	h->func = ihk_ikc_interrupt_handler;
+	h->priv = os;
 
-	ikc_h->func = __ihk_ikc_reception_handler;
-	ikc_h->priv = os;
-	
-	ihk_os_register_interrupt_handler(os, 0, ikc_h);
+	ihk_ikc_linux_init_work_data(os, ikc_work_func);
+	ihk_os_register_interrupt_handler(os, 0, h);
 }
 
 void ihk_ikc_system_exit(ihk_os_t os)
@@ -75,6 +90,7 @@ void ihk_ikc_system_exit(ihk_os_t os)
 	struct ihk_host_interrupt_handler *h;
 	
 	h = ihk_host_os_get_ikc_handler(os);
+	
 	ihk_os_unregister_interrupt_handler(os, 0, h);
 }
 

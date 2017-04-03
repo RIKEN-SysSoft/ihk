@@ -287,8 +287,7 @@ unsigned long ident_page_table;
 int ident_npages_order = 0;
 unsigned long *ident_page_table_virt;
 
-int ihk_smp_irq_master = 0;
-int ihk_smp_irq_regular = 0;
+int ihk_smp_irq = 0;
 int ihk_smp_irq_apicid = 0;
 int this_module_put = 0;
 int ihk_smp_reset_cpu(int phys_apicid);
@@ -921,8 +920,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	getnstimeofday(&now);
 	os->param->boot_sec = now.tv_sec;
 	os->param->boot_nsec = now.tv_nsec;
-	os->param->ihk_ikc_master_irq = ihk_smp_irq_master;
-	os->param->ihk_ikc_regular_irq = ihk_smp_irq_regular;
+	os->param->ihk_ikc_irq = ihk_smp_irq;
 	for (i = 0; i < nr_cpu_ids; i++) {
 		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
 	}
@@ -1721,6 +1719,8 @@ static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	if (cpu < 0 || cpu >= os->cpu_info.n_cpus) {
 		return -EINVAL;
 	}
+	//printk("smp_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
+	//shimos_issue_ipi(os->cpu_info.hw_ids[cpu], v);
 	
 	local_irq_save(flags);
 #ifdef CONFIG_X86_X2APIC
@@ -1823,14 +1823,14 @@ static long smp_ihk_os_debug_request(ihk_os_t ihk_os, void *priv,
 	return -EINVAL;
 }
 
-struct ihk_host_interrupt_handler* ikc_handler = NULL;
+static LIST_HEAD(builtin_interrupt_handlers);
 
 static int smp_ihk_os_register_handler(ihk_os_t os, void *os_priv, int itype,
                                        struct ihk_host_interrupt_handler *h)
 {
 	h->os = os;
 	h->os_priv = os_priv;
-	ikc_handler = h;
+	list_add_tail(&h->list, &builtin_interrupt_handlers);
 
 	return 0;
 }
@@ -1838,23 +1838,19 @@ static int smp_ihk_os_register_handler(ihk_os_t os, void *os_priv, int itype,
 static int smp_ihk_os_unregister_handler(ihk_os_t os, void *os_priv, int itype,
                                          struct ihk_host_interrupt_handler *h)
 {
-	ikc_handler = NULL;
+	list_del(&h->list);
 	return 0;
 }
 
 static irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data)
 {
-	struct ihk_host_interrupt_handler *h = NULL;
+	struct ihk_host_interrupt_handler *h;
 
-	if (irq == ihk_smp_irq_master || irq == ihk_smp_irq_regular) {
-		h = ikc_handler;
-	}
-	else {
-		printk("IHK-SMP: warning: Unknown irq\n");
-	}
-
-	if (h && h->func) {
-		h->func(h->os, h->os_priv, h->priv, irq);
+	/* XXX: Linear search? */
+	list_for_each_entry(h, &builtin_interrupt_handlers, list) {
+		if (h->func) {
+			h->func(h->os, h->os_priv, h->priv);
+		}
 	}
 
 	return IRQ_HANDLED;
@@ -2182,25 +2178,6 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 
 	return 0;
-}
-
-static int smp_ihk_os_get_ikc_irq(ihk_os_t ihk_os, void *priv, int itype)
-{
-	int ret;
-
-	switch (itype) {
-	case INTR_TYPE_IKC_MASTER:
-		ret = ihk_smp_irq_master;
-		break;
-	case INTR_TYPE_IKC_REGULAR:
-		ret = ihk_smp_irq_regular;
-		break;
-	default:
-		printk("IHK-SMP: error: Unknown interrupt type\n");
-		ret = -EINVAL;
-	}
-
-	return ret;
 }
 
 static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
@@ -2627,7 +2604,6 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.get_cpu_info = smp_ihk_os_get_cpu_info,
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
-	.get_ikc_irq = smp_ihk_os_get_ikc_irq,
 	.ikc_map = smp_ihk_os_ikc_map,
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
@@ -2818,14 +2794,16 @@ static int smp_ihk_init_ident_page_table(void)
 static irqreturn_t smp_ihk_irq_handler(int irq, void *dev_id)
 {
 	ack_APIC_irq();
-	smp_ihk_irq_call_handlers(irq, NULL);
+	smp_ihk_irq_call_handlers(ihk_smp_irq, NULL);
 	return IRQ_HANDLED;
 }
 
 #ifdef CONFIG_SPARSE_IRQ
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+void (*orig_irq_flow_handler)(struct irq_desc *desc) = NULL;
 void ihk_smp_irq_flow_handler(struct irq_desc *desc)
 #else
+void (*orig_irq_flow_handler)(unsigned int irq, struct irq_desc *desc) = NULL;
 void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0) */
 {
@@ -4097,13 +4075,13 @@ vector_is_used(int vector, int core) {
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
 	if (vectors[vector] != VECTOR_UNUSED) {
-		dprintk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
 				vector, core, vectors[vector]);
 		rtn = 1;
 	}
 #else
 	if (vectors[vector] != -1) {
-		dprintk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
 				vector, core, vectors[vector]);
 		rtn = 1;
 	}
@@ -4112,11 +4090,7 @@ vector_is_used(int vector, int core) {
 }
 
 static void
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-set_vector(struct desc, int vector, int core) {
-#else
 set_vector(int vector, int core) {
-#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
@@ -4266,7 +4240,7 @@ retry_trampoline:
 #ifdef CONFIG_SPARSE_IRQ
 		struct irq_desc *desc;
 #endif
-		int is_used = 0;
+
 		if (test_bit(vector, used_vectors)) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: used\n", vector);
 			continue;
@@ -4274,12 +4248,9 @@ retry_trampoline:
 
 		for (i = 0; i < nr_cpu_ids; i++) {
 			if (vector_is_used(vector, i)) {
-				is_used = 1;
-				break;
+				continue;
 			}
 		}
-		if (is_used)
-			continue;
 
 #ifdef CONFIG_SPARSE_IRQ
 		/* If no descriptor, create one */
@@ -4296,7 +4267,7 @@ retry_trampoline:
 				continue;
 			}
 			desc->chip = _dummy_irq_chip;
-#endif //LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#endif
 		}
 		
 		desc = _irq_to_desc(vector);
@@ -4305,13 +4276,9 @@ retry_trampoline:
 			continue;
 		}
 
-		if (desc->action) {
-			// action is already registered.
-			continue;
-		}
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 		if (desc->status_use_accessors & IRQ_NOREQUEST) {
+			
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
 			
 			desc->status_use_accessors &= ~IRQ_NOREQUEST;
@@ -4323,7 +4290,9 @@ retry_trampoline:
 			
 			desc->status &= ~IRQ_NOREQUEST;
 		}
-#endif //LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#endif
+		orig_irq_flow_handler = desc->handle_irq;
+		desc->handle_irq = ihk_smp_irq_flow_handler;
 #endif // CONFIG_SPARSE_IRQ
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
@@ -4335,37 +4304,25 @@ retry_trampoline:
 			continue;
 		}
 
-#ifdef CONFIG_SPARSE_IRQ
-		desc->handle_irq = ihk_smp_irq_flow_handler;
-#endif
-
-		if (ihk_smp_irq_master == 0) {
-			ihk_smp_irq_master = vector;
+		/* Pretend a real external interrupt */
+		for (i = 0; i < nr_cpu_ids; i++) {
+			set_vector(vector, i);
 		}
-		else {
-			ihk_smp_irq_regular = vector;
-			break;
-		}
+		break;
 	}
 
-	/* Pretend a real external interrupt */
-	for (i = 0; i < nr_cpu_ids; i++) {
-		set_vector(ihk_smp_irq_master, i);
-		set_vector(ihk_smp_irq_regular, i);
-	}
 	if (vector >= 256) {
 		printk(KERN_ERR "IHK-SMP: error: allocating IKC irq vector\n");
 		error = EFAULT;
 		goto error_free_trampoline;
 	}
 
+	ihk_smp_irq = vector;
 	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, 
 		ihk_ikc_irq_core);
 
-	irq_set_chip(ihk_smp_irq_master, &ihk_irq_chip);
-	irq_set_chip_data(ihk_smp_irq_master, NULL);
-	irq_set_chip(ihk_smp_irq_regular, &ihk_irq_chip);
-	irq_set_chip_data(ihk_smp_irq_regular, NULL);
+	irq_set_chip(vector, &ihk_irq_chip);
+	irq_set_chip_data(vector, NULL);
 
 	error = smp_ihk_init_ident_page_table();
 	if (error) {
@@ -4386,17 +4343,16 @@ retry_trampoline:
 	 * This causes rmmod to fail and report the module is in use when one
 	 * tries to unload it. To overcome this, we drop one ref here and get
 	 * an extra one before free_irq in the module's exit code */
-	while (module_refcount(THIS_MODULE) >= 2) {
+	if (module_refcount(THIS_MODULE) == 2) {
 		module_put(THIS_MODULE);
-		this_module_put++;
+		this_module_put = 1;
 	}
 #endif
 
 	return error;
 
 error_free_irq:
-	free_irq(ihk_smp_irq_master, NULL);
-	free_irq(ihk_smp_irq_regular, NULL);
+	free_irq(ihk_smp_irq, NULL);
 
 error_free_trampoline:
 	if (trampoline_page) {
@@ -4465,31 +4421,34 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	int cpu;
 	int i = 0;
 
+#ifdef CONFIG_SPARSE_IRQ
+	struct irq_desc *desc;
+#endif
+
 	/* Release IRQ vector */
 	for (i = 0; i < nr_cpu_ids; i++) {
-		release_vector(ihk_smp_irq_master, i);
-		release_vector(ihk_smp_irq_regular, i);
+		release_vector(ihk_smp_irq, i);
 	}
 
-	irq_set_chip(ihk_smp_irq_master, NULL);
-	irq_set_chip(ihk_smp_irq_regular, NULL);
+	irq_set_chip(ihk_smp_irq, NULL);
 
+#ifdef CONFIG_SPARSE_IRQ
+	desc = _irq_to_desc(ihk_smp_irq);
+	desc->handle_irq = orig_irq_flow_handler;
+#endif
 
 #if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
 	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
-	while (this_module_put > 0) {
+	if (this_module_put) {
 		try_module_get(THIS_MODULE);
-		this_module_put--;
 	}
 #endif
 
-	free_irq(ihk_smp_irq_master, NULL);
-	free_irq(ihk_smp_irq_regular, NULL);
+	free_irq(ihk_smp_irq, NULL);
 	
 #ifdef CONFIG_SPARSE_IRQ
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-	irq_free_descs(ihk_smp_irq_master, 1);
-	irq_free_descs(ihk_smp_irq_regular, 1);
+	irq_free_descs(ihk_smp_irq, 1);
 #endif
 #endif
 

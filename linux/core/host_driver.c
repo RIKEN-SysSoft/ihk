@@ -1096,7 +1096,7 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 	spin_lock_init(&os->event_list_lock);
 	INIT_LIST_HEAD(&os->ikc_channels);
 
-	os->regular_channels = kmalloc(sizeof(*os->regular_channels) * nr_cpu_ids, GFP_KERNEL);
+	os->intr_channels = kmalloc(sizeof(*os->intr_channels) * nr_cpu_ids, GFP_KERNEL);
 
 	INIT_LIST_HEAD(&os->wait_list);
 	INIT_LIST_HEAD(&os->aux_call_list);
@@ -1766,11 +1766,6 @@ int ihk_os_load_file(ihk_os_t os, char *fn) {
 	return __ihk_os_load_file(os, fn);
 }
 
-int ihk_os_get_ikc_irq(ihk_os_t os, int itype)
-{
-	return __ihk_os_get_ikc_irq(os, itype);
-}
-
 int ihk_os_register_interrupt_handler(ihk_os_t os, int itype,
                                       struct ihk_host_interrupt_handler *h)
 {
@@ -2130,7 +2125,6 @@ EXPORT_SYMBOL(ihk_os_load_file);
 EXPORT_SYMBOL(ihk_os_load_memory);
 EXPORT_SYMBOL(ihk_os_boot);
 EXPORT_SYMBOL(ihk_os_shutdown);
-EXPORT_SYMBOL(ihk_os_get_ikc_irq);
 EXPORT_SYMBOL(ihk_os_register_interrupt_handler);
 EXPORT_SYMBOL(ihk_os_unregister_interrupt_handler);
 EXPORT_SYMBOL(ihk_os_get_special_address);

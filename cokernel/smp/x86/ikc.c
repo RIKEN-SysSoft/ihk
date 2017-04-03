@@ -18,12 +18,6 @@ int ihk_mc_ikc_init_first(struct ihk_ikc_channel_desc *channel,
 
 int ihk_ikc_send_interrupt(struct ihk_ikc_channel_desc *channel)
 {	
-	int vector;
-	if (channel == channel->master)
-		vector = ihk_ikc_master_irq;
-	else
-		vector = ihk_ikc_regular_irq;
-
 	return ihk_mc_interrupt_host(channel->send.intr_cpu,
-	                             vector);
+	                             IHK_GV_IKC);
 }

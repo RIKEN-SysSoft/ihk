@@ -21,8 +21,7 @@ extern int no_turbo;
 
 unsigned long x86_kernel_phys_base;
 unsigned long ap_trampoline = 0;
-unsigned int ihk_ikc_master_irq = 0;
-unsigned int ihk_ikc_regular_irq = 0;
+unsigned int ihk_ikc_irq = 0;
 unsigned int ihk_ikc_irq_apicid = 0;
 
 /* NOTEs on parameters: 
@@ -38,8 +37,7 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	boot_param = phys_to_virt(param_addr);
 	boot_param_pa = param_addr;
 	ap_trampoline = _ap_trampoline;
-	ihk_ikc_master_irq = boot_param->ihk_ikc_master_irq;
-	ihk_ikc_regular_irq = boot_param->ihk_ikc_regular_irq;
+	ihk_ikc_irq = boot_param->ihk_ikc_irq;
 	bootstrap_mem_end = boot_param->bootstrap_mem_end;
 
 	/* Set up initial (temporary) stack */
@@ -167,16 +165,15 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 extern void (*x86_issue_ipi)(int, int);
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
-	x86_issue_ipi(ihk_mc_get_apicid(cpu), vector);
+	x86_issue_ipi(ihk_mc_get_apicid(cpu), ihk_ikc_irq);
 	return 0;
 }
 
 int ihk_mc_get_vector(enum ihk_mc_gv_type type)
 {
+
 	switch (type) {
-	case IHK_GV_IKC_MASTER:
-		return 0xd0;
-	case IHK_GV_IKC_REGULAR:
+	case IHK_GV_IKC:
 		return 0xd1;
 	case IHK_GV_QUERY_FREE_MEM:
 		return 200;

@@ -87,12 +87,6 @@ IHK_OS_OPS_BEGIN(int, release_cpu,
 	IHK_OPS_BODY(release_cpu, arg);
 }
 
-IHK_OS_OPS_BEGIN(int, get_ikc_irq, 
-                 int itype)
-{
-	IHK_OPS_BODY(get_ikc_irq, itype);
-}
-
 IHK_OS_OPS_BEGIN(int, ikc_map,
                  unsigned long arg)
 {
