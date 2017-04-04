@@ -15,7 +15,7 @@ struct ihk_ikc_channel_desc *ihk_mc_get_master_channel(void);
 static ihk_spinlock_t *ihk_ikc_channels_lock;
 static struct list_head *ihk_ikc_channels;
 
-static struct ihk_ikc_channel_desc **intr_channels;
+static struct ihk_ikc_channel_desc **regular_channels;
 
 struct list_head *ihk_ikc_get_channel_list(ihk_os_t os)
 {
@@ -26,33 +26,42 @@ ihk_spinlock_t *ihk_ikc_get_channel_list_lock(ihk_os_t os)
 	return &ihk_ikc_channels_lock[ihk_mc_get_processor_id()];
 }
 
-struct ihk_ikc_channel_desc *ihk_ikc_get_intr_channel(ihk_os_t os, int cpu)
+struct ihk_ikc_channel_desc *ihk_ikc_get_regular_channel(ihk_os_t os, int cpu)
 {
-	return intr_channels[cpu];
+	if (cpu < 0 || cpu >= num_processors) {
+		return NULL;
+	}
+
+	return regular_channels[cpu];
 }
 
-void ihk_ikc_set_intr_channel(ihk_os_t os, struct ihk_ikc_channel_desc *c, int cpu)
+void ihk_ikc_set_regular_channel(ihk_os_t os, struct ihk_ikc_channel_desc *c, int cpu)
 {
 	if (cpu >= 0 && cpu < num_processors) {
-		intr_channels[cpu] = c;
+		regular_channels[cpu] = c;
 	}
 }
 
 static void ihk_ikc_interrupt_handler(void *priv)
 {
 	/* This should be done in the software irq... */
-	struct ihk_ikc_channel_desc *m_channel = ihk_ikc_get_master_channel(NULL);
-	struct ihk_ikc_channel_desc *intr_channel = ihk_ikc_get_intr_channel(NULL, ihk_mc_get_processor_id());
+	struct ihk_ikc_channel_desc *m_channel;
+	struct ihk_ikc_channel_desc *r_channel;
 
-	while (ihk_ikc_channel_enabled(m_channel) &&
-	       !ihk_ikc_queue_is_empty(m_channel->recv.queue) &&
-	       m_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
-		ihk_ikc_recv_handler(m_channel, m_channel->handler, NULL, 0);
+	if (ihk_mc_get_processor_id() == 0) {
+		m_channel = ihk_ikc_get_master_channel(NULL);
+		while (ihk_ikc_channel_enabled(m_channel) &&
+		       !ihk_ikc_queue_is_empty(m_channel->recv.queue) &&
+		       m_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
+			ihk_ikc_recv_handler(m_channel, m_channel->handler, NULL, 0);
+		}
 	}
-	while (ihk_ikc_channel_enabled(intr_channel) &&
-	       !ihk_ikc_queue_is_empty(intr_channel->recv.queue) &&
-	       intr_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
-		ihk_ikc_recv_handler(intr_channel, intr_channel->handler, NULL, 0);
+
+	r_channel = ihk_ikc_get_regular_channel(NULL, ihk_mc_get_processor_id());
+	while (ihk_ikc_channel_enabled(r_channel) &&
+	       !ihk_ikc_queue_is_empty(r_channel->recv.queue) &&
+	       r_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
+		ihk_ikc_recv_handler(r_channel, r_channel->handler, NULL, 0);
 	}
 }
 
@@ -108,14 +117,14 @@ void ihk_ikc_system_init(ihk_os_t os)
 	ihk_ikc_channels = ihk_ikc_malloc(sizeof(*ihk_ikc_channels) * num_processors);
 	ihk_ikc_channels_lock = ihk_ikc_malloc(sizeof(*ihk_ikc_channels_lock) * num_processors);
 
-	intr_channels = ihk_ikc_malloc(sizeof(*intr_channels) * num_processors);
+	regular_channels = ihk_ikc_malloc(sizeof(*regular_channels) * num_processors);
 
-	if (!ihk_ikc_channels || !ihk_ikc_channels_lock || !intr_channels) {
+	if (!ihk_ikc_channels || !ihk_ikc_channels_lock || !regular_channels) {
 		kprintf("%s: error allocating channels list\n", __FUNCTION__);
 		panic("");
 	}
 
-	memset(intr_channels, 0, sizeof(*intr_channels) * num_processors);
+	memset(regular_channels, 0, sizeof(*regular_channels) * num_processors);
 
 	for (i = 0; i < num_processors; ++i) {
 		INIT_LIST_HEAD(&ihk_ikc_channels[i]);

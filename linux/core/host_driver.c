@@ -1096,7 +1096,7 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 	spin_lock_init(&os->event_list_lock);
 	INIT_LIST_HEAD(&os->ikc_channels);
 
-	os->intr_channels = kmalloc(sizeof(*os->intr_channels) * nr_cpu_ids, GFP_KERNEL);
+	os->regular_channels = kmalloc(sizeof(*os->regular_channels) * nr_cpu_ids, GFP_KERNEL);
 
 	INIT_LIST_HEAD(&os->wait_list);
 	INIT_LIST_HEAD(&os->aux_call_list);
