@@ -68,6 +68,11 @@ struct smp_boot_param {
 	 * ihk_smp_boot_param_memory_chunk structures.
 	 */
 	unsigned long start, end;
+
+	/* End address of the memory chunk on which kernel sections 
+	   are loaded, used for boundary check in early_alloc_pages(). */
+	unsigned long bootstrap_mem_end;
+
 	unsigned long status;
 	unsigned long msg_buffer;
 	unsigned long msg_buffer_size;

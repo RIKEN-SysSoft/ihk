@@ -13,6 +13,7 @@
 /* BUILTIN Setup.c */
 unsigned long boot_param_pa;
 struct smp_boot_param *boot_param;
+unsigned long bootstrap_mem_end;
 
 extern void main(void);
 extern void setup_arm64(void);
@@ -62,6 +63,7 @@ void start_kernel(struct start_kernel_param *param)
 #endif /*CONFIG_ARM64_64K_PAGES*/
 	ihk_ikc_irq = boot_param->ihk_ikc_irq;
 	ihk_ikc_irq_apicid = boot_param->ihk_ikc_irq_apicid;
+	bootstrap_mem_end = boot_param->bootstrap_mem_end;
 
 	main();
 

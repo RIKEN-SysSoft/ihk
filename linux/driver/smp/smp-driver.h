@@ -58,6 +58,11 @@ struct smp_os_data {
 	unsigned long mem_end;
 	/** \brief Bitmask of NUMA nodes from where memory or
 	 * CPUs are assigned */
+
+	/* Memory chunk for kernel image and bootstrap page table */
+	unsigned long bootstrap_mem_start, bootstrap_mem_end; 
+	int bootstrap_numa_id;
+
 	unsigned long numa_mask;
 
 	/** \brief hardware ID of the bsp of this OS instance */

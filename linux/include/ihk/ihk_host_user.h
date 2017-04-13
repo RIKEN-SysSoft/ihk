@@ -3,7 +3,8 @@
  * \brief
  *	 IHK-Host: ioctl request numbers
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
- * Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
+ * \author Balazs Gerofi  <bgerofi@riken.jp> \par
+ * Copyright (C) 2011-2017 RIKEN AICS>
  */
 #ifndef __HEADER_IHK_HOST_USER_H
 #define __HEADER_IHK_HOST_USER_H
@@ -41,6 +42,7 @@
 #define IHK_OS_RELEASE_MEM            0x112a25
 #define IHK_OS_QUERY_CPU              0x112a26
 #define IHK_OS_QUERY_MEM              0x112a27
+#define IHK_OS_IKC_MAP                0x112a28
 
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff
@@ -73,5 +75,11 @@ typedef struct dumpargs_s {
 	void *buf;
 	void *spare[4];
 } dumpargs_t;
+
+typedef struct ihk_resource_req_s {
+	char *string;
+	int string_len;
+} ihk_resource_req_t;
+
 
 #endif

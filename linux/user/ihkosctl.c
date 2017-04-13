@@ -5,7 +5,8 @@
  * \brief
  *  configures the OSs on coprocessors
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
- *	Copyright (C) 2011 - 2012  Taku Shimosawa
+ * \author Balazs Gerofi  <bgerofi@riken.jp> \par
+ * Copyright (C) 2011-2017 RIKEN AICS>
  */
 #include <config.h>
 #include <stdio.h>
@@ -50,7 +51,8 @@ static int usage(char **arg)
 	fprintf(stderr, "           mem (size@NUMA) \n");
 	fprintf(stderr, "    release cpu|mem \n");
 	fprintf(stderr, "            cpu (cpu_list) \n");
-	fprintf(stderr, "            mem (size@NUMA) \n");
+	fprintf(stderr, "            mem\n");
+	fprintf(stderr, "    ikc_map (cpu_list:cpu+cpu_list:cpu+..) \n");
 	fprintf(stderr, "    query [cpu|mem]\n");
 	fprintf(stderr, "    query_free_mem\n");
 	fprintf(stderr, "    kargs (kernel arg)\n");
@@ -183,24 +185,51 @@ static int do_reserve_mem(int fd)
 	return r;
 }
 
+static int do_ikc_map(int fd)
+{
+	int ret;
+
+	if (__argc < 4) {
+		usage(__argv);
+		return -1;
+	}
+
+	ret = ioctl(fd, IHK_OS_IKC_MAP, __argv[3]);
+
+	if (ret != 0) {
+		fprintf(stderr, "error: setting up IKC map: %s\n", __argv[3]);
+	}
+
+	dprintf("ret = %d\n", ret);
+	return ret;
+}
+
 static int do_assign(int fd)
 {
 	int ret;
+	ihk_resource_req_t req;
 
 	if (__argc < 5) {
 		usage(__argv);
 		return -1;
 	}
 
+	req.string = __argv[4];
+	req.string_len = strlen(__argv[4]);
+	if (!req.string || !req.string_len) {
+		usage(__argv);
+		return -1;
+	}
+
 	if (!strcmp(__argv[3], "cpu")) {
-		ret = ioctl(fd, IHK_OS_ASSIGN_CPU, __argv[4]);
+		ret = ioctl(fd, IHK_OS_ASSIGN_CPU, &req);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: assigning CPUs: %s\n", __argv[4]);
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ioctl(fd, IHK_OS_ASSIGN_MEM, __argv[4]);
+		ret = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: assigning memory: %s\n", __argv[4]);
@@ -733,6 +762,7 @@ int main(int argc, char **argv)
 	else HANDLER(reserve_mem)
 	else HANDLER(assign)
 	else HANDLER(release)
+	else HANDLER(ikc_map)
 	else HANDLER(query)
 	else HANDLER(query_free_mem)
 	else HANDLER(kargs)

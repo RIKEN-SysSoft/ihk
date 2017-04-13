@@ -407,6 +407,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->param->start = os->mem_start;
 	os->param->end = os->mem_end;
+	os->param->bootstrap_mem_end = os->bootstrap_mem_end;
 	os->param->ident_table = ident_page_table;
 	strncpy(os->param->kernel_args, os->kernel_args,
 	        sizeof(os->param->kernel_args));
@@ -455,9 +456,58 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	Elf64_Phdr *elf64p;
 	int i;
 	unsigned long entry;
+	struct ihk_os_mem_chunk *os_mem_chunk_iter;
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	os->bootstrap_mem_start = 0;
+	os->bootstrap_mem_end = 0;
 
-	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->mem_end - os->mem_start < 0) {
-		printk("builtin: OS is not ready to boot.\n");
+	/* Update bootstrap_numa_id with the lowest NUMA id if not set */
+	/* TODO: add IHK API to set bootstrap_numa_id */
+	if (os->bootstrap_numa_id == -1) {
+		int min_numa_id = -1;
+
+		list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+			if (min_numa_id != -1 &&
+					min_numa_id <= os_mem_chunk_iter->numa_id) {
+				continue;
+			}
+
+			min_numa_id = os_mem_chunk_iter->numa_id;
+		}
+
+		os->bootstrap_numa_id = min_numa_id;
+	}
+
+	/* Find the bootstrap memory chunk for image and page table */
+	list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+		if (os_mem_chunk_iter->os != ihk_os ||
+				os_mem_chunk_iter->numa_id != os->bootstrap_numa_id) {
+			continue;
+		}
+
+		/* Find the largest memory chunk on the bootstrap NUMA node */
+		if ((os->bootstrap_mem_end - os->bootstrap_mem_start) <
+				os_mem_chunk_iter->size) {
+			os_mem_chunk = os_mem_chunk_iter;
+			os->bootstrap_mem_start = os_mem_chunk->addr;
+			os->bootstrap_mem_end = os_mem_chunk->addr + os_mem_chunk->size;
+		}
+	}
+
+	if (os_mem_chunk == NULL) {
+		printk("%s: couldn't find NUMA node to load kernel image\n",
+				__FUNCTION__);
+		return -EINVAL;
+	}
+
+	printk("IHK-SMP: bootstrap addr: 0x%lx, chunk size: %lu @ NUMA: %d\n",
+			os->bootstrap_mem_start,
+			os->bootstrap_mem_end - os->bootstrap_mem_start,
+			os->bootstrap_numa_id);
+
+	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) ||
+			os->bootstrap_mem_end - os->bootstrap_mem_start < 0) {
+		printk("%s: OS is not ready to boot\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -475,15 +525,18 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		printk("open failed: %s\n", fn);
 		return -ENOENT;
 	}
-	elf64 = ihk_smp_map_virtual(os->mem_end - PAGE_SIZE, PAGE_SIZE);
+
+	elf64 = ihk_smp_map_virtual(os->bootstrap_mem_end - PAGE_SIZE, PAGE_SIZE);
 	if (!elf64) {
 		printk("error: ioremap() returns NULL\n");
 		return -EINVAL;
 	}
+
 	fs = get_fs();
 	set_fs(get_ds());
-	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=%lx\n",
-	       (unsigned long)ihk_os, os->mem_end - PAGE_SIZE);
+	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n",
+		(unsigned long)ihk_os, os->bootstrap_mem_end - PAGE_SIZE);
+
 	r = vfs_read(file, (char *)elf64, PAGE_SIZE, &pos);
 	set_fs(fs);
 	if (r <= 0) {
@@ -504,8 +557,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	}
 	entry = elf64->e_entry;
 	elf64p = (Elf64_Phdr *)(((char *)elf64) + elf64->e_phoff);
-	phys = (os->mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) &
-	        IHK_SMP_LARGE_PAGE_MASK;
+	phys = (os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
 	maxoffset = phys;
 
 	entry = smp_ihk_adjust_entry(entry, phys);
@@ -531,12 +583,14 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		while(pos < end){
 			long l = end - pos;
 
-			if(l > PAGE_SIZE)
+			if (l > PAGE_SIZE)
 				l = PAGE_SIZE;
-			if (offset + PAGE_SIZE > os->mem_end) {
+
+			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
+
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
 			fs = get_fs();
 			set_fs(get_ds());
@@ -554,20 +608,25 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 			}
 			offset += PAGE_SIZE;
 		}
-		for(size = (size + PAGE_SIZE - 1) & PAGE_MASK; size < psize;
-		    size += PAGE_SIZE){
-			if (offset + PAGE_SIZE > os->mem_end) {
+
+		for (size = (size + PAGE_SIZE - 1) & PAGE_MASK;
+				size < psize; size += PAGE_SIZE) {
+
+			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
 				return -E2BIG;
 			}
+
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
 			memset(buf, '\0', PAGE_SIZE);
 			ihk_smp_unmap_virtual(buf);
 			offset += PAGE_SIZE;
 		}
-		if(offset > maxoffset)
+
+		if (offset > maxoffset)
 			maxoffset = offset;
 	}
+
 	fput(file);
 	ihk_smp_unmap_virtual(elf64);
 
@@ -749,7 +808,6 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 				mem_chunk->size);
 
 		add_free_mem_chunk(mem_chunk);
-		merge_mem_chunks(&ihk_mem_free_chunks);
 
 		kfree(os_mem_chunk);
 	}
@@ -1039,13 +1097,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 {
 	unsigned a, b;
 	int c, old_c, totaldigits, ndigits;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	int at_start, in_range;
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	const char __user __force *ubuf = (const char __user __force *)buf;
-	int at_start, in_range;
-	int is_user = 1;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 	totaldigits = c = 0;
 	do {
@@ -1057,15 +1109,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 		/* Get the next cpu# or a range of cpu#'s */
 		for (;;) {
 			old_c = c;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 			c = *buf++;
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-			if (is_user) {
-				if (__get_user(c, ubuf++))
-					return -EFAULT;
-			} else
-				c = *buf++;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 			/* End of string? */
 			if (!c)
@@ -1135,14 +1179,6 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 	}
 	while (c);
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	printk(KERN_INFO "IHK-SMP: assigned CPUs: %s to OS %p\n",
-		buf, ihk_os);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	printk(KERN_INFO "IHK-SMP: assigned CPUs: %s to OS %p\n",
-		(const char __user __force *)buf, ihk_os);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-
 	return 0;
 }
 
@@ -1153,10 +1189,8 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_assign;
 	unsigned long flags;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	long len = 0;
-	char *karg = NULL;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -1165,24 +1199,36 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
+
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
 	memset(&cpus_to_assign, 0, sizeof(cpus_to_assign));
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	len = strlen_user((char __user *)arg);
-	karg = kzalloc(len + 1, GFP_KERNEL);
-	if (!karg) {
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(karg, (char __user *)arg, len)) {
-		ret = -EFAULT;
-		goto err;
-	}
-	cpulist_parse(karg, &cpus_to_assign);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	/* Validate CPU list provided by user */
-	cpulist_parse((char *)arg, &cpus_to_assign);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	if (cpulist_parse(req_string, &cpus_to_assign) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	/* Check if cores to be assigned are available */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
@@ -1191,22 +1237,22 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	for_each_cpu_mask(cpu, cpus_to_assign) {
 #endif
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
-			dprintk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
+			printk("IHK-SMP: error: CPU core %d is not available for assignment\n", cpu);
 			ret = -EINVAL;
-			goto err;
+			goto out;
 		}
 	}
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	ret = __assign_cpus(ihk_os, os, karg);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	ret = __assign_cpus(ihk_os, os, (char *)arg);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	ret = __assign_cpus(ihk_os, os, req_string);
+	if (ret) {
+		printk("%s: error: assigning CPUs: %s\n", __FUNCTION__, req_string);
+		goto out;
+	}
 
-err:
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	kfree(karg);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	printk(KERN_INFO "IHK-SMP: CPUs: %s assigned to OS %p\n", req_string, ihk_os);
+
+out:
+	if (req_string) kfree(req_string);
 	return ret;
 }
 
@@ -1217,10 +1263,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_release;
 	unsigned long flags;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	long len = 0;
-	char *karg = NULL;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -1229,24 +1273,36 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
+
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
 	memset(&cpus_to_release, 0, sizeof(cpus_to_release));
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	len = strlen_user((char __user *)arg);
-	karg = kzalloc(len + 1, GFP_KERNEL);
-	if (!karg) {
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(karg, (char __user *)arg, len)) {
-		ret = -EFAULT;
-		goto err;
-	}
-	cpulist_parse(karg, &cpus_to_release);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	/* Parse CPU list provided by user */
-	cpulist_parse((char *)arg, &cpus_to_release);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	if (cpulist_parse(req_string, &cpus_to_release) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		ret = -EINVAL;
+		goto out;
+	}
 	
 	/* Check if cores to be released are assigned to this OS */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
@@ -1259,7 +1315,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 			printk("IHK-SMP: error: CPU core %d is not assigned to %p\n",
 			       cpu, ihk_os);
 			ret = -EINVAL;
-			goto err;
+			goto out;
 		}
 	}
 
@@ -1299,18 +1355,11 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 				ihk_smp_cpus[cpu].hw_id, ihk_os);
 	}
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
-		karg, ihk_os);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
 		(const char __user *)arg, ihk_os);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
-err:
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	kfree(karg);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+out:
+	if (req_string) kfree(req_string);
 	return ret;
 }
 
@@ -1344,6 +1393,36 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 
 	return 0;
+}
+
+static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret = 0;
+	struct smp_os_data *os = priv;
+	cpumask_t cpus_to_map;
+	unsigned long flags;
+	char *string = (char *)arg;
+	char *token;
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		ret = -EBUSY;
+		goto out;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	token = strsep(&string, "+");
+	while (token) {
+
+		memset(&cpus_to_map, 0, sizeof(cpus_to_map));
+		printk("%s: %s\n", __FUNCTION__, token);
+
+		token = strsep(&string, "+");
+	}
+
+out:
+	return ret;
 }
 
 static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
@@ -1539,14 +1618,10 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	struct smp_os_data *os = priv;
 	unsigned long flags;
 	int ret = 0;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	char *mem_string = NULL;
+	char *mem_string;
 	char *mem_token;
-	long len = 0;
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	char *mem_string = (char *)arg;
-	char *mem_token;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -1555,60 +1630,59 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	len = strlen_user((char __user *)arg);
-	mem_string = kzalloc(len + 1, GFP_KERNEL);
-	if (!mem_string) {
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(mem_string, (char __user *)arg, len)) {
-		kfree(mem_string);
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
 		return -EFAULT;
 	}
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	mem_string = req_string;
 	mem_token = strsep(&mem_string, ",");
 	while (mem_token) {
 
 		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: os_assign_mem: error: parsing memory string\n");
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-			kfree(mem_string);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-			return ret;
+			goto out;
 		}
 
 		ret = __smp_ihk_os_assign_mem(ihk_os, os, mem_size, numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: os_assign_mem: error: assigning memory chunk\n");
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-			kfree(mem_string);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-			return ret;
+			goto out;
 		}
 
 		mem_token = strsep(&mem_string, ",");
 	}
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	kfree(mem_string);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+out:
+	if (req_string) kfree(req_string);
 	return ret;
 }
 
 static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
-	size_t mem_size;
-	int numa_id;
 	struct smp_os_data *os = priv;
 	unsigned long flags;
-	int ret;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	long len = 0;
-	char *karg = NULL;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	struct ihk_os_mem_chunk *next_chunk = NULL;
+	struct chunk *mem_chunk;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -1617,30 +1691,33 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	len = strlen_user((char __user *)arg);
-	karg = kzalloc(len + 1, GFP_KERNEL);
-	if (!karg) {
-		return -ENOMEM;
+	/* Drop memory chunk used by this OS */
+	/* TODO: parse user string */
+	list_for_each_entry_safe(os_mem_chunk, next_chunk,
+			&ihk_mem_used_chunks, list) {
+
+		if (os_mem_chunk->os != ihk_os) {
+			continue;
+		}
+
+		list_del(&os_mem_chunk->list);
+
+		mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+		mem_chunk->addr = os_mem_chunk->addr;
+		mem_chunk->size = os_mem_chunk->size;
+		mem_chunk->numa_id = os_mem_chunk->numa_id;
+		INIT_LIST_HEAD(&mem_chunk->chain);
+
+		dprintk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
+				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+				mem_chunk->size);
+
+		add_free_mem_chunk(mem_chunk);
+
+		kfree(os_mem_chunk);
 	}
 
-	if (copy_from_user(karg, (char __user *)arg, len)) {
-		kfree(karg);
-		return -EFAULT;
-	}
-
-	ret = smp_ihk_parse_mem(karg, &mem_size, &numa_id);
-	kfree(karg);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-	if (ret != 0) {
-		printk("IHK-SMP: os_assign_mem: error: parsing memory string\n");
-		return ret;
-	}
-
-	/* Do the release */
-	return ret;
+	return 0;
 }
 
 static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
@@ -1696,6 +1773,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.get_cpu_info = smp_ihk_os_get_cpu_info,
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
+	.ikc_map = smp_ihk_os_ikc_map,
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,
@@ -1727,6 +1805,9 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 	spin_lock_init(&os->lock);
 	os->dev = data;
 	regdata->priv = os;
+	/* Put the image into the smallest NUMA id if value is -1,
+	 * use the designated NUMA node otherwise */
+	os->bootstrap_numa_id = -1;
 
 	return 0;
 }
@@ -1926,9 +2007,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		allocated += max;
 	}
 
-	/* Merge free chunks in case this wasn't the first reservation */
-	merge_mem_chunks(&ihk_mem_free_chunks);
-
 	ret = 0;
 
 out:
@@ -1985,59 +2063,52 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int ret;
 	int cpu;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	long len = 0;
-	char *karg = NULL;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-	cpumask_t cpus_to_offline;;
+	cpumask_t cpus_to_offline;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
+
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
+
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
 
 	memset(&cpus_to_offline, 0, sizeof(cpus_to_offline));
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	len = strlen_user((char __user *)arg);
-	karg = kzalloc(len + 1, GFP_KERNEL);
-	if (!karg) {
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(karg, (char __user *)arg, len)) {
-		kfree(karg);
-		return -EFAULT;
-	}
-	if (cpulist_parse(karg, &cpus_to_offline) < 0) {
+	/* Parse CPU list provided by user */
+	if (cpulist_parse(req_string, &cpus_to_offline) < 0) {
 		printk("%s: invalid CPUs requested\n", __FUNCTION__);
-		kfree(karg);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	/* Parse CPU list provided by user
-	 * FIXME: validate userspace buffer */
-	if (cpulist_parse((char *)arg, &cpus_to_offline) < 0) {
-		printk("%s: invalid CPUs requested\n", __FUNCTION__);
-		return -EINVAL;
-	}
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 	/* Ugly, but for_each_cpu doesn't look beyond nr_cpu_ids */
 	for (cpu = nr_cpu_ids;
 			cpu < sizeof(cpus_to_offline) * BITS_PER_BYTE; ++cpu) {
-#ifdef POSTK_DEBUG_ARCH_DEP_54 /* cpu_set() & cpu_isset() linux version depend fix. */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
-		if (cpu_isset(cpu, cpus_to_offline)) {
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0) */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
 		if (cpumask_test_cpu(cpu, &cpus_to_offline)) {
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_54 */
-		if (cpu_isset(cpu, cpus_to_offline)) {
-#endif /* POSTK_DEBUG_ARCH_DEP_54 */
+#else
+ 		if (cpu_isset(cpu, cpus_to_offline)) {
+#endif
 			printk("%s: invalid CPU requested: %d\n",
 					__FUNCTION__, cpu);
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-			ret = -EINVAL;
-			goto out;
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
 			return -EINVAL;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 		}
 	}
 
@@ -2119,12 +2190,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n", karg);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n",
-			(char *)arg);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n", req_string);
 	ret = 0;
 	goto out;
 
@@ -2146,9 +2212,7 @@ err_before_offline:
 	}
 
 out:
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	kfree(karg);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	if (req_string) kfree(req_string);
 	return ret;
 }
 
@@ -2156,36 +2220,40 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int ret;
 	int cpu;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	long len = 0;
-	char *karg = NULL;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-	cpumask_t cpus_to_online;;
+	cpumask_t cpus_to_online;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
-	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
+		return -EFAULT;
+	}
 
-	if (!arg) {
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	len = strlen_user((char __user *)arg);
-	karg = kzalloc(len + 1, GFP_KERNEL);
-	if (!karg) {
-		return -ENOMEM;
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
 	}
 
-	if (copy_from_user(karg, (char __user *)arg, len)) {
-		kfree(karg);
-		return -EFAULT;
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
 	}
-	cpulist_parse(karg, &cpus_to_online);
-	kfree(karg);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	/* Parse CPU list provided by user
-	 * FIXME: validate userspace buffer */
-	cpulist_parse((char *)arg, &cpus_to_online);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+
+	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
+
+	/* Parse CPU list provided by user */
+	if (cpulist_parse(req_string, &cpus_to_online) < 0) {
+		printk("%s: invalid CPUs requested\n", __FUNCTION__);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	/* Collect cores to be onlined */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
@@ -2256,6 +2324,8 @@ err:
 	}
 
 out:
+	if (req_string) kfree(req_string);
+
 	return ret;
 }
 
@@ -2268,8 +2338,7 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	memset(query_res, 0, sizeof(query_res));
 
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE &&
-			ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
 			continue;
 
 		cpumask_set_cpu(cpu, &cpus_reserved);
@@ -2293,92 +2362,91 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 	size_t mem_size;
 	int numa_id;
 	int ret = 0;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	char *mem_string = NULL;
+	char *mem_string;
 	char *mem_token;
-	long len = 0;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
-	len = strlen_user((char __user *)arg);
-	mem_string = kzalloc(len + 1, GFP_KERNEL);
-	if (!mem_string) {
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(mem_string, (char __user *)arg, len)) {
-		kfree(mem_string);
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		printk("%s: error: copying request\n", __FUNCTION__);
 		return -EFAULT;
 	}
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	char *mem_string = (char *)arg;
-	char *mem_token;
 
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	if (req.string_len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	if (!req_string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	mem_string = req_string;
+
+	/* Check mem size */
 	mem_token = strsep(&mem_string, ",");
 	while (mem_token) {
-
 		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: reserve_mem: error: parsing memory string\n");
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-			kfree(mem_string);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-			return ret;
+			break;
 		}
 
-		/* Do the reservation */
-		ret = __ihk_smp_reserve_mem(mem_size, numa_id);
-		if (ret != 0) {
-			printk("IHK-SMP: reserve_mem: error: reserving memory\n");
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-			kfree(mem_string);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-			return ret;
+		if (mem_size % (1024 * 1024 * 4) != 0) {
+			printk("%s: error: mem_size must be in multiples of %d bytes\n",
+					__FUNCTION__, 1024 * 1024 * 4);
+			ret = -1;
+			break;
 		}
 
 		mem_token = strsep(&mem_string, ",");
 	}
+
+	if (ret != 0) {
+		goto out;
+	}
+
+	if (copy_from_user(req_string, req.string, req.string_len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	mem_string = req_string;
+
+	/* Do the reservation */
+	mem_token = strsep(&mem_string, ",");
+	while (mem_token) {
+		smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		ret = __ihk_smp_reserve_mem(mem_size, numa_id);
+		if (ret != 0) {
+			printk("IHK-SMP: reserve_mem: error: reserving memory\n");
+			break;
+		}
+
+		mem_token = strsep(&mem_string, ",");
+	}
+
+out:
+	if (req_string) kfree(req_string);
 
 	return ret;
 }
 
 static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
-//	size_t mem_size;
-//	int numa_id;
-	int ret = 0;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
-	/*
-	long len = 0;
-	char *karg = NULL;
+	int ret;
 
-	len = strlen_user((char __user *)arg);
-	karg = kzalloc(len + 1, GFP_KERNEL);
-	if (!karg) {
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(karg, (char __user *)arg, len)) {
-		kfree(karg);
-		return -EFAULT;
-	}
-	ret = smp_ihk_parse_mem(karg, &mem_size, &numa_id);
-	kfree(karg);
-	if (ret != 0) {
-		printk("IHK-SMP: release_mem: error: parsing memory string\n");
-		return ret;
-	}
-	*/
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	/*
-	ret = smp_ihk_parse_mem((char *)arg, &mem_size, &numa_id);
-	if (ret != 0) {
-		printk("IHK-SMP: release_mem: error: parsing memory string\n");
-		return ret;
-	}
-	*/
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
-	/* Find out if there is enough free memory to be released */
-
+	/* Release everything for now */
+	/* TODO: parse input string */
 	ret = __smp_ihk_free_mem_from_list(&ihk_mem_free_chunks);
 
 	return ret;
@@ -2821,7 +2889,7 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 static struct builtin_device_data builtin_data;
 
 static struct ihk_register_device_data builtin_dev_reg_data = {
-	.name = "builtin",
+	.name = "SMP",
 	.flag = 0,
 	.priv = &builtin_data,
 	.ops = &smp_ihk_device_ops,

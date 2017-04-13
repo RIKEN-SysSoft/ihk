@@ -948,7 +948,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	unsigned long startup_p;
 	unsigned long *startup;
 
-	startup_p = os->mem_end - (2 << IHK_SMP_LARGE_PAGE_SHIFT);
+	startup_p = os->bootstrap_mem_end - (2 << IHK_SMP_LARGE_PAGE_SHIFT);
 	D("startup_p=0x%lx\n", startup_p);
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
