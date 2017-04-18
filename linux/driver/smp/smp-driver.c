@@ -1258,7 +1258,7 @@ out:
 
 static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
-	int ret = 0;
+	int ret;
 	int cpu;
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_release;
@@ -1362,6 +1362,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
 		(const char __user *)arg, ihk_os);
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
+
+	ret = 0;
 
 out:
 	if (req_string) kfree(req_string);
