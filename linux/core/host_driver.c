@@ -28,6 +28,7 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/file.h>
+#include <linux/string.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
 #include <asm/spinlock.h>
@@ -1746,7 +1747,16 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
 
 	/* Then the front of it */
 	if (len_start > 0) {
-		printk("%s", kmsg_buf->str);
+		char *line;
+		char *lines = kmsg_buf->str;
+
+		/* Print line-by-line */
+		line = strsep(&lines, "\n");
+		while (line) {
+			printk("%s\n", line);
+			line = strsep(&lines, "\n");
+		}
+
 		printed = 1;
 	}
 
