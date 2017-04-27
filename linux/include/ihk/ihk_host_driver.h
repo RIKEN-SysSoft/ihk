@@ -19,6 +19,9 @@ enum ihk_os_status {
 	IHK_OS_STATUS_SHUTDOWN,  /* OS is shutting down */
 	IHK_OS_STATUS_STOPPED,   /* OS stopped successfully */
 	IHK_OS_STATUS_FAILED,    /* OS panics or failed to boot */
+	IHK_OS_STATUS_HUNGUP,    /* OS is hungup */
+	IHK_OS_STATUS_FREEZING,  /* OS is freezing */
+	IHK_OS_STATUS_FROZEN,    /* OS is frozen */
 };
 
 /** \brief Status of a manycore device */
@@ -35,6 +38,8 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_KMSG = 1,
 	IHK_SPADDR_MIKC_QUEUE_RECV = 2,
 	IHK_SPADDR_MIKC_QUEUE_SEND = 3,
+	IHK_SPADDR_MONITOR = 4,
+	IHK_SPADDR_NMI_MODE = 5,
 };
 
 /** \brief Type of an IHK device */
@@ -261,12 +266,12 @@ struct ihk_os_ops {
 	int (*release_cpu)(ihk_os_t, void *, unsigned long arg);
 
 	/** \brief Define IKC CPU mapping.
-	 *
-	 *  \return Success or failure.
-	 *  \param List of CPU mappings (see ihkosctl for format).
-	 **/
-	int (*ikc_map)(ihk_os_t, void *, unsigned long arg);
+	*
+	* \return Success or failure.
+	* \param List of CPU mappings (see ihkosctl for format).
+	**/
 
+	int (*ikc_map)(ihk_os_t, void *, unsigned long arg);
 	/** \brief Query CPU cores of an OS instance
 	 *
 	 *  \return Success or failure.
@@ -294,6 +299,18 @@ struct ihk_os_ops {
 	 *  \param Memory
 	 **/
 	int (*query_mem)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Freeze CPU
+	 *
+	 *  \return Success or failure.
+	 **/
+	int (*freeze)(ihk_os_t ihk_os, void *priv);
+
+	/** \brief Wake up CPU
+	 *
+	 *  \return Success or failure.
+	 **/
+	int (*thaw)(ihk_os_t ihk_os, void *priv);
 
 };
 
@@ -842,6 +859,7 @@ int ihk_device_linux_cpu_to_hw_id(ihk_device_t dev, int cpu);
 struct ihk_os_notifier_ops {
 	int (*boot)(int os_index);
 	int (*shutdown)(int os_index);
+	int (*freeze)(int os_index);
 };
 
 struct ihk_os_notifier {
@@ -851,4 +869,23 @@ struct ihk_os_notifier {
 
 int ihk_host_register_os_notifier(struct ihk_os_notifier *ion);
 int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
+
+void ihk_os_event_signal(ihk_os_t os);
+
+/** \brief IHK-Monitor */
+struct ihk_os_monitor {
+	int status;
+#define IHK_OS_MONITOR_NOT_BOOT 0
+#define IHK_OS_MONITOR_IDLE 1
+#define IHK_OS_MONITOR_USER 2
+#define IHK_OS_MONITOR_KERNEL 3
+#define IHK_OS_MONITOR_KERNEL_HEAVY 4
+#define IHK_OS_MONITOR_KERNEL_OFFLOAD 5
+#define IHK_OS_MONITOR_PANIC 99
+	int status_bak;
+	unsigned long counter;
+	unsigned long ocounter;
+	unsigned long user_tsc;
+	unsigned long system_tsc;
+};
 #endif

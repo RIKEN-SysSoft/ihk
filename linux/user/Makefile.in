@@ -6,7 +6,7 @@ SBINDIR=@SBINDIR@
 MANDIR=@MANDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
-TARGET=ihkconfig ihkosctl memdump pagetable maccess memdump-mic mcklogd
+TARGET=libihk.so ihkconfig ihkosctl memdump pagetable maccess memdump-mic mcklogd
 
 .PHONY: all clean install
 
@@ -15,6 +15,15 @@ all: $(TARGET)
 clean:
 	$(RM) $(TARGET) *.o
 
+libihk.so:  ihklib.c ihklib.h
+	${CC} ${CFLAGS} -shared -fPIC -lpthread -o $@ $<
+
+ihkconfig: ihkconfig.c
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(SBINDIR)
+
+ihkosctl: ihkosctl.c
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(SBINDIR)
+
 %: %.c
 	${CC} ${CFLAGS} -o $@ $< ${LIBS}
 
@@ -22,6 +31,7 @@ install:
 	mkdir -p -m 755 $(SBINDIR)
 	install -m 755 ihkconfig $(SBINDIR)/ihkconfig
 	install -m 755 ihkosctl $(SBINDIR)/ihkosctl
+	install -m 755 libihk.so $(SBINDIR)/libihk.so
 	mkdir -p -m 755 $(MANDIR)/man1
 	install -m 644 ihkconfig.1 $(MANDIR)/man1/ihkconfig.1
 	install -m 644 ihkosctl.1 $(MANDIR)/man1/ihkosctl.1

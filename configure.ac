@@ -290,6 +290,7 @@ AC_CONFIG_FILES([
 	linux/driver/attached/mic/Makefile
 	linux/user/ihkconfig.1:linux/user/ihkconfig.1in
 	linux/user/ihkosctl.1:linux/user/ihkosctl.1in
+	linux/user/ihklib.h:linux/user/ihklib.h.in
 	cokernel/Makefile.common
 ])
 
