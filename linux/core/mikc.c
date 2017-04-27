@@ -183,6 +183,10 @@ void ihk_os_set_regular_channel(ihk_os_t ihk_os, struct ihk_ikc_channel_desc *c,
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
 
+	if (cpu < 0 || cpu > num_possible_cpus()) {
+		dprintf("%s: WARNING: invalid CPU number: %d\n", __FUNCTION__, cpu);
+		return;
+	}
 	os->regular_channels[cpu] = c;
 }
 
