@@ -94,6 +94,12 @@ enum ihk_os_status {
 	IHK_STATUS_FROZEN,
 };
 
+enum ihk_perf_event {
+	PERF_EVENT_ENABLE,
+	PERF_EVENT_DISABLE,
+	PERF_EVENT_DESTROY,
+};
+
 typedef struct {
 	enum ihk_resource_type resource_type;
 	cpu_set_t cpu_set;

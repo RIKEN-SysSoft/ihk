@@ -2045,3 +2045,83 @@ int ihk_thaw (int index)
 	}
 	return ret;
 }
+
+/* ihk_setperfevent */
+int ihk_setperfevent (int index, struct ihk_perf_event_attr *attr, int n)
+{
+	char fn[128];
+	int ret;
+	int fd = 0;
+
+	sprintf(fn, "/dev/mcos%d", index);
+	fd = open(fn, O_RDONLY);
+	if (fd < 0) {
+	  ret=-ENOENT;
+	}
+	else {
+	  ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
+	  if (ret != 0) {
+	    fprintf(stderr, "error: ihk_setperfevent() \n");
+	  }
+	  ret = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
+	  if (ret < 0) {
+	    fprintf(stderr, "error: ihk_setperfevent() \n");
+	  }
+	}
+	return ret;
+}
+
+/* ihk_perfctl */
+int ihk_perfctl (int index, int comm)
+{
+	char fn[128];
+	int ret;
+	int fd = 0;
+
+
+	sprintf(fn, "/dev/mcos%d", index);
+	fd = open(fn, O_RDONLY);
+	if (fd < 0) {
+	  ret=-ENOENT;
+	}
+	else {
+	  switch (comm) {
+	    case PERF_EVENT_ENABLE : /* start PA event */
+	      ret = ioctl(fd, IHK_OS_AUX_PERF_ENABLE, 0);
+	      break;
+	    case PERF_EVENT_DISABLE : /* stop PA event */
+	      ret = ioctl(fd, IHK_OS_AUX_PERF_DISABLE, 0);
+	      break;
+	    case PERF_EVENT_DESTROY : /* delete PA event */
+	      ret = ioctl(fd, IHK_OS_AUX_PERF_DESTROY, 0);
+	      break;
+	    default:
+	      return(-EINVAL);
+	  }
+	  if (ret != 0) {
+	    fprintf(stderr, "error: ihk_perfctl() \n");
+	  }
+	}
+	return ret;
+}
+
+/* ihk_getperfevent */
+int ihk_getperfevent (int index, unsigned long *counter, int n)
+{
+	char fn[128];
+	int ret;
+	int fd = 0;
+
+	sprintf(fn, "/dev/mcos%d", index);
+	fd = open(fn, O_RDONLY);
+	if (fd < 0) {
+	  ret=-ENOENT;
+	}
+	else {
+	  ret = ioctl(fd, IHK_OS_AUX_PERF_GET, counter);
+	  if (ret != 0) {
+	    fprintf(stderr, "error: ihk_getperfevent() \n");
+	  }
+	}
+	return ret;
+}
