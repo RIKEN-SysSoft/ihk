@@ -39,6 +39,11 @@ static void __ihk_ikc_reception_handler(ihk_os_t os)
 	}
 
 	r_channel = ihk_ikc_get_regular_channel(os, smp_processor_id());
+	if (!r_channel) {
+		printk("%s: ERROR: r_channel for CPU %d does not exist\n",
+				__FUNCTION__, smp_processor_id());
+		return;
+	}
 	while (ihk_ikc_channel_enabled(r_channel) &&
 	       !ihk_ikc_queue_is_empty(r_channel->recv.queue)) {
 		ihk_ikc_recv_handler(r_channel, r_channel->handler, os, 0);
