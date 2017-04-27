@@ -206,5 +206,8 @@ int ihk_setperfevent(int index, ihk_perf_event_attr attr[], int n);
 int ihk_perfctl(int index, int comm);
 int ihk_getperfevent(int index, unsigned long *counter, int n);
 
+int ihk_freeze (int index);
+int ihk_thaw (int index);
+
 #endif
 
