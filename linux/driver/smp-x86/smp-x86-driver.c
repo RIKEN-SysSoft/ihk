@@ -529,7 +529,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 {
 	unsigned long send_status, accept_status = 0;
 	int maxlvt, num_starts, j;
-	unsigned long flags;
 
 	maxlvt = _lapic_get_maxlvt();
 
@@ -550,7 +549,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 	/*
 	 * Send IPI
 	 */
-	local_irq_save(flags);
 	apic_icr_write(APIC_INT_LEVELTRIG | APIC_INT_ASSERT | APIC_DM_INIT,
 		       phys_apicid);
 
@@ -567,7 +565,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 
 	pr_debug("Waiting for send to finish...\n");
 	send_status = safe_apic_wait_icr_idle();
-	local_irq_restore(flags);
 
 	mb();
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
@@ -604,7 +601,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 		/* Target chip */
 		/* Boot on the stack */
 		/* Kick the second */
-		local_irq_save(flags);
 		apic_icr_write(APIC_DM_STARTUP | (start_eip >> 12),
 			       phys_apicid);
 
@@ -617,7 +613,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 
 		pr_debug("Waiting for send to finish...\n");
 		send_status = safe_apic_wait_icr_idle();
-		local_irq_restore(flags);
 
 		/*
 		 * Give the other CPU some time to accept the IPI.
@@ -641,7 +636,10 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 
 int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 {
-	
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+	atomic_set(_init_deasserted, 0);
+#endif
+
 	if (_get_uv_system_type() != UV_NON_UNIQUE_APIC) {
 
 		pr_debug("Setting warm reset code and vector.\n");
@@ -657,10 +655,18 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 	}
 
 	if (apic->wakeup_secondary_cpu) {
+		printk("%s: apic->wakeup_secondary_cpu()\n", __FUNCTION__);
 		return apic->wakeup_secondary_cpu(apicid, start_eip);
 	}
 	else {
-		return smp_wakeup_secondary_cpu_via_init(apicid, start_eip);
+		int ret;
+		printk("%s: smp_wakeup_secondary_cpu_via_init()\n", __FUNCTION__);
+
+		preempt_disable();
+		ret = smp_wakeup_secondary_cpu_via_init(apicid, start_eip);
+		preempt_enable();
+
+		return ret;
 	}
 }
 
@@ -817,8 +823,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		bp_cpu->ikc_cpu = ihk_smp_cpus[lwk_cpu_2_linux_cpu(os, lwk_cpu)].ikc_map_cpu;
 		os->cpu_ikc_map[lwk_cpu] = bp_cpu->ikc_cpu;
 
-		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU APIC: %d, IKC CPU: %d\n",
-				os, cpu_to_node(os->cpu_mapping[lwk_cpu]), 
+		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, LWK CPU: %d,"
+				" CPU APIC: %d, IKC CPU: %d\n",
+				os, cpu_to_node(os->cpu_mapping[lwk_cpu]), lwk_cpu,
 				bp_cpu->hw_id, bp_cpu->ikc_cpu);
 
 		++bp_cpu;
@@ -4370,6 +4377,7 @@ int ihk_smp_reset_cpu(int phys_apicid) {
 	unsigned long send_status;
 	int maxlvt;
 
+	preempt_disable();
 	dprintk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", phys_apicid);
 
 	maxlvt = _lapic_get_maxlvt();
@@ -4408,6 +4416,7 @@ int ihk_smp_reset_cpu(int phys_apicid) {
 	pr_debug("Waiting for send to finish...\n");
 	send_status = safe_apic_wait_icr_idle();
 
+	preempt_enable();
 	return 0;
 }
 
