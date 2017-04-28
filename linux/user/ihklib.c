@@ -2000,7 +2000,11 @@ int __ihk_makedumpfile(int index, char *dumpfile, int opt, char *vmfile, struct 
 	__argv[4] = optstr;
 	__argv[5] = vmfile;
 	__argc = 6;
+#ifdef ENABLE_MEMDUMP
+	ret = do_dump(fd, fp);
+#else
 	ret = do_dump(fd);
+#endif // ENABLE_MEMDUMP
 	return(ret);
 }
 
