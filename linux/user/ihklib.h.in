@@ -38,20 +38,12 @@
 
 #include <ihk/affinity.h> 
 
-<<<<<<< HEAD
 typedef struct ihk_mem_chunk {
-=======
-typedef struct {
->>>>>>> create rusage branch.
 	unsigned long size;
 	int numa_node_number;
 } ihk_mem_chunk;
 
-<<<<<<< HEAD
 typedef struct ihk_info {
-=======
-typedef struct {
->>>>>>> create rusage branch.
 	ihk_mem_chunk *reserved_mem_chunks;
 	int num_reserved_mem_chunks;
 	cpu_set_t reserved_cpu_set;
