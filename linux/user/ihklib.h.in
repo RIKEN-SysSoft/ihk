@@ -38,12 +38,12 @@
 
 #include <ihk/affinity.h> 
 
-typedef struct {
+typedef struct ihk_mem_chunk {
 	unsigned long size;
 	int numa_node_number;
 } ihk_mem_chunk;
 
-typedef struct {
+typedef struct ihk_info {
 	ihk_mem_chunk *reserved_mem_chunks;
 	int num_reserved_mem_chunks;
 	cpu_set_t reserved_cpu_set;
@@ -100,7 +100,7 @@ enum ihk_perf_event {
 	PERF_EVENT_DESTROY,
 };
 
-typedef struct {
+typedef struct ihkconfig {
 	enum ihk_resource_type resource_type;
 	cpu_set_t cpu_set;
 	ihk_mem_chunk *mem_chunks;
@@ -109,7 +109,7 @@ typedef struct {
 	int numa_node;
 } ihkconfig;
 
-typedef struct {
+typedef struct ihkosctl {
 	enum ihk_resource_type resource_type;
 	cpu_set_t cpu_set;
 	ihk_mem_chunk *mem_chunks;
@@ -122,14 +122,14 @@ typedef struct {
 	int numa_node;
 } ihkosctl;
 
-typedef struct {
+typedef struct ihk_osinfo {
 	ihk_mem_chunk *mem_chunks;
 	int num_mem_chunks;
 	cpu_set_t mask;
 	enum ihk_os_status status;
 } ihk_osinfo;
 
-typedef struct {
+typedef struct ihk_rusage {
 	unsigned long rss;
 	unsigned long cache;
 	unsigned long rss_huge;
@@ -149,7 +149,7 @@ typedef struct {
 	int max_num_threads;
 } ihk_rusage;
 
-struct ihk_perf_event_attr{
+typedef struct ihk_perf_event_attr {
 	unsigned long config; 
 	unsigned disabled:1;
 	unsigned pinned:1;
@@ -157,7 +157,7 @@ struct ihk_perf_event_attr{
 	unsigned exclude_kernel:1;
 	unsigned exclude_hv:1;
 	unsigned exclude_idle:1;
-};
+} ihk_perf_event_attr;
 
 struct ihk_bfd_func {
 	void (*bfd_init)(void);
@@ -208,7 +208,7 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl);
 int ihk_getrusage (int index, ihk_rusage *rusage);
 int ihk_getosinfo (int index, ihk_osinfo *osinfo);
 
-int ihk_setperfevent(int index, struct ihk_perf_event_attr attr[], int n);
+int ihk_setperfevent (int index, struct ihk_perf_event_attr *attr, int n);
 int ihk_perfctl(int index, int comm);
 int ihk_getperfevent(int index, unsigned long *counter, int n);
 
