@@ -297,7 +297,7 @@ static int do_release(int fd)
 static int do_query(int fd)
 {
 	int ret;
-	char query_result[1024];
+	char query_result[65536];
 
 	if (__argc < 4) {
 		usage(__argv);
