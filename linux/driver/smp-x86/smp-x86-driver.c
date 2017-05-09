@@ -1744,6 +1744,10 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 {
 	struct smp_os_data *os = priv;
 
+	if (!os->param) {
+		return -EINVAL;
+	}
+
 	switch (type) {
 	case IHK_SPADDR_KMSG:
 		if (os->param->msg_buffer) {
