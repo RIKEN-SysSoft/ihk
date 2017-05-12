@@ -76,6 +76,7 @@ struct dump_mem_chunk {
 
 typedef struct dump_mem_chunks_s {
 	int nr_chunks;
+	unsigned long kernel_base;
 	struct dump_mem_chunk chunks[];
 } dump_mem_chunks_t;
 

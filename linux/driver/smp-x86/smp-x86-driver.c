@@ -1635,6 +1635,9 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		}
 
 		mem_chunks->nr_chunks = i;
+		/* See load_file() for the calculation below */
+		mem_chunks->kernel_base =
+			(os->bootstrap_mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
 
 		return 0;
 	}
