@@ -1403,7 +1403,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	if (os->param && os->param_pages_order) {
-		free_pages(os->param, os->param_pages_order);
+		free_pages((unsigned long)os->param, os->param_pages_order);
 	}
 
 	return 0;
@@ -4154,6 +4154,7 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 	int vector = IRQ15_VECTOR + 2;
 #endif
 	int i = 0;
+	int is_used = 0;
 
 	INIT_LIST_HEAD(&ihk_mem_free_chunks);
 	INIT_LIST_HEAD(&ihk_mem_used_chunks);
@@ -4255,8 +4256,14 @@ retry_trampoline:
 
 		for (i = 0; i < nr_cpu_ids; i++) {
 			if (vector_is_used(vector, i)) {
-				continue;
+				is_used = 1;
+				break;
 			}
+		}
+
+		if (is_used) {
+			is_used = 0;
+			continue;
 		}
 
 #ifdef CONFIG_SPARSE_IRQ
@@ -4280,6 +4287,11 @@ retry_trampoline:
 		desc = _irq_to_desc(vector);
 		if (!desc) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: no descriptor\n", vector);
+			continue;
+		}
+
+		if (desc->action) {
+			// action is already registered.
 			continue;
 		}
 
@@ -4327,6 +4339,8 @@ retry_trampoline:
 	ihk_smp_irq = vector;
 	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, 
 		ihk_ikc_irq_core);
+	printk(KERN_INFO "IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n",
+	    ihk_smp_irq, ihk_ikc_irq_core, ihk_smp_irq_apicid);
 
 	irq_set_chip(vector, &ihk_irq_chip);
 	irq_set_chip_data(vector, NULL);
