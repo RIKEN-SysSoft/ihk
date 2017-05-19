@@ -2051,7 +2051,7 @@ int ihk_thaw (int index)
 }
 
 /* ihk_setperfevent */
-int ihk_setperfevent (int index, struct ihk_perf_event_attr *attr, int n)
+int ihk_setperfevent (int index, ihk_perf_event_attr *attr, int n)
 {
 	char fn[128];
 	int ret;
