@@ -832,6 +832,42 @@ int ihk_os_register_user_call_handlers(ihk_os_t os,
 void ihk_os_unregister_user_call_handlers(ihk_os_t os,
                                           struct ihk_os_user_call *);
 
+struct ihk_os_cpu_register {
+	unsigned long addr;
+	unsigned long val;
+	unsigned long addr_ext;
+};
+
+/** \brief Kernel space callbacks for an OS implementation */
+struct ihk_os_kernel_call_handler {
+	/* Obtain LWK CPU for threads that are in a syscall offload */
+	int (*get_request_cpu)(ihk_os_t os, int *ret_cpu);
+	/* LWK CPU register (MSR) operation  */
+	int (*read_cpu_register)(ihk_os_t os, int cpu,
+			struct ihk_os_cpu_register *desc);
+	int (*write_cpu_register)(ihk_os_t os, int cpu,
+			struct ihk_os_cpu_register *desc);
+};
+
+/** \brief Set kernel callback handlers for an OS instance */
+int ihk_os_set_kernel_call_handlers(ihk_os_t ihk_os,
+		struct ihk_os_kernel_call_handler *handlers);
+
+/** \brief Clear kernel callback handlers for an OS instance */
+int ihk_os_clear_kernel_call_handlers(ihk_os_t ihk_os);
+
+/** \brief Get requester OS and CPU of a thread in a syscall offload */
+int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu);
+
+/** \brief Read CPU register of an OS instance */
+int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
+		struct ihk_os_cpu_register *desc);
+
+/** \brief Write CPU register of an OS instance */
+int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
+		struct ihk_os_cpu_register *desc);
+
+
 /** \brief Get a DMA information of the device */
 int ihk_device_get_dma_info(ihk_device_t data, struct ihk_dma_info *info);
 /** \brief Get the DMA channel descriptor for the specified channel */

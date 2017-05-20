@@ -122,6 +122,9 @@ struct ihk_host_linux_os_data {
 	spinlock_t event_list_lock;
 	/** \brief event list */
 	struct list_head event_list;
+
+	/** \brief Linux kernel level callbacks */
+	struct ihk_os_kernel_call_handler *kernel_handlers;
 };
 
 /** \brief Structure that manages a kernel instance fd in Linux */

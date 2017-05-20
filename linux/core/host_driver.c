@@ -2011,6 +2011,73 @@ int ihk_host_os_get_index(ihk_os_t ihk_os)
 	return -1;
 }
 
+int ihk_os_set_kernel_call_handlers(ihk_os_t ihk_os,
+	struct ihk_os_kernel_call_handler *handlers)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	os->kernel_handlers = handlers;
+
+	return 0;
+}
+
+int ihk_os_clear_kernel_call_handlers(ihk_os_t ihk_os)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	os->kernel_handlers = NULL;
+
+	return 0;
+}
+
+int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
+		struct ihk_os_cpu_register *desc)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+
+	if (!os || !os->kernel_handlers ||
+			!os->kernel_handlers->read_cpu_register) {
+		return -EINVAL;
+	}
+
+	return os->kernel_handlers->read_cpu_register(ihk_os, cpu, desc);
+}
+
+int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
+		struct ihk_os_cpu_register *desc)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+
+	if (!os || !os->kernel_handlers ||
+			!os->kernel_handlers->write_cpu_register) {
+		return -EINVAL;
+	}
+
+	return os->kernel_handlers->write_cpu_register(ihk_os, cpu, desc);
+}
+
+int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
+{
+	struct ihk_host_linux_os_data *os;
+
+	/*
+	 * Look up IHK OS structure
+	 * TODO: iterate all possible indeces, currently only for OS 0
+	 */
+	os = (struct ihk_host_linux_os_data *)ihk_host_find_os(0, NULL);
+	if (!os) {
+		printk("%s: ERROR: no OS found for index 0\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (!os->kernel_handlers ||
+			!os->kernel_handlers->get_request_cpu) {
+		return -EINVAL;
+	}
+
+	*ihk_os = (ihk_os_t *)os;
+	return os->kernel_handlers->get_request_cpu(os, cpu);
+}
+
+
 int ihk_os_register_user_call_handlers(ihk_os_t ihk_os,
                                        struct ihk_os_user_call *clist)
 {
@@ -2150,6 +2217,11 @@ EXPORT_SYMBOL(ihk_device_unmap_memory);
 EXPORT_SYMBOL(ihk_os_issue_interrupt);
 EXPORT_SYMBOL(ihk_os_register_user_call_handlers);
 EXPORT_SYMBOL(ihk_os_unregister_user_call_handlers);
+EXPORT_SYMBOL(ihk_os_set_kernel_call_handlers);
+EXPORT_SYMBOL(ihk_get_request_os_cpu);
+EXPORT_SYMBOL(ihk_os_read_cpu_register);
+EXPORT_SYMBOL(ihk_os_write_cpu_register);
+EXPORT_SYMBOL(ihk_os_clear_kernel_call_handlers);
 EXPORT_SYMBOL(ihk_os_get_memory_info);
 EXPORT_SYMBOL(ihk_os_get_cpu_info);
 EXPORT_SYMBOL(ihk_device_get_dma_channel);
