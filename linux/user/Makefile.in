@@ -1,8 +1,10 @@
 CC=@CC@
 ARCH=@ARCH@
 IHKBASE ?= @abs_srcdir@/../..
-CFLAGS=-Wall -O -I$(IHKBASE)/linux/include/ -I$(IHKBASE)/linux/include/ihk/arch/$(ARCH) -I.
+CFLAGS=-Wall -O -I$(IHKBASE)/linux/include/ -I$(IHKBASE)/linux/include/ihk/arch/$(ARCH) -I@abs_builddir@
 SBINDIR=@SBINDIR@
+LIBDIR=@LIBDIR@
+INCLUDEDIR=@INCLUDEDIR@
 MANDIR=@MANDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
@@ -19,10 +21,10 @@ libihk.so:  ihklib.c ihklib.h
 	${CC} ${CFLAGS} -shared -fPIC -lpthread -o $@ $<
 
 ihkconfig: ihkconfig.c
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(SBINDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
 
 ihkosctl: ihkosctl.c
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(SBINDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
 
 %: %.c
 	${CC} ${CFLAGS} -o $@ $< ${LIBS}
@@ -31,7 +33,12 @@ install:
 	mkdir -p -m 755 $(SBINDIR)
 	install -m 755 ihkconfig $(SBINDIR)/ihkconfig
 	install -m 755 ihkosctl $(SBINDIR)/ihkosctl
-	install -m 755 libihk.so $(SBINDIR)/libihk.so
+	mkdir -p -m 755 $(LIBDIR)
+	install -m 755 libihk.so $(LIBDIR)/libihk.so
+	mkdir -p -m 755 $(INCLUDEDIR)
+	install -m 644 ihklib.h $(INCLUDEDIR)/ihklib.h
+	mkdir -p -m 755 $(INCLUDEDIR)/ihk
+	install -m 644 $(IHKBASE)/linux/include/ihk/affinity.h $(INCLUDEDIR)/ihk/affinity.h
 	mkdir -p -m 755 $(MANDIR)/man1
 	install -m 644 ihkconfig.1 $(MANDIR)/man1/ihkconfig.1
 	install -m 644 ihkosctl.1 $(MANDIR)/man1/ihkosctl.1

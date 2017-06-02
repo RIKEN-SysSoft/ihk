@@ -198,7 +198,7 @@ int ihk_getoslist(int oslist[], int n);
 
 int ihk_geteventfd(int index, int type);
 
-int ihk_getihk_info (ihk_info *info);
+int ihk_getihkinfo (ihk_info *info);
 
 int __ihk_makedumpfile(int index, char *dumpfile, int opt, char *vmfile, struct ihk_bfd_func *);
 

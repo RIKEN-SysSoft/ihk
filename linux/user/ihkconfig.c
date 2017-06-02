@@ -374,9 +374,9 @@ static int do_getinfo(int fd)
 	info->num_reserved_mem_chunks = 0;
 	info->num_assigned_mem_chunks = 0;
 
-	ret = ihk_getihk_info(info);
+	ret = ihk_getihkinfo(info);
 	if (ret == -1) {
-		perror("ihk_getihk_info(1st) failed");
+		perror("ihk_getihkinfo(1st) failed");
 		exit(-1);
 	}
 
@@ -394,9 +394,9 @@ static int do_getinfo(int fd)
 	}
 	info->assigned_mem_chunks  = os_chunk;
 
-	ret = ihk_getihk_info(info);
+	ret = ihk_getihkinfo(info);
 	if (ret == -1) {
-		perror("ihk_getihk_info(2nd) failed");
+		perror("ihk_getihkinfo(2nd) failed");
 		exit(-1);
 	}
 
@@ -458,7 +458,7 @@ static int do_getoslist(int fd)
 	}
 	info->reserved_mem_chunks = NULL;
 	info->assigned_mem_chunks = NULL;
-	ret = ihk_getihk_info(info);
+	ret = ihk_getihkinfo(info);
 	if (ret  == -1) {
 		perror("Error: Invalid argument");
 		exit(-1);

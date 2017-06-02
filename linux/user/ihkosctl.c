@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include <errno.h>
+#include "ihklib.h"
 
 int __argc;
 char **__argv;
@@ -50,11 +51,13 @@ static int usage(char **arg)
 	fprintf(stderr, "           mem (size@NUMA) \n");
 	fprintf(stderr, "    release cpu|mem \n");
 	fprintf(stderr, "            cpu (cpu_list) \n");
-	fprintf(stderr, "            mem\n");
+	fprintf(stderr, "            mem (size@NUMA) \n");
 	fprintf(stderr, "    ikc_map (cpu_list:cpu+cpu_list:cpu+..) \n");
 	fprintf(stderr, "    query [cpu|mem]\n");
 	fprintf(stderr, "    query_free_mem\n");
 	fprintf(stderr, "    kargs (kernel arg)\n");
+	fprintf(stderr, "    status\n");
+	fprintf(stderr, "    getosinfo\n");
 	fprintf(stderr, "    kmsg\n");
 	fprintf(stderr, "    clear_kmsg\n");
 	fprintf(stderr, "    intr cpu irq_vector\n");
@@ -73,6 +76,13 @@ static int do_boot(int fd)
 		fprintf(stderr, "error: booting\n");
 	}
 	dprintf("ret = %d\n", r);
+	return r;
+}
+
+static int do_status(int fd)
+{
+	int r = ioctl(fd, IHK_OS_STATUS, 0);
+	printf("ret = %d\n", r);
 	return r;
 }
 
@@ -384,6 +394,93 @@ static int do_kmsg(int fd)
 		fprintf(stderr, "error querying kmsg\n");
 		return 1;
 	}
+}
+
+static int do_getosinfo(int fd) {
+	ihk_mem_chunk *os_chunk;
+	ihk_osinfo *osinfo;
+	int ret;
+	int i;
+	int index;
+
+	close(fd);
+
+	index = atoi(__argv[1]);
+    osinfo = (ihk_osinfo *) malloc (sizeof(ihk_osinfo));
+    if (osinfo == NULL) {
+        perror("osinfo malloc");
+        exit(-1);
+    }
+    osinfo->mem_chunks = NULL;
+    osinfo->num_mem_chunks = 0;
+
+	ret = ihk_getosinfo(index, osinfo);
+    if (ret == -1) {
+        perror("ihk_getosinfo(1st) failed");
+        exit(-1);
+    }
+
+    os_chunk = (ihk_mem_chunk *) malloc (osinfo->num_mem_chunks * sizeof(ihk_mem_chunk));
+    if (os_chunk == NULL) {
+        perror("ihk_chunk malloc");
+        exit(-1);
+    }		
+	
+   	osinfo->mem_chunks = os_chunk;
+
+	ret = ihk_getosinfo(index, osinfo);
+    if (ret == -1) {
+        perror("ihk_getosinfo(2nd) failed");
+        exit(-1);
+    }
+
+    printf("Assigned_mem:");
+    for (i = 0; i < osinfo->num_mem_chunks; i++) {
+        if (i == 0) {
+            printf("%lu@%d",
+                    (osinfo->mem_chunks + i * sizeof(ihk_mem_chunk))->size,
+                    (osinfo->mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+        } 
+		else {
+            printf(",%lu@%d",
+                    (osinfo->mem_chunks + i * sizeof(ihk_mem_chunk))->size,
+                    (osinfo->mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+        }
+    }
+    printf("\n");
+
+    printf("Assigned_cpu:");
+    printf("%016lx%016lx\n", osinfo->mask.__bits[0], osinfo->mask.__bits[1]);
+
+	switch (osinfo->status) {
+		case IHK_STATUS_INACTIVE:
+			printf("Status: INACTIVE\n");
+			break;
+		case IHK_STATUS_BOOTING:
+			printf("Status: BOOTING\n");
+			break;
+		case IHK_STATUS_RUNNING:
+			printf("Status: RUNNING\n");
+			break;
+		case IHK_STATUS_SHUTDOWN:
+			printf("Status: SHUTDOWN\n");
+			break;
+		case IHK_STATUS_PANIC:
+			printf("Status: PANIC\n");
+			break;
+		case IHK_STATUS_HUNGUP:
+			printf("Status: HUNGUP\n");
+			break;
+		case IHK_STATUS_FREEZING:
+			printf("Status: FREEZING\n");
+			break;
+		case IHK_STATUS_FROZEN:
+			printf("Status: FROZEN\n");
+			break;
+	}	
+    free(os_chunk);
+    free(osinfo);
+    return 0;
 }
 
 static int do_clear_kmsg(int fd)
@@ -758,6 +855,8 @@ int main(int argc, char **argv)
 	else HANDLER(release)
 	else HANDLER(ikc_map)
 	else HANDLER(query)
+	else HANDLER(status)
+	else HANDLER(getosinfo)
 	else HANDLER(query_free_mem)
 	else HANDLER(kargs)
 	else HANDLER(kmsg)

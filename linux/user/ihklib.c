@@ -53,8 +53,8 @@ typedef struct {
 	int efd;
 } check_param;
 
-/* ihk_getihk_info */
-int ihk_getihk_info (ihk_info *info) 
+/* ihk_getihkinfo */
+int ihk_getihkinfo (ihk_info *info) 
 {
 	int fd = 0;
 	char fn[128];
@@ -1605,6 +1605,7 @@ int count_numa_node () {
 	return num_numa;
 }
 
+#ifdef ENABLE_RUSAGE
 /* ihk_getrusage */
 int ihk_getrusage(int index, ihk_rusage *rusage) {
 	unsigned long val;
@@ -1806,6 +1807,13 @@ int ihk_getrusage(int index, ihk_rusage *rusage) {
 	}
 	return 0;
 }
+#else
+/* ihk_getrusage */
+int ihk_getrusage(int index, ihk_rusage *rusage) {
+	fprintf(stderr, "rusage is not supported.\n");
+	return 1;
+}
+#endif
 
 int read_sysfs_simple_val(char* sysfs_path, unsigned long* val) {
 	FILE *fp;

@@ -34,6 +34,12 @@ AC_ARG_ENABLE([memdump],
 	[ENABLE_MEMDUMP=$enableval],
 	[ENABLE_MEMDUMP=default])
 
+AC_ARG_ENABLE([rusage],
+	AS_HELP_STRING([--enable-rusage],
+		[enable rusage implementation]),
+	[ENABLE_RUSAGE=$enableval],
+	[ENABLE_RUSAGE=yes])
+
 AC_ARG_WITH([system_map],
   AS_HELP_STRING(
     [--with-system_map=path],[Path to 'System.map file', default is /boot/System.map-uname_r]),
@@ -60,6 +66,14 @@ fi
 
 if test "X$sbindir" = X; then
 	SBINDIR="$sbindir"
+fi
+
+if test "X$libdir" = X; then
+	LIBDIR="$libdir"
+fi
+
+if test "X$includedir" = X; then
+	INCLUDEDIR="$includedir"
 fi
 
 test "x$prefix" = xNONE && prefix="$ac_default_prefix"
@@ -140,6 +154,12 @@ case $WITH_TARGET in
 	if test "X$MANDIR" = X; then
 		MANDIR="$prefix/smp-x86/man"
 	fi
+	if test "X$LIBDIR" = X; then
+		LIBDIR="$prefix/lib"
+	fi
+	if test "X$INCLUDEDIR" = X; then
+		INCLUDEDIR="$prefix/include"
+	fi
 	;;
     *)
 	AC_MSG_ERROR([target $WITH_TARGET is unknwon])
@@ -158,6 +178,17 @@ case $ENABLE_MEMDUMP in
 		;;
 	*)
 		AC_MSG_ERROR([unknown memdump argument: $ENABLE_MEMDUMP])
+		;;
+esac
+
+case $ENABLE_RUSAGE in
+	yes|no)
+		;;
+	default)
+		ENABLE_RUSAGE=yes
+		;;
+	*)
+		AC_MSG_ERROR([unknown rusage argument: $ENABLE_RUSAGE])
 		;;
 esac
 
@@ -258,6 +289,13 @@ else
 	uncomment_if_ENABLE_MEMDUMP='#'
 fi
 
+if test "x$ENABLE_RUSAGE" = "xyes" ; then
+	AC_MSG_NOTICE([rusage is enabled])
+	AC_DEFINE([ENABLE_RUSAGE],[1],[whether rusage is enabled])
+else
+	AC_MSG_NOTICE([rusage is disabled])
+fi
+
 AC_SUBST(CC)
 AC_SUBST(XCC)
 AC_SUBST(ARCH)
@@ -265,6 +303,8 @@ AC_SUBST(KDIR)
 AC_SUBST(TARGET)
 AC_SUBST(BINDIR)
 AC_SUBST(SBINDIR)
+AC_SUBST(INCLUDEDIR)
+AC_SUBST(LIBDIR)
 AC_SUBST(KMODDIR)
 AC_SUBST(MANDIR)
 AC_SUBST(CFLAGS)

@@ -3,6 +3,9 @@
 /* whether memdump feature is enabled */
 #undef ENABLE_MEMDUMP
 
+/* whether rusage is enabled */
+#undef ENABLE_RUSAGE
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
