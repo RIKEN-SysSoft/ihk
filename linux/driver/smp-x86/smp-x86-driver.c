@@ -1406,6 +1406,8 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		free_pages((unsigned long)os->param, os->param_pages_order);
 	}
 
+	kfree(os);
+
 	return 0;
 }
 
@@ -3562,7 +3564,7 @@ out:
 
 static int file_readable(char *fmt, ...)
 {
-	int error;
+	int ret;
 	va_list ap;
 	int n;
 	char *filename = NULL;
@@ -3570,10 +3572,10 @@ static int file_readable(char *fmt, ...)
 
 	filename = kmalloc(PATH_MAX, GFP_KERNEL);
 	if (!filename) {
-		error = -ENOMEM;
 		eprintk("%s: kmalloc failed. %d\n",
-				__FUNCTION__, error);
-		return 0;
+				__FUNCTION__, -ENOMEM);
+		ret = 0;
+		goto out;
 	}
 
 	va_start(ap, fmt);
@@ -3581,19 +3583,24 @@ static int file_readable(char *fmt, ...)
 	va_end(ap);
 
 	if (n >= PATH_MAX) {
-		error = -ENAMETOOLONG;
 		eprintk("%s: vsnprintf failed. %d\n",
-				__FUNCTION__, error);
-		return 0;
+				__FUNCTION__, -ENAMETOOLONG);
+		ret = 0;
+		goto out;
 	}
 
 	fp = filp_open(filename, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		return 0;
+		ret = 0;
+		goto out;
 	}
 
-	error = filp_close(fp, NULL);
-	return 1;
+	filp_close(fp, NULL);
+	ret = 1;
+
+out:
+	kfree(filename);
+	return ret;
 }
 
 static int read_long(long *valuep, char *fmt, ...)
