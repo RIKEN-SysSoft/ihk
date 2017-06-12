@@ -279,6 +279,18 @@ retry_alloc:
 void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channel_desc *c)
 {
 	unsigned long flags;
+
+	if (!p) {
+		return;
+	}
+
+	if (!c) {
+		kprintf("%s: WARNING: can't release on NULL channel\n",
+				__FUNCTION__);
+		ihk_ikc_free(p);
+		return;
+	}
+
 	flags = ihk_ikc_spinlock_lock(&c->packet_pool_lock);
 	list_add_tail(&p->list, &c->packet_pool);
 	ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
