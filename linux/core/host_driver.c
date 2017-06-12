@@ -1238,6 +1238,10 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 	cdev_del(&os->cdev);
 	device_destroy(mcos_class, os->dev_num);
 
+	if (os->regular_channels)
+		kfree(os->regular_channels);
+	kfree(os);
+
 	return 0;
 }
 
