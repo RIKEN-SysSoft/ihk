@@ -380,12 +380,19 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 	ihk_os_t os = desc->remote_os;
 	int qpages;
 	ihk_spinlock_t *lock = ihk_ikc_get_channel_list_lock(os);
-	struct ihk_ikc_free_packet *p_iter;
+	struct ihk_ikc_free_packet *p_iter, *p_next;
 	unsigned long flags;
 
 	flags = ihk_ikc_spinlock_lock(lock);
 	list_del(&desc->list_all);
 	ihk_ikc_spinlock_unlock(lock, flags);
+
+	flags = ihk_ikc_spinlock_lock(&desc->packet_pool_lock);
+	list_for_each_entry_safe(p_iter, p_next, &desc->packet_pool, list) {
+		list_del(&p_iter->list);
+		ihk_ikc_free(p_iter);
+	}
+	ihk_ikc_spinlock_unlock(&desc->packet_pool_lock, flags);
 
 	if (desc->recv.queue) {
 		qpages = (desc->recv.queue->queue_size
@@ -414,15 +421,6 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 			ihk_ikc_free_queue(desc->send.queue);
 		}
 	}
-
-	flags = ihk_ikc_spinlock_lock(&desc->packet_pool_lock);
-reiterate:
-	list_for_each_entry(p_iter, &desc->packet_pool, list) {
-		list_del(&p_iter->list);
-		ihk_ikc_free(p_iter);
-		goto reiterate;
-	}
-	ihk_ikc_spinlock_unlock(&desc->packet_pool_lock, flags);
 
 	ihk_ikc_free(desc);
 }
