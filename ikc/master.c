@@ -118,8 +118,10 @@ int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm,
 	memset(&ci, 0, sizeof(ci));
 	ci.channel = c;
 	
-	ihk_ikc_channel_set_cpu(c, intr_cpu);
-	ihk_ikc_set_regular_channel(cm->remote_os, c, intr_cpu);
+	if (p->ikc_direction == IHK_IKC_DIRECTION_RECV) {
+		ihk_ikc_channel_set_cpu(c, intr_cpu);
+		ihk_ikc_set_regular_channel(cm->remote_os, c, intr_cpu);
+	}
 
 	if ((r = p->handler(&ci)) != 0) {
 		ihk_ikc_free_channel(c);
