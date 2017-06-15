@@ -40,8 +40,13 @@ static void __ihk_ikc_reception_handler(ihk_os_t os)
 
 	r_channel = ihk_ikc_get_regular_channel(os, smp_processor_id());
 	if (!r_channel) {
-		printk("%s: ERROR: r_channel for CPU %d does not exist\n",
-				__FUNCTION__, smp_processor_id());
+		/* It is fine not to have this channel for CPU 0 as we may be
+		 * in initialization phase where only master channel exists yet.
+		 * Otherwise, print a warning */
+		if (smp_processor_id() > 0) {
+			printk("%s: WARNING: r_channel for CPU %d does not exist\n",
+					__FUNCTION__, smp_processor_id());
+		}
 		return;
 	}
 	while (ihk_ikc_channel_enabled(r_channel) &&

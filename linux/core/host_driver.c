@@ -1096,8 +1096,8 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 	spin_lock_init(&os->event_list_lock);
 	INIT_LIST_HEAD(&os->ikc_channels);
 
-	os->regular_channels = kmalloc(sizeof(*os->regular_channels) *
-		num_possible_cpus(), GFP_KERNEL);
+	os->regular_channels = kzalloc(sizeof(*os->regular_channels) *
+			num_possible_cpus(), GFP_KERNEL);
 	if (!os->regular_channels) {
 		ret = -ENOMEM;
 		printk("ihk: error allocating channels\n");
