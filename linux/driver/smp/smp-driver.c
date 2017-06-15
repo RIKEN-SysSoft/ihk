@@ -1,4 +1,4 @@
-/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2016 */
+/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
 /**
  * \file smp-x86-driver.c
  * \brief
