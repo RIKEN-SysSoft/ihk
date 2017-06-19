@@ -694,10 +694,16 @@ static int ihk_smp_acpi_get_gic_base(void)
 {
 	struct acpi_table_header *table;
 	acpi_status status;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
 	acpi_size tbl_size;
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0) */
 	int count = 0;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
+	status = acpi_get_table(ACPI_SIG_MADT, 0, &table);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0) */
 	status = acpi_get_table_with_size(ACPI_SIG_MADT, 0, &table, &tbl_size);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0) */
 	if (ACPI_FAILURE(status)) {
 		printk("ERROR: Failed to get MADT table.\n");
 		return -ENODATA;
