@@ -932,7 +932,8 @@ void smp_ihk_setup_trampoline(void *priv)
 	}
 	header->nr_pmu_irq_affiniry = nr_irqs;
 	// TODO[PMU]: McKernel側でコアが起きた後にaffinity設定しないと駄目なら、ここでの設定は止める。
-	ihk_armpmu_set_irq_affinity(header->pmu_irq_affiniry, os);
+	// TODO[PMU]: A log that fails in __irq_set_affinity() in combination with CPUFW-0.8.0 or later is output.
+	//ihk_armpmu_set_irq_affinity(header->pmu_irq_affiniry, os);
 }
 
 unsigned long smp_ihk_adjust_entry(unsigned long entry,
