@@ -234,7 +234,7 @@ AC_DEFUN([IHK_FIND_KSYM],[
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break

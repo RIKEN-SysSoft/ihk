@@ -9,7 +9,7 @@
 ## --------------------- ##
 ## M4sh Initialization.  ##
 ## --------------------- ##
-# configure COPYRIGHT FUJITSU LIMITED 2015-2016
+# configure COPYRIGHT FUJITSU LIMITED 2015-2017
 
 # Be more Bourne compatible
 DUALCASE=1; export DUALCASE # for MKS sh
@@ -3048,7 +3048,7 @@ $as_echo_n "checking System.map for symbol x86_trampoline_base... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3084,7 +3084,7 @@ $as_echo_n "checking System.map for symbol real_mode_header... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3120,7 +3120,7 @@ $as_echo_n "checking System.map for symbol per_cpu__vector_irq... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3156,7 +3156,7 @@ $as_echo_n "checking System.map for symbol vector_irq... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3192,7 +3192,7 @@ $as_echo_n "checking System.map for symbol lapic_get_maxlvt... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3228,7 +3228,7 @@ $as_echo_n "checking System.map for symbol init_deasserted... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3264,7 +3264,7 @@ $as_echo_n "checking System.map for symbol irq_to_desc... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3300,7 +3300,7 @@ $as_echo_n "checking System.map for symbol alloc_desc... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3336,7 +3336,7 @@ $as_echo_n "checking System.map for symbol irq_desc_tree... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3372,7 +3372,7 @@ $as_echo_n "checking System.map for symbol irq_to_desc_alloc_node... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3408,7 +3408,7 @@ $as_echo_n "checking System.map for symbol dummy_irq_chip... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3444,7 +3444,7 @@ $as_echo_n "checking System.map for symbol get_uv_system_type... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3480,7 +3480,7 @@ $as_echo_n "checking System.map for symbol wakeup_secondary_cpu_via_init... " >&
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3516,7 +3516,7 @@ $as_echo_n "checking System.map for symbol __default_send_IPI_dest_field... " >&
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3553,7 +3553,7 @@ $as_echo_n "checking System.map for symbol gic_data... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3584,7 +3584,7 @@ $as_echo_n "checking System.map for symbol gic_data... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3615,7 +3615,7 @@ $as_echo_n "checking System.map for symbol gic_raise_softirq... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3646,7 +3646,7 @@ $as_echo_n "checking System.map for symbol gic_raise_softirq... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3677,7 +3677,7 @@ $as_echo_n "checking System.map for symbol __irq_domain_alloc_irqs... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3713,7 +3713,7 @@ $as_echo_n "checking System.map for symbol irq_domain_free_irqs... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3749,7 +3749,7 @@ $as_echo_n "checking System.map for symbol irq_to_desc... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3785,7 +3785,7 @@ $as_echo_n "checking System.map for symbol alloc_desc... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3821,7 +3821,7 @@ $as_echo_n "checking System.map for symbol irq_desc_tree... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3857,7 +3857,7 @@ $as_echo_n "checking System.map for symbol irq_to_desc_alloc_node... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3893,7 +3893,7 @@ $as_echo_n "checking System.map for symbol psci_ops... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3929,7 +3929,7 @@ $as_echo_n "checking System.map for symbol __cpu_logical_map... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -3965,7 +3965,7 @@ $as_echo_n "checking System.map for symbol invoke_psci_fn... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4001,7 +4001,7 @@ $as_echo_n "checking System.map for symbol __invoke_psci_fn_hvc... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4037,7 +4037,7 @@ $as_echo_n "checking System.map for symbol __invoke_psci_fn_smc... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4073,7 +4073,7 @@ $as_echo_n "checking System.map for symbol acpi_gic_ver... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4109,7 +4109,7 @@ $as_echo_n "checking System.map for symbol cpu_pmu... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4145,7 +4145,7 @@ $as_echo_n "checking System.map for symbol __oprofile_cpu_pmu... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4181,7 +4181,7 @@ $as_echo_n "checking System.map for symbol __irq_set_affinity... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4217,7 +4217,7 @@ $as_echo_n "checking System.map for symbol arch_timer_use_virtual... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4253,7 +4253,7 @@ $as_echo_n "checking System.map for symbol arch_timer_uses_ppi... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
@@ -4289,7 +4289,7 @@ $as_echo_n "checking System.map for symbol arch_timer_rate... " >&6; }
   ihk_addr_array=($ihk_addr)
   if test ${#ihk_addr_array[*]} -gt 1 ; then
     for addr in $ihk_addr ; do
-      filename=`${CROSS_COMPILE}addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
       if test $filename = $symbol_src  ; then
         ihk_addr=$addr
         break
