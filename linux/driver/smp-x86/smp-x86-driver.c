@@ -35,6 +35,7 @@
 #include <linux/irq.h>
 #include <linux/topology.h>
 #include <linux/ctype.h>
+#include <linux/kallsyms.h>
 #include <asm/hw_irq.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
@@ -2898,6 +2899,24 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	INIT_LIST_HEAD(&tmp_chunks);
 
 	dprintk(KERN_INFO "IHK-SMP: __ihk_smp_reserve_mem: %lu bytes\n", ihk_mem);
+
+	/* Shrink slab/slub caches */
+	{
+		struct mutex *slab_mutexp =
+			(struct mutex *)kallsyms_lookup_name("slab_mutex");
+		struct list_head *slab_cachesp =
+			(struct list_head *)kallsyms_lookup_name("slab_caches");
+		if (slab_mutexp && slab_cachesp) {
+			struct kmem_cache *s;
+
+			dprintk("%s: shrinking slab caches\n", __FUNCTION__);
+			mutex_lock(slab_mutexp);
+			list_for_each_entry(s, slab_cachesp, list) {
+				kmem_cache_shrink(s);
+			}
+			mutex_unlock(slab_mutexp);
+		}
+	}
 
 	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
 	allocated = 0;
