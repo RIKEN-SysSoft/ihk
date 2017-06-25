@@ -32,6 +32,7 @@
 #include <linux/elf.h>
 #include <linux/cpu.h>
 #include <linux/radix-tree.h>
+#include <linux/rbtree.h>
 #include <linux/irq.h>
 #include <linux/topology.h>
 #include <linux/ctype.h>
@@ -385,6 +386,7 @@ struct builtin_device_data {
  * they represent!! */
 struct chunk {
 	struct list_head chain;
+	struct rb_node node;
 	uintptr_t addr;
 	size_t size;
 	int numa_id;
@@ -1336,14 +1338,17 @@ rerun:
 	}
 }
 
-static size_t max_size_mem_chunk(struct list_head *chunks)
+/* TODO: rewrite this to embed in allocation and keep track
+ * of max on the fly */
+static size_t max_size_mem_chunk(struct rb_root *root)
 {
 	size_t max = 0;
-	struct chunk *chunk_iter;
+	struct rb_node *node;
 
-	list_for_each_entry(chunk_iter, chunks, chain) {
-		if (chunk_iter->size > max) {
-			max = chunk_iter->size;
+	for (node = rb_first(root); node; node = rb_next(node)) {
+		struct chunk *chunk = container_of(node, struct chunk, node);
+		if (chunk->size > max) {
+			max = chunk->size;
 		}
 	}
 
@@ -2357,13 +2362,39 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 
 			/* Split if there is any leftover */
 			if (mem_chunk_max->size > mem_size) {
-				mem_chunk_leftover = (struct chunk*)
-					phys_to_virt(mem_chunk_max->addr + mem_size);
-				mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size;
-				mem_chunk_leftover->size = mem_chunk_max->size - mem_size;
-				mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+				struct page *pg;
 
-				add_free_mem_chunk(mem_chunk_leftover);
+				pg = virt_to_page(phys_to_virt(mem_chunk_max->addr + mem_size));
+				/* Do not split compound pages though */
+				if (PageTail(pg)) {
+					size_t comp_size = PAGE_SIZE << compound_order(pg->first_page);
+
+					if ((page_to_phys(pg->first_page) + comp_size) <
+							mem_chunk_max->addr + mem_chunk_max->size) {
+						off_t comp_end_offset = comp_size -
+							(page_to_phys(pg) - page_to_phys(pg->first_page));
+
+						mem_chunk_leftover = (struct chunk*)
+							phys_to_virt(mem_chunk_max->addr + mem_size +
+									comp_end_offset);
+						mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size +
+							comp_end_offset;
+						mem_chunk_leftover->size = mem_chunk_max->size - mem_size -
+							comp_end_offset;
+						mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+						add_free_mem_chunk(mem_chunk_leftover);
+						printk("%s: comp_end_offset: %lu\n",
+								__FUNCTION__, comp_end_offset);
+					}
+				}
+				else {
+					mem_chunk_leftover = (struct chunk*)
+						phys_to_virt(mem_chunk_max->addr + mem_size);
+					mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size;
+					mem_chunk_leftover->size = mem_chunk_max->size - mem_size;
+					mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+					add_free_mem_chunk(mem_chunk_leftover);
+				}
 			}
 		}
 
@@ -2844,7 +2875,7 @@ void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 }
 #endif
 
-int shimos_nchunks = 16;
+#define IHK_RESERVE_PAGE_ORDER	(10)
 
 static int __smp_ihk_free_mem_from_list(struct list_head *list)
 {
@@ -2866,14 +2897,33 @@ static int __smp_ihk_free_mem_from_list(struct list_head *list)
 		va = (unsigned long)phys_to_virt(pa);
 		size_left = mem_chunk->size;
 		while (size_left > 0) {
-			/* NOTE: memory was allocated via __get_free_pages() in 4MB blocks */
-			int order = 10;
-			int order_size = 4194304;
+			int order;
+			size_t order_size;
+			struct page *page = virt_to_page(va);
+
+			if (!PageCompound(page) || !PageHead(page)) {
+				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
+					__FUNCTION__);
+				size_left -= PAGE_SIZE;
+				va += PAGE_SIZE;
+				continue;
+			}
+
+			order = compound_order(page);
+			order_size = (PAGE_SIZE << order);
 
 			free_pages(va, order);
 			pr_debug("0x%lx, page order: %d freed\n", va, order);
-			size_left -= order_size;
-			va += order_size;
+			/* A compound page may stretch over the size of this chunk */
+			if (order_size <= size_left) {
+				size_left -= order_size;
+				va += order_size;
+			}
+			else {
+				printk("%s: order_size - size_left: %lu\n",
+					__FUNCTION__, order_size - size_left);
+				size_left = 0;
+			}
 		}
 
 		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
@@ -2882,21 +2932,147 @@ static int __smp_ihk_free_mem_from_list(struct list_head *list)
 	return 0;
 }
 
+static int __smp_ihk_free_mem_from_rbtree(struct rb_root *root)
+{
+	struct rb_node *node;
+	struct chunk *mem_chunk;
+	unsigned long size_left;
+	unsigned long va;
+	unsigned long pa;
+#ifdef IHK_DEBUG
+	unsigned long size;
+#endif
+
+	/* Drop all memory */
+	node = rb_first(root);
+	while (node) {
+		mem_chunk = container_of(node, struct chunk, node);
+		pa = mem_chunk->addr;
+#ifdef IHK_DEBUG
+		size = mem_chunk->size;
+#endif
+
+		rb_erase(node, root);
+
+		va = (unsigned long)phys_to_virt(pa);
+		size_left = mem_chunk->size;
+		while (size_left > 0) {
+			int order;
+			size_t order_size;
+			struct page *page = virt_to_page(va);
+
+			if (!PageCompound(page) || !PageHead(page)) {
+				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
+					__FUNCTION__);
+				size_left -= PAGE_SIZE;
+				va += PAGE_SIZE;
+				continue;
+			}
+
+			order = compound_order(page);
+			order_size = (PAGE_SIZE << order);
+
+			free_pages(va, order);
+			pr_debug("0x%lx, page order: %d freed\n", va, order);
+			/* A compound page may stretch over the size of this chunk */
+			if (order_size <= size_left) {
+				size_left -= order_size;
+				va += order_size;
+			}
+			else {
+				printk("%s: order_size - size_left: %lu\n",
+					__FUNCTION__, order_size - size_left);
+				size_left = 0;
+			}
+		}
+
+		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
+		node = rb_first(root);
+	}
+
+	return 0;
+}
+
+
+void __mem_chunk_insert(struct rb_root *root, struct chunk *chunk)
+{
+	struct rb_node **iter = &(root->rb_node), *parent = NULL;
+
+	/* Figure out where to put new node */
+	while (*iter) {
+		struct chunk *ichunk = container_of(*iter, struct chunk, node);
+		parent = *iter;
+
+		/* Is ichunk contigous from the left? */
+		if (ichunk->addr + ichunk->size == chunk->addr) {
+			struct rb_node *right;
+			/* Extend it to the right */
+			ichunk->size += chunk->size;
+
+			/* Have the right chunk of ichunk and ichunk become contigous? */
+			right = rb_next(*iter);
+			if (right) {
+				struct chunk *right_chunk =
+					container_of(right, struct chunk, node);
+
+				if (ichunk->addr + ichunk->size == right_chunk->addr) {
+					ichunk->size += right_chunk->size;
+					rb_erase(right, root);
+				}
+			}
+
+			return;
+		}
+
+		/* Is ichunk contigous from the right? */
+		if (chunk->addr + chunk->size == ichunk->addr) {
+			struct rb_node *left;
+			/* Extend it to the left */
+			ichunk->addr -= chunk->size;
+			ichunk->size += chunk->size;
+
+			/* Have the left chunk of ichunk and ichunk become contigous? */
+			left = rb_prev(*iter);
+			if (left) {
+				struct chunk *left_chunk =
+					container_of(left, struct chunk, node);
+
+				if (left_chunk->addr + left_chunk->size == ichunk->addr) {
+					ichunk->addr -= left_chunk->size;
+					ichunk->size += left_chunk->size;
+					rb_erase(left, root);
+				}
+			}
+
+			return;
+		}
+
+		if (chunk->addr < ichunk->addr)
+			iter = &((*iter)->rb_left);
+		else
+			iter = &((*iter)->rb_right);
+	}
+
+	/* Add new node and rebalance tree. */
+	rb_link_node(&chunk->node, parent, iter);
+	rb_insert_color(&chunk->node, root);
+
+	return;
+}
+
 int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
-	const int order = 10;		/* 4 MiB a chunk */
+	int order = IHK_RESERVE_PAGE_ORDER;
 	size_t want;
 	size_t allocated;
 	struct chunk *p;
 	struct chunk *q;
 	int ret = 0;
-	struct list_head tmp_chunks;
+	struct rb_root tmp_chunks = RB_ROOT;
 	nodemask_t nodemask;
 
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
-
-	INIT_LIST_HEAD(&tmp_chunks);
 
 	dprintk(KERN_INFO "IHK-SMP: __ihk_smp_reserve_mem: %lu bytes\n", ihk_mem);
 
@@ -2918,9 +3094,12 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		}
 	}
 
-	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
+	want = (ihk_mem + ((PAGE_SIZE << order) - 1))
+		& ~((PAGE_SIZE << order) - 1);
+	printk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
 	allocated = 0;
 
+retry:
 	/* Allocate and merge pages until we get a contigous area
 	 * or run out of free memory. Keep the longest areas */
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
@@ -2932,8 +3111,18 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
 		if (!pg) {
 			/*
-			 * We ran out of memory before finding a single contigous
-			 * chunk, but do we have enough in multiple chunks?
+			 * We ran out of memory using the current order of compound
+			 * pages, decrease order and try to grab smaller pieces.
+			 */
+			if (order > 4) {
+				--order;
+				printk("%s: order decreased to %d\n", __FUNCTION__, order);
+				goto retry;
+			}
+
+			/*
+			 * Otherwise, we may have run out of memory altogether before finding
+			 * a single contigous chunk, but do we have enough in multiple chunks?
 			 */
 			if (allocated >= want) break;
 
@@ -2952,31 +3141,20 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		p->numa_id = numa_id;
 		INIT_LIST_HEAD(&p->chain);
 
-		/* Insert the chunk in physical address ascending order */
-		list_for_each_entry(q, &tmp_chunks, chain) {
-			if (p->addr < q->addr) {
-				break;
-			}
-		}
-
-		if ((void *)q == &tmp_chunks) {
-			list_add_tail(&p->chain, &tmp_chunks);
-		}
-		else {
-			list_add_tail(&p->chain, &q->chain);
-		}
-
-		/* Merge adjucent chunks */
-		merge_mem_chunks(&tmp_chunks);
+		__mem_chunk_insert(&tmp_chunks, p);
 	}
+
+	printk("%s: allocated internally: %lu\n", __FUNCTION__, allocated);
 
 	/* Move the largest chunks to free list until we meet the required size */
 	allocated = 0;
 	while (allocated < want) {
+		struct rb_node *node;
 		size_t max = 0;
 		p = NULL;
 
-		list_for_each_entry(q, &tmp_chunks, chain) {
+		for (node = rb_first(&tmp_chunks); node; node = rb_next(node)) {
+			struct chunk *q = container_of(node, struct chunk, node);
 			if (q->size > max) {
 				p = q;
 				max = p->size;
@@ -2985,7 +3163,16 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 
 		if (!p) break;
 
-		list_del(&p->chain);
+		rb_erase(&p->node, &tmp_chunks);
+
+		/* Verify that chunk structure is in front of physical memory */
+		if (page_to_phys(virt_to_page(p)) != p->addr) {
+			struct chunk *__p = (struct chunk *)phys_to_virt(p->addr);
+			*__p = *p;
+			p = __p;
+			dprintk("%s: moved chunk structure to front of 0x%lx\n",
+				__FUNCTION__, p->addr);
+		}
 
 		/* Insert the chunk in physical address ascending order */
 		list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
@@ -3011,7 +3198,7 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 
 out:
 	/* Free leftover tmp_chunks */
-	__smp_ihk_free_mem_from_list(&tmp_chunks);
+	__smp_ihk_free_mem_from_rbtree(&tmp_chunks);
 
 	return ret;
 }
@@ -4470,10 +4657,6 @@ int ihk_smp_reset_cpu(int phys_apicid) {
 
 static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv) 
 {
-	struct chunk *mem_chunk;
-	struct chunk *mem_chunk_next;
-	unsigned long size_left;
-	unsigned long va;
 	int cpu;
 	int i = 0;
 
@@ -4536,24 +4719,8 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	}
 
 	/* Free memory */
-	list_for_each_entry_safe(mem_chunk, mem_chunk_next, 
-			&ihk_mem_free_chunks, chain) {
+	__smp_ihk_free_mem_from_list(&ihk_mem_free_chunks);
 
-		list_del(&mem_chunk->chain);
-
-		va = (unsigned long)phys_to_virt(mem_chunk->addr);
-		size_left = mem_chunk->size;
-		while (size_left > 0) {
-			/* NOTE: memory was allocated via __get_free_pages() in 4MB blocks */
-			int order = 10;
-			int order_size = 4194304;
-
-			free_pages(va, order);
-			pr_debug("0x%lx, page order: %d freed\n", va, order); 
-			size_left -= order_size;
-			va += order_size;
-		}
-	}
 	free_info();
 
 	return 0;
