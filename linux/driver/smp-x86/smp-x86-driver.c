@@ -4399,6 +4399,13 @@ retry_trampoline:
 	return error;
 
 error_free_irq:
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
+	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+	if (this_module_put) {
+		try_module_get(THIS_MODULE);
+	}
+#endif
+
 	free_irq(ihk_smp_irq, NULL);
 
 error_free_trampoline:
