@@ -1186,7 +1186,6 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	pml4[(MAP_ST_START >> PTL4_SHIFT) & 511] = cr3[0];
 	pml4[(MAP_KERNEL_START >> PTL4_SHIFT) & 511] = pdp_p | 3;
 	pdp[(MAP_KERNEL_START >> PTL3_SHIFT) & 511] = pde_p | 3;
-	//n = (os->mem_end - os->mem_start) >> PTL2_SHIFT;
 	n = (os->bootstrap_mem_end - os->bootstrap_mem_start) >> PTL2_SHIFT;
 	if(n > 511)
 		n = 511;
@@ -1194,18 +1193,13 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	for (i = 0; i < n; i++) {
 		pde[i] = (phys + (i << PTL2_SHIFT)) | 0x83;
 	}
-	//pde[511] = (os->mem_end - (2 << PTL2_SHIFT)) | 0x83;
-	pde[511] = (os->bootstrap_mem_end - (2 << PTL2_SHIFT)) | 0x83;
+	startup_p = (os->bootstrap_mem_end & LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
+	pde[511] = startup_p | 0x83;
 
 	ihk_smp_unmap_virtual(pde);
 	ihk_smp_unmap_virtual(pdp);
 	ihk_smp_unmap_virtual(pml4);
 
-#if 0
-	startup_p = os->mem_end - (2 << PTL2_SHIFT);
-#else
-	startup_p = os->bootstrap_mem_end - (2 << PTL2_SHIFT);
-#endif
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
 	startup[2] = pml4_p;
