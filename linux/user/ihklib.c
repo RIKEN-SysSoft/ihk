@@ -302,34 +302,35 @@ int ihk_geteventfd(int index, int type) {
 	char fn[128];
 	int fd = 0;
 	int ret = 0;
-	int efd;
+	unsigned long efd;
 	pthread_t thread_id;
 	check_param cparam;
 
 	dprintf("ihk geteventfd \n");
-		sprintf(fn, "/dev/mcos%d", index);
-		fd = open(fn, O_RDWR);
-		if (fd < 0) {
-			perror("open");
-			return (-ENOENT);
-		} 
-		else {
-			switch (type ) {
-				case 0:
-					// resource type 0: physical memory 
-					efd = eventfd(0, 0);
-					ret = ioctl(fd, IHK_OS_REGISTER_EVENT, efd);
-					break;
-				case 1:
-					// resource type 1:  os status
-					efd = eventfd(0, 0);
-					cparam.efd = efd;
-					ioctl(fd, IHK_OS_REGISTER_EVENT, efd);
-					ret = pthread_create(&thread_id, NULL, check_status, (void *)&cparam);
-					break;
-				default:
-					return(-EINVAL);
-			}
+	sprintf(fn, "/dev/mcos%d", index);
+	fd = open(fn, O_RDWR);
+	if (fd < 0) {
+		perror("open");
+		return (-ENOENT);
+	} 
+	else {
+		switch (type) {
+		    case 0:
+			// resource type 0: physical memory 
+			efd = eventfd(0, 0);
+			ret = ioctl(fd, IHK_OS_REGISTER_EVENT, efd);
+			break;
+		    case 1:
+			// resource type 1:  os status
+			efd = eventfd(0, 0);
+			cparam.efd = efd;
+			ioctl(fd, IHK_OS_REGISTER_EVENT, efd | (1L << 32));
+			ret = pthread_create(&thread_id, NULL, check_status,
+			                     (void *)&cparam);
+			break;
+		    default:
+				return(-EINVAL);
+		}
 		if (ret != 0) {
 			fprintf(stderr, "error: querying eventfd\n");
 			return (-EINVAL);

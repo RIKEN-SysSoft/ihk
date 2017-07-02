@@ -84,6 +84,7 @@ struct ihk_kmsg_buf {
 
 struct ihk_event {
 	struct list_head list;
+	int type;
 	struct eventfd_ctx *event;
 };
 #define IHK_OS_MONITOR_KERNEL_FREEZING 8
@@ -679,7 +680,8 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned long uarg)
 {
 	struct ihk_event *ep;
-	int fd = (long)uarg;
+	int fd = (int)uarg;
+	int type = uarg >> 32;
 	struct eventfd_ctx *event;
 	struct file *filp;
 	unsigned long flags;
@@ -694,13 +696,14 @@ static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned l
 	}
 	ep = kzalloc(sizeof(struct ihk_event), GFP_KERNEL);
 	ep->event = event;
+	ep->type = type;
 	spin_lock_irqsave(&os->event_list_lock, flags);
 	list_add_tail(&ep->list, &os->event_list);
 	spin_unlock_irqrestore(&os->event_list_lock, flags);
 	return 0;
 }
 
-void ihk_os_event_signal(ihk_os_t data)
+void ihk_os_event_signal(ihk_os_t data, int type)
 {
 	unsigned long flags;
 	struct ihk_event *ep;
@@ -708,7 +711,8 @@ void ihk_os_event_signal(ihk_os_t data)
 
 	spin_lock_irqsave(&os->event_list_lock, flags);
 	list_for_each_entry(ep, &os->event_list, list) {
-		eventfd_signal(ep->event, 1);
+		if (ep->type == type)
+			eventfd_signal(ep->event, 1);
 	}
 	spin_unlock_irqrestore(&os->event_list_lock, flags);
 }
@@ -928,7 +932,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		break;
 
 	case IHK_OS_EVENT_SIGNAL:
-		ihk_os_event_signal(data);
+		ihk_os_event_signal(data, 1);
 		ret = 0;
 		break;
 

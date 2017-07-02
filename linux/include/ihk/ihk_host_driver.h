@@ -908,7 +908,7 @@ struct ihk_os_notifier {
 int ihk_host_register_os_notifier(struct ihk_os_notifier *ion);
 int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
 
-void ihk_os_event_signal(ihk_os_t os);
+void ihk_os_event_signal(ihk_os_t os, int type);
 
 /** \brief IHK-Monitor */
 struct ihk_os_monitor {
