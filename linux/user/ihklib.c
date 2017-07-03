@@ -514,46 +514,6 @@ int ihk_config (int mcd, int comm, ihkconfig *config) {
 				return(-EINVAL);
 			}
 			break;
-		case IHK_CONFIG_RESERVE_NUMA:
-			dprintf("IHK_CONFIG_RESERVE_NUMA called.\n");
-			args[2] = "reserve";
-			args[3] = "mem";
-			memset(mem_list, 0, sizeof(mem_list));
-			ihk_chunk_pos = config->mem_chunks;	
-			for (i = 1; i <= config->num_mem_chunks; i++) {
-				snprintf(mem_str, sizeof(mem_str), "%lu@%d,",
-					ihk_chunk_pos->size, config->numa_node);
-				strcat(mem_list, mem_str);
-				ihk_chunk_pos = ihk_chunk_pos + sizeof(ihk_mem_chunk);
-			}
-			p = strchr(mem_list, '\0');
-			if (p != NULL) {
-				*(p-1) = '\0';
-			}
-			dprintf("mem_list:%s\n", mem_list);
-			args[4] = mem_list;
-			args[5] = NULL;	
-			break;
-		case IHK_CONFIG_RELEASE_NUMA:
-			dprintf("IHK_CONFIG_RELEASE_NUMA called.\n");
-			args[2] = "release";
-			args[3] = "mem";
-			memset(mem_list, 0, sizeof(mem_list));
-			ihk_chunk_pos = config->mem_chunks;	
-			for (i = 1; i <= config->num_mem_chunks; i++) {
-				snprintf(mem_str, sizeof(mem_str), "%lu@%d,",
-					ihk_chunk_pos->size, config->numa_node);
-				strcat(mem_list, mem_str);
-				ihk_chunk_pos = ihk_chunk_pos + sizeof(ihk_mem_chunk);
-			}
-			p = strchr(mem_list,'\0');
-			if (p != NULL) {
-				*(p-1) = '\0';
-			}
-			dprintf("mem_list:%s\n", mem_list);
-			args[4] = mem_list;
-			args[5] = NULL;	
-			break;
 		default:
 			dprintf("cmdtype:%d is unknown.\n", cmd_type);
 			return(-EINVAL);
@@ -597,9 +557,7 @@ int ihk_config (int mcd, int comm, ihkconfig *config) {
 			return(0); /* always returns 0 */
 			break;
 		case IHK_CONFIG_RESERVE:
-		case IHK_CONFIG_RESERVE_NUMA:
 		case IHK_CONFIG_RELEASE:
-		case IHK_CONFIG_RELEASE_NUMA:
 			if (ret != 0) {
 				return(-EINVAL);
 			}
@@ -1430,50 +1388,6 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 				__argc = 3;
 				r = do_clear_kmsg(fd);
 				break;
-		    case IHK_OSCTL_ASSIGN_NUMA:
-				dprintf("IHK_OSCTL_ASSIGN_NUMA called.\n");
-				args[2] = "assign";
-				args[3] = "mem";
-				memset(mem_list, 0, sizeof(mem_list));
-				ihk_chunk_pos = ctl->mem_chunks;
-				for (i = 1; i <= ctl->num_mem_chunks; i++) {
-					snprintf(mem_str, sizeof(mem_str), "%lu@%d,",
-						ihk_chunk_pos->size, ctl->numa_node);
-					strcat(mem_list, mem_str);
-				ihk_chunk_pos = ihk_chunk_pos + sizeof(ihk_mem_chunk);
-				}
-				p = strchr(mem_list, '\0');
-				if (p != NULL) {
-					*(p-1) = '\0';
-				}
-				dprintf("mem_list:%s\n", mem_list);
-				args[4] = mem_list;
-				args[5] = NULL;	
-				__argc = 5;
-				r = do_assign(fd);
-				break;
-		    case IHK_OSCTL_RELEASE_NUMA:
-				dprintf("IHK_OSCTL_RELEASE_NUMA called.\n");
-				args[2] = "release";
-				args[3] = "mem";
-				memset(mem_list, 0, sizeof(mem_list));
-				ihk_chunk_pos = ctl->mem_chunks;
-				for (i = 1; i <= ctl->num_mem_chunks; i++) {
-					snprintf(mem_str, sizeof(mem_str), "%lu@%d,",
-						ihk_chunk_pos->size, ctl->numa_node);
-					strcat(mem_list, mem_str);
-					ihk_chunk_pos = ihk_chunk_pos + sizeof(ihk_mem_chunk);
-				}
-				p = strchr(mem_list, '\0');
-				if (p != NULL) {
-					*(p-1) = '\0';
-				}
-				dprintf("mem_list:%s\n", mem_list);
-				args[4] = mem_list;
-				args[5] = NULL;
-				__argc = 5;
-				r = do_release(fd);
-				break;
 		    default:
 				dprintf("ihkosctl cmdtype:%d is unknown.\n", cmd_type);
 				exit(255);
@@ -1511,8 +1425,6 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 	    case IHK_OSCTL_RELEASE:
 	    case IHK_OSCTL_KARGS:
 	    case IHK_OSCTL_CLEAR_KMSG:
-	    case IHK_OSCTL_ASSIGN_NUMA:
-	    case IHK_OSCTL_RELEASE_NUMA:
 			if (ret != 0) {
 				return -EINVAL;
 			}

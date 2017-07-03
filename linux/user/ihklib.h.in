@@ -59,8 +59,6 @@ enum ihk_command_type {
 	IHK_CONFIG_RESERVE,
 	IHK_CONFIG_RELEASE,
 	IHK_CONFIG_QUERY,
-	IHK_CONFIG_RESERVE_NUMA,
-	IHK_CONFIG_RELEASE_NUMA
 };
 
 enum ihk_osctl_command_type {
@@ -74,8 +72,6 @@ enum ihk_osctl_command_type {
 	IHK_OSCTL_KARGS,
 	IHK_OSCTL_KMSG,
 	IHK_OSCTL_CLEAR_KMSG,
-	IHK_OSCTL_ASSIGN_NUMA,
-	IHK_OSCTL_RELEASE_NUMA
 };
 
 enum ihk_resource_type {
@@ -106,7 +102,6 @@ typedef struct ihkconfig {
 	ihk_mem_chunk *mem_chunks;
 	int num_mem_chunks;
 	int os_index;
-	int numa_node;
 } ihkconfig;
 
 typedef struct ihkosctl {
@@ -119,7 +114,6 @@ typedef struct ihkosctl {
 	char* kargs;
 	char* kmsg;
 	size_t kmsg_size;
-	int numa_node;
 } ihkosctl;
 
 typedef struct ihk_osinfo {
