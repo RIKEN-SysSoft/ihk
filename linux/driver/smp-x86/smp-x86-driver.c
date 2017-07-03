@@ -37,6 +37,7 @@
 #include <linux/topology.h>
 #include <linux/ctype.h>
 #include <linux/kallsyms.h>
+#include <linux/list_sort.h>
 #include <asm/hw_irq.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
@@ -2377,7 +2378,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 							comp_end_offset;
 						mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
 						add_free_mem_chunk(mem_chunk_leftover);
-						printk("%s: comp_end_offset: %lu\n",
+						dprintk("%s: comp_end_offset: %lu\n",
 								__FUNCTION__, comp_end_offset);
 					}
 				}
@@ -2914,7 +2915,7 @@ static int __smp_ihk_free_mem_from_list(struct list_head *list)
 				va += order_size;
 			}
 			else {
-				printk("%s: order_size - size_left: %lu\n",
+				dprintk("%s: order_size - size_left: %lu\n",
 					__FUNCTION__, order_size - size_left);
 				size_left = 0;
 			}
@@ -2974,7 +2975,7 @@ static int __smp_ihk_free_mem_from_rbtree(struct rb_root *root)
 				va += order_size;
 			}
 			else {
-				printk("%s: order_size - size_left: %lu\n",
+				dprintk("%s: order_size - size_left: %lu\n",
 					__FUNCTION__, order_size - size_left);
 				size_left = 0;
 			}
@@ -3054,6 +3055,40 @@ void __mem_chunk_insert(struct rb_root *root, struct chunk *chunk)
 	return;
 }
 
+
+static int cmp_pages(void *priv, struct list_head *a, struct list_head *b)
+{
+	/*
+	 * We just need to compare the pointers.  The 'struct
+	 * page' with vmemmap are ordered in the virtual address
+	 * space by physical address.  The list_head is embedded
+	 * in the 'struct page'.  So we don't even have to get
+	 * back to the 'struct page' here.
+	 */
+	if (a < b)
+		return -1;
+	if (a == b)
+		return 0;
+	/* a > b */
+	return 1;
+}
+
+static void sort_pagelists(struct zone *zone)
+{
+	unsigned int order;
+	unsigned int type;
+	unsigned long flags;
+
+	for_each_migratetype_order(order, type) {
+		struct list_head *l = &zone->free_area[order].free_list[type];
+
+		spin_lock_irqsave(&zone->lock, flags);
+		list_sort(NULL, l, &cmp_pages);
+		spin_unlock_irqrestore(&zone->lock, flags);
+	}
+}
+
+
 int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
 	int order = IHK_RESERVE_PAGE_ORDER;
@@ -3064,6 +3099,8 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	int ret = 0;
 	struct rb_root tmp_chunks = RB_ROOT;
 	nodemask_t nodemask;
+	int mcdram = 0;
+	int i;
 
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
@@ -3088,9 +3125,36 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		}
 	}
 
+	/* Sort page list (from Intel XPPSL patch) */
+	{
+		struct zone *zone;
+
+		for (i = 0; i < MAX_NR_ZONES; i++) {
+			zone = &NODE_DATA(numa_id)->node_zones[i];
+			if (!zone_is_initialized(zone)) {
+				continue;
+			}
+			if (!populated_zone(zone)) {
+				continue;
+			}
+			dprintk("%s: sorting node %d zone %d\n",
+				__FUNCTION__, numa_id, i);
+			sort_pagelists(zone);
+		}
+	}
+
+	/* XXX: OFP specific optimization for KNL */
+	for (i = 0; i < nr_node_ids / 2; ++i) {
+		if (node_distance(i, numa_id) == 31) {
+			dprintk("%s: NUMA %d is MCDRAM\n", __FUNCTION__, numa_id);
+			mcdram = 1;
+			break;
+		}
+	}
+
 	want = (ihk_mem + ((PAGE_SIZE << order) - 1))
 		& ~((PAGE_SIZE << order) - 1);
-	printk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
+	dprintk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
 	allocated = 0;
 
 retry:
@@ -3100,7 +3164,8 @@ retry:
 		struct page *pg;
 
 		pg = __alloc_pages_nodemask(
-				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN,
+				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
+				__GFP_NORETRY | __GFP_REPEAT,
 				order,
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
 		if (!pg) {
@@ -3108,9 +3173,9 @@ retry:
 			 * We ran out of memory using the current order of compound
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
-			if (order > 4) {
+			if (order > 4 || (mcdram && order > 1)) {
 				--order;
-				printk("%s: order decreased to %d\n", __FUNCTION__, order);
+				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
 				goto retry;
 			}
 
