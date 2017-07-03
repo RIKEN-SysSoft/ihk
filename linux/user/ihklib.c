@@ -2018,45 +2018,63 @@ int __ihk_makedumpfile(int index, char *dumpfile, int opt, char *vmfile, struct 
 }
 
 /* ihk_freeze */
-int ihk_freeze (int index)
+int ihk_freeze(unsigned long *os_set, int n)
 {
 	char fn[128];
-	int ret;
+	int ret = 0;
 	int fd = 0;
+	int i;
 
-    sprintf(fn, "/dev/mcos%d", index);
-    fd = open(fn, O_RDONLY);
-    if (fd < 0) {
-	  ret=-ENOENT;
+	for (i = 0; i < n; i++) {
+		if (*(os_set + i / 64) >> (i % 64)) {
+			sprintf(fn, "/dev/mcos%d", i);
+			fd = open(fn, O_RDONLY);
+			if (fd < 0) {
+				ret = -ENOENT;
+				goto fn_fail;
+			}
+			ret = ioctl(fd, IHK_OS_FREEZE, 0);
+			if (ret != 0) {
+				dprintf("Error: ioctl IHK_OS_FREEZE returned %d\n", ret);
+				ret = -EINVAL;
+				goto fn_fail;
+			}
+		}
     }
-    else {
-	  ret = ioctl(fd, IHK_OS_FREEZE, 0);
-      if (ret != 0) {
-        fprintf(stderr, "error: ihk_freeze() \n");
-      }
-    }
+ fn_exit:
 	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 /* ihk_thaw */
-int ihk_thaw (int index)
+int ihk_thaw(unsigned long *os_set, int n)
 {
 	char fn[128];
-	int ret;
+	int ret = 0;
 	int fd = 0;
+	int i;
 
-	sprintf(fn, "/dev/mcos%d", index);
-	fd = open(fn, O_RDONLY);
-	if (fd < 0) {
-	  ret=-ENOENT;
+	for (i = 0; i < n; i++) {
+		if (*(os_set + i / 64) >> (i % 64)) {
+			sprintf(fn, "/dev/mcos%d", i);
+			fd = open(fn, O_RDONLY);
+			if (fd < 0) {
+				ret = -ENOENT;
+				goto fn_fail;
+			}
+			ret = ioctl(fd, IHK_OS_THAW, 0);
+			if (ret != 0) {
+				dprintf("Error: ioctl IHK_OS_THAW returned %d\n", ret);
+				ret = -EINVAL;
+				goto fn_fail;
+			}
+		}
 	}
-	else {
-	  ret = ioctl(fd, IHK_OS_THAW, 0);
-	  if (ret != 0) {
-	    fprintf(stderr, "error: ihk_thaw() \n");
-	  }
-	}
+ fn_exit:
 	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 /* ihk_setperfevent */

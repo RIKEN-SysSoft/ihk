@@ -1,7 +1,7 @@
 CC=@CC@
 ARCH=@ARCH@
 IHKBASE ?= @abs_srcdir@/../..
-CFLAGS=-Wall -O -I$(IHKBASE)/linux/include/ -I$(IHKBASE)/linux/include/ihk/arch/$(ARCH) -I@abs_builddir@
+CFLAGS=-g -Wall -O -I$(IHKBASE)/linux/include/ -I$(IHKBASE)/linux/include/ihk/arch/$(ARCH) -I@abs_builddir@
 SBINDIR=@SBINDIR@
 LIBDIR=@LIBDIR@
 INCLUDEDIR=@INCLUDEDIR@
