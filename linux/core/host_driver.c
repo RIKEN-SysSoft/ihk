@@ -582,85 +582,93 @@ static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 	int status;
 
 	status = __ihk_os_query_status(data);
-	if (data->monitor == NULL) {
-		if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
-			dprintf("get_special_addr: failed.\n");
-			return -EINVAL;
-		}
 
-		psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
-		pa = __ihk_os_map_memory(data, rpa, psize);
-
+	/* (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
+	   (2) LWK initializes IHK_SPADDR_MONITOR
+	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready() */
+	if (status == IHK_OS_STATUS_READY) {
+		if(data->monitor == NULL) {
+			if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
+				printk("%s,get_special_addr failed\n", __FILE__);
+				status = -EINVAL;
+				goto fn_fail;
+			}
+			
+			psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+			pa = __ihk_os_map_memory(data, rpa, psize);
+			
 #ifdef CONFIG_MIC
-		if ((long)pa <= 0) {
-			return -EINVAL;
-		}
-
-		data->monitor = ioremap_nocache(pa, psize);
+			if ((long)pa <= 0) {
+				status = -EINVAL;
+				goto fn_fail;
+			}
+			
+			data->monitor = ioremap_nocache(pa, psize);
 #else
-		data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize, NULL, 0);
+			data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize, NULL, 0);
 #endif
-		data->monitor_pa = pa;
-		data->monitor_len = size;
-	}
-
-	size = data->monitor_len;
-	n = size / sizeof(struct ihk_os_monitor);
-	for (i = 0; i < n; i++) {
-if(status == IHK_OS_MONITOR_KERNEL_FREEZING || status == IHK_OS_MONITOR_KERNEL_FROZEN)
-continue;
-		if (data->monitor[i].status == IHK_OS_MONITOR_KERNEL_FREEZING) {
-			status = IHK_OS_MONITOR_KERNEL_FREEZING;
-//			break;
-		}
-		if (data->monitor[i].status == IHK_OS_MONITOR_KERNEL_FROZEN) {
-			status = IHK_OS_MONITOR_KERNEL_FROZEN;
-//			break;
-		}
-	}
-	if (status != IHK_OS_STATUS_READY) {
-	    dkprintf("function = %s (status=%d) \n",__FUNCTION__,status);
-		return status;
-	}
-
-	if(data->monitor == NULL){
-		if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
-			dprintf("get_special_addr: failed.\n");
-			return -EINVAL;
+			data->monitor_pa = pa;
+			data->monitor_len = size;
 		}
 
-		psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
-		pa = __ihk_os_map_memory(data, rpa, psize);
+		size = data->monitor_len;
+		n = size / sizeof(struct ihk_os_monitor);
+		for (i = 0; i < n; i++) {
+			if(status == IHK_OS_MONITOR_KERNEL_FREEZING || status == IHK_OS_MONITOR_KERNEL_FROZEN)
+				continue;
+			if (data->monitor[i].status == IHK_OS_MONITOR_KERNEL_FREEZING) {
+				status = IHK_OS_MONITOR_KERNEL_FREEZING;
+				//			break;
+			}
+			if (data->monitor[i].status == IHK_OS_MONITOR_KERNEL_FROZEN) {
+				status = IHK_OS_MONITOR_KERNEL_FROZEN;
+				//			break;
+			}
+		}
 
+		if(data->monitor == NULL){
+			if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
+				printk("%s,get_special_addr failed\n", __FILE__);
+				status = -EINVAL;
+				goto fn_fail;
+			}
+
+			psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+			pa = __ihk_os_map_memory(data, rpa, psize);
+			
 #ifdef CONFIG_MIC
-		if ((long)pa <= 0) {
-			return -EINVAL;
-		}
-
-		data->monitor = ioremap_nocache(pa, psize);
+			if ((long)pa <= 0) {
+				return -EINVAL;
+			}
+			
+			data->monitor = ioremap_nocache(pa, psize);
 #else
-		data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize, NULL, 0);
+			data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize, NULL, 0);
 #endif
-		data->monitor_pa = pa;
-		data->monitor_len = size;
+			data->monitor_pa = pa;
+			data->monitor_len = size;
+		}
+
+		size = data->monitor_len;
+		n = size / sizeof(struct ihk_os_monitor);
+		for(i = 0; i < n; i++){
+			if(data->monitor[i].status == IHK_OS_MONITOR_PANIC){
+				status = IHK_OS_STATUS_FAILED;
+				break;
+			}
+			if(data->monitor[i].status == IHK_OS_MONITOR_KERNEL){
+				if(data->monitor[i].counter ==
+				   data->monitor[i].ocounter)
+					status = IHK_OS_STATUS_HUNGUP;
+			}
+			data->monitor[i].ocounter = data->monitor[i].counter;
+		}
 	}
 
-	size = data->monitor_len;
-	n = size / sizeof(struct ihk_os_monitor);
-	for(i = 0; i < n; i++){
-		if(data->monitor[i].status == IHK_OS_MONITOR_PANIC){
-			status = IHK_OS_STATUS_FAILED;
-			break;
-		}
-		if(data->monitor[i].status == IHK_OS_MONITOR_KERNEL){
-			if(data->monitor[i].counter ==
-				data->monitor[i].ocounter)
-				status = IHK_OS_STATUS_HUNGUP;
-		}
-		data->monitor[i].ocounter = data->monitor[i].counter;
-	}
-
+	fn_exit:
 	return status;
+	fn_fail:
+	goto fn_exit;
 }
 
 /** \brief Clear the kernel message buffer. */

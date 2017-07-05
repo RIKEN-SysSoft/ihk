@@ -1950,8 +1950,9 @@ int ihk_getosinfo (int index, ihk_osinfo *osinfo) {
 				osinfo->status = IHK_STATUS_FROZEN;
 				break;
 		    default:
-				osinfo->status = IHK_STATUS_INACTIVE;
-				break;
+				dprintf("%s,unknown os status=%d\n", __FILE__, ret);
+				ret = -EINVAL;
+				goto fn_fail;
 		}
 	}	
 
