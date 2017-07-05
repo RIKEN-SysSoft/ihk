@@ -93,6 +93,12 @@ IHK_OS_OPS_BEGIN(int, ikc_map,
 	IHK_OPS_BODY(ikc_map, arg);
 }
 
+IHK_OS_OPS_BEGIN(int, query_ikc_map,
+                 unsigned long arg)
+{
+	IHK_OPS_BODY(query_ikc_map, arg);
+}
+
 IHK_OS_OPS_BEGIN(int, query_cpu,
                  unsigned long arg)
 {

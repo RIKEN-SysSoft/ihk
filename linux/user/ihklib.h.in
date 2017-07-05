@@ -72,6 +72,7 @@ enum ihk_osctl_command_type {
 	IHK_OSCTL_KARGS,
 	IHK_OSCTL_KMSG,
 	IHK_OSCTL_CLEAR_KMSG,
+	IHK_OSCTL_IKC_MAP,
 };
 
 enum ihk_resource_type {
@@ -114,6 +115,10 @@ typedef struct ihkosctl {
 	char* kargs;
 	char* kmsg;
 	size_t kmsg_size;
+	int num_ikc_ssets;
+	int *ikc_sset_sizes;
+	int **ikc_sset_members;
+	int *ikc_map;
 } ihkosctl;
 
 typedef struct ihk_osinfo {
@@ -121,6 +126,10 @@ typedef struct ihk_osinfo {
 	int num_mem_chunks;
 	cpu_set_t mask;
 	enum ihk_os_status status;
+	int num_ikc_ssets;
+	int *ikc_sset_sizes;
+	int **ikc_sset_members;
+	int *ikc_map;
 } ihk_osinfo;
 
 typedef struct ihk_rusage {

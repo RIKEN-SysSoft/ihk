@@ -32,11 +32,9 @@ char **__argv;
 #define MILLI_SEC 1000000
 
 #ifdef DEBUG_PRINT
-#define	dprintf(...) printf(__VA_ARGS__)
-#define	eprintf(...) printf(__VA_ARGS__)
+#define	dprintf(...) fprintf(stderr, __VA_ARGS__)
 #else
-#define dprintf(...) do { if (0) printf(__VA_ARGS__); } while (0)
-#define	eprintf(...) printf(__VA_ARGS__)
+#define dprintf(...) do { if (0) fprintf(stderr, __VA_ARGS__); } while (0)
 #endif
 
 cpu_set_t cpu_set;
@@ -805,6 +803,30 @@ static int do_clear_kmsg(int fd)
 	return r >= 0 ? r : -errno;
 }
 
+static int do_ikc_map(int fd)
+{
+	int status = 0, ret;
+	dprintf("do_ikc_map,__argc=%d,__argv[3]=%s\n", __argc, __argv[3]);
+
+	if (__argc != 3) {
+		status = 255;
+		goto fn_fail;
+	}
+
+	ret = ioctl(fd, IHK_OS_IKC_MAP, __argv[3]);
+	if (ret != 0) {
+		dprintf("Error: do_ikc_map, ioctl returns %d\n", ret);
+		status = 255;
+		goto fn_fail;
+	}
+
+ fn_exit:
+	dprintf("do_ikc_map, returning %d\n", status);
+	return status;
+ fn_fail:
+	goto fn_exit;
+}
+
 #ifdef ENABLE_MEMDUMP
 #include <bfd.h>
 #include <inttypes.h>
@@ -1174,7 +1196,7 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 	enum ihk_osctl_command_type cmd_type;
 	char fn[1024];
 	char os_fn[1024];
-	int i;
+	int i, j;
 	int pid;
 	int status;
 	struct stat file_stat;
@@ -1193,7 +1215,10 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 	char cpu_str[4];
 	char mem_list[2048];
 	char mem_str[128];
+	char ikc_map[2048];
 	char *p;
+
+ 	dprintf("ihk_osctl,comm=%d\n", comm);
 
 	cmd_type = comm;
 	args[0] = ihkosctl_cmd;
@@ -1217,13 +1242,14 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 		int r = 0;
 		int fd;
 
+		dprintf("ihk_osctl(), child\n");
 		fd = open(os_fn, O_RDONLY);
 		if (fd == -1) {
 			perror("open");
 			exit(255);
 		}
 		close(STDOUT_FILENO);
-		close(STDERR_FILENO);
+		//close(STDERR_FILENO);
 		dup2(cmd_fd[1], STDOUT_FILENO);
 		close(cmd_fd[0]);
 		switch (cmd_type) {
@@ -1388,6 +1414,29 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 				__argc = 3;
 				r = do_clear_kmsg(fd);
 				break;
+		    case IHK_OSCTL_IKC_MAP:
+				dprintf("IHK_OSCTL_IKC_MAP called.\n");
+				args[2] = "ikc_map";
+				memset(ikc_map, 0, sizeof(ikc_map));
+				for (i = 0; i < ctl->num_ikc_ssets; i++) {
+					for (j = 0; j < ctl->ikc_sset_sizes[i]; j++) {
+						snprintf(cpu_str, sizeof(cpu_str), "%d", *(ctl->ikc_sset_members[i] + j));
+						strcat(ikc_map, cpu_str);
+						if(j != ctl->ikc_sset_sizes[i] - 1) {
+							strcat(ikc_map, ",");
+						}
+					}
+					strcat(ikc_map, ":");
+					snprintf(cpu_str, sizeof(cpu_str), "%d", ctl->ikc_map[i]);
+					strcat(ikc_map, cpu_str);
+					if(i != ctl->num_ikc_ssets - 1) {
+						strcat(ikc_map, "+");
+					}
+				}
+				args[3] = ikc_map;
+				__argc = 3;
+				r = do_ikc_map(fd);
+				break;
 		    default:
 				dprintf("ihkosctl cmdtype:%d is unknown.\n", cmd_type);
 				exit(255);
@@ -1425,6 +1474,7 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 	    case IHK_OSCTL_RELEASE:
 	    case IHK_OSCTL_KARGS:
 	    case IHK_OSCTL_CLEAR_KMSG:
+	    case IHK_OSCTL_IKC_MAP:
 			if (ret != 0) {
 				return -EINVAL;
 			}
@@ -1768,7 +1818,7 @@ int read_sysfs_key_val(char* sysfs_path, char* keyword, unsigned long* val) {
 int ihk_getosinfo (int index, ihk_osinfo *osinfo) {
 	int fd = 0;
 	char fn[128];
-	int ret;	
+	int ret = 0;	
 	char query_result[1024];
 	unsigned long size = 0;
 	int numa_node_number = 0;
@@ -1778,11 +1828,14 @@ int ihk_getosinfo (int index, ihk_osinfo *osinfo) {
 
 	int store_os_mem_chunks = 0;
 	ihk_mem_chunk *os_chunk_pos = NULL;
-
+	
+	dprintf("ihk_getosinfo,enter\n");
 	sprintf(fn, "/dev/mcos%d", index);
 	fd = open(fn, O_RDWR);
 	if (fd < 0) {
-		return (-ENOENT);
+		dprintf("%s,ihk_getosinfo,open failed,fn=%s,errno=%d\n", __FILE__, fn, errno);
+		ret = -ENOENT;
+		goto fn_fail;
 	}
 	close(fd);
 
@@ -1798,6 +1851,9 @@ int ihk_getosinfo (int index, ihk_osinfo *osinfo) {
 	sprintf(fn, "/dev/mcos%d", index);
 	fd = open(fn, O_RDONLY);
 	if (fd < 0) {
+		dprintf("%s,ihk_getosinfo,open failed,fn=%s,errno=%d\n", __FILE__, fn, errno);
+		ret = -ENOENT;
+		goto fn_fail;
 	} 
 	else {
 		ret = ioctl(fd, IHK_OS_QUERY_MEM, query_result);
@@ -1805,7 +1861,7 @@ int ihk_getosinfo (int index, ihk_osinfo *osinfo) {
 			fprintf(stderr, "error: querying OS MEM\n");
 		}
 		if (ret == 0) {
-			dprintf("query_result:%s\n", query_result);
+			dprintf("%s,ihkosctl query mem returned %s\n", __FILE__, query_result);
 			token = strtok(query_result, delim);
 			while ( token != NULL ) {	
 				os_mem_count++;
@@ -1844,7 +1900,7 @@ int ihk_getosinfo (int index, ihk_osinfo *osinfo) {
 			fprintf(stderr, "error: querying OS CPU\n");
 		}
 		if (ret == 0) {
-			dprintf("%s\n", query_result);
+			dprintf("%s,ihkosctl query cpu returned %s\n", __FILE__, query_result);
 			CPU_ZERO(&cpu_set);
 			token1 = strtok(query_result, delim1);
 			while (token1 != NULL) {
@@ -1865,6 +1921,7 @@ int ihk_getosinfo (int index, ihk_osinfo *osinfo) {
 	}
 	else {
 		ret = ioctl(fd, IHK_OS_STATUS, query_result);
+		dprintf("%s,ihkosctl status returned %d\n", __FILE__, ret);
 		switch (ret) {
 		    case 0: /* IHK_OS_STATUS_NOT_BOOTED */
 				osinfo->status = IHK_STATUS_INACTIVE;
@@ -1897,7 +1954,74 @@ int ihk_getosinfo (int index, ihk_osinfo *osinfo) {
 				break;
 		}
 	}	
-	return 0;
+
+	/* query ikc_map */
+	dprintf("%s,query_ikc_map\n", __FILE__);
+	memset(query_result, 0, sizeof(query_result));
+	sprintf(fn, "/dev/mcos%d", index);
+	fd = open(fn, O_RDONLY);
+	if (fd < 0) {
+		dprintf("%s,query_ikc_map,open failed,fn=%s\n", __FILE__, fn);
+		ret = -ENOENT;
+		goto fn_fail;
+	} 
+
+	ret = ioctl(fd, IHK_OS_QUERY_IKC_MAP, query_result);
+	if (ret != 0) {
+		dprintf("%s,query_ikc_map,ioctl failed,ret=%d\n", __FILE__, ret);
+		ret = -EINVAL;
+		goto fn_fail;
+	}
+	close(fd);
+	
+	dprintf("%s,query_ikc_map, ioctl returned %s\n", __FILE__, query_result);
+	dprintf("%s,ref,num_ikc_ssets=%d\n", __FILE__, osinfo->num_ikc_ssets);
+
+	int sset_rank = 0;
+	char* sset = query_result;
+	token = strsep(&sset, "+");
+	while (token != NULL) {	
+		char* pair = token;
+		token = strsep(&pair, ":");
+		if (pair == NULL) {
+			dprintf("%s,query_ikc_map,colon not found,str=%s\n", __FILE__, query_result);
+			ret = -EINVAL;
+			goto fn_fail;
+		}
+		if(osinfo->num_ikc_ssets > sset_rank) {
+			osinfo->ikc_map[sset_rank] = atol(pair);
+			dprintf("ikc_map[%d]=%d\n", sset_rank, osinfo->ikc_map[sset_rank]);
+		}
+
+		int cpu_rank = 0;
+		char* cpus = token;
+		token = strsep(&cpus, ",");
+		while (token != NULL) {
+			if(osinfo->num_ikc_ssets > sset_rank &&
+			   osinfo->ikc_sset_sizes[sset_rank] > cpu_rank) {
+				dprintf("%s,use,sset_sizes[%d]=%d\n", __FILE__, sset_rank, osinfo->ikc_sset_sizes[sset_rank]);
+				*(osinfo->ikc_sset_members[sset_rank] + cpu_rank) = atol(token);
+				dprintf("%s,sset_members[%d]+%d=%d\n", __FILE__, sset_rank, cpu_rank, *(osinfo->ikc_sset_members[sset_rank] + cpu_rank));
+			}
+			token = strsep(&cpus, ",");
+			cpu_rank++;
+		}
+		if(osinfo->num_ikc_ssets > sset_rank) {
+			osinfo->ikc_sset_sizes[sset_rank] = cpu_rank;
+			dprintf("%s,def,sset_sizes[%d]=%d\n", __FILE__, sset_rank, osinfo->ikc_sset_sizes[sset_rank]);
+		}
+
+		token = strsep(&sset, "+");
+		sset_rank++;
+	}
+	osinfo->num_ikc_ssets = sset_rank;
+	dprintf("%s,def,num_ikc_ssets=%d\n", __FILE__, osinfo->num_ikc_ssets);
+	ret = 0;
+	
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 /* Create dumpfile of OS instance */

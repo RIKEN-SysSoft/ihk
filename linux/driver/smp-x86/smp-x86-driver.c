@@ -2199,6 +2199,8 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	char *string = (char *)arg;
 	char *token;
 
+	dprintk("%s,ikc_map,arg=%s\n", __FUNCTION__, string);
+
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
 		spin_unlock_irqrestore(&os->lock, flags);
@@ -2251,6 +2253,124 @@ out:
 	return ret;
 }
 
+static int smp_ihk_os_query_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret = 0;
+	int i, src, dst, max_dst = -1;
+	char cpu_str[4];
+
+	/* Sender-set (sset): Set of senders sharing the same destination */
+	int *rank = NULL; /* Order in sender-set, indexed by IKC source CPU# */
+	int *ikc_sset_sizes = NULL; /* Indexed by IKC destination CPU# */
+	int **ikc_sset_members = NULL; /* Indexed by IKC destination CPU# */
+
+	rank = kzalloc(sizeof(int) * SMP_MAX_CPUS, GFP_KERNEL);
+	if (!rank) {
+		printk(KERN_ERR "IHK-SMP: error: allocating rank\n");
+		ret = -ENOMEM;
+		goto fn_fail;
+	}
+
+	ikc_sset_sizes = kzalloc(sizeof(int) * SMP_MAX_CPUS, GFP_KERNEL);
+	if (!ikc_sset_sizes) {
+		printk(KERN_ERR "IHK-SMP: error: allocating num_ikc_ssets\n");
+		ret = -ENOMEM;
+		goto fn_fail;
+	}
+
+	ikc_sset_members = kzalloc(sizeof(int*) * SMP_MAX_CPUS, GFP_KERNEL);
+	if (!ikc_sset_members) {
+		printk(KERN_ERR "IHK-SMP: error: allocating ikc_sset_members\n");
+		ret = -ENOMEM;
+		goto fn_fail;
+	}
+
+	for (src = 0; src < SMP_MAX_CPUS; ++src) {
+		if (ihk_smp_cpus[src].status != IHK_SMP_CPU_ASSIGNED)
+			continue;
+		if (ihk_smp_cpus[src].os != ihk_os)
+			continue;
+
+		rank[src] = ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu];
+		dprintk("query_ikc_map,src=%d,dst=%d,rank[src]=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, rank[src]);
+		ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]++;
+		dprintk("query_ikc_map,sset_sizes=%d\n", ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
+		if(max_dst < ihk_smp_cpus[src].ikc_map_cpu) {
+			max_dst = ihk_smp_cpus[src].ikc_map_cpu;
+		}
+		dprintk("query_ikc_map,max_dst=%d\n", max_dst);
+	}
+
+	for (src = 0; src < SMP_MAX_CPUS; ++src) {
+		if (ihk_smp_cpus[src].status != IHK_SMP_CPU_ASSIGNED)
+			continue;
+		if (ihk_smp_cpus[src].os != ihk_os)
+			continue;
+
+		if (!ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu]) {
+			ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] = 
+				kmalloc(sizeof(int) * ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu], GFP_KERNEL);
+			if (!ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu]) {
+				printk(KERN_ERR "IHK-SMP: error: allocating ikc_sset_members\n");
+				ret = -ENOMEM;
+				goto fn_fail;
+			}
+			dprintk("query_ikc_map,kmalloc,dst=%d,sset_sizes=%d\n", ihk_smp_cpus[src].ikc_map_cpu, ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
+		}
+		*(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]) = src;
+		dprintk("query_ikc_map,src=%d,dst=%d,*(members[dst]+rank[src])=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, *(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]));
+	}
+
+	memset(query_res, 0, sizeof(query_res));
+
+	for (dst = 0; dst < SMP_MAX_CPUS; ++dst) {
+		if(ikc_sset_sizes[dst] == 0) {
+			continue;
+		}
+
+		for (i = 0; i < ikc_sset_sizes[dst]; ++i) {
+			sprintf(cpu_str, "%d", *(ikc_sset_members[dst] + i));
+			strcat(query_res, cpu_str);
+			if(i != ikc_sset_sizes[dst] - 1) {
+				strcat(query_res, ",");
+			}
+		}
+		strcat(query_res, ":");
+		sprintf(cpu_str, "%d", dst);
+		strcat(query_res, cpu_str);
+		if(dst != max_dst) {
+			strcat(query_res, "+");
+		}
+	}
+
+	dprintk("query_ikc_map,query_res=%s\n", query_res);
+
+	if (strlen(query_res) >= 0) {
+		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
+			printk("IHK-SMP: error: copying CPU string to user-space\n");
+			ret = -EINVAL;
+			goto fn_fail;
+		}
+	}
+
+ fn_fail:
+	if(ikc_sset_members) {
+		for (dst = 0; dst < SMP_MAX_CPUS; ++dst) {
+			if(ikc_sset_members[dst]) {
+				kfree(ikc_sset_members[dst]);
+			}
+		}
+		kfree(ikc_sset_members);
+	}
+	if(ikc_sset_sizes) {
+		kfree(ikc_sset_sizes);
+	}
+	if(rank) {
+		kfree(rank);
+	}
+	// fn_exit:
+	return ret;
+}
 
 static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
 {
@@ -2641,10 +2761,10 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
 	.ikc_map = smp_ihk_os_ikc_map,
+	.query_ikc_map = smp_ihk_os_query_ikc_map,
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,
-	.ikc_map = smp_ihk_os_ikc_map,
 	.query_mem = smp_ihk_os_query_mem,
 	.freeze = smp_ihk_os_freeze,
 	.thaw = smp_ihk_os_thaw,

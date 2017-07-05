@@ -37,7 +37,7 @@
 #include "host_linux.h"
 #include "ops_wrappers.h"
 
-#define DEBUG_IKC
+//#define DEBUG_IKC
 
 #ifdef DEBUG_IKC
 #define dkprintf(...) kprintf(__VA_ARGS__)
@@ -795,6 +795,7 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_CLEAR_KMSG:
 	case IHK_OS_QUERY_CPU:
 	case IHK_OS_QUERY_MEM:
+	case IHK_OS_QUERY_IKC_MAP:
 	case IHK_OS_STATUS:
 		break;
 	default:
@@ -879,6 +880,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
 	case IHK_OS_IKC_MAP:
 		ret = __ihk_os_ikc_map(data, arg);
+		break;
+
+	case IHK_OS_QUERY_IKC_MAP:
+		ret = __ihk_os_query_ikc_map(data, arg);
 		break;
 
 	case IHK_OS_QUERY_CPU:

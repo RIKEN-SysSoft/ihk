@@ -46,6 +46,7 @@
 #define IHK_OS_QUERY_CPU              0x112a26
 #define IHK_OS_QUERY_MEM              0x112a27
 #define IHK_OS_IKC_MAP                0x112a28
+#define IHK_OS_QUERY_IKC_MAP          0x112a29
 #define IHK_OS_FREEZE                 0x112a30
 #define IHK_OS_THAW                   0x112a31
 

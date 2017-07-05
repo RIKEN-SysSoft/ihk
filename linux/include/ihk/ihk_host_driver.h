@@ -270,8 +270,15 @@ struct ihk_os_ops {
 	* \return Success or failure.
 	* \param List of CPU mappings (see ihkosctl for format).
 	**/
-
 	int (*ikc_map)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Query IKC CPU mapping.
+	*
+	* \return Success or failure.
+	* \param List of CPU mappings (see ihkosctl for format).
+	**/
+	int (*query_ikc_map)(ihk_os_t, void *, unsigned long arg);
+
 	/** \brief Query CPU cores of an OS instance
 	 *
 	 *  \return Success or failure.
