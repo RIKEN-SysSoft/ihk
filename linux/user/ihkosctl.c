@@ -397,62 +397,104 @@ static int do_kmsg(int fd)
 }
 
 static int do_getosinfo(int fd) {
-	ihk_mem_chunk *os_chunk;
-	ihk_osinfo *osinfo;
-	int ret;
-	int i;
-	int index;
+	ihk_osinfo osinfo;
+	int ret = 0, ihk_ret;
+	int i, j;
+	int index = atoi(__argv[1]);
 
-	close(fd);
-
-	index = atoi(__argv[1]);
-    osinfo = (ihk_osinfo *) malloc (sizeof(ihk_osinfo));
-    if (osinfo == NULL) {
-        perror("osinfo malloc");
-        exit(-1);
-    }
-    osinfo->mem_chunks = NULL;
-    osinfo->num_mem_chunks = 0;
-
-	ret = ihk_getosinfo(index, osinfo);
-    if (ret == -1) {
-        perror("ihk_getosinfo(1st) failed");
-        exit(-1);
+	bzero(&osinfo, sizeof(osinfo));
+	ihk_ret = ihk_getosinfo(index, &osinfo);
+    if (ihk_ret == -1) {
+        fprintf(stderr, "error: ihk_getosinfo failed\n");
+        ret = -1;
+		goto fn_fail;
     }
 
-    os_chunk = (ihk_mem_chunk *) malloc (osinfo->num_mem_chunks * sizeof(ihk_mem_chunk));
-    if (os_chunk == NULL) {
-        perror("ihk_chunk malloc");
-        exit(-1);
+    osinfo.mem_chunks = (ihk_mem_chunk *)malloc(osinfo.num_mem_chunks * sizeof(ihk_mem_chunk));
+    if (osinfo.mem_chunks == NULL) {
+        fprintf(stderr, "error: calloc failed\n");
+        ret = -1;
+		goto fn_fail;
     }		
-	
-   	osinfo->mem_chunks = os_chunk;
 
-	ret = ihk_getosinfo(index, osinfo);
-    if (ret == -1) {
-        perror("ihk_getosinfo(2nd) failed");
-        exit(-1);
+    osinfo.ikc_sset_sizes = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
+    if (osinfo.ikc_sset_sizes == NULL) {
+        fprintf(stderr, "error: calloc failed\n");
+        ret = -1;
+		goto fn_fail;
+    }		
+    osinfo.ikc_sset_members = (int**)calloc(osinfo.num_ikc_ssets, sizeof(int*));
+    if (osinfo.ikc_sset_members == NULL) {
+        fprintf(stderr, "error: calloc failed\n");
+        ret = -1;
+		goto fn_fail;
+    }		
+    osinfo.ikc_map = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
+    if (osinfo.ikc_map == NULL) {
+        fprintf(stderr, "error: calloc failed\n");
+        ret = -1;
+		goto fn_fail;
     }
 
-    printf("Assigned_mem:");
-    for (i = 0; i < osinfo->num_mem_chunks; i++) {
+	ihk_ret = ihk_getosinfo(index, &osinfo);
+    if (ihk_ret == -1) {
+        fprintf(stderr, "error: ihk_getosinfo failed\n");
+        ret = -1;
+		goto fn_fail;
+    }
+
+    for(i = 0; i < osinfo.num_ikc_ssets; i++) {
+        dprintf("%s,ikc_sset_sizes[%d]=%d\n", __FILE__, i, osinfo.ikc_sset_sizes[i]);
+        osinfo.ikc_sset_members[i] = calloc(osinfo.ikc_sset_sizes[i], sizeof(int));
+		if (osinfo.ikc_sset_members[i] == NULL) {
+			fprintf(stderr, "error: calloc failed\n");
+			ret = -1;
+			goto fn_fail;
+		}
+    }
+
+	ihk_ret = ihk_getosinfo(index, &osinfo);
+    if (ihk_ret == -1) {
+        fprintf(stderr, "error: ihk_getosinfo failed\n");
+        ret = -1;
+		goto fn_fail;
+    }
+
+    printf("Assigned_mem: ");
+    for (i = 0; i < osinfo.num_mem_chunks; i++) {
         if (i == 0) {
             printf("%lu@%d",
-                    (osinfo->mem_chunks + i * sizeof(ihk_mem_chunk))->size,
-                    (osinfo->mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+                    (osinfo.mem_chunks + i * sizeof(ihk_mem_chunk))->size,
+                    (osinfo.mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
         } 
 		else {
             printf(",%lu@%d",
-                    (osinfo->mem_chunks + i * sizeof(ihk_mem_chunk))->size,
-                    (osinfo->mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+                    (osinfo.mem_chunks + i * sizeof(ihk_mem_chunk))->size,
+                    (osinfo.mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
         }
     }
     printf("\n");
 
-    printf("Assigned_cpu:");
-    printf("%016lx%016lx\n", osinfo->mask.__bits[0], osinfo->mask.__bits[1]);
+    printf("Assigned_cpu: ");
+    printf("%016lx%016lx\n", osinfo.mask.__bits[0], osinfo.mask.__bits[1]);
 
-	switch (osinfo->status) {
+    printf("IKC_map: ");
+	for (i = 0; i < osinfo.num_ikc_ssets; i++) {
+		for (j = 0; j < osinfo.ikc_sset_sizes[i]; j++) {
+			printf("%d", *(osinfo.ikc_sset_members[i] + j));
+			if(j != osinfo.ikc_sset_sizes[i] - 1) {
+				printf(",");
+			}
+		}
+		printf(":");
+		printf("%d", osinfo.ikc_map[i]);
+		if(i != osinfo.num_ikc_ssets - 1) {
+			printf("+");
+		}
+	}
+    printf("\n");
+
+	switch (osinfo.status) {
 		case IHK_STATUS_INACTIVE:
 			printf("Status: INACTIVE\n");
 			break;
@@ -478,9 +520,30 @@ static int do_getosinfo(int fd) {
 			printf("Status: FROZEN\n");
 			break;
 	}	
-    free(os_chunk);
-    free(osinfo);
-    return 0;
+
+ fn_fail:
+	if(osinfo.ikc_sset_members) {
+		for (i = 0; i < osinfo.num_ikc_ssets; ++i) {
+			if(osinfo.ikc_sset_members[i]) {
+				free(osinfo.ikc_sset_members[i]);
+			}
+		}
+	}
+	if(osinfo.ikc_map) {
+		free(osinfo.ikc_map);
+	}
+	if(osinfo.ikc_sset_members) {
+		free(osinfo.ikc_sset_members);
+	}
+	if(osinfo.ikc_sset_sizes) {
+		free(osinfo.ikc_sset_sizes);
+	}
+	if(osinfo.mem_chunks) {
+		free(osinfo.mem_chunks);
+	}
+
+	// fn_exit:
+    return ret;
 }
 
 static int do_clear_kmsg(int fd)

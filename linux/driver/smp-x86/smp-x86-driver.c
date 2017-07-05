@@ -2361,6 +2361,8 @@ static int smp_ihk_os_query_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long a
 				kfree(ikc_sset_members[dst]);
 			}
 		}
+	}
+	if(ikc_sset_members) {
 		kfree(ikc_sset_members);
 	}
 	if(ikc_sset_sizes) {
