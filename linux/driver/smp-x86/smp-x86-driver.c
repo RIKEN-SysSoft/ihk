@@ -3296,11 +3296,7 @@ retry:
 		if (!pg) {
 			int freed_pages;
 
-			if (__try_to_free_pages && failed_free_attempts < 20) {
-
-				if (__drain_all_pages) {
-					__drain_all_pages();
-				}
+			if (__try_to_free_pages && failed_free_attempts < 5) {
 
 				freed_pages = __try_to_free_pages(
 						node_zonelist(numa_id, GFP_KERNEL),
