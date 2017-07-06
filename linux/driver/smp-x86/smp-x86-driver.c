@@ -38,6 +38,7 @@
 #include <linux/ctype.h>
 #include <linux/kallsyms.h>
 #include <linux/list_sort.h>
+#include <linux/swap.h>
 #include <asm/hw_irq.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
@@ -3221,11 +3222,25 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	nodemask_t nodemask;
 	int mcdram = 0;
 	int i;
+	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
+				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
+	void (*__drain_all_pages)(void) = NULL;
+	int failed_free_attempts = 0;
 
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
 
 	dprintk(KERN_INFO "IHK-SMP: __ihk_smp_reserve_mem: %lu bytes\n", ihk_mem);
+
+	__try_to_free_pages = (unsigned long (*)
+			(struct zonelist *, int, gfp_t, nodemask_t *))
+			kallsyms_lookup_name("try_to_free_pages");
+	__drain_all_pages = (void (*)(void))
+			kallsyms_lookup_name("drain_all_pages");
+
+	if (__drain_all_pages) {
+		__drain_all_pages();
+	}
 
 	/* Shrink slab/slub caches */
 	{
@@ -3289,19 +3304,42 @@ retry:
 				order,
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
 		if (!pg) {
+			int freed_pages;
+
+			if (__try_to_free_pages && failed_free_attempts < 20) {
+
+				if (__drain_all_pages) {
+					__drain_all_pages();
+				}
+
+				freed_pages = __try_to_free_pages(
+						node_zonelist(numa_id, GFP_KERNEL),
+						order,
+						GFP_KERNEL, NULL);
+
+				if (freed_pages <= 1)
+					++failed_free_attempts;
+
+				dprintk("%s: freed %d pages with order %d..\n",
+						__FUNCTION__, freed_pages, order);
+				goto retry;
+			}
+
 			/*
 			 * We ran out of memory using the current order of compound
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
 			if (order > 4 || (mcdram && order > 1)) {
 				--order;
+				failed_free_attempts = 0;
 				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
 				goto retry;
 			}
 
 			/*
-			 * Otherwise, we may have run out of memory altogether before finding
-			 * a single contigous chunk, but do we have enough in multiple chunks?
+			 * Otherwise, we may have run out of memory altogether before
+			 * finding a single contigous chunk, but do we have enough in
+			 * multiple chunks?
 			 */
 			if (allocated >= want) break;
 
@@ -3310,6 +3348,8 @@ retry:
 			ret = -1;
 			goto out;
 		}
+
+		failed_free_attempts = 0;
 
 		p = page_address(pg);
 
