@@ -3220,7 +3220,6 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	int ret = 0;
 	struct rb_root tmp_chunks = RB_ROOT;
 	nodemask_t nodemask;
-	int mcdram = 0;
 	int i;
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
@@ -3278,15 +3277,6 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		}
 	}
 
-	/* XXX: OFP specific optimization for KNL */
-	for (i = 0; i < nr_node_ids / 2; ++i) {
-		if (node_distance(i, numa_id) == 31) {
-			dprintk("%s: NUMA %d is MCDRAM\n", __FUNCTION__, numa_id);
-			mcdram = 1;
-			break;
-		}
-	}
-
 	want = (ihk_mem + ((PAGE_SIZE << order) - 1))
 		& ~((PAGE_SIZE << order) - 1);
 	dprintk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
@@ -3329,7 +3319,7 @@ retry:
 			 * We ran out of memory using the current order of compound
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
-			if (order > 4 || (mcdram && order > 1)) {
+			if (order > 1) {
 				--order;
 				failed_free_attempts = 0;
 				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
