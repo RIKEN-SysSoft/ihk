@@ -3216,6 +3216,8 @@ static void sort_pagelists(struct zone *zone)
 	}
 }
 
+#define RESERVE_MEM_FAILED_ATTEMPTS 20
+#define RESERVE_MEM_TIMEOUT 15
 
 int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
@@ -3232,6 +3234,7 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
 	void (*__drain_all_pages)(void) = NULL;
 	int failed_free_attempts = 0;
+	unsigned long res_start = get_seconds();
 
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
@@ -3297,13 +3300,19 @@ retry:
 
 		pg = __alloc_pages_nodemask(
 				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
-				__GFP_NORETRY | __GFP_REPEAT,
+				__GFP_NORETRY,
+				//| __GFP_REPEAT,
 				order,
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
 		if (!pg) {
 			int freed_pages;
 
-			if (__try_to_free_pages && failed_free_attempts < 5) {
+			if (__drain_all_pages) {
+				__drain_all_pages();
+			}
+
+			if (__try_to_free_pages &&
+					failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS) {
 
 				freed_pages = __try_to_free_pages(
 						node_zonelist(numa_id, GFP_KERNEL),
@@ -3326,7 +3335,12 @@ retry:
 				--order;
 				failed_free_attempts = 0;
 				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
-				goto retry;
+
+				/* Do not spend more than RESERVE_MEM_TIMEOUT
+				 * secs on reservation */
+				if ((get_seconds() - res_start) < RESERVE_MEM_TIMEOUT) {
+					goto retry;
+				}
 			}
 
 			/*
