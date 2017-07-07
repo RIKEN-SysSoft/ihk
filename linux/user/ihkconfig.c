@@ -32,6 +32,15 @@ char **__argv;
 #define	eprintf(...) printf(__VA_ARGS__)
 #endif
 
+#define IHKCONFIG_CHKANDJUMP(cond, func, err)							\
+	do {																\
+		if(cond) {														\
+			eprintf("%s,"func" failed\n", __FUNCTION__);				\
+			ret = err;													\
+			goto fn_fail;												\
+		}																\
+	} while(0)
+
 static int usage(char **arg)
 {
 	char	*cmd;
@@ -356,132 +365,130 @@ static int do_ioctl(int fd)
 
 static int do_getinfo(int fd)
 {
-	ihk_mem_chunk *ihk_chunk;
-	ihk_mem_chunk *os_chunk;
-	ihk_info *info;
-	int ret;
-	int i;
+	int ret = 0, ret_ihklib;
+	int i, j;
 
 	close(fd);
-	info = (ihk_info *) malloc (sizeof(ihk_info));
-	if (info == NULL) {
-		perror("info malloc");
-		exit(-1);
+	ihk_info info;
+	bzero(&info, sizeof(ihk_info));
+
+	ret_ihklib = ihk_getihkinfo(&info);
+	IHKCONFIG_CHKANDJUMP(ret_ihklib == -1, "ihk_getihkinfo", -1);
+
+	info.reserved_mem_chunks = (ihk_mem_chunk *)calloc(info.num_reserved_mem_chunks, sizeof(ihk_mem_chunk));
+	IHKCONFIG_CHKANDJUMP(info.reserved_mem_chunks == NULL, "calloc", -1);
+
+	info.reserved_cpus = (int *)calloc(info.num_reserved_cpus, sizeof(int));
+	IHKCONFIG_CHKANDJUMP(info.reserved_cpus == NULL, "calloc", -1);
+
+    info.num_assigned_mem_chunks = (int *)calloc(info.num_os_instances, sizeof(int));
+    IHKCONFIG_CHKANDJUMP(info.num_assigned_mem_chunks == NULL, "calloc", -1);
+
+    info.assigned_mem_chunks = (ihk_mem_chunk**)calloc(info.num_os_instances, sizeof(ihk_mem_chunk*));
+    IHKCONFIG_CHKANDJUMP(info.assigned_mem_chunks == NULL, "calloc", -1);
+
+    info.num_assigned_cpus = (int *)calloc(info.num_os_instances, sizeof(int));
+    IHKCONFIG_CHKANDJUMP(info.num_assigned_cpus == NULL, "calloc", -1);
+
+    info.assigned_cpus = (int **)calloc(info.num_os_instances, sizeof(int*));
+    IHKCONFIG_CHKANDJUMP(info.assigned_cpus == NULL, "calloc", -1);
+
+	ret_ihklib = ihk_getihkinfo(&info);
+	IHKCONFIG_CHKANDJUMP(ret_ihklib == -1, "ihk_getihkinfo", -1);
+
+	for(i = 0; i < info.num_os_instances; i++) {
+		info.assigned_mem_chunks[i] = (ihk_mem_chunk *)calloc(info.num_assigned_mem_chunks[i], sizeof(ihk_mem_chunk));
+		IHKCONFIG_CHKANDJUMP(info.assigned_mem_chunks[i] == NULL, "calloc", -1);
+
+		info.assigned_cpus[i] = (int *)calloc(info.num_assigned_cpus[i], sizeof(int));
+		IHKCONFIG_CHKANDJUMP(info.assigned_cpus[i] == NULL, "calloc", -1);
 	}
 
-	info->reserved_mem_chunks = NULL;
-	info->assigned_mem_chunks = NULL;
-	info->num_reserved_mem_chunks = 0;
-	info->num_assigned_mem_chunks = 0;
+	ret_ihklib = ihk_getihkinfo(&info);
+	IHKCONFIG_CHKANDJUMP(ret_ihklib == -1, "ihk_getihkinfo", -1);
 
-	ret = ihk_getihkinfo(info);
-	if (ret == -1) {
-		perror("ihk_getihkinfo(1st) failed");
-		exit(-1);
-	}
-
-	ihk_chunk = (ihk_mem_chunk *) malloc (info->num_reserved_mem_chunks * sizeof(ihk_mem_chunk));
-	if (ihk_chunk == NULL) {
-		perror("ihk_chunk malloc");
-		exit(-1);
-	}
-	info->reserved_mem_chunks = ihk_chunk;
-
-	os_chunk = (ihk_mem_chunk *) malloc (info->num_assigned_mem_chunks * sizeof(ihk_mem_chunk));
-	if (os_chunk == NULL) {
-		perror("ihk_chunk malloc");
-		exit(-1);
-	}
-	info->assigned_mem_chunks  = os_chunk;
-
-	ret = ihk_getihkinfo(info);
-	if (ret == -1) {
-		perror("ihk_getihkinfo(2nd) failed");
-		exit(-1);
-	}
-
-	printf("Reserved_mem:");
-	for (i = 0; i < info->num_reserved_mem_chunks; i++) {
-		if (i == 0) {
-			printf("%lu@%d",
-					(info->reserved_mem_chunks + i * sizeof(ihk_mem_chunk))->size,
-					(info->reserved_mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
-		} 
-		else {
-			printf(",%lu@%d",
-					(info->reserved_mem_chunks + i * sizeof(ihk_mem_chunk))->size,
-					(info->reserved_mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+	printf("Reserved_mem: ");
+	for (i = 0; i < info.num_reserved_mem_chunks; i++) {
+		printf("%lu@%d", info.reserved_mem_chunks[i].size, info.reserved_mem_chunks[i].numa_node_number);
+		if(i != info.num_reserved_mem_chunks - 1) {
+			printf(",");
 		}
 	}
 	printf("\n");
 
-	printf("Reserved_cpu:");
-	printf("%016lx%016lx\n", info->reserved_cpu_set.__bits[0], info->reserved_cpu_set.__bits[1]);
-
-	printf("Assigned_mem:");
-	for (i = 0; i < info->num_assigned_mem_chunks; i++) {
-		if (i == 0) {
-			printf("%lu@%d",
-					(info->assigned_mem_chunks + i * sizeof(ihk_mem_chunk))->size,
-					(info->assigned_mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
-		} 
-		else {
-			printf(",%lu@%d",
-					(info->assigned_mem_chunks + i * sizeof(ihk_mem_chunk))->size,
-					(info->assigned_mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+	printf("Reserved_cpu: ");
+	for (i = 0; i < info.num_reserved_cpus; i++) {
+		printf("%d", info.reserved_cpus[i]);
+		if(i != info.num_reserved_cpus - 1) {
+			printf(",");
 		}
 	}
 	printf("\n");
 
-	printf("Assigned_cpu:");
-	printf("%016lx%016lx\n", info->assigned_cpu_set.__bits[0], info->assigned_cpu_set.__bits[1]);
+	printf("Number_of_OS_instances: %d\n", info.num_os_instances);
 
-	printf("Number_of_OS_instances:%d\n", info->num_os);
+	for (i = 0; i < info.num_os_instances; i++) {
+		printf("OS_instance: %d\n", i);
+		printf("Assigned_mem: ");
+		for (j = 0; j < info.num_assigned_mem_chunks[i]; j++) {
+			printf("%lu@%d",
+				   (info.assigned_mem_chunks[i] + j)->size,
+				   (info.assigned_mem_chunks[i] + j)->numa_node_number);;
+			if(j != info.num_assigned_mem_chunks[i] - 1) {
+				printf(",");
+			}
+		}
+		printf("\n");
 
-	free(ihk_chunk);
-	free(os_chunk);
-	free(info);
-	return 0;
+		printf("Assigned_cpu: ");
+		for (j = 0; j < info.num_assigned_cpus[i]; j++) {
+			printf("%d", *(info.assigned_cpus[i] + j));
+			if(j != info.num_assigned_cpus[i] - 1) {
+				printf(",");
+			}
+		}
+		printf("\n");
+		if(i != info.num_os_instances - 1) {
+			printf("\n");
+		}
+	}
+
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 static int do_getoslist(int fd)
 {
-	int *oslist;
-	ihk_info *info;
-	int ret;
+	int *oslist = NULL;
+	int num_os_instances = 0;
+	int ret = 0;
 	int i;
 
-	info = (ihk_info *) malloc (sizeof(ihk_info));
-	if (info  == NULL) {
-		perror("Error: Invalid argument");
-		exit(-1);
-	}
-	info->reserved_mem_chunks = NULL;
-	info->assigned_mem_chunks = NULL;
-	ret = ihk_getihkinfo(info);
-	if (ret  == -1) {
-		perror("Error: Invalid argument");
-		exit(-1);
-	}
+	num_os_instances = ihk_getoslist(oslist, num_os_instances);
+	IHKCONFIG_CHKANDJUMP(num_os_instances < 0, "ihk_getoslist", -1);
 
-	oslist = (int *) malloc(info->num_os * sizeof(int));
-	ret = ihk_getoslist(oslist, info->num_os);
-	if (ret  == -1) {
-		perror("Error: Invalid argument");
-		exit(-1);
-	}
+	oslist = (int *)calloc(num_os_instances, sizeof(int));
+	IHKCONFIG_CHKANDJUMP(oslist == NULL, "calloc", -1);
+
+	num_os_instances = ihk_getoslist(oslist, num_os_instances);
+	IHKCONFIG_CHKANDJUMP(num_os_instances < 0, "ihk_getoslist", -1);
 	
-	for (i = 0; i < info->num_os; i++) {
-		if (i == 0) { 
-			printf ("%d", oslist[i]);
-		} 
-		else {
-			printf (",%d", oslist[i]);
+	for (i = 0; i < num_os_instances; i++) {
+		printf ("%d", oslist[i]);
+		if(i != num_os_instances - 1) {
+			printf (",");
 		}	
 	}		
 	printf ("\n");
-	free(oslist);
-	return 0;
+fn_exit:
+	if(oslist) {
+		free(oslist);
+	}
+	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 #define HANDLER(name) if (!strcmp(argv[2], #name)) { int r = do_##name(fd); close(fd); return r; }

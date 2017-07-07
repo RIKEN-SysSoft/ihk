@@ -5,8 +5,6 @@
 #include <bfd.h>
 #define PATH_SYS_NODE "/sys/devices/system/node"
 #define PATH_DEV "/dev"
-#define IHKCONFIG_CMD "@SBINDIR@/ihkconfig"
-#define IHKOSCTL_CMD "@SBINDIR@/ihkosctl"
 
 /* rusage sysfs path */
 #define PATH_SYS_RSS	"/tmp/mcos/mcos%d_sys/fs/cgroup/memory/memory.stat"
@@ -44,13 +42,15 @@ typedef struct ihk_mem_chunk {
 } ihk_mem_chunk;
 
 typedef struct ihk_info {
-	ihk_mem_chunk *reserved_mem_chunks;
 	int num_reserved_mem_chunks;
-	cpu_set_t reserved_cpu_set;
-	ihk_mem_chunk *assigned_mem_chunks;
-	int num_assigned_mem_chunks;
-	cpu_set_t assigned_cpu_set;
-	int num_os;
+	ihk_mem_chunk *reserved_mem_chunks;
+	int num_reserved_cpus;
+	int *reserved_cpus;
+	int *num_assigned_mem_chunks;
+	ihk_mem_chunk **assigned_mem_chunks;
+	int *num_assigned_cpus;
+	int **assigned_cpus;
+	int num_os_instances;
 } ihk_info ;
 
 enum ihk_command_type {
@@ -80,7 +80,7 @@ enum ihk_resource_type {
 	IHK_RESOURCE_MEM
 };
 
-enum ihk_os_status {
+enum ihklib_os_status {
 	IHK_STATUS_INACTIVE,
 	IHK_STATUS_BOOTING,
 	IHK_STATUS_RUNNING,
@@ -99,7 +99,8 @@ enum ihk_perf_event {
 
 typedef struct ihkconfig {
 	enum ihk_resource_type resource_type;
-	cpu_set_t cpu_set;
+	int num_cpus;
+	int *cpus;
 	ihk_mem_chunk *mem_chunks;
 	int num_mem_chunks;
 	int os_index;
@@ -127,7 +128,7 @@ typedef struct ihk_osinfo {
 	int num_mem_chunks;
 	int num_cpus;
 	int *cpus;
-	enum ihk_os_status status;
+	enum ihklib_os_status status;
 	int num_ikc_ssets;
 	int *ikc_sset_sizes;
 	int **ikc_sset_members;

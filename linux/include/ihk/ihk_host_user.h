@@ -9,6 +9,8 @@
 #ifndef __HEADER_IHK_HOST_USER_H
 #define __HEADER_IHK_HOST_USER_H
 
+#include "ihk_os_status.h"
+
 #define IHK_DEVICE_CREATE_OS          0x112900
 #define IHK_DEVICE_DESTROY_OS         0x112901
 #define IHK_DEVICE_RESERVE_CPU        0x112902

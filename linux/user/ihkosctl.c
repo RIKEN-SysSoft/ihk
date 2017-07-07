@@ -32,6 +32,15 @@ char **__argv;
 #define	eprintf(...) printf(__VA_ARGS__)
 #endif
 
+#define IHKOSCTL_CHKANDJUMP(cond, func, err)							\
+	do {																\
+		if(cond) {														\
+			eprintf("%s,"func" failed\n", __FUNCTION__);				\
+			ret = err;													\
+			goto fn_fail;												\
+		}																\
+	} while(0)
+
 static int usage(char **arg)
 {
 	char	*cmd;
@@ -405,89 +414,49 @@ static int do_kmsg(int fd)
 }
 
 static int do_getosinfo(int fd) {
-	ihk_osinfo osinfo;
-	int ret = 0, ihk_ret;
+	int ret = 0, ret_ihklib;
 	int i, j;
 	int index = atoi(__argv[1]);
 
+	ihk_osinfo osinfo;
 	bzero(&osinfo, sizeof(osinfo));
-	ihk_ret = ihk_getosinfo(index, &osinfo);
-    if (ihk_ret == -1) {
-        fprintf(stderr, "error: ihk_getosinfo failed\n");
-        ret = -1;
-		goto fn_fail;
-    }
+	ret_ihklib = ihk_getosinfo(index, &osinfo);
+    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
 
     osinfo.mem_chunks = (ihk_mem_chunk *)calloc(osinfo.num_mem_chunks, sizeof(ihk_mem_chunk));
-    if (osinfo.mem_chunks == NULL) {
-        fprintf(stderr, "error: calloc failed\n");
-        ret = -1;
-		goto fn_fail;
-    }		
+    IHKOSCTL_CHKANDJUMP(osinfo.mem_chunks == NULL, "calloc", -1);
 
     osinfo.cpus = (int *)calloc(osinfo.num_cpus, sizeof(int));
-    if (osinfo.cpus == NULL) {
-        fprintf(stderr, "error: calloc failed\n");
-        ret = -1;
-		goto fn_fail;
-    }		
+    IHKOSCTL_CHKANDJUMP(osinfo.cpus == NULL, "calloc", -1);
 
     osinfo.ikc_sset_sizes = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
-    if (osinfo.ikc_sset_sizes == NULL) {
-        fprintf(stderr, "error: calloc failed\n");
-        ret = -1;
-		goto fn_fail;
-    }	
+    IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_sizes == NULL, "calloc", -1);
 	
     osinfo.ikc_sset_members = (int**)calloc(osinfo.num_ikc_ssets, sizeof(int*));
-    if (osinfo.ikc_sset_members == NULL) {
-        fprintf(stderr, "error: calloc failed\n");
-        ret = -1;
-		goto fn_fail;
-    }		
+    IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_members == NULL, "calloc", -1);
 
     osinfo.ikc_map = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
-    if (osinfo.ikc_map == NULL) {
-        fprintf(stderr, "error: calloc failed\n");
-        ret = -1;
-		goto fn_fail;
-    }
+    IHKOSCTL_CHKANDJUMP(osinfo.ikc_map == NULL, "calloc", -1);
 
-	ihk_ret = ihk_getosinfo(index, &osinfo);
-    if (ihk_ret == -1) {
-        fprintf(stderr, "error: ihk_getosinfo failed\n");
-        ret = -1;
-		goto fn_fail;
-    }
+	ret_ihklib = ihk_getosinfo(index, &osinfo);
+    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
 
     for(i = 0; i < osinfo.num_ikc_ssets; i++) {
         dprintf("%s,ikc_sset_sizes[%d]=%d\n", __FILE__, i, osinfo.ikc_sset_sizes[i]);
         osinfo.ikc_sset_members[i] = calloc(osinfo.ikc_sset_sizes[i], sizeof(int));
-		if (osinfo.ikc_sset_members[i] == NULL) {
-			fprintf(stderr, "error: calloc failed\n");
-			ret = -1;
-			goto fn_fail;
-		}
+		IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_members[i] == NULL, "calloc", -1);
     }
 
-	ihk_ret = ihk_getosinfo(index, &osinfo);
-    if (ihk_ret == -1) {
-        fprintf(stderr, "error: ihk_getosinfo failed\n");
-        ret = -1;
-		goto fn_fail;
-    }
+	ret_ihklib = ihk_getosinfo(index, &osinfo);
+    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
 
     printf("Assigned_mem: ");
     for (i = 0; i < osinfo.num_mem_chunks; i++) {
-        if (i == 0) {
-            printf("%lu@%d",
-                    (osinfo.mem_chunks + i * sizeof(ihk_mem_chunk))->size,
-                    (osinfo.mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
-        } 
-		else {
-            printf(",%lu@%d",
-                    (osinfo.mem_chunks + i * sizeof(ihk_mem_chunk))->size,
-                    (osinfo.mem_chunks + i * sizeof(ihk_mem_chunk))->numa_node_number);
+		printf("%lu@%d",
+			   osinfo.mem_chunks[i].size,
+			   osinfo.mem_chunks[i].numa_node_number);
+		if(i != osinfo.num_mem_chunks - 1) {
+            printf(",");
         }
     }
     printf("\n");
