@@ -256,21 +256,29 @@ static int do_assign(int fd)
 static int do_release(int fd)
 {
 	int ret;
+	ihk_resource_req_t req;
 
-	if (__argc < 4) {
+	if (__argc < 5) {
+		usage(__argv);
+		return -1;
+	}
+
+	req.string = __argv[4];
+	req.string_len = strlen(__argv[4]);
+	if (!req.string || !req.string_len) {
 		usage(__argv);
 		return -1;
 	}
 
 	if (!strcmp(__argv[3], "cpu")) {
-		ret = ioctl(fd, IHK_OS_RELEASE_CPU, __argv[4]);
+		ret = ioctl(fd, IHK_OS_RELEASE_CPU, &req);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: releasing CPUs: %s\n", __argv[4]);
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ioctl(fd, IHK_OS_RELEASE_MEM, __argv[4]);
+		ret = ioctl(fd, IHK_OS_RELEASE_MEM, &req);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: releasing memory: %s\n", __argv[4]);
@@ -410,8 +418,15 @@ static int do_getosinfo(int fd) {
 		goto fn_fail;
     }
 
-    osinfo.mem_chunks = (ihk_mem_chunk *)malloc(osinfo.num_mem_chunks * sizeof(ihk_mem_chunk));
+    osinfo.mem_chunks = (ihk_mem_chunk *)calloc(osinfo.num_mem_chunks, sizeof(ihk_mem_chunk));
     if (osinfo.mem_chunks == NULL) {
+        fprintf(stderr, "error: calloc failed\n");
+        ret = -1;
+		goto fn_fail;
+    }		
+
+    osinfo.cpus = (int *)calloc(osinfo.num_cpus, sizeof(int));
+    if (osinfo.cpus == NULL) {
         fprintf(stderr, "error: calloc failed\n");
         ret = -1;
 		goto fn_fail;
@@ -422,13 +437,15 @@ static int do_getosinfo(int fd) {
         fprintf(stderr, "error: calloc failed\n");
         ret = -1;
 		goto fn_fail;
-    }		
+    }	
+	
     osinfo.ikc_sset_members = (int**)calloc(osinfo.num_ikc_ssets, sizeof(int*));
     if (osinfo.ikc_sset_members == NULL) {
         fprintf(stderr, "error: calloc failed\n");
         ret = -1;
 		goto fn_fail;
     }		
+
     osinfo.ikc_map = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
     if (osinfo.ikc_map == NULL) {
         fprintf(stderr, "error: calloc failed\n");
@@ -475,8 +492,14 @@ static int do_getosinfo(int fd) {
     }
     printf("\n");
 
-    printf("Assigned_cpu: ");
-    printf("%016lx%016lx\n", osinfo.mask.__bits[0], osinfo.mask.__bits[1]);
+	printf("Assigned_cpu: ");
+	for (i = 0; i < osinfo.num_cpus; i++) {
+		printf("%d", osinfo.cpus[i]);
+		if(i != osinfo.num_cpus - 1) {
+			printf(",");
+		}
+	}
+    printf("\n");
 
     printf("IKC_map: ");
 	for (i = 0; i < osinfo.num_ikc_ssets; i++) {

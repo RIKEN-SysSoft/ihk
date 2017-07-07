@@ -107,7 +107,8 @@ typedef struct ihkconfig {
 
 typedef struct ihkosctl {
 	enum ihk_resource_type resource_type;
-	cpu_set_t cpu_set;
+	int num_cpus;
+	int *cpus;
 	ihk_mem_chunk *mem_chunks;
 	int num_mem_chunks;
 	int os_index;
@@ -124,7 +125,8 @@ typedef struct ihkosctl {
 typedef struct ihk_osinfo {
 	ihk_mem_chunk *mem_chunks;
 	int num_mem_chunks;
-	cpu_set_t mask;
+	int num_cpus;
+	int *cpus;
 	enum ihk_os_status status;
 	int num_ikc_ssets;
 	int *ikc_sset_sizes;

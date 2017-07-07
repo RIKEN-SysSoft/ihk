@@ -2150,7 +2150,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 
 	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
-		(const char __user *)arg, ihk_os);
+		req_string, ihk_os);
 
 	ret = 0;
 
@@ -2163,32 +2163,37 @@ char query_res[8192];
 
 static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
-	int cpu;
-	cpumask_t cpus_assigned;
+	int i, ret = 0;
+	struct smp_os_data *os = priv;
+	char cpu_str[64];
 
-	memset(&cpus_assigned, 0, sizeof(cpus_assigned));
 	memset(query_res, 0, sizeof(query_res));
 
-	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
-			continue;
-		if (ihk_smp_cpus[cpu].os != ihk_os)
-			continue;
-
-		cpumask_set_cpu(cpu, &cpus_assigned);
+	/* Respect the order of cpus specified when assigining them
+	   e.g. 0,2,1,3 */
+	for(i = 0; i < os->nr_cpus; ++i) {
+		sprintf(cpu_str, "%d", os->cpu_mapping[i]);
+		strcat(query_res, cpu_str);
+		if(i != os->nr_cpus - 1) {
+			strcat(query_res, ",");
+		}
 	}
 
-	BITMAP_SCNLISTPRINTF(query_res, sizeof(query_res),
-		cpumask_bits(&cpus_assigned), nr_cpumask_bits);
+	dprintk("%s,query_res=%s\n", __FUNCTION__, query_res);
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
 			printk("IHK-SMP: error: copying CPU string to user-space\n");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto fn_fail;
 		}
 	}
 
+
+ fn_exit:
 	return 0;
+ fn_fail:
+	goto fn_exit;
 }
 
 static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
