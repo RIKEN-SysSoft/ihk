@@ -331,6 +331,14 @@ int ihk_mc_get_core(int id, unsigned long *linux_core_id, unsigned long *apic_id
 	return 0;
 }
 
+int ihk_mc_get_ikc_cpu(int id)
+{
+	if (id < 0 || id >= boot_param->nr_cpus || ihk_cpu_info == NULL)
+		return -1;
+
+	return ihk_cpu_info->ikc_cpus[id];
+}
+
 int ihk_mc_get_apicid(int linux_core_id) {
 	return boot_param->ihk_ikc_irq_apicids[linux_core_id];
 }
