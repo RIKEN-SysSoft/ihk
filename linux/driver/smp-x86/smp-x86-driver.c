@@ -1383,6 +1383,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		dprintk("IHK-SMP: CPU %d has been deassigned, APIC: %d\n", 
 			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
 	}
+	os->nr_cpus = 0;
 
 	/* Drop memory chunk used by this OS */
 	list_for_each_entry_safe(os_mem_chunk, next_chunk,
