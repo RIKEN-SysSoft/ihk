@@ -306,7 +306,7 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 }
 
 /** \brief Shutdown the kernel related to the OS file */
-static int  __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
+static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
 	struct ihk_os_notifier *_ion;
@@ -1218,15 +1218,15 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 {
 	int ret = 0;
 
-	dprintf("__ihk_device_destroy_os (%p, %p)\n", data, os);
+	dkprintf("__ihk_device_destroy_os (%p, %p)\n", data, os);
 	if (!os || os == OS_DATA_INVALID || !data || data == DEV_DATA_INVALID
 	    || os->dev_data != data) {
-		dprintf("%s: pointer invalid\n", __FUNCTION__);
+		dkprintf("%s: pointer invalid\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
 	if (atomic_read(&os->refcount) > 0) {
-		dprintf("%s: refcount != 0\n", __FUNCTION__);
+		dkprintf("%s: refcount != 0\n", __FUNCTION__);
 		return -EBUSY;
 	}
 

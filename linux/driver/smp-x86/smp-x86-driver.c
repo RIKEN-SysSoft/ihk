@@ -71,13 +71,19 @@
 
 #include "../../../cokernel/smp/x86/bootparam.h"
 
+#ifdef IHK_DEBUG
+#define dprintk(...) do { if (1) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
+#define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
+#else
 #define dprintk(...) do { if (0) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
 #define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
+#endif
 
 #define BUILTIN_OS_STATUS_INITIAL  0
 #define BUILTIN_OS_STATUS_LOADING  1
 #define BUILTIN_OS_STATUS_LOADED   2
 #define BUILTIN_OS_STATUS_BOOTING  3
+#define BUILTIN_OS_STATUS_SHUTDOWN  4 /* After shutdown */
 
 #define BUILTIN_COM_VECTOR  0xf1
 
@@ -1359,6 +1365,11 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	struct ihk_os_mem_chunk *next_chunk = NULL;
 	struct chunk *mem_chunk;
 	
+	if(os->status == BUILTIN_OS_STATUS_SHUTDOWN) {
+		eprintk("%s,already down\n", __FUNCTION__);
+		return 0;
+	}
+
 	/* Reset CPU cores used by this OS */
 	for (i = 0; i < SMP_MAX_CPUS; ++i) {
 		
@@ -1398,7 +1409,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		kfree(os_mem_chunk);
 	}
 
-	os->status = BUILTIN_OS_STATUS_INITIAL;
+	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
 	if (os->numa_mapping) {
 		kfree(os->numa_mapping);
 		os->numa_mapping = NULL;
@@ -1408,7 +1419,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		free_pages((unsigned long)os->param, os->param_pages_order);
 	}
 
-	kfree(os);
+	//kfree(os); /* done in destroy */
 
 	return 0;
 }
@@ -2807,6 +2818,14 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 	 * use the designated NUMA node otherwise */
 	os->bootstrap_numa_id = -1;
 
+	return 0;
+}
+
+static int smp_ihk_destroy_os(ihk_device_t ihk_dev, void *ihk_dev_priv,
+							  ihk_os_t ihk_os, void *ihk_os_priv)
+{
+	struct smp_os_data *smp_os = ihk_os_priv;
+	kfree(smp_os);
 	return 0;
 }
 
@@ -4956,6 +4975,7 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.init = smp_ihk_init,
 	.exit = smp_ihk_exit,
 	.create_os = smp_ihk_create_os,
+	.destroy_os = smp_ihk_destroy_os,
 	.map_memory = smp_ihk_map_memory,
 	.unmap_memory = smp_ihk_unmap_memory,
 	.map_virtual = smp_ihk_map_virtual,
