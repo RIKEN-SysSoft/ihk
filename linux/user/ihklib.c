@@ -777,16 +777,77 @@ static int ihklib_os_query_mem(int fd, int *num_mem_chunks, ihk_mem_chunk* mem_c
 	goto fn_exit;
 }
 
-static int ihklib_os_query_free_mem(int fd, int *num_mem_chunks, ihk_mem_chunk* mem_chunks)
+int _ihklib_os_query_free_mem(int os_index, char *result, ssize_t sz_result)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
+	int node = 0;
+	char path[PATH_MAX];
+	int len = 0;
+	struct stat sb;
+
+	memset(result, 0, sz_result);
+
+	snprintf(path, PATH_MAX,
+			"/sys/devices/virtual/mcos/mcos%d/"
+			"sys/devices/system/node/node%d/meminfo",
+			 os_index, node);
+
+	while (stat(path, &sb) != -1) {
+		unsigned long free_kb = 0;
+		FILE *f = fopen(path, "r");
+		char *line = NULL;
+		size_t line_len;
+
+		if (!f) {
+			fprintf(stderr, "error: opening %s\n", path);
+			ret = -1;
+			goto fn_fail;
+		}
+
+		while (getline(&line, &line_len, f) != -1) {
+			int scan_node;
+			if (sscanf(line, "Node %d MemFree:%16lu kB",
+						&scan_node, &free_kb) == 2) {
+				if (node > 0)
+					len += snprintf(&result[len], sz_result - len, ",");
+
+				len += snprintf(&result[len], sz_result - len,
+						"%lu@%d",
+						free_kb * 1024, node);
+			}
+
+			free(line);
+			line = NULL;
+		}
+
+		++node;
+		snprintf(path, PATH_MAX,
+				"/sys/devices/virtual/mcos/mcos%d/"
+				"sys/devices/system/node/node%d/meminfo",
+				os_index, node);
+		fclose(f);
+	}
+
+	if (len == 0) {
+		ret = -1;
+		goto fn_fail;
+	}
+
+	dprintf("%s,result=%s\n", __FUNCTION__, result);
+
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
+}
+
+static int ihklib_os_query_free_mem(int os_index, int *num_mem_chunks, ihk_mem_chunk* mem_chunks)
+{
+	int ret = 0, ret_internal;
     char result[65536];
 
-	memset(result, 0, sizeof(result));
-	ret_ioctl = ioctl(fd, IHK_OS_QUERY_FREE_MEM, result);
-    IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
-	dprintf("%s,list=%s\n", __FUNCTION__, result);
-
+	ret_internal = _ihklib_os_query_free_mem(os_index, result, sizeof(result));
+	IHKLIB_CHKANDJUMP(ret_internal != 0, "_ihklib_os_query_free_mem", -1);
 	mem_str2array(result, num_mem_chunks, mem_chunks);
 
  fn_exit:
@@ -963,7 +1024,7 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 				break;
 		    case IHK_OSCTL_QUERY_FREE_MEM:
 				dprintf("IHK_OSCTL_QUERY_FREE_MEM called.\n");
-				ret_ihklib = ihklib_os_query_free_mem(fd, &ctl->num_mem_chunks, ctl->mem_chunks);
+				ret_ihklib = ihklib_os_query_free_mem(index, &ctl->num_mem_chunks, ctl->mem_chunks);
 				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_query_free_mem", -EINVAL);
 				break;
 		    case IHK_OSCTL_KARGS:

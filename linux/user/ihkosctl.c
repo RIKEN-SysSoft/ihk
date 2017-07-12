@@ -351,58 +351,15 @@ static int do_query(int fd)
 #define RESULT_LEN	16384
 static int do_query_free_mem(int fd)
 {
+	int ret = 0, ret_internal;
 	char result[RESULT_LEN];
-	int node = 0;
-	char path[PATH_MAX];
-	int len = 0;
-	struct stat sb;
-
-	snprintf(path, PATH_MAX,
-			"/sys/devices/virtual/mcos/mcos%s/"
-			"sys/devices/system/node/node%d/meminfo",
-			__argv[1], node);
-
-	while (stat(path, &sb) != -1) {
-		unsigned long free_kb = 0;
-		FILE *f = fopen(path, "r");
-		char *line = NULL;
-		size_t line_len;
-
-		if (!f) {
-			fprintf(stderr, "error: opening %s\n", path);
-			return EINVAL;
-		}
-
-		while (getline(&line, &line_len, f) != -1) {
-			int scan_node;
-			if (sscanf(line, "Node %d MemFree:%16lu kB",
-						&scan_node, &free_kb) == 2) {
-				if (node > 0)
-					len += snprintf(&result[len], RESULT_LEN - len, ",");
-
-				len += snprintf(&result[len], RESULT_LEN - len,
-						"%lu@%d",
-						free_kb * 1024, node);
-			}
-
-			free(line);
-			line = NULL;
-		}
-
-		++node;
-		snprintf(path, PATH_MAX,
-				"/sys/devices/virtual/mcos/mcos%s/"
-				"sys/devices/system/node/node%d/meminfo",
-				__argv[1], node);
-		fclose(f);
-	}
-
-	if (len == 0) {
-		return EINVAL;
-	}
-
+	ret_internal = _ihklib_os_query_free_mem(atol(__argv[1]), result, sizeof(result));
+	IHKOSCTL_CHKANDJUMP(ret_internal != 0, "_ihklib_os_query_free_mem", -1);
 	printf("%s\n", result);
-	return 0;
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 

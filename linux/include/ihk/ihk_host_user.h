@@ -103,5 +103,6 @@ typedef struct ihk_resource_req_s {
 	int string_len;
 } ihk_resource_req_t;
 
+int _ihklib_os_query_free_mem(int os_index, char *result, ssize_t sz_result);
 
 #endif
