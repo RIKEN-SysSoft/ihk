@@ -28,21 +28,31 @@
 int __argc;
 char **__argv;
 
-//#define DEBUG_PRINT
+//#define DEBUG
 #define MILLI_SEC 1000000
 
-#ifdef DEBUG_PRINT
-#define	dprintf(...) fprintf(stderr, __VA_ARGS__)
-#define	eprintf(...) fprintf(stderr, __VA_ARGS__)
+#ifdef DEBUG
+#define	dprintf(...)											\
+	do {														\
+		char msg[1024];											\
+		sprintf(msg, __VA_ARGS__);								\
+		fprintf(stderr, "%s,%s", __FUNCTION__, msg);			\
+	} while (0);
+#define	eprintf(...)											\
+	do {														\
+		char msg[1024];											\
+		sprintf(msg, __VA_ARGS__);								\
+		fprintf(stderr, "%s,%s", __FUNCTION__, msg);			\
+	} while (0);
 #else
 #define dprintf(...) do {  } while (0)
 #define eprintf(...) do {  } while (0)
 #endif
 
-#define IHKLIB_CHKANDJUMP(cond, func, err)								\
+#define CHKANDJUMP(cond, err, ...)										\
 	do {																\
 		if(cond) {														\
-			eprintf("%s,"func" failed\n", __FUNCTION__);				\
+			eprintf(__VA_ARGS__);										\
 			ret = err;													\
 			goto fn_fail;												\
 		}																\
@@ -180,14 +190,14 @@ int ihk_getoslist(int oslist[], int n) {
 	char str_nodenum[5];
 
 	dir = opendir(PATH_DEV);
-	IHKLIB_CHKANDJUMP(dir == NULL, "opendir", -EINVAL);
+	CHKANDJUMP(dir == NULL, -EINVAL, "opendir failed\n");
 	while (dir && (dirp = readdir(dir))) {
 		if ((strncmp(dirp->d_name,"mcos",4) == 0)) {
 			oscount++;
 			if (oscount <= n) {
 				strncpy(str_nodenum,dirp->d_name+4, strlen(dirp->d_name)-3);
 				oslist[oscount-1] = atoi(str_nodenum);
-				dprintf("%s,oscount=%d,oslist[%d]=%d,str_nodenum=%s\n", oscount, oscount-1, oslist[oscount-1], str_nodenum);
+				dprintf("oscount=%d,oslist[%d]=%d,str_nodenum=%s\n", oscount, oscount-1, oslist[oscount-1], str_nodenum);
 			} 
 		}
 	}
@@ -218,10 +228,7 @@ static int cpus_str2array(char* cpu_list, int *num_cpus, int* cpus) {
 	int cpu_rank = 0, ret = 0;
 	char* token;
 	
-	if (strchr(cpu_list, '-')) {
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(strchr(cpu_list, '-'), -1, "range expression not supported,cpu_list=%s\n", cpu_list);
 	
 	token = strsep(&cpu_list, ",");
 	while (token != NULL) {
@@ -296,11 +303,7 @@ static int ihklib_device_create_os(int fd)
 	int ret = 0, ret_ioctl; 
 	
 	ret_ioctl = ioctl(fd, IHK_DEVICE_CREATE_OS, 0);
-	if (ret_ioctl != 0) {
-		dprintf("ioctl failed\n");
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
  fn_exit:
 	return ret;
  fn_fail:
@@ -312,11 +315,7 @@ static int ihklib_device_destroy_os(int fd, int os_index)
 	int ret = 0, ret_ioctl;
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_DESTROY_OS, os_index);
-	if (ret_ioctl != 0) {
-		dprintf("ioctl failed\n");
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
  fn_exit:
 	return ret;
  fn_fail:
@@ -333,19 +332,10 @@ static int ihklib_device_reserve_cpu(int fd, int num_cpus, int* cpus)
 
 	req.string = cpu_list;
 	req.string_len = strlen(cpu_list);
-	if (!req.string || !req.string_len) {
-        dprintf("%s, invalid format, string=%s\n", __FUNCTION__, cpu_list);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(!req.string || !req.string_len, -EINVAL, "invalid format, string=%s\n", cpu_list);
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req);
-	
-	if (ret_ioctl != 0) {
-		dprintf("%s, ioctl failed, string=%s\n", __FUNCTION__, cpu_list);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -EINVAL, "ioctl failed, string=%s\n", cpu_list);
 	
  fn_exit:
 	return ret;
@@ -363,19 +353,10 @@ static int ihklib_device_reserve_mem(int fd, int num_mem_chunks, ihk_mem_chunk* 
 
 	req.string = mem_list;
 	req.string_len = strlen(mem_list);
-	if (!req.string || !req.string_len) {
-        dprintf("%s, invalid format, list=%s\n", __FUNCTION__, mem_list);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(!req.string || !req.string_len, -EINVAL, "invalid format, list=%s\n", __FUNCTION__, mem_list);
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RESERVE_MEM, &req);
-	
-	if (ret_ioctl != 0) {
-		dprintf("%s, ioctl failed, list=%s\n", __FUNCTION__, mem_list);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -EINVAL, "ioctl failed, list=%s\n", mem_list);
 
  fn_exit:
 	return ret;
@@ -393,18 +374,10 @@ static int ihklib_device_release_cpu(int fd, int num_cpus, int* cpus)
 
 	req.string = cpu_list;
 	req.string_len = strlen(cpu_list);
-	if (!req.string || !req.string_len) {
-		dprintf("%s, invalid format, string=%s\n", __FUNCTION__, cpu_list);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(!req.string || !req.string_len, -EINVAL, "invalid format, string=%s\n", cpu_list);
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RELEASE_CPU, &req);
-	if (ret_ioctl != 0) {
-		dprintf("%s, ioctl failed, string=%s\n", __FUNCTION__, cpu_list);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -EINVAL, "ioctl failed, string=%s\n", cpu_list);
 	
  fn_exit:
 	return ret;
@@ -422,19 +395,10 @@ static int ihklib_device_release_mem(int fd, int num_mem_chunks, ihk_mem_chunk* 
 	
 	req.string = mem_list;
 	req.string_len = strlen(mem_list);
-	if (!req.string || !req.string_len) {
-		dprintf("%s, invalid format, string=%s\n", __FUNCTION__, mem_list);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(!req.string || !req.string_len, -EINVAL, "invalid format, string=%s\n", mem_list);
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RELEASE_MEM, &req);
-	
-	if (ret_ioctl != 0) {
-		dprintf("%s, ioctl failed, string=%s\n", __FUNCTION__, mem_list);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -EINVAL, "ioctl failed, string=%s\n", mem_list);
 	
  fn_exit:
 	return ret;
@@ -450,11 +414,11 @@ static int ihklib_device_query_cpu(int fd, int* num_cpus, int* cpus)
 	memset(result, 0, sizeof(result));
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_QUERY_CPU, result);
-	IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
+	CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
 	dprintf("%s,result=%s\n", __FUNCTION__, result);
 
 	ret_ihklib = cpus_str2array(result, num_cpus, cpus);
-	IHKLIB_CHKANDJUMP(ret_ihklib != 0, "cpus_str2array", -1);
+	CHKANDJUMP(ret_ihklib != 0, -1, "cpus_str2array failed\n");
 	dprintf("%s,def,num_cpus=%d\n", __FUNCTION__, *num_cpus);
 
  fn_exit:
@@ -471,7 +435,7 @@ static int ihklib_device_query_mem(int fd, int* num_mem_chunks, ihk_mem_chunk* m
 	memset(result, 0, sizeof(result));
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_QUERY_MEM, result);
-    IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
+    CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
 	dprintf("%s,result=%s\n", __FUNCTION__, result);
 
 	mem_str2array(result, num_mem_chunks, mem_chunks);
@@ -488,44 +452,37 @@ int ihk_config(int mcd, int comm, ihkconfig *config) {
 	char fn[1024];
 	int fd = -1;
 	struct stat file_stat;
-	int ret = 0, ret_ihklib;
+	int ret = 0, ret_ihklib, ret_internal;
 	
 	cmd_type = comm;
 
 	sprintf(fn, "/dev/mcd%d", mcd);
-	if (stat(fn, &file_stat) != 0) {
-		dprintf("%s,stat failed,fn=%s\n", __FUNCTION__, fn);
-		ret = -ENOENT;
-		goto fn_fail;
-	}
+	ret_internal = stat(fn, &file_stat);
+	CHKANDJUMP(ret_internal != 0, -ENOENT, "stat failed,fn=%s\n", fn);
  
 	fd = open(fn, O_RDONLY);
-	if (fd == -1) {
-		dprintf("%s,open failed,fn=%s\n", __FUNCTION__, fn);
-		ret = -EINVAL;
-		goto fn_fail;
-	}
+	CHKANDJUMP(fd == -1, -EINVAL, "open failed,fn=%s\n", fn);
 
 	switch (cmd_type) {
 		case IHK_CONFIG_CREATE:
 			dprintf("IHK_CONFIG_CREATE called.\n");
 			ret_ihklib = ihklib_device_create_os(fd);
-			IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_device_create", -EINVAL);
+			CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_device_create failed\n");
 			break;
 		case IHK_CONFIG_DESTROY:
 			dprintf("IHK_CONFIG_DESTROY called.\n");
 			ret_ihklib = ihklib_device_destroy_os(fd, config->os_index);
-			IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_device_destroy", -EINVAL);
+			CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_device_destroy failed\n");
 			break;
 		case IHK_CONFIG_RESERVE:
 			dprintf("IHK_CONFIG_RESERVE called.\n");
 			if (config->resource_type == IHK_RESOURCE_CPU) {
 				ret_ihklib = ihklib_device_reserve_cpu(fd, config->num_cpus, config->cpus);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_device_reserve", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_device_reserve failed\n");
 			} 
 			else if (config->resource_type == IHK_RESOURCE_MEM) {
 				ret_ihklib = ihklib_device_reserve_mem(fd, config->num_mem_chunks, config->mem_chunks);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_device_reserve_mem", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_device_reserve_mem failed\n");
 			} else {
 				dprintf("Invalid resource_type.\n");
 				ret = -EINVAL;
@@ -536,11 +493,11 @@ int ihk_config(int mcd, int comm, ihkconfig *config) {
 			dprintf("IHK_CONFIG_RELEASE called.\n");
 			if (config->resource_type == IHK_RESOURCE_CPU) {
 				ret_ihklib = ihklib_device_release_cpu(fd, config->num_cpus, config->cpus);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_release_cpu", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_release_cpu failed\n");
 			} 
 			else if (config->resource_type == IHK_RESOURCE_MEM) {
 				ret_ihklib = ihklib_device_release_mem(fd, config->num_mem_chunks, config->mem_chunks);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_release_mem", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_release_mem failed\n");
 			} 
 			else {
 				dprintf("%s,invalid resource_type=%d\n", __FUNCTION__, config->resource_type);
@@ -552,11 +509,11 @@ int ihk_config(int mcd, int comm, ihkconfig *config) {
 			dprintf("%s,IHK_CONFIG_QUERY\n", __FUNCTION__);
 			if (config->resource_type == IHK_RESOURCE_CPU) {
 				ret_ihklib = ihklib_device_query_cpu(fd, &config->num_cpus, config->cpus);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_device_query", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_device_query failed\n");
 			} 
 			else if (config->resource_type == IHK_RESOURCE_MEM) {
 				ret_ihklib = ihklib_device_query_mem(fd, &config->num_mem_chunks, config->mem_chunks);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_device_query", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_device_query failed\n");
 			} 
 			else {
 				dprintf("%s,invalid resource_type=%d\n", __FUNCTION__, config->resource_type);
@@ -580,7 +537,7 @@ static int ihklib_os_boot(int fd)
 {
 	int ret = 0, ret_ihklib;
 	ret_ihklib = ioctl(fd, IHK_OS_BOOT, 0);
-	IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ioctl", -1);
+	CHKANDJUMP(ret_ihklib != 0, -1, "ioctl failed\n");
 
  fn_exit:
 	return ret;
@@ -592,13 +549,9 @@ static int ihklib_os_load(int fd, char* fn)
 {
 	int ret = 0, ret_ihklib;
 
-	if (fn == NULL) {
-		dprintf("%s,fn=NULL\n", __FUNCTION__);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(fn == NULL, -1, "fn=NULL\n");
 	ret_ihklib = ioctl(fd, IHK_OS_LOAD, (unsigned long)fn);
-	IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ioctl", -1);
+	CHKANDJUMP(ret_ihklib != 0, -1, "ioctl failed\n");
 
  fn_exit:
 	return ret;
@@ -611,7 +564,7 @@ static int ihklib_os_shutdown(int fd)
 	int ret = 0, ret_ihklib;
 
 	ret_ihklib = ioctl(fd, IHK_OS_SHUTDOWN, 0);
-    IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ioctl", -1);
+    CHKANDJUMP(ret_ihklib != 0, -1, "ioctl failed\n");
  fn_exit:
 	return ret;
  fn_fail:
@@ -628,19 +581,10 @@ static int ihklib_os_assign_cpu(int fd, int num_cpus, int* cpus)
 
 	req.string = cpu_list;
 	req.string_len = strlen(cpu_list);
-	if (!req.string || !req.string_len) {
-		dprintf("%s, invalid format, string=%s\n", __FUNCTION__, cpu_list);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(!req.string || !req.string_len, -1, "invalid format, string=%s\n", cpu_list);
 
 	ret_ioctl = ioctl(fd, IHK_OS_ASSIGN_CPU, &req);
-
-	if (ret_ioctl != 0) {
-		dprintf("%s, ioctl failed, string=%s\n", __FUNCTION__, cpu_list);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed, string=%s\n", cpu_list);
 	
  fn_exit:
 	return ret;
@@ -658,19 +602,10 @@ static int ihklib_os_assign_mem(int fd, int num_mem_chunks, ihk_mem_chunk *mem_c
 
 	req.string = mem_list;
 	req.string_len = strlen(mem_list);
-	if (!req.string || !req.string_len) {
-		dprintf("%s, invalid format, string=%s\n", __FUNCTION__, mem_list);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(!req.string || !req.string_len, -1, "invalid format, string=%s\n", mem_list);
 
 	ret_ioctl = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
-	
-	if (ret_ioctl != 0) {
-		dprintf("%s, ioctl failed, string=%s\n", __FUNCTION__, mem_list);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed, string=%s\n", mem_list);
 
  fn_exit:
 	return ret;
@@ -687,19 +622,10 @@ static int ihklib_os_release_cpu(int fd, int num_cpus, int* cpus)
 	cpus_array2str(cpu_list, sizeof(cpu_list), num_cpus, cpus);
 	req.string = cpu_list;
 	req.string_len = strlen(cpu_list);
-	if (!req.string || !req.string_len) {
-		dprintf("%s, invalid format, string=%s\n", __FUNCTION__, cpu_list);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(!req.string || !req.string_len, -1, "invalid format, string=%s\n", cpu_list);
 
 	ret_ioctl = ioctl(fd, IHK_OS_RELEASE_CPU, &req);
-	
-	if (ret_ioctl != 0) {
-		dprintf("%s, ioctl failed, string=%s\n", __FUNCTION__, cpu_list);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed, string=%s\n", cpu_list);
 	
  fn_exit:
 	return ret;
@@ -717,19 +643,10 @@ static int ihklib_os_release_mem(int fd, int num_mem_chunks, ihk_mem_chunk* mem_
 
 	req.string = mem_list;
 	req.string_len = strlen(mem_list);
-	if (!req.string || !req.string_len) {
-		dprintf("%s, invalid format, string=%s\n", __FUNCTION__, mem_list);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(!req.string || !req.string_len, -1, "invalid format, string=%s\n", mem_list);
 
 	ret_ioctl = ioctl(fd, IHK_OS_RELEASE_MEM, &req);
-	
-	if (ret_ioctl != 0) {
-		dprintf("%s, ioctl failed, string=%s\n", __FUNCTION__, mem_list);
-		ret = -1;
-		goto fn_fail;
-	}
+	CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed, string=%s\n", mem_list);
 
  fn_exit:
 	return ret;
@@ -745,11 +662,11 @@ static int ihklib_os_query_cpu(int fd, int *num_cpus, int* cpus)
 	memset(result, 0, sizeof(result));
 
 	ret_ioctl = ioctl(fd, IHK_OS_QUERY_CPU, result);
-	IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
+	CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
 	dprintf("%s,result=%s\n", __FUNCTION__, result);
 
 	ret_ihklib = cpus_str2array(result, num_cpus, cpus);
-	IHKLIB_CHKANDJUMP(ret_ihklib != 0, "cpus_str2array", -1);
+	CHKANDJUMP(ret_ihklib != 0, -1, "cpus_str2array failed\n");
 	dprintf("%s,def,num_cpus=%d\n", __FUNCTION__, *num_cpus);
 
  fn_exit:
@@ -766,7 +683,7 @@ static int ihklib_os_query_mem(int fd, int *num_mem_chunks, ihk_mem_chunk* mem_c
 	memset(result, 0, sizeof(result));
 
 	ret_ioctl = ioctl(fd, IHK_OS_QUERY_MEM, result);
-    IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
+    CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
 	dprintf("%s,result=%s\n", __FUNCTION__, result);
 
 	mem_str2array(result, num_mem_chunks, mem_chunks);
@@ -798,11 +715,7 @@ int _ihklib_os_query_free_mem(int os_index, char *result, ssize_t sz_result)
 		char *line = NULL;
 		size_t line_len;
 
-		if (!f) {
-			fprintf(stderr, "error: opening %s\n", path);
-			ret = -1;
-			goto fn_fail;
-		}
+		CHKANDJUMP(!f, -1, "error: opening %s\n", path);
 
 		while (getline(&line, &line_len, f) != -1) {
 			int scan_node;
@@ -827,11 +740,8 @@ int _ihklib_os_query_free_mem(int os_index, char *result, ssize_t sz_result)
 				os_index, node);
 		fclose(f);
 	}
-
-	if (len == 0) {
-		ret = -1;
-		goto fn_fail;
-	}
+	
+	CHKANDJUMP(len == 0, -1, "MemFree not found\n");
 
 	dprintf("%s,result=%s\n", __FUNCTION__, result);
 
@@ -847,7 +757,7 @@ static int ihklib_os_query_free_mem(int os_index, int *num_mem_chunks, ihk_mem_c
     char result[65536];
 
 	ret_internal = _ihklib_os_query_free_mem(os_index, result, sizeof(result));
-	IHKLIB_CHKANDJUMP(ret_internal != 0, "_ihklib_os_query_free_mem", -1);
+	CHKANDJUMP(ret_internal != 0, -1, "_ihklib_os_query_free_mem failed\n");
 	mem_str2array(result, num_mem_chunks, mem_chunks);
 
  fn_exit:
@@ -861,7 +771,7 @@ static int ihklib_os_kargs(int fd, char* kargs)
 	int ret = 0, ret_ioctl;
 
 	ret_ioctl = ioctl(fd, IHK_OS_SET_KARGS, kargs);
-    IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
+    CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
  fn_exit:
 	return ret;
  fn_fail:
@@ -872,11 +782,7 @@ static int ihklib_os_kmsg(int fd, char* kmsg, ssize_t sz_kmsg)
 {
 	int ret = 0, ret_ioctl;
 	ret_ioctl = ioctl(fd, IHK_OS_READ_KMSG, (unsigned long)kmsg);
-    if(ret_ioctl < 0) {
-		dprintf("%s,ioctl failed\n", __FUNCTION__);
-		ret = -1;
-		goto fn_fail;
-	}
+    CHKANDJUMP(ret_ioctl < 0, -1, "ioctl failed\n");
 	if(ret_ioctl < sz_kmsg) {
 		kmsg[ret_ioctl] = 0;
 	}
@@ -890,7 +796,7 @@ static int ihklib_os_clear_kmsg(int fd)
 {
 	int ret = 0, ret_ioctl;
 	ret_ioctl = ioctl(fd, IHK_OS_CLEAR_KMSG, 0);
-    IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
+    CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
 
  fn_exit:
 	return ret;
@@ -924,7 +830,7 @@ static int ihklib_os_ikc_map(int fd, int num_ikc_ssets, int* ikc_sset_sizes, int
 	dprintf("%s,map_str=%s\n", __FUNCTION__, map_str);
 
 	ret_ioctl = ioctl(fd, IHK_OS_IKC_MAP, map_str);
-    IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
+    CHKANDJUMP(ret_ioctl != 0, -1, "ioctl failed\n");
 
  fn_exit:
 	return ret;
@@ -938,51 +844,44 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 	int fd = -1;
 	char fn[1024];
 	struct stat file_stat;
-	int ret = 0, ret_ihklib;
+	int ret = 0, ret_ihklib, ret_internal;
 
  	dprintf("ihk_osctl,comm=%d\n", comm);
 
 	cmd_type = comm;
 
 	sprintf(fn, "/dev/mcos%d", index);
-	if (stat(fn, &file_stat) != 0) {
-		dprintf("%s,os instance (/dev/mcos%d) not found\n", __FUNCTION__, index);
-		ret = -ENOENT;
-		goto fn_fail;
-	}
+	ret_internal = stat(fn, &file_stat);
+	CHKANDJUMP(ret_internal != 0, -ENOENT, "os instance (/dev/mcos%d) not found\n", index);
 
 		fd = open(fn, O_RDONLY);
-		if (fd == -1) {
-			dprintf("open failed\n");
-			ret = -EINVAL;
-			goto fn_fail;
-		}
+		CHKANDJUMP(fd == -1, -EINVAL, "open failed\n");
 
 		switch (cmd_type) {
 		    case IHK_OSCTL_LOAD:
 				dprintf("IHK_OSCTL_LOAD called.\n");
 				ret_ihklib = ihklib_os_load(fd, ctl->image);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_load", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_load failed\n");
 				break;
 		    case IHK_OSCTL_BOOT:
 				dprintf("IHK_OSCTL_BOOT called.\n");
 				ret_ihklib = ihklib_os_boot(fd);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_boot", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_boot failed\n");
 				break;
 		    case IHK_OSCTL_SHUTDOWN:
 				dprintf("IHK_OSCTL_SHUTDOWN called.\n");
 				ret_ihklib = ihklib_os_shutdown(fd);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_shutdown", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_shutdown failed\n");
 				break;
 		    case IHK_OSCTL_ASSIGN:
 				dprintf("IHK_OSCTL_ASSIGN called.\n");
 				if (ctl->resource_type == IHK_RESOURCE_CPU) {
 					ret_ihklib = ihklib_os_assign_cpu(fd, ctl->num_cpus, ctl->cpus);
-					IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_assign_cpu", -EINVAL);
+					CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_assign_cpu failed\n");
 				} 
 				else if (ctl->resource_type == IHK_RESOURCE_MEM) {
 					ret_ihklib = ihklib_os_assign_mem(fd, ctl->num_mem_chunks, ctl->mem_chunks);
-					IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_assign_mem", -EINVAL);
+					CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_assign_mem failed\n");
 				} 
 				else {
 					dprintf("%s,invalid resource type=%d\n", __FUNCTION__, ctl->resource_type);
@@ -994,11 +893,11 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 				dprintf("IHK_OSCTL_RELEASE called.\n");
 				if (ctl->resource_type == IHK_RESOURCE_CPU) {
 					ret_ihklib = ihklib_os_release_cpu(fd, ctl->num_cpus, ctl->cpus);
-					IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_release", -EINVAL);
+					CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_release failed\n");
 				} 
 				else if (ctl->resource_type == IHK_RESOURCE_MEM) {
 					ret_ihklib = ihklib_os_release_mem(fd, ctl->num_mem_chunks, ctl->mem_chunks);
-					IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_release", -EINVAL);
+					CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_release failed\n");
 				} 
 				else {
 					dprintf("%s,invalid resource_type=%d\n", __FUNCTION__, ctl->resource_type);
@@ -1010,11 +909,11 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 				dprintf("%s,IHK_OSCTL_QUERY\n", __FUNCTION__);
 				if (ctl->resource_type == IHK_RESOURCE_CPU) {
 					ret_ihklib = ihklib_os_query_cpu(fd, &ctl->num_cpus, ctl->cpus);
-					IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_query_cpu", -EINVAL);
+					CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_query_cpu failed\n");
 				} 
 				else if (ctl->resource_type == IHK_RESOURCE_MEM) {
 					ret_ihklib = ihklib_os_query_mem(fd, &ctl->num_mem_chunks, ctl->mem_chunks);
-					IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_query_mem", -EINVAL);
+					CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_query_mem failed\n");
 				} 
 				else {
 					dprintf("invalid resource_type\n");
@@ -1025,27 +924,27 @@ int ihk_osctl(int index, int comm, ihkosctl *ctl) {
 		    case IHK_OSCTL_QUERY_FREE_MEM:
 				dprintf("IHK_OSCTL_QUERY_FREE_MEM called.\n");
 				ret_ihklib = ihklib_os_query_free_mem(index, &ctl->num_mem_chunks, ctl->mem_chunks);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_query_free_mem", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_query_free_mem failed\n");
 				break;
 		    case IHK_OSCTL_KARGS:
 				dprintf("IHK_OSCTL_KARGS called.\n");
 				ret_ihklib = ihklib_os_kargs(fd, ctl->kargs);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_kargs", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_kargs failed\n");
 				break;
 		    case IHK_OSCTL_KMSG:
 				dprintf("IHK_OSCTL_KMSG called.\n");
 				ret_ihklib = ihklib_os_kmsg(fd, ctl->kmsg, ctl->kmsg_size);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_kmsg", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_kmsg failed\n");
 				break;
 		    case IHK_OSCTL_CLEAR_KMSG:
 				dprintf("IHK_OSCTL_CLEAR_KMSG called.\n");
 				ret_ihklib = ihklib_os_clear_kmsg(fd);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_clear_kmsg", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_clear_kmsg failed\n");
 				break;
 		    case IHK_OSCTL_IKC_MAP:
 				dprintf("IHK_OSCTL_IKC_MAP called.\n");
 				ret_ihklib = ihklib_os_ikc_map(fd, ctl->num_ikc_ssets, ctl->ikc_sset_sizes, ctl->ikc_sset_members, ctl->ikc_map);
-				IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_ikc_map", -EINVAL);
+				CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_ikc_map failed\n");
 				break;
 		    default:
 				dprintf("%s, unknown cmdtype=%d\n", __FUNCTION__, cmd_type);
@@ -1070,33 +969,25 @@ int ihk_getihkinfo (ihk_info *info)
 	int os_count = 0;
 
 	fd = open("/dev/mcd0", O_RDWR);
-	if (fd < 0) {
-		dprintf("%s,open failed,fn=%s,errno=%d\n", __FUNCTION__, fn, errno);
-        ret = -ENOENT;
-        goto fn_fail;
-	}
+	CHKANDJUMP(fd < 0, -ENOENT, "open failed,fn=%s,errno=%d\n", fn, errno);
 
 	ret_ihklib = ihklib_device_query_mem(fd, &info->num_reserved_mem_chunks, info->reserved_mem_chunks);
-	IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_device_query", -EINVAL);
+	CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_device_query failed\n");
 
 	ret_ihklib = ihklib_device_query_cpu(fd, &info->num_reserved_cpus, info->reserved_cpus);
-	IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_device_query", -EINVAL);
+	CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_device_query failed\n");
 
 	for(i = 0; i < info->num_os_instances; i++) {
 		int fd;
 		sprintf(fn, "/dev/mcos%d", i);
 		fd = open(fn, O_RDONLY);
-		if (fd == -1) {
-			dprintf("%s,open failed\n", __FUNCTION__);
-			ret = -EINVAL;
-			goto fn_fail;
-		}
+		CHKANDJUMP(fd == -1, -EINVAL, "open failed\n");
 
 		ret_ihklib = ihklib_os_query_mem(fd, &info->num_assigned_mem_chunks[i], info->assigned_mem_chunks[i]);
-		IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_query_mem", -EINVAL);
+		CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_query_mem failed\n");
 
 		ret_ihklib = ihklib_os_query_cpu(fd, &info->num_assigned_cpus[i], info->assigned_cpus[i]);
-		IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_query_cpu", -EINVAL);
+		CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_query_cpu failed\n");
 		
 		close(fd);
 	}
@@ -1131,20 +1022,15 @@ int ihk_getosinfo(int index, ihk_osinfo *osinfo) {
 	int ret = 0, ret_ihklib, ret_ioctl;
 	char *token;
 
-	dprintf("ihk_getosinfo,enter\n");
 	sprintf(fn, "/dev/mcos%d", index);
 	fd = open(fn, O_RDWR);
-	if (fd < 0) {
-		dprintf("%s,open failed,fn=%s,errno=%d\n", __FUNCTION__, fn, errno);
-		ret = -ENOENT;
-		goto fn_fail;
-	}
+	CHKANDJUMP(fd < 0, -ENOENT, "open failed,fn=%s,errno=%d\n", fn, errno);
 
 	ret_ihklib = ihklib_os_query_mem(fd, &osinfo->num_mem_chunks, osinfo->mem_chunks);
-    IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_query_mem", -EINVAL);
+    CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_query_mem failed\n");
 	
 	ret_ihklib = ihklib_os_query_cpu(fd, &osinfo->num_cpus, osinfo->cpus);
-	IHKLIB_CHKANDJUMP(ret_ihklib != 0, "ihklib_os_query_cpu", -EINVAL);
+	CHKANDJUMP(ret_ihklib != 0, -EINVAL, "ihklib_os_query_cpu failed\n");
 	
 	memset(query_result, 0, sizeof(query_result));
 	ret_ioctl = ioctl(fd, IHK_OS_STATUS, query_result);
@@ -1188,7 +1074,7 @@ int ihk_getosinfo(int index, ihk_osinfo *osinfo) {
 	memset(query_result, 0, sizeof(query_result));
 
 	ret_ioctl = ioctl(fd, IHK_OS_QUERY_IKC_MAP, query_result);
-    IHKLIB_CHKANDJUMP(ret_ioctl != 0, "ioctl", -EINVAL);
+    CHKANDJUMP(ret_ioctl != 0, -EINVAL, "ioctl failed\n");
 	
 	dprintf("%s,query_ikc_map, ioctl returned %s\n", __FUNCTION__, query_result);
 	dprintf("%s,ref,num_ikc_ssets=%d\n", __FUNCTION__, osinfo->num_ikc_ssets);
@@ -1202,16 +1088,8 @@ int ihk_getosinfo(int index, ihk_osinfo *osinfo) {
 		}
 		char* cdr = token;
 		token = strsep(&cdr, ":");
-		if(*token == 0) {
-			dprintf("%s,query_ikc_map,empty sender set,str=%s\n", __FILE__, query_result);
-			ret = -EINVAL;
-			goto fn_fail;
-		}
-		if (cdr == NULL) {
-			dprintf("%s,query_ikc_map,colon not found,str=%s\n", __FILE__, query_result);
-			ret = -EINVAL;
-			goto fn_fail;
-		}
+		CHKANDJUMP(*token == 0, -EINVAL, "query_ikc_map,empty sender set,str=%s\n", query_result);
+		CHKANDJUMP(cdr == NULL, -EINVAL, "query_ikc_map,colon not found,str=%s\n", query_result);
 		if(osinfo->num_ikc_ssets > sset_rank) {
 			osinfo->ikc_map[sset_rank] = atol(cdr);
 			dprintf("ikc_map[%d]=%d\n", sset_rank, osinfo->ikc_map[sset_rank]);
@@ -1226,9 +1104,7 @@ int ihk_getosinfo(int index, ihk_osinfo *osinfo) {
 			}
 			if(osinfo->num_ikc_ssets > sset_rank &&
 			   osinfo->ikc_sset_sizes[sset_rank] > cpu_rank) {
-				//dprintf("%s,use,sset_sizes[%d]=%d\n", __FILE__, sset_rank, osinfo->ikc_sset_sizes[sset_rank]);
 				*(osinfo->ikc_sset_members[sset_rank] + cpu_rank) = atol(token);
-				//dprintf("%s,sset_members[%d]+%d=%d\n", __FILE__, sset_rank, cpu_rank, *(osinfo->ikc_sset_members[sset_rank] + cpu_rank));
 			}
 			cpu_rank++;
 		empty_cpu:
@@ -1236,14 +1112,12 @@ int ihk_getosinfo(int index, ihk_osinfo *osinfo) {
 		}
 		if(osinfo->num_ikc_ssets > sset_rank) {
 			osinfo->ikc_sset_sizes[sset_rank] = cpu_rank;
-			//dprintf("%s,def,sset_sizes[%d]=%d\n", __FILE__, sset_rank, osinfo->ikc_sset_sizes[sset_rank]);
 		}
 		sset_rank++;
 	empty_pair:
 		token = strsep(&sset, "+");
 	}
 	osinfo->num_ikc_ssets = sset_rank;
-	//dprintf("%s,def,num_ikc_ssets=%d\n", __FILE__, osinfo->num_ikc_ssets);
 	
  fn_exit:
 	if(fd != -1) {
@@ -1842,16 +1716,10 @@ int ihk_freeze(unsigned long *os_set, int n)
 		if (*(os_set + i / 64) >> (i % 64)) {
 			sprintf(fn, "/dev/mcos%d", i);
 			fd = open(fn, O_RDONLY);
-			if (fd < 0) {
-				ret = -ENOENT;
-				goto fn_fail;
-			}
+			CHKANDJUMP(fd < 0, -ENOENT, "open failed\n");
+
 			ret = ioctl(fd, IHK_OS_FREEZE, 0);
-			if (ret != 0) {
-				dprintf("Error: ioctl IHK_OS_FREEZE returned %d\n", ret);
-				ret = -EINVAL;
-				goto fn_fail;
-			}
+			CHKANDJUMP(ret != 0, -EINVAL, "Error: ioctl IHK_OS_FREEZE returned %d\n", ret);
 		}
     }
  fn_exit:
@@ -1872,16 +1740,9 @@ int ihk_thaw(unsigned long *os_set, int n)
 		if (*(os_set + i / 64) >> (i % 64)) {
 			sprintf(fn, "/dev/mcos%d", i);
 			fd = open(fn, O_RDONLY);
-			if (fd < 0) {
-				ret = -ENOENT;
-				goto fn_fail;
-			}
+			CHKANDJUMP(fd < 0, -ENOENT, "open failed\n");
 			ret = ioctl(fd, IHK_OS_THAW, 0);
-			if (ret != 0) {
-				dprintf("Error: ioctl IHK_OS_THAW returned %d\n", ret);
-				ret = -EINVAL;
-				goto fn_fail;
-			}
+			CHKANDJUMP(ret != 0, -EINVAL, "Error: ioctl IHK_OS_THAW returned %d\n", ret);
 		}
 	}
  fn_exit:
