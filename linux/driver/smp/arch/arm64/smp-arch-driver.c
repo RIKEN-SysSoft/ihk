@@ -34,6 +34,8 @@
 #include "smp-driver.h"
 #include "smp-defines-driver.h"
 
+#define UNSUPPORTED_GICV2
+
 /*
  * IHK-SMP unexported kernel symbols
  */
@@ -736,6 +738,7 @@ static int ihk_smp_acpi_get_gic_base(void)
 		 */
 		ihk_smp_gic_collect_rdist();
 	} else {
+#ifndef UNSUPPORTED_GICV2
 		// for GICv2 or abobe
 		/* Collect CPU base addresses */
 		count = ihk_smp_acpi_parse_entries(ACPI_SIG_MADT,
@@ -746,6 +749,10 @@ static int ihk_smp_acpi_get_gic_base(void)
 			printk("ERROR: No valid GICC entries exist\n");
 			return -ENXIO;
 		}
+#else /* !UNSUPPORTED_GICV2 */
+		pr_err("Unsupported GIC versions below v2.\n");
+		return -EINVAL;
+#endif /* !UNSUPPORTED_GICV2 */
 	}
 
 	return 0;
@@ -773,8 +780,13 @@ static int ihk_smp_dt_get_gic_base(void)
 		ihk_gic_version = 3; /* GICv3 or later */
 		domain = ihk_gic_data_v3->domain;
 	} else {
+#ifndef UNSUPPORTED_GICV2
 		ihk_gic_version = 2; /* GICv2 or abobe */
 		domain = ihk_gic_data_v2->domain;
+#else /* !UNSUPPORTED_GICV2 */
+		pr_err("Unsupported GIC versions below v2.\n");
+		return -EINVAL;
+#endif /* !UNSUPPORTED_GICV2 */
 	}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
