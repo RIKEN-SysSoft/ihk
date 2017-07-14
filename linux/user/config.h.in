@@ -1,5 +1,8 @@
 /* linux/driver/smp-x86/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* whether rusage is enabled */
+#undef ENABLE_RUSAGE
+
 /* whether memdump feature is enabled */
 #undef ENABLE_MEMDUMP
 

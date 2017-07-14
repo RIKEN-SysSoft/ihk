@@ -93,7 +93,7 @@ int set_cpu(char *cpustr) {
 	return (0);
 }
 
-static void* check_status (void *p) {
+static void *check_status (void *p) {
 	/* check os status */
 	int fd = 0;
 	char fn[128];
@@ -107,30 +107,28 @@ static void* check_status (void *p) {
 	fd = open(fn, O_RDONLY);
 	if (fd < 0) {
  		perror("open");
+		return NULL;
 	} 
-	else {
-		while(1) {
-  			ret = ioctl(fd, IHK_OS_STATUS, query_result);
-  			switch (ret) {
-			case IHK_OS_STATUS_NOT_BOOTED:
-			case IHK_OS_STATUS_BOOTING:
-			case IHK_OS_STATUS_BOOTED:
-			case IHK_OS_STATUS_READY:
-			case IHK_OS_STATUS_SHUTDOWN:
-			case IHK_OS_STATUS_STOPPED:
-				break;
-			case IHK_OS_STATUS_FAILED:
-			case IHK_OS_STATUS_HUNGUP:
-				ioctl(fd, IHK_OS_EVENT_SIGNAL, efd);
-				return (0);
-				break;
-			default:
-				break;
-			}
-			nanosleep(&req, NULL);
+	for (;;) {
+		ret = ioctl(fd, IHK_OS_STATUS, query_result);
+		switch (ret) {
+		case IHK_OS_STATUS_NOT_BOOTED:
+		case IHK_OS_STATUS_BOOTING:
+		case IHK_OS_STATUS_BOOTED:
+		case IHK_OS_STATUS_READY:
+		case IHK_OS_STATUS_SHUTDOWN:
+		case IHK_OS_STATUS_STOPPED:
+			break;
+		case IHK_OS_STATUS_FAILED:
+		case IHK_OS_STATUS_HUNGUP:
+			ioctl(fd, IHK_OS_EVENTFD, efd);
+			return NULL;
+			break;
+		default:
+			break;
 		}
+		nanosleep(&req, NULL);
 	}
-	return(0);	
 }
 
 int ihk_geteventfd(int index, int type) {
@@ -1583,205 +1581,119 @@ int count_numa_node () {
 }
 
 #ifdef ENABLE_RUSAGE
-/* ihk_getrusage */
-int ihk_getrusage(int index, ihk_rusage *rusage) {
-	unsigned long val;
-	int ret;
-	int numa_count;
+struct ihk_os_cpu_monitor {
+	int status;
+#define IHK_OS_MONITOR_NOT_BOOT 0
+#define IHK_OS_MONITOR_IDLE 1
+#define IHK_OS_MONITOR_USER 2
+#define IHK_OS_MONITOR_KERNEL 3
+#define IHK_OS_MONITOR_KERNEL_HEAVY 4
+#define IHK_OS_MONITOR_KERNEL_OFFLOAD 5
+#define IHK_OS_MONITOR_KERNEL_FREEZING 8
+#define IHK_OS_MONITOR_KERNEL_FROZEN 9
+#define IHK_OS_MONITOR_KERNEL_THAW 10
+#define IHK_OS_MONITOR_PANIC 99
+	int status_bak;
+	unsigned long counter;
+	unsigned long ocounter;
+	unsigned long user_tsc;
+	unsigned long system_tsc;
+};
+
+struct ihk_os_monitor {
+	unsigned long rusage_max_num_threads;
+	unsigned long rusage_num_threads;
+	unsigned long rusage_rss_max;
+	unsigned long rusage_rss_current;
+	unsigned long rusage_kmem_usage;
+	unsigned long rusage_kmem_max_usage;
+	unsigned long rusage_hugetlb_usage;
+	unsigned long rusage_hugetlb_max_usage;
+	unsigned long rusage_total_memory;
+	unsigned long rusage_total_memory_usage;
+	unsigned long rusage_total_memory_max_usage;
+	unsigned long num_numa_nodes;
+	unsigned long num_processors;
+	unsigned long ns_per_tsc;
+	unsigned long reserve[128];
+	unsigned long rusage_numa_stat[1024];
+};
+
+int
+ihk_getrusage(int index, ihk_rusage *rusage)
+{
+	int fd;
+	char path[1024];
+	struct ihk_os_monitor monitor;
+	struct ihk_os_cpu_monitor *cpu;
+	int rc;
+	unsigned long *numa_stat = rusage->numa_stat;
+	int num_numa_nodes = rusage->num_numa_nodes;
 	int i;
-	FILE *fp;
-	int BUF_SIZE = 2048;
-	char buf[BUF_SIZE];
-	char key[8];
-	char *p;
-	char path[1024] = {'\0'};
-	
+	int n;
+	unsigned long ut;
+	unsigned long st;
+
 	sprintf(path, "/dev/mcos%d", index);	
-	fp = fopen(path, "r");
-	if (fp == NULL) {
-		return(-ENOENT);
+	if ((fd = open(path, O_RDWR)) == -1) {
+		return -errno;
 	} 
-	else {
-		fclose(fp);
+
+	if (ioctl(fd, IHK_OS_GET_USAGE, &monitor) == -1) {
+		rc = -errno;
+		close(fd);
+		return rc;
 	}
 
-	/* read rss */
-	snprintf(path, 1024, PATH_SYS_RSS, index);
-	if ((ret = read_sysfs_key_val(path, KEY_SYS_RSS, &val)) == 0) {
-		rusage->rss = val;
-	} 
-	else {
-		dprintf("read rss failed.\n");
+	cpu = malloc(sizeof(struct ihk_os_cpu_monitor) *
+	             monitor.num_processors);
+	if (!cpu) {
+		close(fd);
+		return -ENOMEM;
 	}
 
-	/* read cache */
-	if ((ret = read_sysfs_key_val(PATH_SYS_CACHE, KEY_SYS_CACHE, &val)) == 0) {
-		rusage->cache = val;
-	} 
-	else {
-		dprintf("read cache failed.\n");
+	if (ioctl(fd, IHK_OS_GET_CPU_USAGE, cpu) == -1) {
+		rc = -errno;
+		close(fd);
+		free(cpu);
+		return rc;
 	}
 
-	/* read rss_huge */
-	snprintf(path, 1024, PATH_SYS_RSS_HUGE, index);
-	if ((ret = read_sysfs_key_val(path, KEY_SYS_RSS_HUGE, &val)) == 0) {
-		rusage->rss_huge = val;
-	} 
-	else {
-		dprintf("read rss_huge failed. %s\n", path);
-	}
+	memset(numa_stat, '\0', sizeof(unsigned long) * num_numa_nodes);
+	memset(rusage, '\0', sizeof(ihk_rusage));
+	rusage->numa_stat = numa_stat;
 
-	/* read mapped_file */
-	if ((ret = read_sysfs_key_val(PATH_SYS_MAPPED_FILE, KEY_SYS_MAPPED_FILE, &val)) == 0) {
-		rusage->mapped_file = val;
-	} 
-	else {
-		dprintf("read mapped_file failed.\n");
-	}
+	rusage->rss = monitor.rusage_rss_current;
+	rusage->cache = 0;
+	rusage->rss_huge = 0;
+	rusage->mapped_file = 0;
+	rusage->max_usage = monitor.rusage_rss_max;
+	rusage->kmem_usage = monitor.rusage_kmem_usage;
+	rusage->kmax_usage = monitor.rusage_kmem_max_usage;
+	rusage->num_numa_nodes = monitor.num_numa_nodes;
+	n = monitor.num_numa_nodes;
+	if (n > num_numa_nodes)
+		n = num_numa_nodes;
+	for (i = 0; i < n; i++)
+		rusage->numa_stat[i] = monitor.rusage_numa_stat[i];
+	rusage->hugetlb = monitor.rusage_hugetlb_usage;
+	rusage->hugetlb_max = monitor.rusage_hugetlb_max_usage;
+	for (ut = 0, st = 0, i = 0; i < monitor.num_processors; i++) {
+		unsigned long wt;
 
-	/* read max_usage */
-	snprintf(path, 1024, PATH_SYS_MAX_USAGE, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->max_usage = val;
-	} 
-	else {
-		dprintf("read max_usage failed.\n");
+		wt = cpu[i].user_tsc * monitor.ns_per_tsc / 1000;
+		ut += wt;
+		st += cpu[i].system_tsc * monitor.ns_per_tsc / 1000;
+		rusage->usage_per_cpu[i] = wt;
 	}
+	rusage->usage = ut;
+	rusage->stat_system = st / 10000000;
+	rusage->stat_user = ut / 10000000;
+	rusage->num_threads = monitor.rusage_num_threads;
+	rusage->max_num_threads = monitor.rusage_max_num_threads;
 
-	/* read kmem_usage */
-	snprintf(path, 1024, PATH_SYS_KMEM_USAGE, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->kmem_usage = val;
-	} 
-	else {
-		dprintf("read kmem_usage failed.\n");
-	}
-	
-	/* read kmax_usage */
-	snprintf(path, 1024, PATH_SYS_KMAX_USAGE, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->kmax_usage = val;
-	} 
-	else {
-		dprintf("read kmax_usage failed.\n");
-	}
-
-	/* read num_numa_nodes */
-	snprintf(path, 1024, PATH_SYS_NUM_NUMA_NODES, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->num_numa_nodes = val;
-	} 
-	else {
-		dprintf("read num_numa_nodes failed.\n");
-	}
-	numa_count = rusage->num_numa_nodes;
-
-	/* read numa_stat */
-	snprintf(path, 1024, PATH_SYS_NUMA_STAT, index);
-	if ((fp = fopen(path, "r")) == NULL) {
-		perror("fopen");
-	} 
-	else {
-		memset(buf, 0, BUF_SIZE);	
-		while (fgets(buf, BUF_SIZE, fp) != NULL) {
-			if (strncmp(buf, KEY_SYS_NUMA_STAT, strlen(KEY_SYS_NUMA_STAT)) == 0) {
-				p = strtok(buf, " =");  /* get label "total" */
-				p = strtok(NULL, " ="); /* get total value */
-				for (i = 0; i < numa_count; i++) {
-					sprintf(key, "N%d=", i);
-					p = strtok(NULL, " ="); /* get label "N0" */
-					p = strtok(NULL, " ="); /* get value */
-					if (p != NULL) {
-						dprintf(" char:%s.\n", p);
-						*(rusage->numa_stat+sizeof(unsigned long)*i) = strtoul(p, NULL, 0);
-						dprintf(" value:%lu.\n", *(rusage->numa_stat+sizeof(unsigned long)*i));
-					}
-				}
-			}		
-			memset(buf, 0, BUF_SIZE);	
-		}
-		fclose(fp); 
-	}	
-
-	/* read hugetlb */
-	snprintf(path, 1024, PATH_SYS_HUGETLB, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->hugetlb = val;
-	} 
-	else {
-		dprintf("read hugetlb failed.\n");
-	}
-
-	/* read hugetlb_max */
-	snprintf(path, 1024, PATH_SYS_HUGETLB_MAX, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->hugetlb_max = val;
-	} 
-	else {
-		dprintf("read hugetlb_max failed.\n");
-	}
-
-	/* read stat_system */
-	snprintf(path, 1024, PATH_SYS_STAT_SYSTEM, index);
-	if ((ret = read_sysfs_key_val(path, KEY_SYS_STAT_SYSTEM, &val)) == 0) {
-		rusage->stat_system = val;
-	} 
-	else {
-		dprintf("read stat_system failed\n");
-	}
-
-	/* read stat_user */
-	snprintf(path, 1024, PATH_SYS_STAT_USER, index);
-	if ((ret = read_sysfs_key_val(path, KEY_SYS_STAT_USER, &val)) == 0) {
-		rusage->stat_user = val;
-	} 
-	else {
-		dprintf("read stat_user failed\n");
-	}
-
-	/* read usage */
-	snprintf(path, 1024, PATH_SYS_USAGE, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->usage = val;
-	} 
-	else {
-		dprintf("read usage failed.\n");
-	}
-	
-	/* read usage_per_cpu */
-	snprintf(path, 1024, PATH_SYS_USAGE_PER_CPU, index);
-	if ((fp = fopen(path,"r")) == NULL) {
-		perror("fopen");
-	} 
-	else {
-		memset(buf, 0, BUF_SIZE);	
-		fgets(buf, BUF_SIZE, fp);	
-		p = strtok(buf, " ");
-		for (i = 0; i < sizeof(cpu_set_t)/8; i++) {
-			if (p == NULL) { break;}
-			rusage->usage_per_cpu[i] = strtoul(p, NULL, 0);
-			p = strtok(NULL, " ");
-		}	
-		fclose(fp); 
-	}
-
-	/* read num_threads */
-	snprintf(path, 1024, PATH_SYS_NUM_THREADS, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->num_threads = val;
-	} 
-	else {
-		dprintf("read num_threads failed.\n");
-	}
-	
-	/* read max_num_threads */
-	snprintf(path, 1024, PATH_SYS_MAX_NUM_THREADS, index);
-	if ((ret = read_sysfs_simple_val(path, &val)) == 0) {
-		rusage->max_num_threads = val;
-	} 
-	else {
-		dprintf("read max_num_threads failed.\n");
-	}
+	close(fd);
+	free(cpu);
 	return 0;
 }
 #else

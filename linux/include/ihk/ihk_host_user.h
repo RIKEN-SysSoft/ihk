@@ -36,7 +36,7 @@
 #define IHK_OS_RESERVE_MEM            0x112a13
 #define IHK_OS_STATUS                 0x112a14
 #define IHK_OS_REGISTER_EVENT         0x112a15
-#define IHK_OS_EVENT_SIGNAL           0x112a16
+#define IHK_OS_EVENTFD                0x112a16
 
 #define IHK_OS_READ_KMSG              0x112a20
 #define IHK_OS_CLEAR_KMSG             0x112a21
@@ -51,10 +51,9 @@
 #define IHK_OS_QUERY_IKC_MAP          0x112a29
 #define IHK_OS_FREEZE                 0x112a30
 #define IHK_OS_THAW                   0x112a31
+#define IHK_OS_GET_USAGE              0x112a32
+#define IHK_OS_GET_CPU_USAGE          0x112a33
 
-#define IHK_GET_EVENTFD_MEM     0x112a29
-#define IHK_GET_EVENTFD_CPU     0x112a30
-  
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff
 

@@ -902,10 +902,10 @@ struct ihk_os_notifier {
 int ihk_host_register_os_notifier(struct ihk_os_notifier *ion);
 int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
 
-void ihk_os_event_signal(ihk_os_t os, int type);
+void ihk_os_eventfd(ihk_os_t os, int type);
 
 /** \brief IHK-Monitor */
-struct ihk_os_monitor {
+struct ihk_os_cpu_monitor {
 	int status;
 #define IHK_OS_MONITOR_NOT_BOOT 0
 #define IHK_OS_MONITOR_IDLE 1
@@ -919,5 +919,26 @@ struct ihk_os_monitor {
 	unsigned long ocounter;
 	unsigned long user_tsc;
 	unsigned long system_tsc;
+};
+
+struct ihk_os_monitor {
+	unsigned long rusage_max_num_threads;
+	unsigned long rusage_num_threads;
+	unsigned long rusage_rss_max;
+	long rusage_rss_current;
+	unsigned long rusage_kmem_usage;
+	unsigned long rusage_kmem_max_usage;
+	unsigned long rusage_hugetlb_usage;
+	unsigned long rusage_hugetlb_max_usage;
+	unsigned long rusage_total_memory;
+	unsigned long rusage_total_memory_usage;
+	unsigned long rusage_total_memory_max_usage;
+	unsigned long num_numa_nodes;
+	unsigned long num_processors;
+	unsigned long ns_per_tsc;
+	unsigned long reserve[128];
+	unsigned long rusage_numa_stat[1024];
+
+	struct ihk_os_cpu_monitor cpu[0];
 };
 #endif

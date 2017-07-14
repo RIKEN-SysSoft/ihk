@@ -573,102 +573,100 @@ static int __ihk_os_set_kargs(struct ihk_host_linux_os_data *data,
 	return error;
 }
 
+static void
+setup_monitor(struct ihk_host_linux_os_data *data)
+{
+	unsigned long rpa;
+	unsigned long pa;
+	unsigned long size;
+	unsigned long psize;
+
+	if (data->monitor)
+		return;
+
+	if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
+		dprintf("get_special_addr: failed.\n");
+		return;
+	}
+
+	psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+	pa = __ihk_os_map_memory(data, rpa, psize);
+
+#ifdef CONFIG_MIC
+	if ((long)pa <= 0) {
+		return;
+	}
+
+	data->monitor = ioremap_nocache(pa, psize);
+#else
+	data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize,
+	                                       NULL, 0);
+#endif
+	data->monitor_pa = pa;
+	data->monitor_len = size;
+}
+
 static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 		char __user *buf)
 {
-	unsigned long rpa, pa, size, psize;
 	int n;
 	int i;
 	int status;
+	int freezing;
 
 	status = __ihk_os_query_status(data);
 
 	/* (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
 	   (2) LWK initializes IHK_SPADDR_MONITOR
 	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready() */
-	if (status == IHK_OS_STATUS_READY) {
-		if(data->monitor == NULL) {
-			if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
-				printk("%s,get_special_addr failed\n", __FILE__);
-				status = -EINVAL;
-				goto fn_fail;
-			}
-			
-			psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
-			pa = __ihk_os_map_memory(data, rpa, psize);
-			
-#ifdef CONFIG_MIC
-			if ((long)pa <= 0) {
-				status = -EINVAL;
-				goto fn_fail;
-			}
-			
-			data->monitor = ioremap_nocache(pa, psize);
-#else
-			data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize, NULL, 0);
-#endif
-			data->monitor_pa = pa;
-			data->monitor_len = size;
-		}
+	if (status != IHK_OS_STATUS_READY)
+		return status;
 
-		size = data->monitor_len;
-		n = size / sizeof(struct ihk_os_monitor);
-		for (i = 0; i < n; i++) {
-			if(status == IHK_OS_MONITOR_KERNEL_FREEZING || status == IHK_OS_MONITOR_KERNEL_FROZEN)
-				continue;
-			if (data->monitor[i].status == IHK_OS_MONITOR_KERNEL_FREEZING) {
-				status = IHK_OS_MONITOR_KERNEL_FREEZING;
-				//			break;
-			}
-			if (data->monitor[i].status == IHK_OS_MONITOR_KERNEL_FROZEN) {
-				status = IHK_OS_MONITOR_KERNEL_FROZEN;
-				//			break;
-			}
-		}
-
-		if(data->monitor == NULL){
-			if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
-				printk("%s,get_special_addr failed\n", __FILE__);
-				status = -EINVAL;
-				goto fn_fail;
-			}
-
-			psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
-			pa = __ihk_os_map_memory(data, rpa, psize);
-			
-#ifdef CONFIG_MIC
-			if ((long)pa <= 0) {
-				return -EINVAL;
-			}
-			
-			data->monitor = ioremap_nocache(pa, psize);
-#else
-			data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize, NULL, 0);
-#endif
-			data->monitor_pa = pa;
-			data->monitor_len = size;
-		}
-
-		size = data->monitor_len;
-		n = size / sizeof(struct ihk_os_monitor);
-		for(i = 0; i < n; i++){
-			if(data->monitor[i].status == IHK_OS_MONITOR_PANIC){
-				status = IHK_OS_STATUS_FAILED;
-				break;
-			}
-			if(data->monitor[i].status == IHK_OS_MONITOR_KERNEL){
-				if(data->monitor[i].counter ==
-				   data->monitor[i].ocounter)
-					status = IHK_OS_STATUS_HUNGUP;
-			}
-			data->monitor[i].ocounter = data->monitor[i].counter;
-		}
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		return -ENOSYS;
 	}
 
-	fn_exit:
+	n = data->monitor->num_processors;
+	for (i = 0; i < n; i++) {
+		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC){
+			return IHK_OS_STATUS_FAILED;
+		}
+
+		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_KERNEL){
+			if(data->monitor->cpu[i].counter ==
+			   data->monitor->cpu[i].ocounter)
+				status = IHK_OS_STATUS_HUNGUP;
+		}
+		data->monitor->cpu[i].ocounter = data->monitor->cpu[i].counter;
+	}
+	if (status == IHK_OS_STATUS_HUNGUP)
+		return IHK_OS_STATUS_HUNGUP;
+
+	freezing = data->monitor->cpu[0].status;
+	if (freezing == IHK_OS_MONITOR_KERNEL_FREEZING)
+		return IHK_OS_STATUS_FREEZING;
+	for (i = 1; i < n; i++) {
+		switch (data->monitor->cpu[i].status) {
+		    case IHK_OS_MONITOR_KERNEL_FREEZING:
+			return IHK_OS_STATUS_FREEZING;
+			break;
+		    case IHK_OS_MONITOR_KERNEL_FROZEN:
+			if (freezing != IHK_OS_MONITOR_KERNEL_FROZEN) {
+				return IHK_OS_STATUS_FREEZING;
+			}
+			break;
+		    default:
+			if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN) {
+				return IHK_OS_STATUS_FREEZING;
+			}
+			break;
+		}
+	}
+	if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN)
+		return IHK_OS_STATUS_FROZEN;
+
 	return status;
-	fn_fail:
-	goto fn_exit;
 }
 
 /** \brief Clear the kernel message buffer. */
@@ -711,7 +709,7 @@ static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned l
 	return 0;
 }
 
-void ihk_os_event_signal(ihk_os_t data, int type)
+void ihk_os_eventfd(ihk_os_t data, int type)
 {
 	unsigned long flags;
 	struct ihk_event *ep;
@@ -765,6 +763,45 @@ static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
 	return error;
 }
 
+static int
+__ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
+{
+	struct ihk_os_monitor *__user buf;
+
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		return -ENOSYS;
+	}
+
+	buf = (struct ihk_os_monitor *__user)arg;
+	if (copy_to_user(buf, data->monitor, sizeof(struct ihk_os_monitor))) {
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int
+__ihk_os_get_cpu_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
+{
+	struct ihk_os_cpu_monitor *__user buf;
+	int size;
+
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		return -ENOSYS;
+	}
+
+	buf = (struct ihk_os_cpu_monitor *__user)arg;
+	size = sizeof(struct ihk_os_cpu_monitor) *
+	       data->monitor->num_processors;
+	if (copy_to_user(buf, data->monitor->cpu, size)) {
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 /** \brief Handles ioctl calls with the additional request number */
 static long __ihk_os_ioctl_call_aux(struct ihk_host_linux_os_data *os,
                                     unsigned int request, unsigned long arg,
@@ -805,6 +842,8 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_QUERY_MEM:
 	case IHK_OS_QUERY_IKC_MAP:
 	case IHK_OS_STATUS:
+	case IHK_OS_GET_USAGE:
+	case IHK_OS_GET_CPU_USAGE:
 		break;
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
@@ -942,8 +981,8 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_register_event(data, arg);
 		break;
 
-	case IHK_OS_EVENT_SIGNAL:
-		ihk_os_event_signal(data, 1);
+	case IHK_OS_EVENTFD:
+		ihk_os_eventfd(data, 1);
 		ret = 0;
 		break;
 
@@ -956,6 +995,17 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_thaw(data);
 		dkprintf("__ihk_os_thaw  (ret=%d)\n",ret);
 		break;
+
+	case IHK_OS_GET_USAGE:
+		ret = __ihk_os_get_usage(data, arg);
+		dkprintf("__ihk_os_get_usage  (ret=%d)\n",ret);
+		break;
+
+	case IHK_OS_GET_CPU_USAGE:
+		ret = __ihk_os_get_cpu_usage(data, arg);
+		dkprintf("__ihk_os_get_cpu_usage  (ret=%d)\n",ret);
+		break;
+
 
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
@@ -2255,4 +2305,4 @@ EXPORT_SYMBOL(ihk_device_get_node_topology);
 EXPORT_SYMBOL(ihk_device_linux_cpu_to_hw_id);
 EXPORT_SYMBOL(ihk_host_register_os_notifier);
 EXPORT_SYMBOL(ihk_host_deregister_os_notifier);
-EXPORT_SYMBOL(ihk_os_event_signal);
+EXPORT_SYMBOL(ihk_os_eventfd);

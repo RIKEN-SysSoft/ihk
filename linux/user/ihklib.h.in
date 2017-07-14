@@ -6,34 +6,6 @@
 #define PATH_SYS_NODE "/sys/devices/system/node"
 #define PATH_DEV "/dev"
 
-/* rusage sysfs path */
-#define PATH_SYS_RSS	"/tmp/mcos/mcos%d_sys/fs/cgroup/memory/memory.stat"
-#define KEY_SYS_RSS "rss "
-#define PATH_SYS_CACHE	"/sys/fs/cgroup/memory/memory.stat"
-#define KEY_SYS_CACHE "cache "
-#define PATH_SYS_RSS_HUGE "/tmp/mcos/mcos%d_sys/fs/cgroup/memory/memory.stat"
-#define KEY_SYS_RSS_HUGE "rss_huge "
-#define PATH_SYS_MAPPED_FILE "/sys/fs/cgroup/memory/memory.stat"
-#define KEY_SYS_MAPPED_FILE "mapped_file "
-#define PATH_SYS_MAX_USAGE	"/tmp/mcos/mcos%d_sys/fs/cgroup/memory/memory.max_usage_in_bytes"
-#define PATH_SYS_KMEM_USAGE	"/tmp/mcos/mcos%d_sys/fs/cgroup/memory/memory.kmem.usage_in_bytes"
-#define PATH_SYS_KMAX_USAGE	"/tmp/mcos/mcos%d_sys/fs/cgroup/memory/memory.kmem.max_usage_in_bytes"
-#define PATH_SYS_NUM_NUMA_NODES	"/tmp/mcos/mcos%d_sys/fs/cgroup/cpu/num_numa_nodes.txt"
-#define PATH_SYS_NUMA_STAT	"/tmp/mcos/mcos%d_sys/fs/cgroup/memory/memory.numa_stat"
-#define KEY_SYS_NUMA_STAT	"total="
-#define PATH_SYS_HUGETLB	"/tmp/mcos/mcos%d_sys/fs/cgroup/hugetlb/hugetlb.1GB.usage_in_bytes"
-#define PATH_SYS_HUGETLB_MAX	"/tmp/mcos/mcos%d_sys/fs/cgroup/hugetlb/hugetlb.1GB.max_usage_in_bytes"
-#define PATH_SYS_STAT_SYSTEM	"/tmp/mcos/mcos%d_sys/fs/cgroup/cpuacct/cpuacct.stat"
-#define KEY_SYS_STAT_SYSTEM	"system "
-#define PATH_SYS_STAT_USER	"/tmp/mcos/mcos%d_sys/fs/cgroup/cpuacct/cpuacct.stat"
-#define KEY_SYS_STAT_USER	"user "
-#define PATH_SYS_USAGE	"/tmp/mcos/mcos%d_sys/fs/cgroup/cpuacct/cpuacct.usage"
-#define PATH_SYS_USAGE_PER_CPU	"/tmp/mcos/mcos%d_sys/fs/cgroup/cpuacct/cpuacct.usage_percpu" /* comma separeted */
-#define PATH_SYS_NUM_THREADS	"/tmp/mcos/mcos%d_sys/fs/cgroup/num_threads"
-#define PATH_SYS_MAX_NUM_THREADS	"/tmp/mcos/mcos%d_sys/fs/cgroup/max_num_threads"
-
-#define PATH_SYS_OS_STATUS	"/tmp/mcos/mcos%d_sys/fs/cgroup/mck_status"
-
 #include <ihk/affinity.h> 
 
 typedef struct ihk_mem_chunk {
@@ -144,13 +116,13 @@ typedef struct ihk_rusage {
 	unsigned long kmem_usage;
 	unsigned long kmax_usage;
 	int num_numa_nodes;
-	unsigned long* numa_stat;
+	unsigned long *numa_stat;
 	unsigned long hugetlb;
 	unsigned long hugetlb_max;
 	unsigned long stat_system;
 	unsigned long stat_user;
 	unsigned long usage;
-	unsigned long usage_per_cpu[sizeof(cpu_set_t)/8];
+	unsigned long usage_per_cpu[sizeof(cpu_set_t) * 8];
 	int num_threads;
 	int max_num_threads;
 } ihk_rusage;
