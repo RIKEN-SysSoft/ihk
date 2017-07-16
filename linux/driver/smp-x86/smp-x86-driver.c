@@ -2969,7 +2969,7 @@ static int smp_ihk_init_ident_page_table(void)
 	printk("IHK-SMP: page table pages = %d, ident_npages_order = %d\n", 
 			ident_npages, ident_npages_order);
 
-	ident_pages = alloc_pages(GFP_DMA | GFP_KERNEL, ident_npages_order);
+	ident_pages = alloc_pages(GFP_DMA32 | GFP_KERNEL, ident_npages_order);
 	if (!ident_pages) {
 		printk("IHK-SMP: error: allocating identity page tables\n");
 		return ENOMEM;
