@@ -809,7 +809,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	while (((size_t)PAGE_SIZE << param_pages_order) < param_size)
 		++param_pages_order;
 
-	param_pages = alloc_pages(GFP_KERNEL, param_pages_order);
+	param_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, param_pages_order);
 	if (!param_pages) {
 		kfree(os);
 		printk("IHK-SMP: error: allocating boot parameter structure\n");
@@ -817,11 +817,11 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
+	os->param->param_size = param_size;
 	os->param_pages_order = param_pages_order;
 	dprintf("IHK-SMP: param size: %lu, nr_pages: %lu\n",
 		sizeof(*os->param), 1UL << param_pages_order);
 
-	memset(os->param, 0, param_size);
 	os->param->nr_cpus = os->nr_cpus;
 	os->param->nr_linux_cpus = nr_cpu_ids;
 	os->param->nr_numa_nodes = nr_numa_nodes;
