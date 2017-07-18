@@ -12,6 +12,7 @@ static unsigned char stack[8192] __attribute__((aligned(4096)));
 unsigned long boot_param_pa;
 struct smp_boot_param *boot_param;
 unsigned long bootstrap_mem_end;
+static int boot_param_size;
 
 extern void main(void);
 extern void setup_x86(void);
@@ -39,6 +40,7 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	ap_trampoline = _ap_trampoline;
 	ihk_ikc_irq = boot_param->ihk_ikc_irq;
 	bootstrap_mem_end = boot_param->bootstrap_mem_end;
+	boot_param_size = boot_param->param_size;
 
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
@@ -102,11 +104,12 @@ void arch_init(void)
 	}
 
 	setup_x86();
-	/* Remap boot parameter structure */
-	boot_param = map_fixed_area(boot_param_pa, boot_param->param_size, 0);
+	kprintf("boot_param_size: %lu\n", boot_param_size);
 
-	kprintf("boot_param_size: %lu, ns_per_tsc: %lu\n",
-			boot_param->param_size, boot_param->ns_per_tsc);
+	/* Remap boot parameter structure */
+	boot_param = map_fixed_area(boot_param_pa, boot_param_size, 0);
+
+	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 	build_ihk_cpu_info();
 }
 

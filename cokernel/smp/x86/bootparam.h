@@ -68,6 +68,8 @@ struct smp_boot_param {
 	 */
 	unsigned long start, end;
 	unsigned long status;
+	/* Size of this structure (including all the postix data) */
+	int param_size;
 
     /* End address of the memory chunk on which kernel sections 
        are loaded, used for boundary check in early_alloc_pages(). */
@@ -87,8 +89,6 @@ struct smp_boot_param {
 	unsigned long ns_per_tsc;
 	unsigned long boot_sec;
 	unsigned long boot_nsec;
-	/* Size of this structure (including all the postix data) */
-	int param_size;
 	unsigned int ihk_ikc_irq;
 	unsigned int ihk_ikc_irq_apicids[SMP_MAX_CPUS];
 	char kernel_args[256];
