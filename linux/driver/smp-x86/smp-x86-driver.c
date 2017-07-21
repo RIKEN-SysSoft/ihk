@@ -819,8 +819,8 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
 	os->param->param_size = param_size;
 	os->param_pages_order = param_pages_order;
-	dprintf("IHK-SMP: param size: %lu, nr_pages: %lu\n",
-		sizeof(*os->param), 1UL << param_pages_order);
+	printk("IHK-SMP: boot param size: %d, nr_pages: %lu\n",
+			param_size, 1UL << param_pages_order);
 
 	os->param->nr_cpus = os->nr_cpus;
 	os->param->nr_linux_cpus = nr_cpu_ids;
