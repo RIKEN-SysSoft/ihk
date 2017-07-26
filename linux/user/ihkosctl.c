@@ -18,6 +18,8 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
+#include "ihklib.h"
 
 int __argc;
 char **__argv;
@@ -31,6 +33,15 @@ char **__argv;
 #define dprintf(...) do { if (0) printf(__VA_ARGS__); } while (0)
 #define	eprintf(...) printf(__VA_ARGS__)
 #endif
+
+#define IHKOSCTL_CHKANDJUMP(cond, func, err)							\
+	do {																\
+		if(cond) {														\
+			eprintf("%s,"func" failed\n", __FUNCTION__);				\
+			ret = err;													\
+			goto fn_fail;												\
+		}																\
+	} while(0)
 
 static int usage(char **arg)
 {
@@ -51,11 +62,13 @@ static int usage(char **arg)
 	fprintf(stderr, "           mem (size@NUMA) \n");
 	fprintf(stderr, "    release cpu|mem \n");
 	fprintf(stderr, "            cpu (cpu_list) \n");
-	fprintf(stderr, "            mem\n");
+	fprintf(stderr, "            mem (size@NUMA) \n");
 	fprintf(stderr, "    ikc_map (cpu_list:cpu+cpu_list:cpu+..) \n");
 	fprintf(stderr, "    query [cpu|mem]\n");
 	fprintf(stderr, "    query_free_mem\n");
 	fprintf(stderr, "    kargs (kernel arg)\n");
+	fprintf(stderr, "    status\n");
+	fprintf(stderr, "    getosinfo\n");
 	fprintf(stderr, "    kmsg\n");
 	fprintf(stderr, "    clear_kmsg\n");
 	fprintf(stderr, "    intr cpu irq_vector\n");
@@ -74,6 +87,13 @@ static int do_boot(int fd)
 		fprintf(stderr, "error: booting\n");
 	}
 	dprintf("ret = %d\n", r);
+	return r;
+}
+
+static int do_status(int fd)
+{
+	int r = ioctl(fd, IHK_OS_STATUS, 0);
+	printf("ret = %d\n", r);
 	return r;
 }
 
@@ -247,21 +267,29 @@ static int do_assign(int fd)
 static int do_release(int fd)
 {
 	int ret;
+	ihk_resource_req_t req;
 
-	if (__argc < 4) {
+	if (__argc < 5) {
+		usage(__argv);
+		return -1;
+	}
+
+	req.string = __argv[4];
+	req.string_len = strlen(__argv[4]);
+	if (!req.string || !req.string_len) {
 		usage(__argv);
 		return -1;
 	}
 
 	if (!strcmp(__argv[3], "cpu")) {
-		ret = ioctl(fd, IHK_OS_RELEASE_CPU, __argv[4]);
+		ret = ioctl(fd, IHK_OS_RELEASE_CPU, &req);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: releasing CPUs: %s\n", __argv[4]);
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ioctl(fd, IHK_OS_RELEASE_MEM, __argv[4]);
+		ret = ioctl(fd, IHK_OS_RELEASE_MEM, &req);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: releasing memory: %s\n", __argv[4]);
@@ -321,16 +349,18 @@ static int do_query(int fd)
 	return ret;
 }
 
+#define RESULT_LEN	16384
 static int do_query_free_mem(int fd)
 {
-	int r = ioctl(fd, IHK_OS_QUERY_FREE_MEM);
-	
-	if (r != 0) {
-		fprintf(stderr, "error: querying free memory\n");
-	}
-
-	printf("number of free pages (4kB): %d\n", r);
-	return r;
+	int ret = 0, ret_internal;
+	char result[RESULT_LEN];
+	ret_internal = _ihklib_os_query_free_mem(atol(__argv[1]), result, sizeof(result));
+	IHKOSCTL_CHKANDJUMP(ret_internal != 0, "_ihklib_os_query_free_mem", -1);
+	printf("%s\n", result);
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 
@@ -385,6 +415,131 @@ static int do_kmsg(int fd)
 		fprintf(stderr, "error querying kmsg\n");
 		return 1;
 	}
+}
+
+static int do_getosinfo(int fd) {
+	int ret = 0, ret_ihklib;
+	int i, j;
+	int index = atoi(__argv[1]);
+
+	ihk_osinfo osinfo;
+	bzero(&osinfo, sizeof(osinfo));
+	ret_ihklib = ihk_getosinfo(index, &osinfo);
+    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
+
+    osinfo.mem_chunks = (ihk_mem_chunk *)calloc(osinfo.num_mem_chunks, sizeof(ihk_mem_chunk));
+    IHKOSCTL_CHKANDJUMP(osinfo.mem_chunks == NULL, "calloc", -1);
+
+    osinfo.cpus = (int *)calloc(osinfo.num_cpus, sizeof(int));
+    IHKOSCTL_CHKANDJUMP(osinfo.cpus == NULL, "calloc", -1);
+
+    osinfo.ikc_sset_sizes = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
+    IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_sizes == NULL, "calloc", -1);
+	
+    osinfo.ikc_sset_members = (int**)calloc(osinfo.num_ikc_ssets, sizeof(int*));
+    IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_members == NULL, "calloc", -1);
+
+    osinfo.ikc_map = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
+    IHKOSCTL_CHKANDJUMP(osinfo.ikc_map == NULL, "calloc", -1);
+
+	ret_ihklib = ihk_getosinfo(index, &osinfo);
+    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
+
+    for(i = 0; i < osinfo.num_ikc_ssets; i++) {
+        dprintf("%s,ikc_sset_sizes[%d]=%d\n", __FILE__, i, osinfo.ikc_sset_sizes[i]);
+        osinfo.ikc_sset_members[i] = calloc(osinfo.ikc_sset_sizes[i], sizeof(int));
+		IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_members[i] == NULL, "calloc", -1);
+    }
+
+	ret_ihklib = ihk_getosinfo(index, &osinfo);
+    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
+
+    printf("Assigned_mem: ");
+    for (i = 0; i < osinfo.num_mem_chunks; i++) {
+		printf("%lu@%d",
+			   osinfo.mem_chunks[i].size,
+			   osinfo.mem_chunks[i].numa_node_number);
+		if(i != osinfo.num_mem_chunks - 1) {
+            printf(",");
+        }
+    }
+    printf("\n");
+
+	printf("Assigned_cpu: ");
+	for (i = 0; i < osinfo.num_cpus; i++) {
+		printf("%d", osinfo.cpus[i]);
+		if(i != osinfo.num_cpus - 1) {
+			printf(",");
+		}
+	}
+    printf("\n");
+
+    printf("IKC_map: ");
+	for (i = 0; i < osinfo.num_ikc_ssets; i++) {
+		for (j = 0; j < osinfo.ikc_sset_sizes[i]; j++) {
+			printf("%d", *(osinfo.ikc_sset_members[i] + j));
+			if(j != osinfo.ikc_sset_sizes[i] - 1) {
+				printf(",");
+			}
+		}
+		printf(":");
+		printf("%d", osinfo.ikc_map[i]);
+		if(i != osinfo.num_ikc_ssets - 1) {
+			printf("+");
+		}
+	}
+    printf("\n");
+
+	switch (osinfo.status) {
+		case IHK_STATUS_INACTIVE:
+			printf("Status: INACTIVE\n");
+			break;
+		case IHK_STATUS_BOOTING:
+			printf("Status: BOOTING\n");
+			break;
+		case IHK_STATUS_RUNNING:
+			printf("Status: RUNNING\n");
+			break;
+		case IHK_STATUS_SHUTDOWN:
+			printf("Status: SHUTDOWN\n");
+			break;
+		case IHK_STATUS_PANIC:
+			printf("Status: PANIC\n");
+			break;
+		case IHK_STATUS_HUNGUP:
+			printf("Status: HUNGUP\n");
+			break;
+		case IHK_STATUS_FREEZING:
+			printf("Status: FREEZING\n");
+			break;
+		case IHK_STATUS_FROZEN:
+			printf("Status: FROZEN\n");
+			break;
+	}	
+
+ fn_fail:
+	if(osinfo.ikc_sset_members) {
+		for (i = 0; i < osinfo.num_ikc_ssets; ++i) {
+			if(osinfo.ikc_sset_members[i]) {
+				free(osinfo.ikc_sset_members[i]);
+			}
+		}
+	}
+	if(osinfo.ikc_map) {
+		free(osinfo.ikc_map);
+	}
+	if(osinfo.ikc_sset_members) {
+		free(osinfo.ikc_sset_members);
+	}
+	if(osinfo.ikc_sset_sizes) {
+		free(osinfo.ikc_sset_sizes);
+	}
+	if(osinfo.mem_chunks) {
+		free(osinfo.mem_chunks);
+	}
+
+	// fn_exit:
+    return ret;
 }
 
 static int do_clear_kmsg(int fd)
@@ -764,6 +919,8 @@ int main(int argc, char **argv)
 	else HANDLER(release)
 	else HANDLER(ikc_map)
 	else HANDLER(query)
+	else HANDLER(status)
+	else HANDLER(getosinfo)
 	else HANDLER(query_free_mem)
 	else HANDLER(kargs)
 	else HANDLER(kmsg)

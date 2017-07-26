@@ -16,9 +16,14 @@
 #include <linux/pci.h>
 #include <linux/version.h>
 #include <linux/cpu.h>
+#include <linux/rbtree.h>
 #ifdef POSTK_DEBUG_ARCH_DEP_57 /* add ctype.h include for isspace() / isdigit() */
 #include <linux/ctype.h>
 #endif /* POSTK_DEBUG_ARCH_DEP_57 */
+#include <linux/slub_def.h>
+#include <linux/kallsyms.h>
+#include <linux/list_sort.h>
+#include <linux/swap.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
@@ -78,6 +83,24 @@ int this_module_put = 0;
 static struct list_head ihk_mem_free_chunks;
 struct list_head ihk_mem_used_chunks;
 
+static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
+                                       enum ihk_special_addr_type type,
+                                       unsigned long *addr,
+                                       unsigned long *size);
+extern unsigned long smp_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
+                                           unsigned long remote_phys,
+                                           unsigned long size);
+static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
+                                 unsigned long phys, unsigned long size,
+                                 void *virt, int flags);
+static int smp_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
+                                  void *virt, unsigned long size);
+extern int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
+                                unsigned long local_phys,
+                                unsigned long size);
+
+extern int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode);
+
 /* ----------------------------------------------- */
 
 /** \brief Driver-speicific device structure
@@ -98,6 +121,7 @@ struct builtin_device_data {
  * they represent!! */
 struct chunk {
 	struct list_head chain;
+	struct rb_node node;
 	uintptr_t addr;
 	size_t size;
 	int numa_id;
@@ -173,6 +197,8 @@ static void __build_os_info(struct smp_os_data *os)
 	os->cpu_info.n_cpus = os->nr_cpus;
 	os->cpu_info.mapping = os->cpu_mapping;
 	os->cpu_info.hw_ids = os->cpu_hw_ids;
+	os->cpu_info.ikc_map = os->cpu_ikc_map;
+	os->cpu_info.ikc_mapped = os->cpu_ikc_mapped;
 }
 
 /*
@@ -284,7 +310,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	while (((size_t)PAGE_SIZE << param_pages_order) < param_size)
 		++param_pages_order;
 
-	param_pages = alloc_pages(GFP_KERNEL, param_pages_order);
+	param_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, param_pages_order);
 	if (!param_pages) {
 		kfree(os);
 		printk("IHK-SMP: error: allocating boot parameter structure\n");
@@ -292,11 +318,13 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
-	dprintf("IHK-SMP: param size: %lu, nr_pages: %lu\n",
-		sizeof(*os->param), 1UL << param_pages_order);
+	os->param->param_size = param_size;
+	os->param_pages_order = param_pages_order;
+	printk("IHK-SMP: boot param size: %d, nr_pages: %lu\n",
+			param_size, 1UL << param_pages_order);
 
-	memset(os->param, 0, param_size);
 	os->param->nr_cpus = os->nr_cpus;
+	os->param->nr_linux_cpus = nr_cpu_ids;
 	os->param->nr_numa_nodes = nr_numa_nodes;
 	os->param->nr_memory_chunks = nr_memory_chunks;
 
@@ -313,9 +341,13 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 				cpu_to_node(os->cpu_mapping[lwk_cpu]));
 		bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
 		bp_cpu->linux_cpu_id = os->cpu_mapping[lwk_cpu];
+		bp_cpu->ikc_cpu = ihk_smp_cpus[lwk_cpu_2_linux_cpu(os, lwk_cpu)].ikc_map_cpu;
+		os->cpu_ikc_map[lwk_cpu] = bp_cpu->ikc_cpu;
 
-		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, CPU HWID: %d\n",
-				os, cpu_to_node(cpu), ihk_smp_cpus[cpu].hw_id);
+		dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, LWK CPU: %d,"
+				" CPU APIC: %d, IKC CPU: %d\n",
+				os, cpu_to_node(os->cpu_mapping[lwk_cpu]), lwk_cpu,
+				bp_cpu->hw_id, bp_cpu->ikc_cpu);
 
 		++bp_cpu;
 	}
@@ -753,14 +785,17 @@ rerun:
 	}
 }
 
-static size_t max_size_mem_chunk(struct list_head *chunks)
+/* TODO: rewrite this to embed in allocation and keep track
+ * of max on the fly */
+static size_t max_size_mem_chunk(struct rb_root *root)
 {
 	size_t max = 0;
-	struct chunk *chunk_iter;
+	struct rb_node *node;
 
-	list_for_each_entry(chunk_iter, chunks, chain) {
-		if (chunk_iter->size > max) {
-			max = chunk_iter->size;
+	for (node = rb_first(root); node; node = rb_next(node)) {
+		struct chunk *chunk = container_of(node, struct chunk, node);
+		if (chunk->size > max) {
+			max = chunk->size;
 		}
 	}
 
@@ -775,6 +810,11 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	struct ihk_os_mem_chunk *next_chunk = NULL;
 	struct chunk *mem_chunk;
 
+	if(os->status == BUILTIN_OS_STATUS_SHUTDOWN) {
+		eprintk("%s,already down\n", __FUNCTION__);
+		return 0;
+	}
+
 	/* Reset CPU cores used by this OS */
 	for (i = 0; i < SMP_MAX_CPUS; ++i) {
 		if (ihk_smp_cpus[i].os != ihk_os)
@@ -787,6 +827,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		dprintk("IHK-SMP: CPU %d has been deassigned, HWID: %d\n",
 		       ihk_smp_cpus[i].id, ihk_smp_cpus[i].hw_id);
 	}
+	os->nr_cpus = 0;
 
 	/* Drop memory chunk used by this OS */
 	list_for_each_entry_safe(os_mem_chunk, next_chunk,
@@ -812,11 +853,17 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		kfree(os_mem_chunk);
 	}
 
-	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
 	if (os->numa_mapping) {
 		kfree(os->numa_mapping);
 		os->numa_mapping = NULL;
 	}
+
+	if (os->param && os->param_pages_order) {
+		free_pages((unsigned long)os->param, os->param_pages_order);
+	}
+
+	//kfree(os); /* done in destroy */
 
 	return ret;
 }
@@ -968,6 +1015,7 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	spin_unlock_irqrestore(&os->lock, flags);
 
 	strncpy(os->kernel_args, buf, sizeof(os->kernel_args));
+	dprintk("%s,kernel_args=%s\n", __FUNCTION__, os->kernel_args);
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 
@@ -1001,6 +1049,10 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 {
 	struct smp_os_data *os = priv;
 
+	if (!os->param) {
+		return -EINVAL;
+	}
+
 	switch (type) {
 	case IHK_SPADDR_KMSG:
 		if (os->param->msg_buffer) {
@@ -1021,6 +1073,20 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 		if (os->param->mikc_queue_send) {
 			*addr = os->param->mikc_queue_send;
 			*size = MASTER_IKCQ_SIZE;
+			return 0;
+		}
+		break;
+	case IHK_SPADDR_MONITOR:
+		if (os->param->monitor) {
+			*addr = os->param->monitor;
+			*size = os->param->monitor_size;
+			return 0;
+		}
+		break;
+	case IHK_SPADDR_NMI_MODE:
+		if (os->param->nmi_mode_addr) {
+			*addr = os->param->nmi_mode_addr;
+			*size = sizeof(int);
 			return 0;
 		}
 		break;
@@ -1169,6 +1235,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 
 			ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
 			ihk_smp_cpus[cpu].os = ihk_os;
+			ihk_smp_cpus[cpu].ikc_map_cpu = 0;
 
 			os->cpu_mapping[os->nr_cpus] = cpu;
 			os->cpu_hw_ids[os->nr_cpus] = ihk_smp_cpus[cpu].hw_id;
@@ -1355,13 +1422,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 				ihk_smp_cpus[cpu].hw_id, ihk_os);
 	}
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
 		req_string, ihk_os);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
-		(const char __user *)arg, ihk_os);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 	ret = 0;
 
@@ -1374,32 +1436,37 @@ char query_res[8192];
 
 static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
-	int cpu;
-	cpumask_t cpus_assigned;
+	int i, ret = 0;
+	struct smp_os_data *os = priv;
+	char cpu_str[64];
 
-	memset(&cpus_assigned, 0, sizeof(cpus_assigned));
 	memset(query_res, 0, sizeof(query_res));
 
-	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED)
-			continue;
-		if (ihk_smp_cpus[cpu].os != ihk_os)
-			continue;
-
-		cpumask_set_cpu(cpu, &cpus_assigned);
+	/* Respect the order of cpus specified when assigining them
+	   e.g. 0,2,1,3 */
+	for(i = 0; i < os->nr_cpus; ++i) {
+		sprintf(cpu_str, "%d", os->cpu_mapping[i]);
+		strcat(query_res, cpu_str);
+		if(i != os->nr_cpus - 1) {
+			strcat(query_res, ",");
+		}
 	}
 
-	BITMAP_SCNLISTPRINTF(query_res, sizeof(query_res),
-		cpumask_bits(&cpus_assigned), nr_cpumask_bits);
+	dprintk("%s,query_res=%s\n", __FUNCTION__, query_res);
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
 			printk("IHK-SMP: error: copying CPU string to user-space\n");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto fn_fail;
 		}
 	}
 
+
+ fn_exit:
 	return 0;
+ fn_fail:
+	goto fn_exit;
 }
 
 static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
@@ -1415,6 +1482,8 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	char *string = (char *)arg;
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	char *token;
+
+	dprintk("%s,ikc_map,arg=%s\n", __FUNCTION__, string);
 
 #ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	if (len == 0) {
@@ -1445,17 +1514,169 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 	token = strsep(&string, "+");
 	while (token) {
+		char *cpu_list;
+		char *ikc_cpu;
+		int cpu;
+
+		cpu_list = strsep(&token, ":");
+		if (!cpu_list) {
+			ret = -EINVAL;
+			goto out;
+		}
 
 		memset(&cpus_to_map, 0, sizeof(cpus_to_map));
-		printk("%s: %s\n", __FUNCTION__, token);
+		cpulist_parse(cpu_list, &cpus_to_map);
+
+		ikc_cpu = strsep(&token, ":");
+		if (!ikc_cpu) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		printk("%s: %s -> %s\n", __FUNCTION__, cpu_list, ikc_cpu);
+		/* Store IKC target CPU */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+		for_each_cpu(cpu, &cpus_to_map) {
+#else
+		for_each_cpu_mask(cpu, cpus_to_map) {
+#endif
+			/* TODO: check if CPU belongs to OS */
+			if (kstrtoint(ikc_cpu, 10, &ihk_smp_cpus[cpu].ikc_map_cpu)) {
+				ret = -EINVAL;
+				goto out;
+			}
+		}
 
 		token = strsep(&string, "+");
 	}
+	/* Mapping has been requested */
+	os->cpu_ikc_mapped = 1;
 
 out:
 #ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	if (string) kfree(string);
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	return ret;
+}
+
+static int smp_ihk_os_query_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret = 0;
+	int i, src, dst, max_dst = -1;
+	char cpu_str[4];
+
+	/* Sender-set (sset): Set of senders sharing the same destination */
+	int *rank = NULL; /* Order in sender-set, indexed by IKC source CPU# */
+	int *ikc_sset_sizes = NULL; /* Indexed by IKC destination CPU# */
+	int **ikc_sset_members = NULL; /* Indexed by IKC destination CPU# */
+
+	rank = kzalloc(sizeof(int) * SMP_MAX_CPUS, GFP_KERNEL);
+	if (!rank) {
+		printk(KERN_ERR "IHK-SMP: error: allocating rank\n");
+		ret = -ENOMEM;
+		goto fn_fail;
+	}
+
+	ikc_sset_sizes = kzalloc(sizeof(int) * SMP_MAX_CPUS, GFP_KERNEL);
+	if (!ikc_sset_sizes) {
+		printk(KERN_ERR "IHK-SMP: error: allocating num_ikc_ssets\n");
+		ret = -ENOMEM;
+		goto fn_fail;
+	}
+
+	ikc_sset_members = kzalloc(sizeof(int*) * SMP_MAX_CPUS, GFP_KERNEL);
+	if (!ikc_sset_members) {
+		printk(KERN_ERR "IHK-SMP: error: allocating ikc_sset_members\n");
+		ret = -ENOMEM;
+		goto fn_fail;
+	}
+
+	for (src = 0; src < SMP_MAX_CPUS; ++src) {
+		if (ihk_smp_cpus[src].status != IHK_SMP_CPU_ASSIGNED)
+			continue;
+		if (ihk_smp_cpus[src].os != ihk_os)
+			continue;
+
+		rank[src] = ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu];
+		//dprintk("query_ikc_map,src=%d,dst=%d,rank[src]=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, rank[src]);
+		ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]++;
+		//dprintk("query_ikc_map,sset_sizes=%d\n", ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
+		if(max_dst < ihk_smp_cpus[src].ikc_map_cpu) {
+			max_dst = ihk_smp_cpus[src].ikc_map_cpu;
+		}
+		//dprintk("query_ikc_map,max_dst=%d\n", max_dst);
+	}
+
+	for (src = 0; src < SMP_MAX_CPUS; ++src) {
+		if (ihk_smp_cpus[src].status != IHK_SMP_CPU_ASSIGNED)
+			continue;
+		if (ihk_smp_cpus[src].os != ihk_os)
+			continue;
+
+		if (!ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu]) {
+			ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] = 
+				kmalloc(sizeof(int) * ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu], GFP_KERNEL);
+			if (!ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu]) {
+				printk(KERN_ERR "IHK-SMP: error: allocating ikc_sset_members\n");
+				ret = -ENOMEM;
+				goto fn_fail;
+			}
+			//dprintk("query_ikc_map,kmalloc,dst=%d,sset_sizes=%d\n", ihk_smp_cpus[src].ikc_map_cpu, ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
+		}
+		*(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]) = src;
+		//dprintk("query_ikc_map,src=%d,dst=%d,*(members[dst]+rank[src])=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, *(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]));
+	}
+
+	memset(query_res, 0, sizeof(query_res));
+
+	for (dst = 0; dst < SMP_MAX_CPUS; ++dst) {
+		if(ikc_sset_sizes[dst] == 0) {
+			continue;
+		}
+
+		for (i = 0; i < ikc_sset_sizes[dst]; ++i) {
+			sprintf(cpu_str, "%d", *(ikc_sset_members[dst] + i));
+			strcat(query_res, cpu_str);
+			if(i != ikc_sset_sizes[dst] - 1) {
+				strcat(query_res, ",");
+			}
+		}
+		strcat(query_res, ":");
+		sprintf(cpu_str, "%d", dst);
+		strcat(query_res, cpu_str);
+		if(dst != max_dst) {
+			strcat(query_res, "+");
+		}
+	}
+
+	dprintk("query_ikc_map,query_res=%s\n", query_res);
+
+	if (strlen(query_res) >= 0) {
+		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
+			printk("IHK-SMP: error: copying CPU string to user-space\n");
+			ret = -EINVAL;
+			goto fn_fail;
+		}
+	}
+
+ fn_fail:
+	if(ikc_sset_members) {
+		for (dst = 0; dst < SMP_MAX_CPUS; ++dst) {
+			if(ikc_sset_members[dst]) {
+				kfree(ikc_sset_members[dst]);
+			}
+		}
+	}
+	if(ikc_sset_members) {
+		kfree(ikc_sset_members);
+	}
+	if(ikc_sset_sizes) {
+		kfree(ikc_sset_sizes);
+	}
+	if(rank) {
+		kfree(rank);
+	}
+	// fn_exit:
 	return ret;
 }
 
@@ -1563,13 +1784,49 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 
 			/* Split if there is any leftover */
 			if (mem_chunk_max->size > mem_size) {
-				mem_chunk_leftover = (struct chunk*)
-					phys_to_virt(mem_chunk_max->addr + mem_size);
-				mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size;
-				mem_chunk_leftover->size = mem_chunk_max->size - mem_size;
-				mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+				struct page *pg;
 
-				add_free_mem_chunk(mem_chunk_leftover);
+				pg = virt_to_page(phys_to_virt(mem_chunk_max->addr + mem_size));
+				/* Do not split compound pages though */
+				if (PageTail(pg)) {
+#ifdef POSTK_DEBUG_ARCH_DEP_73 /* use compound_head() */
+					struct page *head = compound_head(pg);
+					size_t comp_size = PAGE_SIZE << compound_order(head);
+
+					if ((page_to_phys(head) + comp_size) <
+							mem_chunk_max->addr + mem_chunk_max->size) {
+						off_t comp_end_offset = comp_size -
+							(page_to_phys(pg) - page_to_phys(head));
+#else /* POSTK_DEBUG_ARCH_DEP_73 */
+					size_t comp_size = PAGE_SIZE << compound_order(pg->first_page);
+
+					if ((page_to_phys(pg->first_page) + comp_size) <
+							mem_chunk_max->addr + mem_chunk_max->size) {
+						off_t comp_end_offset = comp_size -
+							(page_to_phys(pg) - page_to_phys(pg->first_page));
+#endif /* POSTK_DEBUG_ARCH_DEP_73 */
+
+						mem_chunk_leftover = (struct chunk*)
+							phys_to_virt(mem_chunk_max->addr + mem_size +
+									comp_end_offset);
+						mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size +
+							comp_end_offset;
+						mem_chunk_leftover->size = mem_chunk_max->size - mem_size -
+							comp_end_offset;
+						mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+						add_free_mem_chunk(mem_chunk_leftover);
+						dprintk("%s: comp_end_offset: %lu\n",
+								__FUNCTION__, comp_end_offset);
+					}
+				}
+				else {
+					mem_chunk_leftover = (struct chunk*)
+						phys_to_virt(mem_chunk_max->addr + mem_size);
+					mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size;
+					mem_chunk_leftover->size = mem_chunk_max->size - mem_size;
+					mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+					add_free_mem_chunk(mem_chunk_leftover);
+				}
 			}
 		}
 
@@ -1617,9 +1874,10 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		}
 		set_bit(os_mem_chunk->numa_id, &os->numa_mask);
 
-		printk(KERN_INFO "IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p\n",
-				os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size, os_mem_chunk->size,
-				numa_id, ihk_os);
+		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+			   " (len: %lu) @ NUMA node: %d is assigned to OS %p\n",
+			   os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+			   os_mem_chunk->size, numa_id, ihk_os);
 	}
 
 	ret = 0;
@@ -1714,6 +1972,13 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 {
 	struct smp_os_data *os = priv;
 	unsigned long flags;
+	size_t mem_size;
+	int numa_id;
+	int ret = -EINVAL, ret_internal;
+	char *mem_string;
+	char *mem_token;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 	struct ihk_os_mem_chunk *next_chunk = NULL;
 	struct chunk *mem_chunk;
@@ -1725,33 +1990,61 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
-	/* Drop memory chunk used by this OS */
-	/* TODO: parse user string */
-	list_for_each_entry_safe(os_mem_chunk, next_chunk,
-			&ihk_mem_used_chunks, list) {
+	ret_internal = copy_from_user(&req, (void *)arg, sizeof(req));
+	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
 
-		if (os_mem_chunk->os != ihk_os) {
-			continue;
+	ARCHDRV_CHKANDJUMP(req.string_len == 0, "invalid request length", -EINVAL);
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	ARCHDRV_CHKANDJUMP(req_string == NULL, "kmalloc failed", -EINVAL);
+
+	ret_internal = copy_from_user(req_string, req.string, req.string_len + 1);
+	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
+
+	mem_string = req_string;
+
+	/* Drop specified memory chunks */
+	mem_token = strsep(&mem_string, ",");
+	while (mem_token) {
+		ret_internal = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		ARCHDRV_CHKANDJUMP(ret_internal != 0, "smp_ihk_parse_mem failed", -EINVAL);
+
+		list_for_each_entry_safe(os_mem_chunk, next_chunk,
+								 &ihk_mem_used_chunks, list) {
+			
+			if (os_mem_chunk->os != ihk_os || os_mem_chunk->size != mem_size || os_mem_chunk->numa_id != numa_id) {
+				continue;
+			}
+			
+			list_del(&os_mem_chunk->list);
+			
+			mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+			mem_chunk->addr = os_mem_chunk->addr;
+			mem_chunk->size = os_mem_chunk->size;
+			mem_chunk->numa_id = os_mem_chunk->numa_id;
+			INIT_LIST_HEAD(&mem_chunk->chain);
+			
+			printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+				   " (len: %lu) @ NUMA node: %d is returned to IHK\n",
+				   mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+				   mem_chunk->size, mem_chunk->numa_id);
+			
+			add_free_mem_chunk(mem_chunk);
+			
+			kfree(os_mem_chunk);
+			ret = 0;
+			goto fn_exit;
 		}
-
-		list_del(&os_mem_chunk->list);
-
-		mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
-		mem_chunk->addr = os_mem_chunk->addr;
-		mem_chunk->size = os_mem_chunk->size;
-		mem_chunk->numa_id = os_mem_chunk->numa_id;
-		INIT_LIST_HEAD(&mem_chunk->chain);
-
-		dprintk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
-				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
-				mem_chunk->size);
-
-		add_free_mem_chunk(mem_chunk);
-
-		kfree(os_mem_chunk);
+        mem_token = strsep(&mem_string, ",");
 	}
 
-	return 0;
+ fn_exit:
+	if (req_string) {
+		kfree(req_string);
+	}
+	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
@@ -1786,6 +2079,18 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	return 0;
 }
 
+static int smp_ihk_os_freeze(ihk_os_t ihk_os, void *priv)
+{
+	smp_ihk_os_send_nmi(ihk_os, priv, 1);
+	return 0;
+}
+
+static int smp_ihk_os_thaw(ihk_os_t ihk_os, void *priv)
+{
+	smp_ihk_os_send_nmi(ihk_os, priv, 2);
+	return 0;
+}
+
 static struct ihk_os_ops smp_ihk_os_ops = {
 	.load_mem = smp_ihk_os_load_mem,
 	.load_file = smp_ihk_os_load_file,
@@ -1808,10 +2113,13 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
 	.ikc_map = smp_ihk_os_ikc_map,
+	.query_ikc_map = smp_ihk_os_query_ikc_map,
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,
 	.query_mem = smp_ihk_os_query_mem,
+	.freeze = smp_ihk_os_freeze,
+	.thaw = smp_ihk_os_thaw,
 };	
 
 static struct ihk_register_os_data builtin_os_reg_data = {
@@ -1843,6 +2151,14 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 	 * use the designated NUMA node otherwise */
 	os->bootstrap_numa_id = -1;
 
+	return 0;
+}
+
+static int smp_ihk_destroy_os(ihk_device_t ihk_dev, void *ihk_dev_priv,
+							  ihk_os_t ihk_os, void *ihk_os_priv)
+{
+	struct smp_os_data *smp_os = ihk_os_priv;
+	kfree(smp_os);
 	return 0;
 }
 
@@ -1918,14 +2234,33 @@ static int __smp_ihk_free_mem_from_list(struct list_head *list)
 		va = (unsigned long)phys_to_virt(pa);
 		size_left = mem_chunk->size;
 		while (size_left > 0) {
-			/* NOTE: memory was allocated via __get_free_pages() in 4MB blocks */
-			int order = 10;
-			int order_size = 4194304;
+			int order;
+			size_t order_size;
+			struct page *page = virt_to_page(va);
+
+			if (!PageCompound(page) || !PageHead(page)) {
+				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
+					__FUNCTION__);
+				size_left -= PAGE_SIZE;
+				va += PAGE_SIZE;
+				continue;
+			}
+
+			order = compound_order(page);
+			order_size = (PAGE_SIZE << order);
 
 			free_pages(va, order);
 			pr_debug("0x%lx, page order: %d freed\n", va, order);
-			size_left -= order_size;
-			va += order_size;
+			/* A compound page may stretch over the size of this chunk */
+			if (order_size <= size_left) {
+				size_left -= order_size;
+				va += order_size;
+			}
+			else {
+				dprintk("%s: order_size - size_left: %lu\n",
+					__FUNCTION__, order_size - size_left);
+				size_left = 0;
+			}
 		}
 
 		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
@@ -1934,40 +2269,298 @@ static int __smp_ihk_free_mem_from_list(struct list_head *list)
 	return 0;
 }
 
+static int __smp_ihk_free_mem_from_rbtree(struct rb_root *root)
+{
+	struct rb_node *node;
+	struct chunk *mem_chunk;
+	unsigned long size_left;
+	unsigned long va;
+	unsigned long pa;
+#ifdef IHK_DEBUG
+	unsigned long size;
+#endif
+
+	/* Drop all memory */
+	node = rb_first(root);
+	while (node) {
+		mem_chunk = container_of(node, struct chunk, node);
+		pa = mem_chunk->addr;
+#ifdef IHK_DEBUG
+		size = mem_chunk->size;
+#endif
+
+		rb_erase(node, root);
+
+		va = (unsigned long)phys_to_virt(pa);
+		size_left = mem_chunk->size;
+		while (size_left > 0) {
+			int order;
+			size_t order_size;
+			struct page *page = virt_to_page(va);
+
+			if (!PageCompound(page) || !PageHead(page)) {
+				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
+					__FUNCTION__);
+				size_left -= PAGE_SIZE;
+				va += PAGE_SIZE;
+				continue;
+			}
+
+			order = compound_order(page);
+			order_size = (PAGE_SIZE << order);
+
+			free_pages(va, order);
+			pr_debug("0x%lx, page order: %d freed\n", va, order);
+			/* A compound page may stretch over the size of this chunk */
+			if (order_size <= size_left) {
+				size_left -= order_size;
+				va += order_size;
+			}
+			else {
+				dprintk("%s: order_size - size_left: %lu\n",
+					__FUNCTION__, order_size - size_left);
+				size_left = 0;
+			}
+		}
+
+		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
+		node = rb_first(root);
+	}
+
+	return 0;
+}
+
+
+void __mem_chunk_insert(struct rb_root *root, struct chunk *chunk)
+{
+	struct rb_node **iter = &(root->rb_node), *parent = NULL;
+
+	/* Figure out where to put new node */
+	while (*iter) {
+		struct chunk *ichunk = container_of(*iter, struct chunk, node);
+		parent = *iter;
+
+		/* Is ichunk contigous from the left? */
+		if (ichunk->addr + ichunk->size == chunk->addr) {
+			struct rb_node *right;
+			/* Extend it to the right */
+			ichunk->size += chunk->size;
+
+			/* Have the right chunk of ichunk and ichunk become contigous? */
+			right = rb_next(*iter);
+			if (right) {
+				struct chunk *right_chunk =
+					container_of(right, struct chunk, node);
+
+				if (ichunk->addr + ichunk->size == right_chunk->addr) {
+					ichunk->size += right_chunk->size;
+					rb_erase(right, root);
+				}
+			}
+
+			return;
+		}
+
+		/* Is ichunk contigous from the right? */
+		if (chunk->addr + chunk->size == ichunk->addr) {
+			struct rb_node *left;
+			/* Extend it to the left */
+			ichunk->addr -= chunk->size;
+			ichunk->size += chunk->size;
+
+			/* Have the left chunk of ichunk and ichunk become contigous? */
+			left = rb_prev(*iter);
+			if (left) {
+				struct chunk *left_chunk =
+					container_of(left, struct chunk, node);
+
+				if (left_chunk->addr + left_chunk->size == ichunk->addr) {
+					ichunk->addr -= left_chunk->size;
+					ichunk->size += left_chunk->size;
+					rb_erase(left, root);
+				}
+			}
+
+			return;
+		}
+
+		if (chunk->addr < ichunk->addr)
+			iter = &((*iter)->rb_left);
+		else
+			iter = &((*iter)->rb_right);
+	}
+
+	/* Add new node and rebalance tree. */
+	rb_link_node(&chunk->node, parent, iter);
+	rb_insert_color(&chunk->node, root);
+
+	return;
+}
+
+
+static int cmp_pages(void *priv, struct list_head *a, struct list_head *b)
+{
+	/*
+	 * We just need to compare the pointers.  The 'struct
+	 * page' with vmemmap are ordered in the virtual address
+	 * space by physical address.  The list_head is embedded
+	 * in the 'struct page'.  So we don't even have to get
+	 * back to the 'struct page' here.
+	 */
+	if (a < b)
+		return -1;
+	if (a == b)
+		return 0;
+	/* a > b */
+	return 1;
+}
+
+static void sort_pagelists(struct zone *zone)
+{
+	unsigned int order;
+	unsigned int type;
+	unsigned long flags;
+
+	for_each_migratetype_order(order, type) {
+		struct list_head *l = &zone->free_area[order].free_list[type];
+
+		spin_lock_irqsave(&zone->lock, flags);
+		list_sort(NULL, l, &cmp_pages);
+		spin_unlock_irqrestore(&zone->lock, flags);
+	}
+}
+
+#define RESERVE_MEM_FAILED_ATTEMPTS 20
+#define RESERVE_MEM_TIMEOUT 15
+
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
-	const int order = get_order(IHK_SMP_CHUNK_BASE_SIZE);
+	int order = get_order(IHK_SMP_CHUNK_BASE_SIZE);
 	size_t want;
 	size_t allocated;
 	struct chunk *p;
 	struct chunk *q;
 	int ret = 0;
-	struct list_head tmp_chunks;
+	struct rb_root tmp_chunks = RB_ROOT;
 	nodemask_t nodemask;
+	int i;
+	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
+				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
+	void (*__drain_all_pages)(void) = NULL;
+	int failed_free_attempts = 0;
+	unsigned long res_start = get_seconds();
 
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
 
-	INIT_LIST_HEAD(&tmp_chunks);
-
 	dprintk(KERN_INFO "IHK-SMP: __ihk_smp_reserve_mem: %lu bytes\n", ihk_mem);
 
-	want = ihk_mem & ~((PAGE_SIZE << order) - 1);
+	__try_to_free_pages = (unsigned long (*)
+			(struct zonelist *, int, gfp_t, nodemask_t *))
+			kallsyms_lookup_name("try_to_free_pages");
+	__drain_all_pages = (void (*)(void))
+			kallsyms_lookup_name("drain_all_pages");
+
+	if (__drain_all_pages) {
+		__drain_all_pages();
+	}
+
+	/* Shrink slab/slub caches */
+	{
+		struct mutex *slab_mutexp =
+			(struct mutex *)kallsyms_lookup_name("slab_mutex");
+		struct list_head *slab_cachesp =
+			(struct list_head *)kallsyms_lookup_name("slab_caches");
+		if (slab_mutexp && slab_cachesp) {
+			struct kmem_cache *s;
+
+			dprintk("%s: shrinking slab caches\n", __FUNCTION__);
+			mutex_lock(slab_mutexp);
+			list_for_each_entry(s, slab_cachesp, list) {
+				kmem_cache_shrink(s);
+			}
+			mutex_unlock(slab_mutexp);
+		}
+	}
+
+	/* Sort page list (from Intel XPPSL patch) */
+	{
+		struct zone *zone;
+
+		for (i = 0; i < MAX_NR_ZONES; i++) {
+			zone = &NODE_DATA(numa_id)->node_zones[i];
+			if (!zone_is_initialized(zone)) {
+				continue;
+			}
+			if (!populated_zone(zone)) {
+				continue;
+			}
+			dprintk("%s: sorting node %d zone %d\n",
+				__FUNCTION__, numa_id, i);
+			sort_pagelists(zone);
+		}
+	}
+
+	want = (ihk_mem + ((PAGE_SIZE << order) - 1))
+		& ~((PAGE_SIZE << order) - 1);
+	dprintk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
 	allocated = 0;
 
+retry:
 	/* Allocate and merge pages until we get a contigous area
 	 * or run out of free memory. Keep the longest areas */
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
 		struct page *pg;
 
 		pg = __alloc_pages_nodemask(
-				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN,
+				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
+				__GFP_NORETRY,
+				//| __GFP_REPEAT,
 				order,
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
 		if (!pg) {
+			int freed_pages;
+
+			if (__drain_all_pages) {
+				__drain_all_pages();
+			}
+
+			if (__try_to_free_pages &&
+					failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS) {
+
+				freed_pages = __try_to_free_pages(
+						node_zonelist(numa_id, GFP_KERNEL),
+						order,
+						GFP_KERNEL, NULL);
+
+				if (freed_pages <= 1)
+					++failed_free_attempts;
+
+				dprintk("%s: freed %d pages with order %d..\n",
+						__FUNCTION__, freed_pages, order);
+				goto retry;
+			}
+
 			/*
-			 * We ran out of memory before finding a single contigous
-			 * chunk, but do we have enough in multiple chunks?
+			 * We ran out of memory using the current order of compound
+			 * pages, decrease order and try to grab smaller pieces.
+			 */
+			if (order > 1) {
+				--order;
+				failed_free_attempts = 0;
+				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
+
+				/* Do not spend more than RESERVE_MEM_TIMEOUT
+				 * secs on reservation */
+				if ((get_seconds() - res_start) < RESERVE_MEM_TIMEOUT) {
+					goto retry;
+				}
+			}
+
+			/*
+			 * Otherwise, we may have run out of memory altogether before
+			 * finding a single contigous chunk, but do we have enough in
+			 * multiple chunks?
 			 */
 			if (allocated >= want) break;
 
@@ -1976,6 +2569,8 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 			ret = -1;
 			goto out;
 		}
+
+		failed_free_attempts = 0;
 
 		p = page_address(pg);
 
@@ -1986,31 +2581,20 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		p->numa_id = numa_id;
 		INIT_LIST_HEAD(&p->chain);
 
-		/* Insert the chunk in physical address ascending order */
-		list_for_each_entry(q, &tmp_chunks, chain) {
-			if (p->addr < q->addr) {
-				break;
-			}
-		}
-
-		if ((void *)q == &tmp_chunks) {
-			list_add_tail(&p->chain, &tmp_chunks);
-		}
-		else {
-			list_add_tail(&p->chain, &q->chain);
-		}
-
-		/* Merge adjucent chunks */
-		merge_mem_chunks(&tmp_chunks);
+		__mem_chunk_insert(&tmp_chunks, p);
 	}
+
+	dprintk("%s: allocated internally: %lu\n", __FUNCTION__, allocated);
 
 	/* Move the largest chunks to free list until we meet the required size */
 	allocated = 0;
 	while (allocated < want) {
+		struct rb_node *node;
 		size_t max = 0;
 		p = NULL;
 
-		list_for_each_entry(q, &tmp_chunks, chain) {
+		for (node = rb_first(&tmp_chunks); node; node = rb_next(node)) {
+			struct chunk *q = container_of(node, struct chunk, node);
 			if (q->size > max) {
 				p = q;
 				max = p->size;
@@ -2019,7 +2603,16 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 
 		if (!p) break;
 
-		list_del(&p->chain);
+		rb_erase(&p->node, &tmp_chunks);
+
+		/* Verify that chunk structure is in front of physical memory */
+		if (page_to_phys(virt_to_page(p)) != p->addr) {
+			struct chunk *__p = (struct chunk *)phys_to_virt(p->addr);
+			*__p = *p;
+			p = __p;
+			dprintk("%s: moved chunk structure to front of 0x%lx\n",
+				__FUNCTION__, p->addr);
+		}
 
 		/* Insert the chunk in physical address ascending order */
 		list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
@@ -2045,8 +2638,71 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 
 out:
 	/* Free leftover tmp_chunks */
-	__smp_ihk_free_mem_from_list(&tmp_chunks);
+	__smp_ihk_free_mem_from_rbtree(&tmp_chunks);
 
+	return ret;
+}
+
+static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
+{
+	int ret = -1;
+	struct chunk *mem_chunk;
+	struct chunk *mem_chunk_next;
+	unsigned long size_left;
+	unsigned long va;
+
+	list_for_each_entry_safe(mem_chunk,
+			mem_chunk_next, &ihk_mem_free_chunks, chain) {
+		unsigned long pa = mem_chunk->addr;
+
+		if(mem_chunk->size != ihk_mem || mem_chunk->numa_id != numa_id) {
+			continue;
+		}
+
+		list_del(&mem_chunk->chain);
+
+		va = (unsigned long)phys_to_virt(pa);
+		size_left = mem_chunk->size;
+		while (size_left > 0) {
+			int order;
+			size_t order_size;
+			struct page *page = virt_to_page(va);
+
+			if (!PageCompound(page) || !PageHead(page)) {
+				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
+					__FUNCTION__);
+				size_left -= PAGE_SIZE;
+				va += PAGE_SIZE;
+				continue;
+			}
+
+			order = compound_order(page);
+			order_size = (PAGE_SIZE << order);
+
+			free_pages(va, order);
+			pr_debug("0x%lx, page order: %d freed\n", va, order);
+			/* A compound page may stretch over the size of this chunk */
+			if (order_size <= size_left) {
+				size_left -= order_size;
+				va += order_size;
+			}
+			else {
+				dprintk("%s: order_size - size_left: %lu\n",
+					__FUNCTION__, order_size - size_left);
+				size_left = 0;
+			}
+		}
+
+		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+				" (len: %lu) @ NUMA node: %d is released\n",
+			   mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+			   mem_chunk->size, mem_chunk->numa_id);
+
+		ret = 0;
+		goto fn_exit;
+	}
+
+ fn_exit:
 	return ret;
 }
 
@@ -2477,11 +3133,43 @@ out:
 
 static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
-	int ret;
+	size_t mem_size;
+	int numa_id;
+	int ret = 0, ret_internal;
+	char *mem_string;
+	char *mem_token;
+	ihk_resource_req_t req;
+	char *req_string = NULL;
 
-	/* Release everything for now */
-	/* TODO: parse input string */
-	ret = __smp_ihk_free_mem_from_list(&ihk_mem_free_chunks);
+	ret_internal = copy_from_user(&req, (void *)arg, sizeof(req));
+	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
+
+	ARCHDRV_CHKANDJUMP(req.string_len == 0, "invalid request length", -EINVAL);
+
+	req_string = kmalloc(req.string_len + 1, GFP_KERNEL);
+	ARCHDRV_CHKANDJUMP(req_string == NULL, "kmalloc failed", -EINVAL);
+
+	ret_internal = copy_from_user(req_string, req.string, req.string_len + 1);
+	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
+
+	mem_string = req_string;
+
+	/* Do the release */
+	mem_token = strsep(&mem_string, ",");
+	while (mem_token) {
+		ret_internal = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		ARCHDRV_CHKANDJUMP(ret_internal != 0, "smp_ihk_parse_mem failed", -EINVAL);
+
+		ret_internal = __ihk_smp_release_mem(mem_size, numa_id);
+		/* ret = __smp_ihk_free_mem_from_list(&ihk_mem_free_chunks); */
+		ARCHDRV_CHKANDJUMP(ret_internal != 0, "__ihk_smp_release_mem failed", -EINVAL);
+
+        mem_token = strsep(&mem_string, ",");
+	}
+ fn_fail:
+	if (req_string) {
+		kfree(req_string);
+	}
 
 	return ret;
 }
@@ -2616,7 +3304,7 @@ out:
 
 int file_readable(char *fmt, ...)
 {
-	int error;
+	int ret;
 	va_list ap;
 	int n;
 	char *filename = NULL;
@@ -2624,10 +3312,10 @@ int file_readable(char *fmt, ...)
 
 	filename = kmalloc(PATH_MAX, GFP_KERNEL);
 	if (!filename) {
-		error = -ENOMEM;
 		eprintk("%s: kmalloc failed. %d\n",
-				__FUNCTION__, error);
-		return 0;
+				__FUNCTION__, -ENOMEM);
+		ret = 0;
+		goto out;
 	}
 
 	va_start(ap, fmt);
@@ -2635,19 +3323,24 @@ int file_readable(char *fmt, ...)
 	va_end(ap);
 
 	if (n >= PATH_MAX) {
-		error = -ENAMETOOLONG;
 		eprintk("%s: vsnprintf failed. %d\n",
-				__FUNCTION__, error);
-		return 0;
+				__FUNCTION__, -ENAMETOOLONG);
+		ret = 0;
+		goto out;
 	}
 
 	fp = filp_open(filename, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		return 0;
+		ret = 0;
+		goto out;
 	}
 
-	error = filp_close(fp, NULL);
-	return 1;
+	filp_close(fp, NULL);
+	ret = 1;
+
+out:
+	kfree(filename);
+	return ret;
 }
 
 int read_long(long *valuep, char *fmt, ...)
@@ -2849,11 +3542,6 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 {
-	struct chunk *mem_chunk;
-	struct chunk *mem_chunk_next;
-	unsigned long size_left;
-	unsigned long va;
-	const int order = get_order(IHK_SMP_CHUNK_BASE_SIZE);
 	int cpu, ret = 0;
 
 	smp_ihk_arch_exit();
@@ -2874,22 +3562,8 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 	}
 
 	/* Free memory */
-	list_for_each_entry_safe(mem_chunk, mem_chunk_next,
-	                         &ihk_mem_free_chunks, chain) {
+	__smp_ihk_free_mem_from_list(&ihk_mem_free_chunks);
 
-		list_del(&mem_chunk->chain);
-
-		va = (unsigned long)phys_to_virt(mem_chunk->addr);
-		size_left = mem_chunk->size;
-		while (size_left > 0) {
-			/* NOTE: memory was allocated via __get_free_pages() in 4MB blocks */
-			free_pages(va, order);
-			pr_debug("0x%lx, page order: %d freed\n",
-			         va, order);
-			size_left -= IHK_SMP_CHUNK_BASE_SIZE;
-			va += IHK_SMP_CHUNK_BASE_SIZE;
-		}
-	}
 	free_info();
 
 	return ret;
@@ -2899,6 +3573,7 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.init = smp_ihk_init,
 	.exit = smp_ihk_exit,
 	.create_os = smp_ihk_create_os,
+	.destroy_os = smp_ihk_destroy_os,
 	.map_memory = smp_ihk_map_memory,
 	.unmap_memory = smp_ihk_unmap_memory,
 	.map_virtual = smp_ihk_map_virtual,

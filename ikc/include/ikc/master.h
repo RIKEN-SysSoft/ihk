@@ -14,14 +14,19 @@
 
 struct ihk_ikc_channel_info;
 
+enum ihk_ikc_direction {
+	IHK_IKC_DIRECTION_SEND,
+	IHK_IKC_DIRECTION_RECV,
+};
+
 struct ihk_ikc_listen_param {
 	int (*handler)(struct ihk_ikc_channel_info *);
 
 	int port;
+	enum ihk_ikc_direction ikc_direction;
 	int pkt_size;
 	int queue_size;
 	int magic;
-	int recv_cpu;
 };
 
 struct ihk_ikc_connect_param {
@@ -29,6 +34,7 @@ struct ihk_ikc_connect_param {
 	int pkt_size;
 	int queue_size;
 	int magic;
+	int intr_cpu;
 	ihk_ikc_ph_t               handler;
 
 	struct ihk_ikc_channel_desc *channel;

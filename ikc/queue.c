@@ -205,12 +205,11 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
                        ihk_ikc_ph_t packet_handler,
 					   struct ihk_ikc_channel_desc *master)
 {
-	struct list_head *channels = ihk_ikc_get_channel_list(ros);
-	ihk_spinlock_t *lock = ihk_ikc_get_channel_list_lock(ros);
+	struct list_head *all_list = ihk_ikc_get_channel_list(ros);
+	ihk_spinlock_t *all_lock = ihk_ikc_get_channel_list_lock(ros);
 	unsigned long flags;
 
-	INIT_LIST_HEAD(&c->list);
-	INIT_LIST_HEAD(&c->all_list);
+	INIT_LIST_HEAD(&c->list_all);
 	INIT_LIST_HEAD(&c->packet_pool);
 
 	c->remote_os = ros;
@@ -235,9 +234,9 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
 	ihk_ikc_spinlock_init(&c->send.lock);
 	ihk_ikc_spinlock_init(&c->packet_pool_lock);
 
-	flags = ihk_ikc_spinlock_lock(lock);
-	list_add_tail(&c->list, channels);
-	ihk_ikc_spinlock_unlock(lock, flags);
+	flags = ihk_ikc_spinlock_lock(all_lock);
+	list_add_tail(&c->list_all, all_list);
+	ihk_ikc_spinlock_unlock(all_lock, flags);
 }
 
 /*
@@ -280,6 +279,18 @@ retry_alloc:
 void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channel_desc *c)
 {
 	unsigned long flags;
+
+	if (!p) {
+		return;
+	}
+
+	if (!c) {
+		kprintf("%s: WARNING: can't release on NULL channel\n",
+				__FUNCTION__);
+		ihk_ikc_free(p);
+		return;
+	}
+
 	flags = ihk_ikc_spinlock_lock(&c->packet_pool_lock);
 	list_add_tail(&p->list, &c->packet_pool);
 	ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
@@ -381,12 +392,19 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 	ihk_os_t os = desc->remote_os;
 	int qpages;
 	ihk_spinlock_t *lock = ihk_ikc_get_channel_list_lock(os);
-	struct ihk_ikc_free_packet *p_iter;
+	struct ihk_ikc_free_packet *p_iter, *p_next;
 	unsigned long flags;
 
 	flags = ihk_ikc_spinlock_lock(lock);
-	list_del(&desc->list);
+	list_del(&desc->list_all);
 	ihk_ikc_spinlock_unlock(lock, flags);
+
+	flags = ihk_ikc_spinlock_lock(&desc->packet_pool_lock);
+	list_for_each_entry_safe(p_iter, p_next, &desc->packet_pool, list) {
+		list_del(&p_iter->list);
+		ihk_ikc_free(p_iter);
+	}
+	ihk_ikc_spinlock_unlock(&desc->packet_pool_lock, flags);
 
 	if (desc->recv.queue) {
 		qpages = (desc->recv.queue->queue_size
@@ -415,15 +433,6 @@ void ihk_ikc_free_channel(struct ihk_ikc_channel_desc *desc)
 			ihk_ikc_free_queue(desc->send.queue);
 		}
 	}
-
-	flags = ihk_ikc_spinlock_lock(&desc->packet_pool_lock);
-reiterate:
-	list_for_each_entry(p_iter, &desc->packet_pool, list) {
-		list_del(&p_iter->list);
-		ihk_ikc_free(p_iter);
-		goto reiterate;
-	}
-	ihk_ikc_spinlock_unlock(&desc->packet_pool_lock, flags);
 
 	ihk_ikc_free(desc);
 }
@@ -573,7 +582,7 @@ struct ihk_ikc_channel_desc *ihk_ikc_find_channel(ihk_os_t os, int id)
 	unsigned long flags;
 
 	flags = ihk_ikc_spinlock_lock(lock);
-	list_for_each_entry(c, channels, list) {
+	list_for_each_entry(c, channels, list_all) {
 		if (c->channel_id == id) {
 			ihk_ikc_spinlock_unlock(lock, flags);
 			return c;

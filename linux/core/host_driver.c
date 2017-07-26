@@ -28,12 +28,24 @@
 #include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/file.h>
+#include <linux/string.h>
+#include <linux/eventfd.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
 #include <asm/spinlock.h>
 #include <ihk/misc/debug.h>
 #include "host_linux.h"
 #include "ops_wrappers.h"
+
+//#define DEBUG_IKC
+
+#ifdef DEBUG_IKC
+#define dkprintf(...) kprintf(__VA_ARGS__)
+#define ekprintf(...) kprintf(__VA_ARGS__)
+#else
+#define dkprintf(...) do { if (0) printk(__VA_ARGS__); } while (0)
+#define ekprintf(...) printk(__VA_ARGS__)
+#endif
 
 
 #define DEV_MAX_MINOR 64
@@ -69,6 +81,15 @@ struct ihk_kmsg_buf {
 		ihk_spinlock_t lock;
 		char str[0];
 };
+
+struct ihk_event {
+	struct list_head list;
+	int type;
+	struct eventfd_ctx *event;
+};
+#define IHK_OS_MONITOR_KERNEL_FREEZING 8
+#define IHK_OS_MONITOR_KERNEL_FROZEN 9
+#define IHK_OS_MONITOR_KERNEL_THAW 10
 
 /*
  * OS character device file operations.
@@ -285,7 +306,7 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 }
 
 /** \brief Shutdown the kernel related to the OS file */
-static int  __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
+static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
 	struct ihk_os_notifier *_ion;
@@ -552,6 +573,102 @@ static int __ihk_os_set_kargs(struct ihk_host_linux_os_data *data,
 	return error;
 }
 
+static void
+setup_monitor(struct ihk_host_linux_os_data *data)
+{
+	unsigned long rpa;
+	unsigned long pa;
+	unsigned long size;
+	unsigned long psize;
+
+	if (data->monitor)
+		return;
+
+	if (__ihk_os_get_special_addr(data, IHK_SPADDR_MONITOR, &rpa, &size)) {
+		dprintf("get_special_addr: failed.\n");
+		return;
+	}
+
+	psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+	pa = __ihk_os_map_memory(data, rpa, psize);
+
+#ifdef CONFIG_MIC
+	if ((long)pa <= 0) {
+		return;
+	}
+
+	data->monitor = ioremap_nocache(pa, psize);
+#else
+	data->monitor = ihk_device_map_virtual(data->dev_data, pa, psize,
+	                                       NULL, 0);
+#endif
+	data->monitor_pa = pa;
+	data->monitor_len = size;
+}
+
+static int __ihk_os_status(struct ihk_host_linux_os_data *data,
+		char __user *buf)
+{
+	int n;
+	int i;
+	int status;
+	int freezing;
+
+	status = __ihk_os_query_status(data);
+
+	/* (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
+	   (2) LWK initializes IHK_SPADDR_MONITOR
+	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready() */
+	if (status != IHK_OS_STATUS_READY)
+		return status;
+
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		return -ENOSYS;
+	}
+
+	n = data->monitor->num_processors;
+	for (i = 0; i < n; i++) {
+		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC){
+			return IHK_OS_STATUS_FAILED;
+		}
+
+		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_KERNEL){
+			if(data->monitor->cpu[i].counter ==
+			   data->monitor->cpu[i].ocounter)
+				status = IHK_OS_STATUS_HUNGUP;
+		}
+		data->monitor->cpu[i].ocounter = data->monitor->cpu[i].counter;
+	}
+	if (status == IHK_OS_STATUS_HUNGUP)
+		return IHK_OS_STATUS_HUNGUP;
+
+	freezing = data->monitor->cpu[0].status;
+	if (freezing == IHK_OS_MONITOR_KERNEL_FREEZING)
+		return IHK_OS_STATUS_FREEZING;
+	for (i = 1; i < n; i++) {
+		switch (data->monitor->cpu[i].status) {
+		    case IHK_OS_MONITOR_KERNEL_FREEZING:
+			return IHK_OS_STATUS_FREEZING;
+			break;
+		    case IHK_OS_MONITOR_KERNEL_FROZEN:
+			if (freezing != IHK_OS_MONITOR_KERNEL_FROZEN) {
+				return IHK_OS_STATUS_FREEZING;
+			}
+			break;
+		    default:
+			if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN) {
+				return IHK_OS_STATUS_FREEZING;
+			}
+			break;
+		}
+	}
+	if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN)
+		return IHK_OS_STATUS_FROZEN;
+
+	return status;
+}
+
 /** \brief Clear the kernel message buffer. */
 static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 {
@@ -564,6 +681,46 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 	((struct ihk_kmsg_buf *) data->kmsg_buf)->tail = 0;
 	
 	return 0;
+}
+
+static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned long uarg)
+{
+	struct ihk_event *ep;
+	int fd = (int)uarg;
+	int type = uarg >> 32;
+	struct eventfd_ctx *event;
+	struct file *filp;
+	unsigned long flags;
+
+	filp = eventfd_fget(fd);
+	if (IS_ERR(filp)) {
+		return PTR_ERR(filp);
+	}
+	event = eventfd_ctx_fileget(filp);
+	if (IS_ERR(event)) {
+		return PTR_ERR(event);
+	}
+	ep = kzalloc(sizeof(struct ihk_event), GFP_KERNEL);
+	ep->event = event;
+	ep->type = type;
+	spin_lock_irqsave(&os->event_list_lock, flags);
+	list_add_tail(&ep->list, &os->event_list);
+	spin_unlock_irqrestore(&os->event_list_lock, flags);
+	return 0;
+}
+
+void ihk_os_eventfd(ihk_os_t data, int type)
+{
+	unsigned long flags;
+	struct ihk_event *ep;
+	struct ihk_host_linux_os_data *os = (struct ihk_host_linux_os_data *)data;
+
+	spin_lock_irqsave(&os->event_list_lock, flags);
+	list_for_each_entry(ep, &os->event_list, list) {
+		if (ep->type == type)
+			eventfd_signal(ep->event, 1);
+	}
+	spin_unlock_irqrestore(&os->event_list_lock, flags);
 }
 
 static int __ihk_os_dump(struct ihk_host_linux_os_data *data, void __user *uargsp) {
@@ -582,6 +739,67 @@ static int __ihk_os_dump(struct ihk_host_linux_os_data *data, void __user *uargs
 		return -EFAULT;
 	}
 	return error;
+}
+
+static int __ihk_os_freeze(struct ihk_host_linux_os_data *data)
+{
+	int error = 0;
+
+	if (data->ops->freeze) {
+		error = (*data->ops->freeze)(data, data->priv);
+	}
+
+	return error;
+}
+
+static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
+{
+	int error = 0;
+
+	if (data->ops->thaw) {
+		error = (*data->ops->thaw)(data, data->priv);
+	}
+
+	return error;
+}
+
+static int
+__ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
+{
+	struct ihk_os_monitor *__user buf;
+
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		return -ENOSYS;
+	}
+
+	buf = (struct ihk_os_monitor *__user)arg;
+	if (copy_to_user(buf, data->monitor, sizeof(struct ihk_os_monitor))) {
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int
+__ihk_os_get_cpu_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
+{
+	struct ihk_os_cpu_monitor *__user buf;
+	int size;
+
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		return -ENOSYS;
+	}
+
+	buf = (struct ihk_os_cpu_monitor *__user)arg;
+	size = sizeof(struct ihk_os_cpu_monitor) *
+	       data->monitor->num_processors;
+	if (copy_to_user(buf, data->monitor->cpu, size)) {
+		return -EFAULT;
+	}
+
+	return 0;
 }
 
 /** \brief Handles ioctl calls with the additional request number */
@@ -622,6 +840,10 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_CLEAR_KMSG:
 	case IHK_OS_QUERY_CPU:
 	case IHK_OS_QUERY_MEM:
+	case IHK_OS_QUERY_IKC_MAP:
+	case IHK_OS_STATUS:
+	case IHK_OS_GET_USAGE:
+	case IHK_OS_GET_CPU_USAGE:
 		break;
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
@@ -707,6 +929,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_ikc_map(data, arg);
 		break;
 
+	case IHK_OS_QUERY_IKC_MAP:
+		ret = __ihk_os_query_ikc_map(data, arg);
+		break;
+
 	case IHK_OS_QUERY_CPU:
 		ret = __ihk_os_query_cpu(data, arg);
 		break;
@@ -739,6 +965,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_read_kmsg(data, (char * __user)arg);
 		break;
 
+	case IHK_OS_STATUS:
+		ret = __ihk_os_status(data, (char * __user)arg);
+		break;
+
 	case IHK_OS_CLEAR_KMSG:
 		ret = __ihk_os_clear_kmsg(data);
 		break;
@@ -746,6 +976,36 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 	case IHK_OS_DUMP:
 		ret = __ihk_os_dump(data, (char __user *)arg);
 		break;
+
+	case IHK_OS_REGISTER_EVENT:
+		ret = __ihk_os_register_event(data, arg);
+		break;
+
+	case IHK_OS_EVENTFD:
+		ihk_os_eventfd(data, 1);
+		ret = 0;
+		break;
+
+	case IHK_OS_FREEZE:
+		ret = __ihk_os_freeze(data);
+		dkprintf("__ihk_os_freeze(ret=%d)\n",ret);
+		break;
+
+	case IHK_OS_THAW:
+		ret = __ihk_os_thaw(data);
+		dkprintf("__ihk_os_thaw  (ret=%d)\n",ret);
+		break;
+
+	case IHK_OS_GET_USAGE:
+		ret = __ihk_os_get_usage(data, arg);
+		dkprintf("__ihk_os_get_usage  (ret=%d)\n",ret);
+		break;
+
+	case IHK_OS_GET_CPU_USAGE:
+		ret = __ihk_os_get_cpu_usage(data, arg);
+		dkprintf("__ihk_os_get_cpu_usage  (ret=%d)\n",ret);
+		break;
+
 
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
@@ -882,7 +1142,7 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 {
 	struct ihk_host_linux_os_data *os = NULL;
 	struct ihk_register_os_data drv_data;
-	int ret;
+	int ret = 0;
 
 	os = kzalloc(sizeof(*os), GFP_KERNEL);
 	if (!os) {
@@ -898,9 +1158,20 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 
 	spin_lock_init(&os->listener_lock);
 	spin_lock_init(&os->wait_lock);
+	spin_lock_init(&os->event_list_lock);
 	INIT_LIST_HEAD(&os->ikc_channels);
+
+	os->regular_channels = kzalloc(sizeof(*os->regular_channels) *
+			num_possible_cpus(), GFP_KERNEL);
+	if (!os->regular_channels) {
+		ret = -ENOMEM;
+		printk("ihk: error allocating channels\n");
+		goto ERR;
+	}
+
 	INIT_LIST_HEAD(&os->wait_list);
 	INIT_LIST_HEAD(&os->aux_call_list);
+	INIT_LIST_HEAD(&os->event_list);
 
 	if (data->ops->create_os && 
 	    (ret = data->ops->create_os(data, data->priv, arg, 
@@ -923,6 +1194,7 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 
 ERR:
 	if (os) {
+		kfree(os->regular_channels);
 		kfree(os);
 	}
 	return ret;
@@ -996,15 +1268,15 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 {
 	int ret = 0;
 
-	dprintf("__ihk_device_destroy_os (%p, %p)\n", data, os);
+	dkprintf("__ihk_device_destroy_os (%p, %p)\n", data, os);
 	if (!os || os == OS_DATA_INVALID || !data || data == DEV_DATA_INVALID
 	    || os->dev_data != data) {
-		dprintf("%s: pointer invalid\n", __FUNCTION__);
+		dkprintf("%s: pointer invalid\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
 	if (atomic_read(&os->refcount) > 0) {
-		dprintf("%s: refcount != 0\n", __FUNCTION__);
+		dkprintf("%s: refcount != 0\n", __FUNCTION__);
 		return -EBUSY;
 	}
 
@@ -1017,10 +1289,23 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 	if (ret != 0) {
 		return -EINVAL;
 	}
+
+	while (!list_empty(&os->event_list)) {
+		struct ihk_event *ep;
+		ep = list_first_entry(&os->event_list, struct ihk_event, list);
+		eventfd_ctx_put(ep->event);
+		list_del(&ep->list);
+		kfree(ep);
+	}
+
 	os_data[os->minor] = NULL;
 
 	cdev_del(&os->cdev);
 	device_destroy(mcos_class, os->dev_num);
+
+	if (os->regular_channels)
+		kfree(os->regular_channels);
+	kfree(os);
 
 	return 0;
 }
@@ -1746,7 +2031,16 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
 
 	/* Then the front of it */
 	if (len_start > 0) {
-		printk("%s", kmsg_buf->str);
+		char *line;
+		char *lines = kmsg_buf->str;
+
+		/* Print line-by-line */
+		line = strsep(&lines, "\n");
+		while (line) {
+			printk("%s\n", line);
+			line = strsep(&lines, "\n");
+		}
+
 		printed = 1;
 	}
 
@@ -1785,6 +2079,73 @@ int ihk_host_os_get_index(ihk_os_t ihk_os)
 	spin_unlock_irqrestore(&os_data_lock, flags);
 	return -1;
 }
+
+int ihk_os_set_kernel_call_handlers(ihk_os_t ihk_os,
+	struct ihk_os_kernel_call_handler *handlers)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	os->kernel_handlers = handlers;
+
+	return 0;
+}
+
+int ihk_os_clear_kernel_call_handlers(ihk_os_t ihk_os)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	os->kernel_handlers = NULL;
+
+	return 0;
+}
+
+int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
+		struct ihk_os_cpu_register *desc)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+
+	if (!os || !os->kernel_handlers ||
+			!os->kernel_handlers->read_cpu_register) {
+		return -EINVAL;
+	}
+
+	return os->kernel_handlers->read_cpu_register(ihk_os, cpu, desc);
+}
+
+int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
+		struct ihk_os_cpu_register *desc)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+
+	if (!os || !os->kernel_handlers ||
+			!os->kernel_handlers->write_cpu_register) {
+		return -EINVAL;
+	}
+
+	return os->kernel_handlers->write_cpu_register(ihk_os, cpu, desc);
+}
+
+int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
+{
+	struct ihk_host_linux_os_data *os;
+
+	/*
+	 * Look up IHK OS structure
+	 * TODO: iterate all possible indeces, currently only for OS 0
+	 */
+	os = (struct ihk_host_linux_os_data *)ihk_host_find_os(0, NULL);
+	if (!os) {
+		printk("%s: ERROR: no OS found for index 0\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (!os->kernel_handlers ||
+			!os->kernel_handlers->get_request_cpu) {
+		return -EINVAL;
+	}
+
+	*ihk_os = (ihk_os_t *)os;
+	return os->kernel_handlers->get_request_cpu(os, cpu);
+}
+
 
 int ihk_os_register_user_call_handlers(ihk_os_t ihk_os,
                                        struct ihk_os_user_call *clist)
@@ -1925,6 +2286,11 @@ EXPORT_SYMBOL(ihk_device_unmap_memory);
 EXPORT_SYMBOL(ihk_os_issue_interrupt);
 EXPORT_SYMBOL(ihk_os_register_user_call_handlers);
 EXPORT_SYMBOL(ihk_os_unregister_user_call_handlers);
+EXPORT_SYMBOL(ihk_os_set_kernel_call_handlers);
+EXPORT_SYMBOL(ihk_get_request_os_cpu);
+EXPORT_SYMBOL(ihk_os_read_cpu_register);
+EXPORT_SYMBOL(ihk_os_write_cpu_register);
+EXPORT_SYMBOL(ihk_os_clear_kernel_call_handlers);
 EXPORT_SYMBOL(ihk_os_get_memory_info);
 EXPORT_SYMBOL(ihk_os_get_cpu_info);
 EXPORT_SYMBOL(ihk_device_get_dma_channel);
@@ -1939,3 +2305,4 @@ EXPORT_SYMBOL(ihk_device_get_node_topology);
 EXPORT_SYMBOL(ihk_device_linux_cpu_to_hw_id);
 EXPORT_SYMBOL(ihk_host_register_os_notifier);
 EXPORT_SYMBOL(ihk_host_deregister_os_notifier);
+EXPORT_SYMBOL(ihk_os_eventfd);

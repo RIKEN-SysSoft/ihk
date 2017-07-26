@@ -9,17 +9,7 @@
 #define __HEADER_IHK_HOST_DRIVER_H
 
 #include "ihk/archdefs.h"
-
-/** \brief Status of a manycore kernel instance */
-enum ihk_os_status {
-	IHK_OS_STATUS_NOT_BOOTED,
-	IHK_OS_STATUS_BOOTING,
-	IHK_OS_STATUS_BOOTED,    /* OS booted and acked */
-	IHK_OS_STATUS_READY,     /* OS is ready and fully functional */
-	IHK_OS_STATUS_SHUTDOWN,  /* OS is shutting down */
-	IHK_OS_STATUS_STOPPED,   /* OS stopped successfully */
-	IHK_OS_STATUS_FAILED,    /* OS panics or failed to boot */
-};
+#include "ihk_os_status.h"
 
 /** \brief Status of a manycore device */
 enum ihk_cpu_status {
@@ -35,6 +25,8 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_KMSG = 1,
 	IHK_SPADDR_MIKC_QUEUE_RECV = 2,
 	IHK_SPADDR_MIKC_QUEUE_SEND = 3,
+	IHK_SPADDR_MONITOR = 4,
+	IHK_SPADDR_NMI_MODE = 5,
 };
 
 /** \brief Type of an IHK device */
@@ -261,11 +253,18 @@ struct ihk_os_ops {
 	int (*release_cpu)(ihk_os_t, void *, unsigned long arg);
 
 	/** \brief Define IKC CPU mapping.
-	 *
-	 *  \return Success or failure.
-	 *  \param List of CPU mappings (see ihkosctl for format).
-	 **/
+	*
+	* \return Success or failure.
+	* \param List of CPU mappings (see ihkosctl for format).
+	**/
 	int (*ikc_map)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Query IKC CPU mapping.
+	*
+	* \return Success or failure.
+	* \param List of CPU mappings (see ihkosctl for format).
+	**/
+	int (*query_ikc_map)(ihk_os_t, void *, unsigned long arg);
 
 	/** \brief Query CPU cores of an OS instance
 	 *
@@ -294,6 +293,18 @@ struct ihk_os_ops {
 	 *  \param Memory
 	 **/
 	int (*query_mem)(ihk_os_t, void *, unsigned long arg);
+
+	/** \brief Freeze CPU
+	 *
+	 *  \return Success or failure.
+	 **/
+	int (*freeze)(ihk_os_t ihk_os, void *priv);
+
+	/** \brief Wake up CPU
+	 *
+	 *  \return Success or failure.
+	 **/
+	int (*thaw)(ihk_os_t ihk_os, void *priv);
 
 };
 
@@ -624,6 +635,8 @@ struct ihk_cpu_info {
 	int *mapping;
 	/** \brief Array of the hardware ID of the CPU cores */
 	int *hw_ids;
+	int *ikc_map;
+	int ikc_mapped;
 };
 
 /** \brief Get information of memory which the OS kernel uses */
@@ -813,6 +826,42 @@ int ihk_os_register_user_call_handlers(ihk_os_t os,
 void ihk_os_unregister_user_call_handlers(ihk_os_t os,
                                           struct ihk_os_user_call *);
 
+struct ihk_os_cpu_register {
+	unsigned long addr;
+	unsigned long val;
+	unsigned long addr_ext;
+};
+
+/** \brief Kernel space callbacks for an OS implementation */
+struct ihk_os_kernel_call_handler {
+	/* Obtain LWK CPU for threads that are in a syscall offload */
+	int (*get_request_cpu)(ihk_os_t os, int *ret_cpu);
+	/* LWK CPU register (MSR) operation  */
+	int (*read_cpu_register)(ihk_os_t os, int cpu,
+			struct ihk_os_cpu_register *desc);
+	int (*write_cpu_register)(ihk_os_t os, int cpu,
+			struct ihk_os_cpu_register *desc);
+};
+
+/** \brief Set kernel callback handlers for an OS instance */
+int ihk_os_set_kernel_call_handlers(ihk_os_t ihk_os,
+		struct ihk_os_kernel_call_handler *handlers);
+
+/** \brief Clear kernel callback handlers for an OS instance */
+int ihk_os_clear_kernel_call_handlers(ihk_os_t ihk_os);
+
+/** \brief Get requester OS and CPU of a thread in a syscall offload */
+int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu);
+
+/** \brief Read CPU register of an OS instance */
+int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
+		struct ihk_os_cpu_register *desc);
+
+/** \brief Write CPU register of an OS instance */
+int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
+		struct ihk_os_cpu_register *desc);
+
+
 /** \brief Get a DMA information of the device */
 int ihk_device_get_dma_info(ihk_device_t data, struct ihk_dma_info *info);
 /** \brief Get the DMA channel descriptor for the specified channel */
@@ -842,6 +891,7 @@ int ihk_device_linux_cpu_to_hw_id(ihk_device_t dev, int cpu);
 struct ihk_os_notifier_ops {
 	int (*boot)(int os_index);
 	int (*shutdown)(int os_index);
+	int (*freeze)(int os_index);
 };
 
 struct ihk_os_notifier {
@@ -851,4 +901,44 @@ struct ihk_os_notifier {
 
 int ihk_host_register_os_notifier(struct ihk_os_notifier *ion);
 int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
+
+void ihk_os_eventfd(ihk_os_t os, int type);
+
+/** \brief IHK-Monitor */
+struct ihk_os_cpu_monitor {
+	int status;
+#define IHK_OS_MONITOR_NOT_BOOT 0
+#define IHK_OS_MONITOR_IDLE 1
+#define IHK_OS_MONITOR_USER 2
+#define IHK_OS_MONITOR_KERNEL 3
+#define IHK_OS_MONITOR_KERNEL_HEAVY 4
+#define IHK_OS_MONITOR_KERNEL_OFFLOAD 5
+#define IHK_OS_MONITOR_PANIC 99
+	int status_bak;
+	unsigned long counter;
+	unsigned long ocounter;
+	unsigned long user_tsc;
+	unsigned long system_tsc;
+};
+
+struct ihk_os_monitor {
+	unsigned long rusage_max_num_threads;
+	unsigned long rusage_num_threads;
+	unsigned long rusage_rss_max;
+	long rusage_rss_current;
+	unsigned long rusage_kmem_usage;
+	unsigned long rusage_kmem_max_usage;
+	unsigned long rusage_hugetlb_usage;
+	unsigned long rusage_hugetlb_max_usage;
+	unsigned long rusage_total_memory;
+	unsigned long rusage_total_memory_usage;
+	unsigned long rusage_total_memory_max_usage;
+	unsigned long num_numa_nodes;
+	unsigned long num_processors;
+	unsigned long ns_per_tsc;
+	unsigned long reserve[128];
+	unsigned long rusage_numa_stat[1024];
+
+	struct ihk_os_cpu_monitor cpu[0];
+};
 #endif

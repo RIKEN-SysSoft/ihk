@@ -12,6 +12,7 @@ static unsigned char stack[8192] __attribute__((aligned(4096)));
 unsigned long boot_param_pa;
 struct smp_boot_param *boot_param;
 unsigned long bootstrap_mem_end;
+static int boot_param_size;
 
 extern void main(void);
 extern void setup_x86(void);
@@ -38,8 +39,8 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	boot_param_pa = param_addr;
 	ap_trampoline = _ap_trampoline;
 	ihk_ikc_irq = boot_param->ihk_ikc_irq;
-	ihk_ikc_irq_apicid = boot_param->ihk_ikc_irq_apicid;
 	bootstrap_mem_end = boot_param->bootstrap_mem_end;
+	boot_param_size = boot_param->param_size;
 
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
@@ -60,17 +61,19 @@ static void build_ihk_cpu_info(void)
 	ihk_cpu_info = early_alloc_pages((
 				(sizeof(*ihk_cpu_info) + boot_param->nr_cpus *
 				 (sizeof(ihk_cpu_info->hw_ids) + sizeof(ihk_cpu_info->nodes) + 
-                  sizeof(ihk_cpu_info->linux_cpu_ids)) +
+                  sizeof(ihk_cpu_info->linux_cpu_ids) + sizeof(ihk_cpu_info->ikc_cpus)) +
 				PAGE_SIZE - 1) >> PAGE_SHIFT));
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
 	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + boot_param->nr_cpus;
 	ihk_cpu_info->linux_cpu_ids = (int *)(ihk_cpu_info->nodes) + boot_param->nr_cpus;
+	ihk_cpu_info->ikc_cpus = (int *)(ihk_cpu_info->linux_cpu_ids) + boot_param->nr_cpus;
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)(boot_param + 1);
 	for (i = 0; i < boot_param->nr_cpus; ++i) {
 		ihk_cpu_info->hw_ids[i] = bp_cpu->hw_id;
 		ihk_cpu_info->nodes[i] = bp_cpu->numa_id;
 		ihk_cpu_info->linux_cpu_ids[i] = bp_cpu->linux_cpu_id;
+		ihk_cpu_info->ikc_cpus[i] = bp_cpu->ikc_cpu;
 		++bp_cpu;
 	}
 
@@ -101,8 +104,10 @@ void arch_init(void)
 	}
 
 	setup_x86();
-	/* TODO: pass the actual length in trampoline code */
-	boot_param = map_fixed_area(boot_param_pa, 8192, 0);
+	kprintf("boot_param_size: %lu\n", boot_param_size);
+
+	/* Remap boot parameter structure */
+	boot_param = map_fixed_area(boot_param_pa, boot_param_size, 0);
 
 	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 	build_ihk_cpu_info();
@@ -164,8 +169,7 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 extern void (*x86_issue_ipi)(int, int);
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
-	//x86_issue_ipi(cpu, ihk_ikc_irq);
-	x86_issue_ipi(ihk_ikc_irq_apicid, ihk_ikc_irq);
+	x86_issue_ipi(ihk_mc_get_apicid(cpu), ihk_ikc_irq);
 	return 0;
 }
 
@@ -206,6 +210,21 @@ int ihk_set_kmsg(unsigned long addr, unsigned long size)
 
 	return 0;
 }	
+
+int ihk_set_monitor(unsigned long addr, unsigned long size)
+{
+	boot_param->monitor = addr;
+	boot_param->monitor_size = size;
+	
+	return 0;
+}
+
+int ihk_set_nmi_mode_addr(unsigned long addr)
+{
+	boot_param->nmi_mode_addr = addr;
+	
+	return 0;
+}
 
 unsigned long ihk_mc_map_memory(void *os, unsigned long phys,
                                 unsigned long size)
@@ -299,6 +318,11 @@ int ihk_mc_get_nr_cores(void)
 	return boot_param->nr_cpus;
 }
 
+int ihk_mc_get_nr_linux_cores(void)
+{
+	return boot_param->nr_linux_cpus;
+}
+
 int ihk_mc_get_core(int id, unsigned long *linux_core_id, unsigned long *apic_id, int *numa_id)
 {
 	if (id < 0 || id >= boot_param->nr_cpus)
@@ -309,6 +333,18 @@ int ihk_mc_get_core(int id, unsigned long *linux_core_id, unsigned long *apic_id
 	if(numa_id) *numa_id = ihk_cpu_info->nodes[id];
 
 	return 0;
+}
+
+int ihk_mc_get_ikc_cpu(int id)
+{
+	if (id < 0 || id >= boot_param->nr_cpus || ihk_cpu_info == NULL)
+		return -1;
+
+	return ihk_cpu_info->ikc_cpus[id];
+}
+
+int ihk_mc_get_apicid(int linux_core_id) {
+	return boot_param->ihk_ikc_irq_apicids[linux_core_id];
 }
 
 void arch_delay(int us)
@@ -357,4 +393,3 @@ static unsigned int perf_map_nehalem[] =
 };
 
 unsigned int *x86_march_perfmap = perf_map_nehalem;
-

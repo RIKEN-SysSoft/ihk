@@ -72,12 +72,20 @@ struct ihk_host_linux_os_data {
 	/** \brief Size of the kernel message buffer */
 	unsigned long kmsg_len;
 
+	/** \brief monitor */
+	struct ihk_os_monitor *monitor;
+	/** \brief Size of the monitor */
+	unsigned long monitor_len;
+	/** \brief Host physical address to monitor  */
+	unsigned long monitor_pa;
+
 	/** \brief Flag whether the IKC is already initialized or not */
 	int ikc_initialized;
 	/** \brief Lock for the channel list */
 	spinlock_t ikc_channel_lock;
 	/** \brief List of the channels available */
 	struct list_head ikc_channels;
+
 	/** \brief Interrupt handler */
 	struct ihk_host_interrupt_handler ikc_handler;
 	/** \brief Worker thread for the IKC interrupt handler */
@@ -85,6 +93,8 @@ struct ihk_host_linux_os_data {
 
 	/** \brief IKC master channel between the host and this kernel */
 	struct ihk_ikc_channel_desc *mchannel;
+	/** \brief IKC regular channels between the host and this kernel */
+	struct ihk_ikc_channel_desc **regular_channels;
 	/** \brief Lock for listeners */
 	spinlock_t listener_lock;
 	/** \brief Array of the listeners */
@@ -107,6 +117,14 @@ struct ihk_host_linux_os_data {
 
 	/** \brief linux struct device for /dev/mcos* */
 	struct device *lindev;
+
+	/** \brief lock for event list */
+	spinlock_t event_list_lock;
+	/** \brief event list */
+	struct list_head event_list;
+
+	/** \brief Linux kernel level callbacks */
+	struct ihk_os_kernel_call_handler *kernel_handlers;
 };
 
 /** \brief Structure that manages a kernel instance fd in Linux */

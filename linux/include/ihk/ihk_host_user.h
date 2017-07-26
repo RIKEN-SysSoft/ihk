@@ -9,6 +9,8 @@
 #ifndef __HEADER_IHK_HOST_USER_H
 #define __HEADER_IHK_HOST_USER_H
 
+#include "ihk_os_status.h"
+
 #define IHK_DEVICE_CREATE_OS          0x112900
 #define IHK_DEVICE_DESTROY_OS         0x112901
 #define IHK_DEVICE_RESERVE_CPU        0x112902
@@ -32,6 +34,9 @@
 #define IHK_OS_ALLOC_MEM              0x112a11
 #define IHK_OS_RESERVE_CPU            0x112a12
 #define IHK_OS_RESERVE_MEM            0x112a13
+#define IHK_OS_STATUS                 0x112a14
+#define IHK_OS_REGISTER_EVENT         0x112a15
+#define IHK_OS_EVENTFD                0x112a16
 
 #define IHK_OS_READ_KMSG              0x112a20
 #define IHK_OS_CLEAR_KMSG             0x112a21
@@ -43,12 +48,24 @@
 #define IHK_OS_QUERY_CPU              0x112a26
 #define IHK_OS_QUERY_MEM              0x112a27
 #define IHK_OS_IKC_MAP                0x112a28
+#define IHK_OS_QUERY_IKC_MAP          0x112a29
+#define IHK_OS_FREEZE                 0x112a30
+#define IHK_OS_THAW                   0x112a31
+#define IHK_OS_GET_USAGE              0x112a32
+#define IHK_OS_GET_CPU_USAGE          0x112a33
 
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff
 
 #define IHK_OS_AUX_CALL_START      0x10000000
 #define IHK_OS_AUX_CALL_END        0x7fffffff
+
+#define IHK_OS_AUX_PERF_NUM        0x11290100
+#define IHK_OS_AUX_PERF_SET        0x11290101
+#define IHK_OS_AUX_PERF_GET        0x11290102
+#define IHK_OS_AUX_PERF_ENABLE     0x11290103
+#define IHK_OS_AUX_PERF_DISABLE    0x11290104
+#define IHK_OS_AUX_PERF_DESTROY    0x11290105
 
 #define FLAG_IHK_OS_SHUTDOWN_FORCE    0x40000000
 
@@ -61,6 +78,7 @@ struct dump_mem_chunk {
 
 typedef struct dump_mem_chunks_s {
 	int nr_chunks;
+	unsigned long kernel_base;
 	struct dump_mem_chunk chunks[];
 } dump_mem_chunks_t;
 
@@ -69,17 +87,22 @@ typedef struct dumpargs_s {
 #define DUMP_NMI 1
 #define DUMP_QUERY 2
 #define DUMP_READ 3
+#define DUMP_QUERY_ALL 4
+#define DUMP_READ_ALL 5
 	int pad;
 	long start;
 	long size;
 	void *buf;
 	void *spare[4];
 } dumpargs_t;
+#define DUMP_ALL_MEM 0
+#define DUMP_CHUNK_MEM 1
 
 typedef struct ihk_resource_req_s {
 	char *string;
 	int string_len;
 } ihk_resource_req_t;
 
+int _ihklib_os_query_free_mem(int os_index, char *result, ssize_t sz_result);
 
 #endif

@@ -895,7 +895,8 @@ void smp_ihk_setup_trampoline(void *priv)
 	int nr_irqs;
 
 	os->param->ihk_ikc_irq = (unsigned int)ihk_smp_irq.hwirq & 0x00000000ffffffffUL;
-	os->param->ihk_ikc_irq_apicid = 0;
+/* TODO: for patch:ihk-0208 */
+//	os->param->ihk_ikc_irq_apicid = 0;
 
 	/* Prepare trampoline code */
 	memcpy(trampoline_va, ihk_smp_trampoline_data,
@@ -1007,20 +1008,27 @@ void ihk_smp_memdump_cpu(int hw_id)
 	}
 }
 
+int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
+{
+	int i;
+
+	for (i = 0; i < SMP_MAX_CPUS; ++i) {
+		if (ihk_smp_cpus[i].os != ihk_os)
+			continue;
+
+		ihk_smp_memdump_cpu(ihk_smp_cpus[i].hw_id);
+	}
+}
+
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 {
+	struct smp_os_data *os = priv;
+
 	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
 			args->cmd, args->start, args->size, args->buf);
 
 	if (args->cmd == DUMP_NMI) {
-		int i;
-
-		for (i = 0; i < SMP_MAX_CPUS; ++i) {
-			if (ihk_smp_cpus[i].os != ihk_os)
-				continue;
-
-			ihk_smp_memdump_cpu(ihk_smp_cpus[i].hw_id);
-		}
+		smp_ihk_os_send_nmi(ihk_os, priv, 0);
 		return 0;
 	}
 
@@ -1041,11 +1049,31 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		}
 
 		mem_chunks->nr_chunks = i;
+		/* See load_file() for the calculation below */
+/* TODO: for patch:ihk-0207 */
+//		mem_chunks->kernel_base =
+//			(os->bootstrap_mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
 
 		return 0;
 	}
 
 	if (args->cmd == DUMP_READ) {
+		void *va;
+
+		va = phys_to_virt(args->start);
+		if (copy_to_user(args->buf, va, args->size)) {
+			return -EFAULT;
+		}
+		return 0;
+	}
+
+	if (args->cmd == DUMP_QUERY_ALL) {
+		args->start = os->mem_start;
+		args->size = os->mem_end - os->mem_start;
+		return 0;
+	}
+
+	if (args->cmd == DUMP_READ_ALL) {
 		void *va;
 
 		va = phys_to_virt(args->start);
@@ -1403,6 +1431,13 @@ retry_trampoline:
 	return error;
 
 error_free_irq:
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
+	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+	if (this_module_put) {
+		try_module_get(THIS_MODULE);
+	}
+#endif
+
 	free_irq(ihk_smp_irq.irq, NULL);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)

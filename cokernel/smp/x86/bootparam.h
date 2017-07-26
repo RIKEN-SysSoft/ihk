@@ -30,6 +30,7 @@ struct ihk_smp_boot_param_cpu {
 	int numa_id;
 	int hw_id;
 	int linux_cpu_id;
+	int ikc_cpu;
 };
 
 struct ihk_smp_boot_param_memory_chunk {
@@ -66,15 +67,22 @@ struct smp_boot_param {
 	 * ihk_smp_boot_param_memory_chunk structures.
 	 */
 	unsigned long start, end;
+	unsigned long status;
+	/* Size of this structure (including all the postix data) */
+	int param_size;
 
     /* End address of the memory chunk on which kernel sections 
        are loaded, used for boundary check in early_alloc_pages(). */
 	unsigned long bootstrap_mem_end;
 
-	unsigned long status;
 	unsigned long msg_buffer;
 	unsigned long msg_buffer_size;
 	unsigned long mikc_queue_recv, mikc_queue_send;
+
+	unsigned long monitor;
+	unsigned long monitor_size;
+
+	unsigned long nmi_mode_addr;
 
 	unsigned long dma_address;
 	unsigned long ident_table;
@@ -82,8 +90,9 @@ struct smp_boot_param {
 	unsigned long boot_sec;
 	unsigned long boot_nsec;
 	unsigned int ihk_ikc_irq;
-	unsigned int ihk_ikc_irq_apicid;
+	unsigned int ihk_ikc_irq_apicids[SMP_MAX_CPUS];
 	char kernel_args[256];
+	int nr_linux_cpus;
 	int nr_cpus;
 	int nr_numa_nodes;
 	int nr_memory_chunks;

@@ -81,6 +81,8 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 		ihk_ikc_init_desc(c, ihk_os, 0, rq, wq,
 		                  ihk_ikc_master_channel_packet_handler, c);
 
+		ihk_ikc_channel_set_cpu(c, 0);
+
 		c->recv.qphys = rp;
 		c->send.qphys = wp;
 		c->recv.qrphys = r;
@@ -167,6 +169,26 @@ spinlock_t *ihk_os_get_ikc_channel_lock(ihk_os_t ihk_os)
 	struct ihk_host_linux_os_data *os = ihk_os;
 
 	return &os->ikc_channel_lock;
+}
+
+/** \brief Get the IKC regular channel (called from IHK-IKC) */
+struct ihk_ikc_channel_desc *ihk_os_get_regular_channel(ihk_os_t ihk_os, int cpu)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+
+	return os->regular_channels[cpu];
+}
+
+/** \brief Set the IKC regular channel (called from IHK-IKC) */
+void ihk_os_set_regular_channel(ihk_os_t ihk_os, struct ihk_ikc_channel_desc *c, int cpu)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+
+	if (cpu < 0 || cpu > num_possible_cpus()) {
+		dprintf("%s: WARNING: invalid CPU number: %d\n", __FUNCTION__, cpu);
+		return;
+	}
+	os->regular_channels[cpu] = c;
 }
 
 /** \brief Get the interrupt handler of the IKC (called from IHK-IKC) */

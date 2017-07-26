@@ -60,8 +60,7 @@ struct ihk_ikc_free_packet {
 };
 
 struct ihk_ikc_channel_desc {
-	struct list_head           all_list;
-	struct list_head           list;
+	struct list_head           list_all;
 	ihk_os_t                   remote_os;
 	int                        remote_channel_id;
 	uint64_t                   remote_channel_va;

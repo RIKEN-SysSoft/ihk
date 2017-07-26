@@ -32,17 +32,31 @@ ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work);
 
 static void __ihk_ikc_reception_handler(ihk_os_t os)
 {
-	struct ihk_ikc_channel_desc *c = ihk_ikc_get_master_channel(os);
+	struct ihk_ikc_channel_desc *m_channel;
+	struct ihk_ikc_channel_desc *r_channel;
 
-	/*
-	 * The master channel is used both for connection management and for
-	 * control packets indicating actual traffic on IKC channels, where
-	 * target channels are referred directly as part of
-	 * IHK_IKC_MASTER_MSG_PACKET_ON_CHANNEL packets.
-	 */
-	while (ihk_ikc_channel_enabled(c) &&
-			!ihk_ikc_queue_is_empty(c->recv.queue)) {
-		ihk_ikc_recv_handler(c, c->handler, os, 0);
+	if (smp_processor_id() == 0) {
+		m_channel = ihk_ikc_get_master_channel(os);
+		while (ihk_ikc_channel_enabled(m_channel) &&
+		       !ihk_ikc_queue_is_empty(m_channel->recv.queue)) {
+			ihk_ikc_recv_handler(m_channel, m_channel->handler, os, 0);
+		}
+	}
+
+	r_channel = ihk_ikc_get_regular_channel(os, smp_processor_id());
+	if (!r_channel) {
+		/* It is fine not to have this channel for CPU 0 as we may be
+		 * in initialization phase where only master channel exists yet.
+		 * Otherwise, print a warning */
+		if (smp_processor_id() > 0) {
+			printk("%s: WARNING: r_channel for CPU %d does not exist\n",
+					__FUNCTION__, smp_processor_id());
+		}
+		return;
+	}
+	while (ihk_ikc_channel_enabled(r_channel) &&
+	       !ihk_ikc_queue_is_empty(r_channel->recv.queue)) {
+		ihk_ikc_recv_handler(r_channel, r_channel->handler, os, 0);
 	}
 }
 

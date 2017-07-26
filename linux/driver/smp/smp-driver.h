@@ -21,13 +21,28 @@
 #include <ihk/ihk_host_driver.h>
 #include <bootparam.h>
 
+#ifdef IHK_DEBUG
+#define dprintk(...) do { if (1) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
+#define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
+#else
 #define dprintk(...) do { if (0) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
 #define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
+#endif
+
+#define ARCHDRV_CHKANDJUMP(cond, msg, err)								\
+	do {																\
+		if(cond) {														\
+			eprintk("%s:%d,"msg"\n", __FUNCTION__, __LINE__);					\
+			ret = err;													\
+			goto fn_fail;												\
+		}																\
+	} while(0)
 
 #define BUILTIN_OS_STATUS_INITIAL	0
 #define BUILTIN_OS_STATUS_LOADING	1
 #define BUILTIN_OS_STATUS_LOADED	2
 #define BUILTIN_OS_STATUS_BOOTING	3
+#define BUILTIN_OS_STATUS_SHUTDOWN	4 /* After shutdown */
 
 #define IHK_SMP_CPU_ONLINE	0
 #define IHK_SMP_CPU_AVAILABLE	1
@@ -41,6 +56,7 @@ struct ihk_smp_cpu {
 	int hw_id;
 	int status;
 	ihk_os_t os;
+	int ikc_map_cpu;
 };
 
 /** \brief BUILTIN driver-specific OS structure */
@@ -92,6 +108,9 @@ struct smp_os_data {
 
 	/* LWK CPU id to Linux CPU id mapping */
 	int cpu_mapping[SMP_MAX_CPUS];
+	/* LWK CPU to Linux CPU mapping for IKC IRQ */
+	int cpu_ikc_map[SMP_MAX_CPUS];
+	int cpu_ikc_mapped;
 	int nr_cpus;
 
 	/** \brief Boot parameter for the kernel
@@ -99,6 +118,7 @@ struct smp_os_data {
 	 * This structure is directly accessed (read and written)
 	 * by the manycore kernel. */
 	struct smp_boot_param *param;
+	int param_pages_order;
 
 	/** \brief Status of the kernel */
 	int status;

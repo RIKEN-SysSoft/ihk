@@ -7,6 +7,9 @@
  * \author Balazs Gerofi  <bgerofi@riken.jp> \par
  * Copyright (C) 2011-2017 RIKEN AICS>
  */
+#ifdef POSTK_DEBUG_ARCH_DEP_70 /* add config.h include to ihkconfig */
+#include <config.h>
+#endif /* POSTK_DEBUG_ARCH_DEP_70 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -16,6 +19,8 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <errno.h>
+#include <dirent.h>
+#include "ihklib.h"
 
 int __argc;
 char **__argv;
@@ -29,6 +34,15 @@ char **__argv;
 #define dprintf(...) do { if (0) printf(__VA_ARGS__); } while (0)
 #define	eprintf(...) printf(__VA_ARGS__)
 #endif
+
+#define IHKCONFIG_CHKANDJUMP(cond, func, err)							\
+	do {																\
+		if(cond) {														\
+			eprintf("%s,"func" failed\n", __FUNCTION__);				\
+			ret = err;													\
+			goto fn_fail;												\
+		}																\
+	} while(0)
 
 static int usage(char **arg)
 {
@@ -54,6 +68,8 @@ static int usage(char **arg)
 	fprintf(stderr, "    release cpu [resources]\n");
 	fprintf(stderr, "    release mem\n");
 	fprintf(stderr, "    query cpu|mem\n");
+	fprintf(stderr, "    getinfo\n");
+	fprintf(stderr, "    getoslist\n");
 
 	return 0;
 }
@@ -293,7 +309,7 @@ static int do_release(int fd)
 static int do_query(int fd)
 {
 	int ret;
-	char query_result[1024];
+	char query_result[65536];
 
 	if (__argc < 4) {
 		usage(__argv);
@@ -350,6 +366,134 @@ static int do_ioctl(int fd)
 	return r;
 }
 
+static int do_getinfo(int fd)
+{
+	int ret = 0, ret_ihklib;
+	int i, j;
+
+	close(fd);
+	ihk_info info;
+	bzero(&info, sizeof(ihk_info));
+
+	ret_ihklib = ihk_getihkinfo(&info);
+	IHKCONFIG_CHKANDJUMP(ret_ihklib == -1, "ihk_getihkinfo", -1);
+
+	info.reserved_mem_chunks = (ihk_mem_chunk *)calloc(info.num_reserved_mem_chunks, sizeof(ihk_mem_chunk));
+	IHKCONFIG_CHKANDJUMP(info.reserved_mem_chunks == NULL, "calloc", -1);
+
+	info.reserved_cpus = (int *)calloc(info.num_reserved_cpus, sizeof(int));
+	IHKCONFIG_CHKANDJUMP(info.reserved_cpus == NULL, "calloc", -1);
+
+    info.num_assigned_mem_chunks = (int *)calloc(info.num_os_instances, sizeof(int));
+    IHKCONFIG_CHKANDJUMP(info.num_assigned_mem_chunks == NULL, "calloc", -1);
+
+    info.assigned_mem_chunks = (ihk_mem_chunk**)calloc(info.num_os_instances, sizeof(ihk_mem_chunk*));
+    IHKCONFIG_CHKANDJUMP(info.assigned_mem_chunks == NULL, "calloc", -1);
+
+    info.num_assigned_cpus = (int *)calloc(info.num_os_instances, sizeof(int));
+    IHKCONFIG_CHKANDJUMP(info.num_assigned_cpus == NULL, "calloc", -1);
+
+    info.assigned_cpus = (int **)calloc(info.num_os_instances, sizeof(int*));
+    IHKCONFIG_CHKANDJUMP(info.assigned_cpus == NULL, "calloc", -1);
+
+	ret_ihklib = ihk_getihkinfo(&info);
+	IHKCONFIG_CHKANDJUMP(ret_ihklib == -1, "ihk_getihkinfo", -1);
+
+	for(i = 0; i < info.num_os_instances; i++) {
+		info.assigned_mem_chunks[i] = (ihk_mem_chunk *)calloc(info.num_assigned_mem_chunks[i], sizeof(ihk_mem_chunk));
+		IHKCONFIG_CHKANDJUMP(info.assigned_mem_chunks[i] == NULL, "calloc", -1);
+
+		info.assigned_cpus[i] = (int *)calloc(info.num_assigned_cpus[i], sizeof(int));
+		IHKCONFIG_CHKANDJUMP(info.assigned_cpus[i] == NULL, "calloc", -1);
+	}
+
+	ret_ihklib = ihk_getihkinfo(&info);
+	IHKCONFIG_CHKANDJUMP(ret_ihklib == -1, "ihk_getihkinfo", -1);
+
+	printf("Reserved_mem: ");
+	for (i = 0; i < info.num_reserved_mem_chunks; i++) {
+		printf("%lu@%d", info.reserved_mem_chunks[i].size, info.reserved_mem_chunks[i].numa_node_number);
+		if(i != info.num_reserved_mem_chunks - 1) {
+			printf(",");
+		}
+	}
+	printf("\n");
+
+	printf("Reserved_cpu: ");
+	for (i = 0; i < info.num_reserved_cpus; i++) {
+		printf("%d", info.reserved_cpus[i]);
+		if(i != info.num_reserved_cpus - 1) {
+			printf(",");
+		}
+	}
+	printf("\n");
+
+	printf("Number_of_OS_instances: %d\n", info.num_os_instances);
+
+	for (i = 0; i < info.num_os_instances; i++) {
+		printf("OS_instance: %d\n", i);
+		printf("Assigned_mem: ");
+		for (j = 0; j < info.num_assigned_mem_chunks[i]; j++) {
+			printf("%lu@%d",
+				   (info.assigned_mem_chunks[i] + j)->size,
+				   (info.assigned_mem_chunks[i] + j)->numa_node_number);;
+			if(j != info.num_assigned_mem_chunks[i] - 1) {
+				printf(",");
+			}
+		}
+		printf("\n");
+
+		printf("Assigned_cpu: ");
+		for (j = 0; j < info.num_assigned_cpus[i]; j++) {
+			printf("%d", *(info.assigned_cpus[i] + j));
+			if(j != info.num_assigned_cpus[i] - 1) {
+				printf(",");
+			}
+		}
+		printf("\n");
+		if(i != info.num_os_instances - 1) {
+			printf("\n");
+		}
+	}
+
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
+}
+
+static int do_getoslist(int fd)
+{
+	int *oslist = NULL;
+	int num_os_instances = 0;
+	int ret = 0;
+	int i;
+
+	num_os_instances = ihk_getoslist(oslist, num_os_instances);
+	IHKCONFIG_CHKANDJUMP(num_os_instances < 0, "ihk_getoslist", -1);
+
+	oslist = (int *)calloc(num_os_instances, sizeof(int));
+	IHKCONFIG_CHKANDJUMP(oslist == NULL, "calloc", -1);
+
+	num_os_instances = ihk_getoslist(oslist, num_os_instances);
+	IHKCONFIG_CHKANDJUMP(num_os_instances < 0, "ihk_getoslist", -1);
+	
+	for (i = 0; i < num_os_instances; i++) {
+		printf ("%d", oslist[i]);
+		if(i != num_os_instances - 1) {
+			printf (",");
+		}	
+	}		
+	printf ("\n");
+fn_exit:
+	if(oslist) {
+		free(oslist);
+	}
+	return ret;
+ fn_fail:
+	goto fn_exit;
+}
+
 #define HANDLER(name) if (!strcmp(argv[2], #name)) { int r = do_##name(fd); close(fd); return r; }
 int main(int argc, char **argv)
 {
@@ -384,6 +528,8 @@ int main(int argc, char **argv)
 	else HANDLER(reserve)
 	else HANDLER(release)
 	else HANDLER(query)
+	else HANDLER(getinfo)
+	else HANDLER(getoslist)
 	else {
 		fprintf(stderr, "Unknown action : %s\n", argv[2]);
 		usage(argv);

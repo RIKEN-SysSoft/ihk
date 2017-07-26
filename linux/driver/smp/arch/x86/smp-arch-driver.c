@@ -267,7 +267,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 {
 	unsigned long send_status, accept_status = 0;
 	int maxlvt, num_starts, j;
-	unsigned long flags;
 
 	maxlvt = _lapic_get_maxlvt();
 
@@ -288,7 +287,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 	/*
 	 * Send IPI
 	 */
-	local_irq_save(flags);
 	apic_icr_write(APIC_INT_LEVELTRIG | APIC_INT_ASSERT | APIC_DM_INIT,
 	               phys_apicid);
 
@@ -305,7 +303,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 
 	pr_debug("Waiting for send to finish...\n");
 	send_status = safe_apic_wait_icr_idle();
-	local_irq_restore(flags);
 
 	mb();
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
@@ -339,7 +336,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 		/* Target chip */
 		/* Boot on the stack */
 		/* Kick the second */
-		local_irq_save(flags);
 		apic_icr_write(APIC_DM_STARTUP | (start_eip >> 12),
 		               phys_apicid);
 
@@ -352,7 +348,6 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 
 		pr_debug("Waiting for send to finish...\n");
 		send_status = safe_apic_wait_icr_idle();
-		local_irq_restore(flags);
 
 		/*
 		 * Give the other CPU some time to accept the IPI.
@@ -376,6 +371,10 @@ static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
 
 int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+	atomic_set(_init_deasserted, 0);
+#endif
+
 	if (_get_uv_system_type() != UV_NON_UNIQUE_APIC) {
 		pr_debug("Setting warm reset code and vector.\n");
 
@@ -391,10 +390,18 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 	}
 
 	if (apic->wakeup_secondary_cpu) {
+		printk("%s: apic->wakeup_secondary_cpu()\n", __FUNCTION__);
 		return apic->wakeup_secondary_cpu(apicid, start_eip);
 	}
 	else {
-		return smp_wakeup_secondary_cpu_via_init(apicid, start_eip);
+		int ret;
+		printk("%s: smp_wakeup_secondary_cpu_via_init()\n", __FUNCTION__);
+
+		preempt_disable();
+		ret = smp_wakeup_secondary_cpu_via_init(apicid, start_eip);
+		preempt_enable();
+
+		return ret;
 	}
 }
 
@@ -421,7 +428,9 @@ void smp_ihk_setup_trampoline(void *priv)
 	struct ihk_smp_trampoline_header *header;
 
 	os->param->ihk_ikc_irq = ihk_smp_irq;
-	os->param->ihk_ikc_irq_apicid = ihk_smp_irq_apicid;
+	for (i = 0; i < nr_cpu_ids; i++) {
+		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
+	}
 
 	/* Make a temporary copy of the Linux trampoline */
 	if (using_linux_trampoline) {
@@ -481,7 +490,6 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	pml4[(IHK_SMP_MAP_ST_START >> PTL4_SHIFT) & 511] = cr3[0];
 	pml4[(IHK_SMP_MAP_KERNEL_START >> PTL4_SHIFT) & 511] = pdp_p | 3;
 	pdp[(IHK_SMP_MAP_KERNEL_START >> PTL3_SHIFT) & 511] = pde_p | 3;
-	//n = (os->mem_end - os->mem_start) >> PTL2_SHIFT;
 	n = (os->bootstrap_mem_end - os->bootstrap_mem_start) >> PTL2_SHIFT;
 	if(n > 511)
 	n = 511;
@@ -489,18 +497,13 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	for (i = 0; i < n; i++) {
 		pde[i] = (phys + (i << PTL2_SHIFT)) | 0x83;
 	}
-	//pde[511] = (os->mem_end - (2 << PTL2_SHIFT)) | 0x83;
-	pde[511] = (os->bootstrap_mem_end - (2 << PTL2_SHIFT)) | 0x83;
+	startup_p = (os->bootstrap_mem_end & LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
+	pde[511] = startup_p | 0x83;
 
 	ihk_smp_unmap_virtual(pde);
 	ihk_smp_unmap_virtual(pdp);
 	ihk_smp_unmap_virtual(pml4);
 
-#if 0
-	startup_p = os->mem_end - (2 << PTL2_SHIFT);
-#else
-	startup_p = os->bootstrap_mem_end - (2 << PTL2_SHIFT);
-#endif
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
 	startup[2] = pml4_p;
@@ -512,21 +515,33 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	os->boot_rip = startup_p;
 }
 
-static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
+int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 {
 	struct smp_os_data *os = priv;
+	int i;
+	unsigned long rpa;
+	unsigned long size;
+	int *nmi_mode;
+	unsigned long pa;
+	unsigned long psize;
 
-	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
-			args->cmd, args->start, args->size, args->buf);
+	if (smp_ihk_os_get_special_addr(ihk_os, priv, IHK_SPADDR_NMI_MODE,
+				        &rpa, &size)) {
+		return -EINVAL;
+	}
 
-	if (args->cmd == DUMP_NMI) {
-		int i;
+	psize = PAGE_SIZE;
+	pa = smp_ihk_os_map_memory(ihk_os, priv, rpa, psize);
+	nmi_mode = smp_ihk_map_virtual(ihk_os, priv, pa, psize,
+					  NULL, 0);
+	*nmi_mode = mode;
+	smp_ihk_unmap_virtual(ihk_os, priv, nmi_mode, psize);
+	smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
 
-		for (i = 0; i < os->cpu_info.n_cpus; ++i) {
+	for (i = 0; i < os->cpu_info.n_cpus; i++) {
 
 #ifdef CONFIG_X86_X2APIC
 		if (x2apic_is_enabled()) {
-		        /* dump on X2APIC environment.*/
 			safe_apic_wait_icr_idle();
 			apic_icr_write(APIC_DM_NMI, os->cpu_info.hw_ids[i]);
 		}
@@ -543,7 +558,19 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 				NMI_VECTOR, APIC_DEST_PHYSICAL);
 #endif
 		}
-		}
+	}
+	return 0;
+}
+
+static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
+{
+	struct smp_os_data *os = priv;
+
+	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
+			args->cmd, args->start, args->size, args->buf);
+
+	if (args->cmd == DUMP_NMI) {
+		smp_ihk_os_send_nmi(ihk_os, priv, 0);
 		return 0;
 	}
 
@@ -564,11 +591,30 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		}
 
 		mem_chunks->nr_chunks = i;
+		/* See load_file() for the calculation below */
+		mem_chunks->kernel_base =
+			(os->bootstrap_mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
 
 		return 0;
 	}
 
 	if (args->cmd == DUMP_READ) {
+		void *va;
+
+		va = phys_to_virt(args->start);
+		if (copy_to_user(args->buf, va, args->size)) {
+			return -EFAULT;
+		}
+		return 0;
+	}
+
+	if (args->cmd == DUMP_QUERY_ALL) {
+		args->start = os->mem_start;
+		args->size = os->mem_end - os->mem_start;
+		return 0;
+	}
+
+	if (args->cmd == DUMP_READ_ALL) {
 		void *va;
 
 		va = phys_to_virt(args->start);
@@ -735,7 +781,7 @@ static int smp_ihk_init_ident_page_table(void)
 	printk("IHK-SMP: page table pages = %d, ident_npages_order = %d\n",
 	       ident_npages, ident_npages_order);
 
-	ident_pages = alloc_pages(GFP_DMA | GFP_KERNEL, ident_npages_order);
+	ident_pages = alloc_pages(GFP_DMA32 | GFP_KERNEL, ident_npages_order);
 	if (!ident_pages) {
 		printk("IHK-SMP: error: allocating identity page tables\n");
 		return ENOMEM;
@@ -791,6 +837,87 @@ static struct irq_chip ihk_irq_chip = {
 	.name = "ihk_irq",
 };
 
+static int
+vector_is_used(int vector, int core) {
+	int rtn = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
+	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+					per_cpu_offset(core)));
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+/* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+				per_cpu_offset(core)));
+#else
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
+				per_cpu_offset(core)));
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	if (vectors[vector] != VECTOR_UNUSED) {
+		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+				vector, core, vectors[vector]);
+		rtn = 1;
+	}
+#else
+	if (vectors[vector] != -1) {
+		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+				vector, core, vectors[vector]);
+		rtn = 1;
+	}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+	return rtn;
+}
+
+static void
+set_vector(int vector, int core) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
+	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+						per_cpu_offset(core)));
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+				per_cpu_offset(core)));
+#else
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
+		per_cpu_offset(core)));
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	if (vectors[vector] == VECTOR_UNUSED) {
+		dprintk(KERN_INFO "IHK-SMP: fixed vector_irq for %d in core %d\n", vector, core);
+		vectors[vector] = desc;
+	}
+#else
+	if (vectors[vector] == -1) {
+		dprintk(KERN_INFO "IHK-SMP: fixed vector_irq for %d in core %d\n", vector, core);
+		vectors[vector] = vector;
+	}
+#endif
+}
+
+static void
+release_vector(int vector, int core) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
+	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+				per_cpu_offset(core)));
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
+				per_cpu_offset(core)));
+#else
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
+				per_cpu_offset(core)));
+#endif
+
+	/* Release IRQ vector */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+	vectors[vector] = VECTOR_UNUSED;
+#else
+	vectors[vector] = -1;
+#endif
+}
+
 int smp_ihk_arch_init(void)
 {
 	int error = 0;
@@ -799,6 +926,8 @@ int smp_ihk_arch_init(void)
 #else
 	int vector = IRQ15_VECTOR + 2;
 #endif
+	int i = 0;
+	int is_used = 0;
 
 	if (ihk_trampoline) {
 		printk("IHK-SMP: preallocated trampoline phys: 0x%lx\n",
@@ -885,32 +1014,16 @@ retry_trampoline:
 			continue;
 		}
 
-		{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-			/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
-			struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-						per_cpu_offset(ihk_ikc_irq_core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-/* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
-			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
-						per_cpu_offset(ihk_ikc_irq_core)));
-#else
-			int *vectors = 
-				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
-				per_cpu_offset(ihk_ikc_irq_core)));
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
-		
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-			if (vectors[vector] != VECTOR_UNUSED) {
-				printk(KERN_INFO "IHK-SMP: IRQ vector %d \n", vector);
-				continue;
+		for (i = 0; i < nr_cpu_ids; i++) {
+			if (vector_is_used(vector, i)) {
+				is_used = 1;
+				break;
 			}
-#else
-			if (vectors[vector] != -1) {
-				printk(KERN_INFO "IHK-SMP: IRQ vector %d: used %d\n", vector, vectors[vector]);
-				continue;
-			}
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+		}
+
+		if (is_used) {
+			is_used = 0;
+			continue;
 		}
 
 #ifdef CONFIG_SPARSE_IRQ
@@ -936,6 +1049,11 @@ retry_trampoline:
 		desc = _irq_to_desc(vector);
 		if (!desc) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: no descriptor\n", vector);
+			continue;
+		}
+
+		if (desc->action) {
+			// action is already registered.
 			continue;
 		}
 
@@ -968,33 +1086,9 @@ retry_trampoline:
 		}
 
 		/* Pretend a real external interrupt */
-		{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-			/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
-			struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-						per_cpu_offset(ihk_ikc_irq_core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-			int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
-						per_cpu_offset(ihk_ikc_irq_core)));
-#else
-			int *vectors = 
-				(*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq, 
-				per_cpu_offset(ihk_ikc_irq_core)));
-#endif
-		
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-			if (vectors[vector] == VECTOR_UNUSED) {
-				printk(KERN_INFO "IHK-SMP: fixed vector_irq for %d\n", vector);
-				vectors[vector] = desc;
-			}
-#else
-			if (vectors[vector] == -1) {
-				printk(KERN_INFO "IHK-SMP: fixed vector_irq for %d\n", vector);
-				vectors[vector] = vector;
-			}
-#endif
+		for (i = 0; i < nr_cpu_ids; i++) {
+			set_vector(vector, i);
 		}
-
 		break;
 	}
 
@@ -1007,8 +1101,8 @@ retry_trampoline:
 	ihk_smp_irq = vector;
 	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid,
 	                                  ihk_ikc_irq_core);
-	printk(KERN_INFO "IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n", 
-		ihk_smp_irq, ihk_ikc_irq_core, ihk_smp_irq_apicid);
+	printk(KERN_INFO "IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n",
+	    ihk_smp_irq, ihk_ikc_irq_core, ihk_smp_irq_apicid);
 
 	irq_set_chip(vector, &ihk_irq_chip);
 	irq_set_chip_data(vector, NULL);
@@ -1029,6 +1123,13 @@ retry_trampoline:
 	return error;
 
 error_free_irq:
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
+	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+	if (this_module_put) {
+		try_module_get(THIS_MODULE);
+	}
+#endif
+
 	free_irq(ihk_smp_irq, NULL);
 
 error_free_trampoline:
@@ -1340,6 +1441,7 @@ int ihk_smp_reset_cpu(int phys_apicid)
 	unsigned long send_status;
 	int maxlvt;
 
+	preempt_disable();
 	dprintk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", phys_apicid);
 
 	maxlvt = _lapic_get_maxlvt();
@@ -1378,32 +1480,21 @@ int ihk_smp_reset_cpu(int phys_apicid)
 	pr_debug("Waiting for send to finish...\n");
 	send_status = safe_apic_wait_icr_idle();
 
+	preempt_enable();
 	return 0;
 }
 
 void smp_ihk_arch_exit(void)
 {
+	int i = 0;
 #ifdef CONFIG_SPARSE_IRQ
 	struct irq_desc *desc;
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
-	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(ihk_ikc_irq_core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq, 
-				per_cpu_offset(ihk_ikc_irq_core)));
-#else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
-	                per_cpu_offset(ihk_ikc_irq_core)));
-#endif
 	/* Release IRQ vector */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	vectors[ihk_smp_irq] = VECTOR_UNUSED;
-#else
-	vectors[ihk_smp_irq] = -1;
-#endif
+	for (i = 0; i < nr_cpu_ids; i++) {
+		release_vector(ihk_smp_irq, i);
+	}
 
 	irq_set_chip(ihk_smp_irq, NULL);
 

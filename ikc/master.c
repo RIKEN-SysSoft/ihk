@@ -60,7 +60,6 @@ int ihk_ikc_listen_port(ihk_os_t os, struct ihk_ikc_listen_param *param)
 		ihk_ikc_spinlock_unlock(lock, flags);
 		return -EBUSY;
 	}
-	param->recv_cpu = ihk_ikc_get_processor_id();
 	*p = param;
 	ihk_ikc_spinlock_unlock(lock, flags);
 
@@ -95,7 +94,7 @@ int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm,
                    unsigned long *rq, unsigned long *sq,
                    struct ihk_ikc_channel_desc **newc,
                    unsigned long remote_channel_va,
-                   int magic)
+                   int magic, int intr_cpu)
 {
 	struct ihk_ikc_channel_info ci;
 	struct ihk_ikc_channel_desc *c;
@@ -119,7 +118,10 @@ int ihk_ikc_accept(struct ihk_ikc_channel_desc *cm,
 	memset(&ci, 0, sizeof(ci));
 	ci.channel = c;
 	
-	ihk_ikc_channel_set_cpu(c, p->recv_cpu);
+	if (p->ikc_direction == IHK_IKC_DIRECTION_RECV) {
+		ihk_ikc_channel_set_cpu(c, intr_cpu);
+		ihk_ikc_set_regular_channel(cm->remote_os, c, intr_cpu);
+	}
 
 	if ((r = p->handler(&ci)) != 0) {
 		ihk_ikc_free_channel(c);
@@ -196,7 +198,8 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 			r = ihk_ikc_accept(c, *p,
 			                   packet->param[0] >> 32,
 			                   &rq, &sq, &newc,
-			                   remote_channel_va, packet->param[4]);
+			                   remote_channel_va, (int)packet->param[4],
+			                   (int)(packet->param[4] >> 32));
 			ihk_ikc_spinlock_unlock(lock, flags);
 		}
 
@@ -345,8 +348,9 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 	                           ref);
 
 	if (ihk_ikc_master_send(os, IHK_IKC_MASTER_MSG_CONNECT, ref,
-	                        ((unsigned long)p->pkt_size << 32) 
-	                        | p->port, sq, rq, (uint64_t)c, (uint64_t)p->magic) == 0) {
+	                        ((unsigned long)p->pkt_size << 32) | p->port,
+	                        sq, rq, (uint64_t)c,
+	                        ((unsigned long)p->intr_cpu << 32) | p->magic) == 0) {
 		ret = ihk_ikc_wait_master(&wq);
 		ihk_ikc_wait_finish(os, &wq);
 
@@ -369,6 +373,7 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 					__FUNCTION__, c, c->remote_channel_va);
 			c->handler = p->handler;
 			c->send.queue->write_cpu = c->recv.queue->read_cpu;
+			c->send.intr_cpu = p->intr_cpu;
 			dkprintf("(Connected) Remote channeld id = %x\n",
 			        c->remote_channel_id);
 			ihk_ikc_enable_channel(c);
