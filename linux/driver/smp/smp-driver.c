@@ -22,6 +22,9 @@
 #include <linux/kallsyms.h>
 #include <linux/list_sort.h>
 #include <linux/swap.h>
+#include <linux/slub_def.h>
+#include <linux/time.h>
+#include <asm/hw_irq.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
@@ -39,6 +42,11 @@
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
+
+/** Get the index in the map array */
+#define MAP_INDEX(n)    ((n) >> 6)
+/** Get the bit number in a map element */
+#define MAP_BIT(n)      ((n) & 0x3f)
 
 /*
  * IHK-SMP unexported kernel symbols
@@ -126,6 +134,8 @@ struct chunk {
 };
 
 /* ----------------------------------------------- */
+static unsigned long dump_page_set_addr;
+static unsigned long dump_bootstrap_mem_start;
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
@@ -256,6 +266,8 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	int lwk_cpu;
 	int *ihk_smp_boot_numa_distance;
 	int i, j;
+	unsigned long buffer_size, map_end, index;
+	struct ihk_dump_page *dump_page;
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
@@ -289,11 +301,14 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 		++numa_id;
 	}
 
+	buffer_size = 0;
 	/* Count number of memory chunks */
 	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
 		if (os_mem_chunk->os != ihk_os)
 			continue;
+
 		++nr_memory_chunks;
+		buffer_size += ((((os_mem_chunk->size + (PAGE_SIZE * 63)) >> 18) *  sizeof(unsigned long)) + sizeof(struct ihk_dump_page));
 	}
 
 	param_size += (nr_memory_chunks *
@@ -335,7 +350,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	 * so that the order can be controlled by the user */
 	/* Pass in CPU information according to CPU mapping */
 	for (lwk_cpu = 0; lwk_cpu < os->nr_cpus; ++lwk_cpu) {
-		bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
+bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 				cpu_to_node(os->cpu_mapping[lwk_cpu]));
 		bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
 		bp_cpu->linux_cpu_id = os->cpu_mapping[lwk_cpu];
@@ -458,8 +473,65 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	smp_ihk_setup_trampoline(os);
 
-	printk("IHK-SMP: booting OS 0x%lx, calling wakeup_secondary_cpu() \n",
-	       (unsigned long)ihk_os);
+	param_size = (buffer_size + PAGE_SIZE - 1) & PAGE_MASK;
+	param_pages_order = 0;
+	while (((size_t)PAGE_SIZE << param_pages_order) < param_size)
+		++param_pages_order;
+
+	param_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, param_pages_order);
+	if (!param_pages) {
+		kfree(os);
+		printk("IHK-SMP: error: allocating boot parameter structure\n");
+		return -ENOMEM;
+	}
+
+	dump_page = pfn_to_kaddr(page_to_pfn(param_pages));
+
+	if (dump_page) {
+
+		dump_page_set_addr = (unsigned long)&os->param->dump_page_set;
+
+		memset(dump_page,0,buffer_size);
+		os->param->dump_page_set.count = nr_memory_chunks;
+		os->param->dump_page_set.page_size = param_size;
+		os->param->dump_page_set.phy_page = __pa(dump_page);
+
+		/* Perform initial setting of dump_page information */
+		/* Turn on the BIT of the physical memory allocation range. */
+		if (nr_memory_chunks) {
+
+			i = 0;
+			list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+
+				if (i) {
+					dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+				}
+
+				dump_page->start = os_mem_chunk->addr;
+				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> 18);
+				map_end = (os_mem_chunk->size >> PAGE_SHIFT);
+
+				for (index = 0; index < map_end; index++) {
+					if(MAP_INDEX(index) >= dump_page->map_count) {
+						printk("%s:used chunk is out of range(max:%ld): %ld\n", __FUNCTION__, dump_page->map_count, MAP_INDEX(index));
+						break;
+					}
+					dump_page->map[MAP_INDEX(index)] |= (1UL << MAP_BIT(index));
+				}
+
+				i++;
+			}
+		}
+	} else {
+		os->param->dump_page_set.count = 0;
+		os->param->dump_page_set.page_size = 0;
+		dprintf("IHK-SMP: error: allocating dump_page_set(size:%ld)\n",buffer_size);
+	}
+
+	os->param->dump_page_set.completion_flag = IHK_DUMP_PAGE_SET_INCOMPLETE;
+
+	printk("IHK-SMP: booting OS 0x%lx, calling smp_wakeup_secondary_cpu() \n", 
+		(unsigned long)ihk_os);
 	udelay(300);
 
 	return smp_wakeup_secondary_cpu(os->boot_cpu, trampoline_phys);
@@ -663,6 +735,9 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	smp_ihk_os_setup_startup(os, phys, entry);
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+
+	dump_bootstrap_mem_start = os->bootstrap_mem_start;
+
 	return 0;
 }
 
@@ -2113,6 +2188,48 @@ static int smp_ihk_os_thaw(ihk_os_t ihk_os, void *priv)
 	return 0;
 }
 
+static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
+{
+	struct smp_os_data *os = priv;
+	struct ihk_dump_page *dump_page = NULL;
+	unsigned long map_start;
+	unsigned long i,j,k;
+	struct page *pg;
+
+	smp_ihk_os_send_nmi(ihk_os, priv, 0);
+
+	while (os->param->dump_page_set.completion_flag !=
+	       IHK_DUMP_PAGE_SET_COMPLETED) {
+
+		rep_nop();
+
+	}
+
+	if (os->param->dump_level == DUMP_LEVEL_USER_UNUSED_EXCLUDE) {
+
+		dump_page = phys_to_virt((unsigned long)os->param->dump_page_set.phy_page);
+
+		for (i = 0; i < os->param->dump_page_set.count; i++) {
+			if (i) {
+				dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+			}
+
+			for (j = 0; j < dump_page->map_count; j++) {
+				for (k = 0; k < 64; k++) {
+					if (!((dump_page->map[j] >> k) & 0x1)) {
+						map_start = (unsigned long)(dump_page->start + (j << (PAGE_SHIFT+6)));
+						map_start = map_start + (k << PAGE_SHIFT);
+						pg = virt_to_page(phys_to_virt(map_start));
+						pg->mapping += PAGE_MAPPING_ANON;
+					}
+				}
+			}
+		}
+	}
+
+	return;
+}
+
 static struct ihk_os_ops smp_ihk_os_ops = {
 	.load_mem = smp_ihk_os_load_mem,
 	.load_file = smp_ihk_os_load_file,
@@ -2142,6 +2259,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.query_mem = smp_ihk_os_query_mem,
 	.freeze = smp_ihk_os_freeze,
 	.thaw = smp_ihk_os_thaw,
+	.panic_notifier = smp_ihk_os_panic_notifier,
 };	
 
 static struct ihk_register_os_data builtin_os_reg_data = {

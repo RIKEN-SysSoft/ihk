@@ -555,66 +555,166 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 {
 	struct smp_os_data *os = priv;
+	struct ihk_dump_page *dump_page = NULL;
+	int i,j,k,mem_num,index;
+	struct ihk_os_mem_chunk *os_mem_chunk;
+	unsigned long map_start, bit_count;
+	dump_mem_chunks_t *mem_chunks;
+	void *va;
+	extern struct list_head ihk_mem_used_chunks;
 
 	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
 			args->cmd, args->start, args->size, args->buf);
 
-	if (args->cmd == DUMP_NMI) {
-		smp_ihk_os_send_nmi(ihk_os, priv, 0);
-		return 0;
+	switch (args->cmd) {
+		
+		case DUMP_SET_LEVEL:
+			/* Set dump level information */
+			switch (args->level) {
+				case DUMP_LEVEL_ALL:
+				case DUMP_LEVEL_USER_UNUSED_EXCLUDE:
+					os->param->dump_level = args->level;
+					break;
+				default:
+					printk("%s:invalid dump level:%d\n", __FUNCTION__, args->level);
+					return -EINVAL;
+			}
+			break;
+
+		case DUMP_NMI:
+			if (os->param->dump_page_set.completion_flag !=  IHK_DUMP_PAGE_SET_COMPLETED) {
+				smp_ihk_os_send_nmi(ihk_os, priv, 0);
+			}
+			break;
+
+		case DUMP_QUERY_NUM_MEM_AREAS:
+			while (1) {
+				if (IHK_DUMP_PAGE_SET_COMPLETED == os->param->dump_page_set.completion_flag)
+					break;
+
+				msleep(10); /* 10ms sleep */
+			}
+
+			dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
+
+			for (i = 0, mem_num = 0; i < os->param->dump_page_set.count; i++) {
+
+				if (i) {
+					dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+				}
+
+				for (j = 0, bit_count = 0; j < dump_page->map_count; j++) {
+					for ( k = 0; k < 64; k++) {
+						if ((dump_page->map[j] >> k) & 0x1) {
+							bit_count++;
+						} else {
+							if (bit_count) {
+								mem_num++;
+								bit_count = 0;
+							}
+						}
+					}
+				}
+
+				if (bit_count) {
+					mem_num++;
+				}
+			}
+
+			args->size = (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));
+
+			break;
+
+		case DUMP_QUERY:
+			i = 0;
+			mem_chunks = args->buf;
+
+			/* Collect memory information */
+			list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+				if (os_mem_chunk->os != ihk_os)
+					continue;
+
+				mem_chunks->chunks[i].addr = os_mem_chunk->addr;
+				mem_chunks->chunks[i].size = os_mem_chunk->size;
+				++i;
+			}
+
+			mem_chunks->nr_chunks = i;
+			/* See load_file() for the calculation below */
+			mem_chunks->kernel_base =
+				(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+			break;
+
+		case DUMP_QUERY_MEM_AREAS:
+
+			mem_chunks = args->buf;
+			dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
+
+			for (i = 0, index = 0; i < os->param->dump_page_set.count; i++) {
+
+				if (i) {
+					dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+				}
+
+				for (j = 0, bit_count = 0; j < dump_page->map_count; j++) {
+					for (k = 0; k < 64; k++) {
+						if ((dump_page->map[j] >> k) & 0x1) {
+							if (!bit_count) {
+								map_start = (unsigned long)(dump_page->start + ((unsigned long)j << (PAGE_SHIFT+6)));
+								map_start = map_start + ((unsigned long)k << PAGE_SHIFT);
+							}
+							bit_count++;
+						} else {
+							if (bit_count) {
+								mem_chunks->chunks[index].addr = map_start;
+								mem_chunks->chunks[index].size = (bit_count << PAGE_SHIFT);
+								index++;
+								bit_count = 0;
+							}
+						}
+					}
+				}
+
+				if (bit_count) {
+					mem_chunks->chunks[index].addr = map_start;
+					mem_chunks->chunks[index].size = (bit_count << PAGE_SHIFT);
+					index++;
+				}
+			}
+
+			mem_chunks->nr_chunks = index;
+
+			/* See load_file() for the calculation below */
+			mem_chunks->kernel_base =
+				(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+
+			break;
+
+		case DUMP_READ:
+			va = phys_to_virt(args->start);
+			if (copy_to_user(args->buf, va, args->size)) {
+				return -EFAULT;
+			}
+
+			break;
+
+		case DUMP_QUERY_ALL:
+			args->start = os->mem_start;
+			args->size = os->mem_end - os->mem_start;
+			break;
+
+		case DUMP_READ_ALL:
+			va = phys_to_virt(args->start);
+			if (copy_to_user(args->buf, va, args->size)) {
+				return -EFAULT;
+			}
+			break;
+
+		default:
+			return -EINVAL;
 	}
 
-	if (args->cmd == DUMP_QUERY) {
-		int i = 0;
-		struct ihk_os_mem_chunk *os_mem_chunk;
-		dump_mem_chunks_t *mem_chunks = args->buf;
-		extern struct list_head ihk_mem_used_chunks;
-
-		/* Collect memory information */
-		list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-			if (os_mem_chunk->os != ihk_os)
-				continue;
-
-			mem_chunks->chunks[i].addr = os_mem_chunk->addr;
-			mem_chunks->chunks[i].size = os_mem_chunk->size;
-			++i;
-		}
-
-		mem_chunks->nr_chunks = i;
-		/* See load_file() for the calculation below */
-		mem_chunks->kernel_base =
-			(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
-
-		return 0;
-	}
-
-	if (args->cmd == DUMP_READ) {
-		void *va;
-
-		va = phys_to_virt(args->start);
-		if (copy_to_user(args->buf, va, args->size)) {
-			return -EFAULT;
-		}
-		return 0;
-	}
-
-	if (args->cmd == DUMP_QUERY_ALL) {
-		args->start = os->mem_start;
-		args->size = os->mem_end - os->mem_start;
-		return 0;
-	}
-
-	if (args->cmd == DUMP_READ_ALL) {
-		void *va;
-
-		va = phys_to_virt(args->start);
-		if (copy_to_user(args->buf, va, args->size)) {
-			return -EFAULT;
-		}
-		return 0;
-	}
-
-	return -EINVAL;
+	return 0;
 }
 
 enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)

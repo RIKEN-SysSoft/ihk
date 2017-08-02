@@ -92,7 +92,12 @@ typedef struct dumpargs_s {
 #define DUMP_READ 3
 #define DUMP_QUERY_ALL 4
 #define DUMP_READ_ALL 5
-	int pad;
+#define DUMP_SET_LEVEL 6
+#define DUMP_QUERY_NUM_MEM_AREAS 7
+#define DUMP_QUERY_MEM_AREAS 8
+	unsigned int level;
+#define DUMP_LEVEL_ALL 0
+#define DUMP_LEVEL_USER_UNUSED_EXCLUDE 24
 	long start;
 	long size;
 	void *buf;

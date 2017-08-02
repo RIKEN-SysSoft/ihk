@@ -43,6 +43,9 @@ char **__argv;
 		}																\
 	} while(0)
 
+
+#define PHYSMEM_NAME_SIZE 32
+
 static int usage(char **arg)
 {
 	char	*cmd;
@@ -74,7 +77,7 @@ static int usage(char **arg)
 	fprintf(stderr, "    intr cpu irq_vector\n");
 	fprintf(stderr, "    ioctl (req) (arg)\n");
 #ifdef ENABLE_MEMDUMP
-	fprintf(stderr, "    dump [file]\n");
+	fprintf(stderr, "    dump [-d level] [file]\n");
 #endif /* ENABLE_MEMDUMP */
 
 	return 0;
@@ -577,6 +580,18 @@ static int do_ioctl(int fd)
 #include <time.h>
 #include <limits.h>
 #include <pwd.h>
+#include <getopt.h>
+
+static struct option do_dump_options[] = {
+	{
+		.name =		"interactive",
+		.has_arg =	no_argument,
+		.flag =		0,
+		.val =		1
+	},
+	/* end */
+	{ NULL, 0, NULL, 0}
+};
 
 static int do_dump(int osfd) {
 	static char path[PATH_MAX];
@@ -598,19 +613,11 @@ static int do_dump(int osfd) {
 	char *date;
 	struct passwd *pw;
 	dump_mem_chunks_t *mem_chunks;
-	int interactive = 0;
-
-	if (__argc > 4 &&
-			(!strcmp("--interactive", __argv[4]) ||
-			 !strcmp("-i", __argv[4]))) {
-		interactive = 1;
-	}
-
-	mem_chunks = malloc(PHYS_CHUNKS_DESC_SIZE);
-	if (!mem_chunks) {
-		perror("allocating mem_chunks buffer: ");
-		return 1;
-	}
+	unsigned int opt_val = DUMP_LEVEL_ALL;;
+	long mem_size;
+	int opt, interactive = 0;
+	char *physmem_name_buf = NULL;
+	char physmem_name[PHYSMEM_NAME_SIZE];
 
 	t = time(NULL);
 	if (t == (time_t)-1) {
@@ -626,6 +633,44 @@ static int do_dump(int osfd) {
 
 	pw = getpwuid(getuid());
 
+	while ((opt = getopt_long(__argc, __argv, "id:", do_dump_options, NULL)) != -1) {
+		switch (opt) {
+			case 1:   /* '--interactive' */
+			case 'i': /* '-i' */
+				interactive = 1;
+				break;
+			case 'd': /* '-d' */
+				opt_val = atoi(optarg);
+				break;
+			default: /* '?' */
+				fprintf(stderr, "dump [-d level] [file]\n");
+				return 1;
+		}
+	}
+
+	if (__argc > (optind + 2)) {
+
+		fname = __argv[optind + 2];
+
+	} else {
+		n = strftime(path, sizeof(path), "mcdump_%Y%m%d_%H%M%S", tm);
+
+		if (!n) {
+			perror("strftime");
+			return 1;
+		}
+
+		fname = path;
+	}
+
+	args.cmd = DUMP_SET_LEVEL;
+	args.level = opt_val;
+	error = ioctl(osfd, IHK_OS_DUMP, &args);
+	if (error) {
+		perror("DUMP_SET_LEVEL");
+		return 1;
+	}
+
 	args.cmd = DUMP_NMI;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
 	if (error) {
@@ -633,11 +678,27 @@ static int do_dump(int osfd) {
 		return 1;
 	}
 
-	args.cmd = DUMP_QUERY;
+	args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
+	args.size = 0;
+	error = ioctl(osfd, IHK_OS_DUMP, &args);
+	if (error) {
+		perror("DUMP_QUERY_NUM_MEM_AREAS");
+		return 1;
+	}
+
+	mem_size = args.size;
+	mem_chunks = malloc(mem_size);
+	if (!mem_chunks) {
+		perror("allocating mem_chunks buffer: ");
+		return 1;
+	}
+	memset(mem_chunks, 0, args.size);
+
+	args.cmd = DUMP_QUERY_MEM_AREAS;
 	args.buf = (void *)mem_chunks;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
 	if (error) {
-		perror("DUMP_QUERY");
+		perror("DUMP_QUERY_MEM_AREAS");
 		return 1;
 	}
 
@@ -659,18 +720,6 @@ static int do_dump(int osfd) {
 	}
 
 	bfd_init();
-
-	if (__argc >= 4) {
-		fname = __argv[3];
-	}
-	else {
-		n = strftime(path, sizeof(path), "mcdump_%Y%m%d_%H%M%S", tm);
-		if (!n) {
-			perror("strftime");
-			return 1;
-		}
-		fname = path;
-	}
 
 #ifdef POSTK_DEBUG_ARCH_DEP_34
 	abfd = bfd_fopen(fname, NULL, "w", -1);
@@ -760,7 +809,7 @@ static int do_dump(int osfd) {
 		return 1;
 	}
 
-	ok = bfd_set_section_size(abfd, scn, PHYS_CHUNKS_DESC_SIZE);
+	ok = bfd_set_section_size(abfd, scn, mem_size);
 	if (!ok) {
 		bfd_perror("bfd_set_section_size");
 		return 1;
@@ -772,31 +821,40 @@ static int do_dump(int osfd) {
 		return 1;
 	}
 
-	/* Physical memory contents section */
-	scn = bfd_make_section_anyway(abfd, "physmem");
-	if (!scn) {
-		bfd_perror("bfd_make_section_anyway(physmem)");
-		return 1;
-	}
+	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
 
-	if (interactive) {
-		ok = bfd_set_section_size(abfd, scn, 4096);
-	}
-	else {
-		ok = bfd_set_section_size(abfd, scn, phys_size);
-	}
+		physmem_name_buf = malloc(PHYSMEM_NAME_SIZE);
+		memset(physmem_name_buf,0,PHYSMEM_NAME_SIZE);
+		sprintf(physmem_name_buf, "physmem%d",i);
 
-	if (!ok) {
-		bfd_perror("bfd_set_section_size");
-		return 1;
-	}
+		/* Physical memory contents section */
+		scn = bfd_make_section_anyway(abfd, physmem_name_buf);
+		if (!scn) {
+			bfd_perror("bfd_make_section_anyway(physmem)");
+			return 1;
+		}
 
-	ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
-	if (!ok) {
-		bfd_perror("bfd_set_setction_flags");
-		return 1;
+		if (interactive) {
+			ok = bfd_set_section_size(abfd, scn, 4096);
+		}
+		else {
+			ok = bfd_set_section_size(abfd, scn, mem_chunks->chunks[i].size);
+		}
+	
+		if (!ok) {
+			bfd_perror("bfd_set_section_size");
+			return 1;
+		}
+
+		ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
+		if (!ok) {
+			bfd_perror("bfd_set_setction_flags");
+			return 1;
+		}
+
+		scn->vma = mem_chunks->chunks[i].addr;
+
 	}
-	scn->vma = mem_chunks->chunks[0].addr;
 
 	scn = bfd_get_section_by_name(abfd, "date");
 	if (scn) {
@@ -827,7 +885,7 @@ static int do_dump(int osfd) {
 
 	scn = bfd_get_section_by_name(abfd, "physchunks");
 	if (scn) {
-		ok = bfd_set_section_contents(abfd, scn, mem_chunks, 0, PHYS_CHUNKS_DESC_SIZE);
+		ok = bfd_set_section_contents(abfd, scn, mem_chunks, 0, mem_size);
 		if (!ok) {
 			bfd_perror("bfd_set_section_contents(physchunks)");
 			return 1;
@@ -837,9 +895,18 @@ static int do_dump(int osfd) {
 	if (interactive)
 		goto out;
 
-	scn = bfd_get_section_by_name(abfd, "physmem");
-	phys_offset = 0;
 	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
+
+		phys_offset = 0;
+
+		memset(physmem_name,0,sizeof(physmem_name));
+		sprintf(physmem_name, "physmem%d",i);
+
+		scn = bfd_get_section_by_name(abfd, physmem_name);
+		if (!scn) {
+			bfd_perror("err bfd_get_section_by_name(physmem_name)");
+			return 1;
+		}
 
 		for (addr = mem_chunks->chunks[i].addr;
 				addr < (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size);
@@ -877,6 +944,7 @@ out:
 		bfd_perror("bfd_close");
 		return 1;
 	}
+
 	return 0;
 }
 #else /* ENABLE_MEMDUMP */

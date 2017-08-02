@@ -1605,6 +1605,25 @@ static struct file_operations mcd_cdev_ops = {
 	.release = ihk_host_device_release,
 };
 
+static int ihk_panic(struct notifier_block *this, unsigned long ev, void *ptr)
+{
+	int i;
+
+	for (i = 0; i < os_max_minor; i++) {
+		if (!os_data[i])
+			continue;
+		if (os_data[i]->ops->panic_notifier)
+			os_data[i]->ops->panic_notifier(os_data[i],
+			                                os_data[i]->priv);
+	}
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block ihk_panic_block = {
+	.notifier_call = ihk_panic,
+};
+
 /** \brief Initialization function of the IHK-Host drivers.
  *
  * This function registers character device classes, and gets prepared to
@@ -1637,6 +1656,8 @@ static int __init ihk_host_driver_init(void)
 	INIT_LIST_HEAD(&ihk_os_notifiers);
 	spin_lock_init(&ihk_os_notifiers_lock);
 
+	atomic_notifier_chain_register(&panic_notifier_list, &ihk_panic_block);
+
 	printk("IHK Initialized: Device number: Device %x, OS %x\n",
 	       mcd_dev_num, mcos_dev_num);
 
@@ -1668,6 +1689,8 @@ static void __exit ihk_exit(void)
 	int i;
 	ihk_device_t dev;
 	unsigned long flags;
+
+	atomic_notifier_chain_unregister(&panic_notifier_list, &ihk_panic_block);
 
 	for (i = 0; i < dev_max_minor; i++) {
 		spin_lock_irqsave(&dev_data_lock, flags);

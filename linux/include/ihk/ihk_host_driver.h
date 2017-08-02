@@ -309,6 +309,9 @@ struct ihk_os_ops {
 	 **/
 	int (*thaw)(ihk_os_t ihk_os, void *priv);
 
+	/** \brief panic notifier
+	 **/
+	void (*panic_notifier)(ihk_os_t ihk_os, void *priv);
 };
 
 struct ihk_register_os_data;

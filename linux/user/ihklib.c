@@ -49,6 +49,8 @@ char **__argv;
 #define eprintf(...) do {  } while (0)
 #endif
 
+#define PHYSMEM_NAME_SIZE 32
+
 #define CHKANDJUMP(cond, err, ...)										\
 	do {																\
 		if(cond) {														\
@@ -1143,8 +1145,6 @@ static int do_dump(int osfd, struct ihk_bfd_func *fp) {
 	bfd_boolean ok;
 	asection *scn;
 	dumpargs_t args;
-	uintptr_t start = 0;
-	uintptr_t end = 0;		
 	unsigned long phys_size = 0;
 	unsigned long phys_offset = 0;
 	int error, i;
@@ -1159,17 +1159,15 @@ static int do_dump(int osfd, struct ihk_bfd_func *fp) {
 	struct passwd *pw;
 
 	dump_mem_chunks_t *mem_chunks;
+	char *physmem_name_buf = NULL;
+	char physmem_name[PHYSMEM_NAME_SIZE];
 
 #if 0
     char *vmfile; /* file name of kernel image, not used */
 #endif
-    int opt = 1; /* 0:DUMP_ALL_MEM 1:DUMP_CHUNK_MEM */
-
-	mem_chunks = malloc(PHYS_CHUNKS_DESC_SIZE);
-	if (!mem_chunks) {
-		perror("allocating mem_chunks buffer: ");
-		return 1;
-	}
+    unsigned int opt = DUMP_LEVEL_ALL; /*  0:DUMP_LEVEL_ALL */
+                                       /* 24:DUMP_LEVEL_USER_UNUSED_EXCLUDE */
+	long mem_size;
 
     if (__argc == 6) {
         opt = atoi(__argv[4]);
@@ -1192,6 +1190,14 @@ static int do_dump(int osfd, struct ihk_bfd_func *fp) {
 
 	pw = getpwuid(getuid());
 
+	args.cmd = DUMP_SET_LEVEL;
+	args.level = opt;
+	error = ioctl(osfd, IHK_OS_DUMP, &args);
+	if (error) {
+		perror("DUMP_SET_LEVEL");
+		return 1;
+	}
+
 	args.cmd = DUMP_NMI;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
 	if (error) {
@@ -1199,38 +1205,39 @@ static int do_dump(int osfd, struct ihk_bfd_func *fp) {
 		return 1;
 	}
 
-	switch (opt) { /* switch by option flag */
-		case DUMP_ALL_MEM:
-    		args.cmd = DUMP_QUERY_ALL;
-    		error = ioctl(osfd, IHK_OS_DUMP, &args);
-    		if (error) {
-        		perror("DUMP_QUERY");
-        		return 1;
-    		}
-    		start = args.start;
-    		end = args.start + args.size;
-			break;
-		case DUMP_CHUNK_MEM:
-			args.cmd = DUMP_QUERY;
-			args.buf = (void *)mem_chunks;
-			error = ioctl(osfd, IHK_OS_DUMP, &args);
-			if (error) {
-				perror("DUMP_QUERY");
-				return 1;
-			}
-			phys_size = 0;
-			dprintf("%s: nr chunks: %d\n", __FUNCTION__, mem_chunks->nr_chunks);
-			for (i = 0; i < mem_chunks->nr_chunks; ++i) {
-				dprintf("%s: 0x%lx:%lu\n",
-					__FUNCTION__,
-					mem_chunks->chunks[i].addr,
-					mem_chunks->chunks[i].size);
-					phys_size += mem_chunks->chunks[i].size;
-			}
-			break;
-		default:
-			return 1;
-	}	
+	args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
+	args.size = 0;
+	error = ioctl(osfd, IHK_OS_DUMP, &args);
+	if (error) {
+		perror("DUMP_QUERY_MEM_AREAS");
+		return 1;
+	}
+
+	mem_size = args.size;
+	mem_chunks = malloc(mem_size);
+	if (!mem_chunks) {
+		perror("allocating mem_chunks buffer: ");
+		return 1;
+	}
+	memset(mem_chunks, 0, args.size);
+
+	args.cmd = DUMP_QUERY_MEM_AREAS;
+	args.buf = (void *)mem_chunks;
+	error = ioctl(osfd, IHK_OS_DUMP, &args);
+	if (error) {
+		perror("DUMP_QUERY_MEM_AREAS");
+		return 1;
+	}
+
+	phys_size = 0;
+	dprintf("%s: nr chunks: %d\n", __FUNCTION__, mem_chunks->nr_chunks);
+	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
+		dprintf("%s: 0x%lx:%lu\n",
+			__FUNCTION__,
+			mem_chunks->chunks[i].addr,
+			mem_chunks->chunks[i].size);
+			phys_size += mem_chunks->chunks[i].size;
+	}
 
 	bsize = 0x100000;
 	buf = malloc(bsize);
@@ -1328,7 +1335,7 @@ static int do_dump(int osfd, struct ihk_bfd_func *fp) {
 			return 1;
 		}
 	}
-	if ( opt == DUMP_CHUNK_MEM ) {
+
 	/* Add section for physical memory chunks information */
 	scn = fp->bfd_make_section_anyway(abfd, "physchunks");
 	if (!scn) {
@@ -1336,7 +1343,7 @@ static int do_dump(int osfd, struct ihk_bfd_func *fp) {
 		return 1;
 	}
 
-	ok = fp->bfd_set_section_size(abfd, scn, PHYS_CHUNKS_DESC_SIZE);
+	ok = fp->bfd_set_section_size(abfd, scn, mem_size);
 	if (!ok) {
 		fp->bfd_perror("bfd_set_section_size");
 		return 1;
@@ -1347,42 +1354,34 @@ static int do_dump(int osfd, struct ihk_bfd_func *fp) {
 		fp->bfd_perror("bfd_set_setction_flags");
 		return 1;
 	}
-	}
-	/* Physical memory contents section */
-	scn = fp->bfd_make_section_anyway(abfd, "physmem");
-	if (!scn) {
-		fp->bfd_perror("bfd_make_section_anyway(physmem)");
-		return 1;
-	}
-	switch (opt) {
-		case DUMP_ALL_MEM:
-			ok = fp->bfd_set_section_size(abfd, scn, end-start);
-			break;
-		case DUMP_CHUNK_MEM:
-			ok = fp->bfd_set_section_size(abfd, scn, phys_size);
-			break;
-		default:
-			return 1;
-	}
-	if (!ok) {
-		fp->bfd_perror("bfd_set_section_size");
-		return 1;
-	}
 
-	ok = fp->bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
-	if (!ok) {
-		fp->bfd_perror("bfd_set_setction_flags");
-		return 1;
-	}
-	switch (opt) {
-		case DUMP_ALL_MEM:
-			scn->vma = start;
-			break;
-		case DUMP_CHUNK_MEM:
-			scn->vma = mem_chunks->chunks[0].addr;
-			break;
-		default:
+
+	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
+
+		physmem_name_buf = malloc(PHYSMEM_NAME_SIZE);
+		memset(physmem_name_buf,0,PHYSMEM_NAME_SIZE);
+		sprintf(physmem_name_buf, "physmem%d",i);
+
+		/* Physical memory contents section */
+		scn = fp->bfd_make_section_anyway(abfd, physmem_name_buf);
+		if (!scn) {
+			fp->bfd_perror("bfd_make_section_anyway(physmem)");
 			return 1;
+		}
+
+		ok = fp->bfd_set_section_size(abfd, scn, mem_chunks->chunks[i].size);
+		if (!ok) {
+			fp->bfd_perror("bfd_set_section_size");
+			return 1;
+		}
+
+		ok = fp->bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
+		if (!ok) {
+			fp->bfd_perror("bfd_set_setction_flags");
+			return 1;
+		}
+
+		scn->vma = mem_chunks->chunks[i].addr;
 	}
 
 	scn = fp->bfd_get_section_by_name(abfd, "date");
@@ -1411,75 +1410,58 @@ static int do_dump(int osfd, struct ihk_bfd_func *fp) {
 			return 1;
 		}
 	}
-	switch (opt) {
-		case DUMP_ALL_MEM:
-    		scn = fp->bfd_get_section_by_name(abfd, "physmem");
-    		for (addr = start; addr < end; addr += cpsize) {
-        		cpsize = end - addr;
-        		if (cpsize > bsize) {
-            		cpsize = bsize;
-        		}
 
-        		args.cmd = DUMP_READ_ALL;
-        		args.start = addr;
-        		args.size = cpsize;
-        		args.buf = buf;
-
-        		error = ioctl(osfd, IHK_OS_DUMP, &args);
-        		if (error) {
-            		perror("DUMP_READ");
-            		return 1;
-        		}
-        		ok = fp->bfd_set_section_contents(abfd, scn, buf, addr-start, cpsize);
-        		if (!ok) {
-            		fp->bfd_perror("bfd_set_section_contents(physmem)");
-            		return 1;
-        		}
-    		}
-			break;
-		case DUMP_CHUNK_MEM:
-			scn = fp->bfd_get_section_by_name(abfd, "physchunks");
-			if (scn) {
-				ok = fp->bfd_set_section_contents(abfd, scn, mem_chunks, 0, PHYS_CHUNKS_DESC_SIZE);
-				if (!ok) {
-					fp->bfd_perror("bfd_set_section_contents(physchunks)");
-					return 1;
-				}
-			}
-			scn = fp->bfd_get_section_by_name(abfd, "physmem");
-			phys_offset = 0;
-			for (i = 0; i < mem_chunks->nr_chunks; ++i) {
-				for (addr = mem_chunks->chunks[i].addr;
-					addr < (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size);
-					addr += cpsize) {
-					cpsize = (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size) - addr;
-					if (cpsize > bsize) {
-						cpsize = bsize;
-					}
-
-					args.cmd = DUMP_READ;
-					args.start = addr;
-					args.size = cpsize;
-					args.buf = buf;
-
-					error = ioctl(osfd, IHK_OS_DUMP, &args);
-					if (error) {
-						perror("DUMP_READ");
-						return 1;
-					}
-
-				ok = fp->bfd_set_section_contents(abfd, scn, buf, phys_offset, cpsize);
-				if (!ok) {
-					fp->bfd_perror("bfd_set_section_contents(physmem)");
-					return 1;
-				}
-				phys_offset += cpsize;
-				}
-			}
-			break;
-		default:
+	scn = fp->bfd_get_section_by_name(abfd, "physchunks");
+	if (scn) {
+		ok = fp->bfd_set_section_contents(abfd, scn, mem_chunks, 0, mem_size);
+		if (!ok) {
+			fp->bfd_perror("bfd_set_section_contents(physchunks)");
 			return 1;
-	};
+		}
+	}
+
+	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
+
+		phys_offset = 0;
+
+		memset(physmem_name,0,sizeof(physmem_name));
+		sprintf(physmem_name, "physmem%d",i);
+
+		scn = fp->bfd_get_section_by_name(abfd, physmem_name);
+		if (!scn) {
+			fp->bfd_perror("err bfd_get_section_by_name(physmem_name)");
+			return 1;
+		}
+
+		for (addr = mem_chunks->chunks[i].addr;
+			addr < (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size);
+			addr += cpsize) {
+			cpsize = (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size) - addr;
+			if (cpsize > bsize) {
+				cpsize = bsize;
+			}
+
+			args.cmd = DUMP_READ;
+			args.start = addr;
+			args.size = cpsize;
+			args.buf = buf;
+
+			error = ioctl(osfd, IHK_OS_DUMP, &args);
+			if (error) {
+				perror("DUMP_READ");
+				return 1;
+			}
+
+			ok = fp->bfd_set_section_contents(abfd, scn, buf, phys_offset, cpsize);
+			if (!ok) {
+				fp->bfd_perror("bfd_set_section_contents(physmem)");
+				return 1;
+			}
+
+			phys_offset += cpsize;
+		}
+	}
+
 	ok = fp->bfd_close(abfd);
 	if (!ok) {
 		fp->bfd_perror("bfd_close");

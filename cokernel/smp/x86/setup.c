@@ -25,6 +25,8 @@ unsigned long ap_trampoline = 0;
 unsigned int ihk_ikc_irq = 0;
 unsigned int ihk_ikc_irq_apicid = 0;
 
+struct ihk_dump_page * dump_page;
+
 /* NOTEs on parameters: 
  *
  * param_addr (RDI) is set in shimos_trampoline_64.S before jumping
@@ -108,6 +110,8 @@ void arch_init(void)
 
 	/* Remap boot parameter structure */
 	boot_param = map_fixed_area(boot_param_pa, boot_param_size, 0);
+
+	dump_page = (struct ihk_dump_page *)map_fixed_area(boot_param->dump_page_set.phy_page, boot_param->dump_page_set.page_size, 0);
 
 	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 	build_ihk_cpu_info();
@@ -393,3 +397,24 @@ static unsigned int perf_map_nehalem[] =
 };
 
 unsigned int *x86_march_perfmap = perf_map_nehalem;
+
+void ihk_mc_set_dump_level(unsigned int level)
+{
+	boot_param->dump_level = level;
+	return;
+}
+
+unsigned int ihk_mc_get_dump_level(void)
+{
+	return (boot_param->dump_level);
+}
+
+struct ihk_dump_page_set *ihk_mc_get_dump_page_set(void)
+{
+	return (&boot_param->dump_page_set);
+}
+
+struct ihk_dump_page *ihk_mc_get_dump_page(void)
+{
+	return (dump_page);
+}
