@@ -2,14 +2,17 @@
  * \file ihk_host_driver.h
  * \brief
  *	IHK-Host: Structures
+ *  Definitions related to IHK services for administrator, implemented as driver
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #ifndef __HEADER_IHK_HOST_DRIVER_H
 #define __HEADER_IHK_HOST_DRIVER_H
 
-#include "ihk/archdefs.h"
-#include "ihk_os_status.h"
+#include <ihk/archdefs.h>
+#include <ihk/status.h>
+#include <ihk/monitor.h>
+#include <ihk/kmsg.h>
 
 /** \brief Status of a manycore device */
 enum ihk_cpu_status {
@@ -904,41 +907,4 @@ int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
 
 void ihk_os_eventfd(ihk_os_t os, int type);
 
-/** \brief IHK-Monitor */
-struct ihk_os_cpu_monitor {
-	int status;
-#define IHK_OS_MONITOR_NOT_BOOT 0
-#define IHK_OS_MONITOR_IDLE 1
-#define IHK_OS_MONITOR_USER 2
-#define IHK_OS_MONITOR_KERNEL 3
-#define IHK_OS_MONITOR_KERNEL_HEAVY 4
-#define IHK_OS_MONITOR_KERNEL_OFFLOAD 5
-#define IHK_OS_MONITOR_PANIC 99
-	int status_bak;
-	unsigned long counter;
-	unsigned long ocounter;
-	unsigned long user_tsc;
-	unsigned long system_tsc;
-};
-
-struct ihk_os_monitor {
-	unsigned long rusage_max_num_threads;
-	unsigned long rusage_num_threads;
-	unsigned long rusage_rss_max;
-	long rusage_rss_current;
-	unsigned long rusage_kmem_usage;
-	unsigned long rusage_kmem_max_usage;
-	unsigned long rusage_hugetlb_usage;
-	unsigned long rusage_hugetlb_max_usage;
-	unsigned long rusage_total_memory;
-	unsigned long rusage_total_memory_usage;
-	unsigned long rusage_total_memory_max_usage;
-	unsigned long num_numa_nodes;
-	unsigned long num_processors;
-	unsigned long ns_per_tsc;
-	unsigned long reserve[128];
-	unsigned long rusage_numa_stat[1024];
-
-	struct ihk_os_cpu_monitor cpu[0];
-};
 #endif

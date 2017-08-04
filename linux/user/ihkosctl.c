@@ -403,7 +403,7 @@ static int do_kargs(int fd)
 
 static int do_kmsg(int fd)
 {
-	char buf[16384];
+	char buf[IHK_KMSG_SIZE];
 	int r = ioctl(fd, IHK_OS_READ_KMSG, (unsigned long)buf);
 	if (r >= 0) {
 		buf[r] = 0;

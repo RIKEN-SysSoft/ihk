@@ -1516,56 +1516,15 @@ int count_numa_node () {
 }
 
 #ifdef ENABLE_RUSAGE
-struct ihk_os_cpu_monitor {
-	int status;
-#define IHK_OS_MONITOR_NOT_BOOT 0
-#define IHK_OS_MONITOR_IDLE 1
-#define IHK_OS_MONITOR_USER 2
-#define IHK_OS_MONITOR_KERNEL 3
-#define IHK_OS_MONITOR_KERNEL_HEAVY 4
-#define IHK_OS_MONITOR_KERNEL_OFFLOAD 5
-#define IHK_OS_MONITOR_KERNEL_FREEZING 8
-#define IHK_OS_MONITOR_KERNEL_FROZEN 9
-#define IHK_OS_MONITOR_KERNEL_THAW 10
-#define IHK_OS_MONITOR_PANIC 99
-	int status_bak;
-	unsigned long counter;
-	unsigned long ocounter;
-	unsigned long user_tsc;
-	unsigned long system_tsc;
-};
-
-struct ihk_os_monitor {
-	unsigned long rusage_max_num_threads;
-	unsigned long rusage_num_threads;
-	unsigned long rusage_rss_max;
-	unsigned long rusage_rss_current;
-	unsigned long rusage_kmem_usage;
-	unsigned long rusage_kmem_max_usage;
-	unsigned long rusage_hugetlb_usage;
-	unsigned long rusage_hugetlb_max_usage;
-	unsigned long rusage_total_memory;
-	unsigned long rusage_total_memory_usage;
-	unsigned long rusage_total_memory_max_usage;
-	unsigned long num_numa_nodes;
-	unsigned long num_processors;
-	unsigned long ns_per_tsc;
-	unsigned long reserve[128];
-	unsigned long rusage_numa_stat[1024];
-};
-
-int
-ihk_getrusage(int index, ihk_rusage *rusage)
+int ihk_os_getrusage(int index, void *_rusage, size_t size_rusage)
 {
 	int fd;
 	char path[1024];
 	struct ihk_os_monitor monitor;
 	struct ihk_os_cpu_monitor *cpu;
+	struct mckernel_rusage *rusage = (struct mckernel_rusage *)_rusage;
 	int rc;
-	unsigned long *numa_stat = rusage->numa_stat;
-	int num_numa_nodes = rusage->num_numa_nodes;
 	int i;
-	int n;
 	unsigned long ut;
 	unsigned long st;
 
@@ -1594,36 +1553,30 @@ ihk_getrusage(int index, ihk_rusage *rusage)
 		return rc;
 	}
 
-	memset(numa_stat, '\0', sizeof(unsigned long) * num_numa_nodes);
-	memset(rusage, '\0', sizeof(ihk_rusage));
-	rusage->numa_stat = numa_stat;
+	memset(rusage, 0, size_rusage);
 
-	rusage->rss = monitor.rusage_rss_current;
-	rusage->cache = 0;
-	rusage->rss_huge = 0;
-	rusage->mapped_file = 0;
-	rusage->max_usage = monitor.rusage_rss_max;
-	rusage->kmem_usage = monitor.rusage_kmem_usage;
-	rusage->kmax_usage = monitor.rusage_kmem_max_usage;
-	rusage->num_numa_nodes = monitor.num_numa_nodes;
-	n = monitor.num_numa_nodes;
-	if (n > num_numa_nodes)
-		n = num_numa_nodes;
-	for (i = 0; i < n; i++)
-		rusage->numa_stat[i] = monitor.rusage_numa_stat[i];
-	rusage->hugetlb = monitor.rusage_hugetlb_usage;
-	rusage->hugetlb_max = monitor.rusage_hugetlb_max_usage;
+	for (i = 0; i < IHK_MAX_NUM_PGSIZES; i++) {
+		rusage->memory_stat_rss[i] = monitor.rusage_memory_stat_rss[i];
+		rusage->memory_stat_mapped_file[i] = monitor.rusage_memory_stat_mapped_file[i];
+	}
+	rusage->memory_max_usage = monitor.rusage_memory_max_usage;
+	rusage->memory_kmem_usage = monitor.rusage_memory_kmem_usage;
+	rusage->memory_kmem_max_usage = monitor.rusage_memory_kmem_max_usage;
+	for (i = 0; i < IHK_MAX_NUM_NUMA_NODES; i++) {
+		rusage->memory_numa_stat[i] = monitor.rusage_memory_numa_stat[i];
+	}
 	for (ut = 0, st = 0, i = 0; i < monitor.num_processors; i++) {
 		unsigned long wt;
 
 		wt = cpu[i].user_tsc * monitor.ns_per_tsc / 1000;
 		ut += wt;
 		st += cpu[i].system_tsc * monitor.ns_per_tsc / 1000;
-		rusage->usage_per_cpu[i] = wt;
+		rusage->cpuacct_usage_percpu[i] = wt;
 	}
-	rusage->usage = ut;
-	rusage->stat_system = st / 10000000;
-	rusage->stat_user = ut / 10000000;
+	rusage->cpuacct_stat_system = st / 10000000;
+	rusage->cpuacct_stat_user = ut / 10000000;
+	rusage->cpuacct_usage = ut;
+
 	rusage->num_threads = monitor.rusage_num_threads;
 	rusage->max_num_threads = monitor.rusage_max_num_threads;
 
@@ -1633,9 +1586,10 @@ ihk_getrusage(int index, ihk_rusage *rusage)
 }
 #else
 /* ihk_getrusage */
-int ihk_getrusage(int index, ihk_rusage *rusage) {
-	fprintf(stderr, "rusage is not supported.\n");
-	return 1;
+int ihk_os_getrusage(int index, void *_rusage, size_t size_rusage)
+{
+	eprintf("Specify --enable-rusage when configuring.\n");
+	return -EINVAL;
 }
 #endif
 

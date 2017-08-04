@@ -2,6 +2,7 @@
  * \file ihk_host_user.h
  * \brief
  *	 IHK-Host: ioctl request numbers
+ *   Definitions related to IHK services for administrator, implemented as user library
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  * \author Balazs Gerofi  <bgerofi@riken.jp> \par
  * Copyright (C) 2011-2017 RIKEN AICS>
@@ -9,7 +10,9 @@
 #ifndef __HEADER_IHK_HOST_USER_H
 #define __HEADER_IHK_HOST_USER_H
 
-#include "ihk_os_status.h"
+#include <ihk/status.h>
+#include <ihk/monitor.h>
+#include <ihk/kmsg.h>
 
 #define IHK_DEVICE_CREATE_OS          0x112900
 #define IHK_DEVICE_DESTROY_OS         0x112901
