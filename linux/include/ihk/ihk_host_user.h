@@ -11,8 +11,8 @@
 #define __HEADER_IHK_HOST_USER_H
 
 #include <ihk/status.h>
-#include <ihk/monitor.h>
-#include <ihk/kmsg.h>
+#include <ihk/ihk_monitor.h>
+#include <ihk/ihk_debug.h>
 
 #define IHK_DEVICE_CREATE_OS          0x112900
 #define IHK_DEVICE_DESTROY_OS         0x112901
@@ -69,6 +69,7 @@
 #define IHK_OS_AUX_PERF_ENABLE     0x11290103
 #define IHK_OS_AUX_PERF_DISABLE    0x11290104
 #define IHK_OS_AUX_PERF_DESTROY    0x11290105
+#define IHK_OS_GETRUSAGE           0x11290106
 
 #define FLAG_IHK_OS_SHUTDOWN_FORCE    0x40000000
 

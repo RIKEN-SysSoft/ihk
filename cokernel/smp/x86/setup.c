@@ -223,6 +223,14 @@ int ihk_set_monitor(unsigned long addr, unsigned long size)
 	return 0;
 }
 
+int ihk_set_rusage(unsigned long addr, unsigned long size)
+{
+	boot_param->rusage = addr;
+	boot_param->rusage_size = size;
+	
+	return 0;
+}
+
 int ihk_set_nmi_mode_addr(unsigned long addr)
 {
 	boot_param->nmi_mode_addr = addr;

@@ -11,8 +11,8 @@
 
 #include <ihk/archdefs.h>
 #include <ihk/status.h>
-#include <ihk/monitor.h>
-#include <ihk/kmsg.h>
+#include <ihk/ihk_monitor.h>
+#include <ihk/ihk_debug.h>
 
 /** \brief Status of a manycore device */
 enum ihk_cpu_status {
@@ -29,7 +29,8 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_MIKC_QUEUE_RECV = 2,
 	IHK_SPADDR_MIKC_QUEUE_SEND = 3,
 	IHK_SPADDR_MONITOR = 4,
-	IHK_SPADDR_NMI_MODE = 5,
+	IHK_SPADDR_RUSAGE = 5,
+	IHK_SPADDR_NMI_MODE = 6,
 };
 
 /** \brief Type of an IHK device */
@@ -649,6 +650,8 @@ struct ihk_cpu_info {
 struct ihk_mem_info *ihk_os_get_memory_info(ihk_os_t os);
 /** \brief Get information of CPU cores which the OS kernel uses */
 struct ihk_cpu_info *ihk_os_get_cpu_info(ihk_os_t os);
+/** \brief Get address of memory area to which OS-global rerouce usage is recorded */
+void *ihk_os_get_rusage(ihk_os_t os);
 
 /** \brief Denote to allocate all the available cpus */
 #define IHK_RESOURCE_CPU_ALL  -1

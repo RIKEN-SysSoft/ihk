@@ -1,18 +1,15 @@
 /**
  * \file ihklib.c
  */
-#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "ihk/ihk_host_user.h"
 #include <sys/ioctl.h>
 #include <string.h>
 #include <errno.h>
 #include <dirent.h>
-#include "ihklib.h"
 #include <bfd.h>
 #include <inttypes.h>
 #include <time.h>
@@ -24,6 +21,11 @@
 #include <sys/eventfd.h>
 #include <sys/time.h>
 #include <pthread.h>
+
+#include <config.h>
+#include <ihk/ihk_host_user.h>
+#include <ihklib.h>
+#include <ihk/ihklib_private.h>
 
 int __argc;
 char **__argv;
@@ -1498,77 +1500,27 @@ int count_numa_node () {
 }
 
 #ifdef ENABLE_RUSAGE
-int ihk_os_getrusage(int index, void *_rusage, size_t size_rusage)
+int ihk_os_getrusage(int index, void *rusage, size_t size_rusage)
 {
+	char fn[128];
+	int ret = 0;
 	int fd;
-	char path[1024];
-	struct ihk_os_monitor monitor;
-	struct ihk_os_cpu_monitor *cpu;
-	struct mckernel_rusage *rusage = (struct mckernel_rusage *)_rusage;
-	int rc;
-	int i;
-	unsigned long ut;
-	unsigned long st;
+	struct getrusage_desc desc = { .rusage = rusage, .size_rusage = size_rusage };
 
-	sprintf(path, "/dev/mcos%d", index);	
-	if ((fd = open(path, O_RDWR)) == -1) {
-		return -errno;
-	} 
+	sprintf(fn, "/dev/mcos%d", index);
+	fd = open(fn, O_RDONLY);
+	CHKANDJUMP(fd == -1, -ENOENT, "open failed: %s\n", strerror(errno));
+	ret = ioctl(fd, IHK_OS_GETRUSAGE, &desc);
+	CHKANDJUMP(ret != 0, -EINVAL, "ioctl failed,ret=%d\n", ret);
 
-	if (ioctl(fd, IHK_OS_GET_USAGE, &monitor) == -1) {
-		rc = -errno;
-		close(fd);
-		return rc;
-	}
-
-	cpu = malloc(sizeof(struct ihk_os_cpu_monitor) *
-	             monitor.num_processors);
-	if (!cpu) {
-		close(fd);
-		return -ENOMEM;
-	}
-
-	if (ioctl(fd, IHK_OS_GET_CPU_USAGE, cpu) == -1) {
-		rc = -errno;
-		close(fd);
-		free(cpu);
-		return rc;
-	}
-
-	memset(rusage, 0, size_rusage);
-
-	for (i = 0; i < IHK_MAX_NUM_PGSIZES; i++) {
-		rusage->memory_stat_rss[i] = monitor.rusage_memory_stat_rss[i];
-		rusage->memory_stat_mapped_file[i] = monitor.rusage_memory_stat_mapped_file[i];
-	}
-	rusage->memory_max_usage = monitor.rusage_memory_max_usage;
-	rusage->memory_kmem_usage = monitor.rusage_memory_kmem_usage;
-	rusage->memory_kmem_max_usage = monitor.rusage_memory_kmem_max_usage;
-	for (i = 0; i < IHK_MAX_NUM_NUMA_NODES; i++) {
-		rusage->memory_numa_stat[i] = monitor.rusage_memory_numa_stat[i];
-	}
-	for (ut = 0, st = 0, i = 0; i < monitor.num_processors; i++) {
-		unsigned long wt;
-
-		wt = cpu[i].user_tsc * monitor.ns_per_tsc / 1000;
-		ut += wt;
-		st += cpu[i].system_tsc * monitor.ns_per_tsc / 1000;
-		rusage->cpuacct_usage_percpu[i] = wt;
-	}
-	rusage->cpuacct_stat_system = st / 10000000;
-	rusage->cpuacct_stat_user = ut / 10000000;
-	rusage->cpuacct_usage = ut;
-
-	rusage->num_threads = monitor.rusage_num_threads;
-	rusage->max_num_threads = monitor.rusage_max_num_threads;
-
-	close(fd);
-	free(cpu);
-	return 0;
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 #else
 /* ihk_getrusage */
-int ihk_os_getrusage(int index, void *_rusage, size_t size_rusage)
+int ihk_os_getrusage(int index, void *rusage, size_t size_rusage)
 {
 	eprintf("Specify --enable-rusage when configuring.\n");
 	return -EINVAL;
@@ -1766,3 +1718,4 @@ int ihk_getperfevent (int index, unsigned long *counter, int n)
 	}
 	return ret;
 }
+

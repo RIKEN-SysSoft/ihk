@@ -79,6 +79,12 @@ struct ihk_host_linux_os_data {
 	/** \brief Host physical address to monitor  */
 	unsigned long monitor_pa;
 
+	void *rusage;
+	/** \brief Size of the rusage */
+	unsigned long rusage_len;
+	/** \brief Host physical address to rusage  */
+	unsigned long rusage_pa;
+
 	/** \brief Flag whether the IKC is already initialized or not */
 	int ikc_initialized;
 	/** \brief Lock for the channel list */

@@ -1181,6 +1181,13 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 			return 0;
 		}
 		break;
+	case IHK_SPADDR_RUSAGE:
+		if (os->param->rusage) {
+			*addr = os->param->rusage;
+			*size = os->param->rusage_size;
+			return 0;
+		}
+		break;
 	case IHK_SPADDR_NMI_MODE:
 		if (os->param->nmi_mode_addr) {
 			*addr = os->param->nmi_mode_addr;

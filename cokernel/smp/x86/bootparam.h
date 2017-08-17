@@ -98,6 +98,9 @@ struct smp_boot_param {
 	unsigned long monitor;
 	unsigned long monitor_size;
 
+	unsigned long rusage;
+	unsigned long rusage_size;
+
 	unsigned long nmi_mode_addr;
 
 	unsigned long dma_address;

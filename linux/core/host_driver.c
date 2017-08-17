@@ -606,6 +606,39 @@ setup_monitor(struct ihk_host_linux_os_data *data)
 	data->monitor_len = size;
 }
 
+static void
+setup_rusage(struct ihk_host_linux_os_data *data)
+{
+	unsigned long rpa;
+	unsigned long pa;
+	unsigned long size;
+	unsigned long psize;
+
+	if (data->rusage)
+		return;
+
+	if (__ihk_os_get_special_addr(data, IHK_SPADDR_RUSAGE, &rpa, &size)) {
+		dprintf("get_special_addr: failed.\n");
+		return;
+	}
+
+	psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+	pa = __ihk_os_map_memory(data, rpa, psize);
+
+#ifdef CONFIG_MIC
+	if ((long)pa <= 0) {
+		return;
+	}
+
+	data->rusage = ioremap_nocache(pa, psize);
+#else
+	data->rusage = ihk_device_map_virtual(data->dev_data, pa, psize,
+	                                       NULL, 0);
+#endif
+	data->rusage_pa = pa;
+	data->rusage_len = size;
+}
+
 static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 		char __user *buf)
 {
@@ -763,8 +796,7 @@ static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
 	return error;
 }
 
-static int
-__ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
+static int __ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
 {
 	struct ihk_os_monitor *__user buf;
 
@@ -781,8 +813,7 @@ __ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
 	return 0;
 }
 
-static int
-__ihk_os_get_cpu_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
+static int __ihk_os_get_cpu_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
 {
 	struct ihk_os_cpu_monitor *__user buf;
 	int size;
@@ -1005,7 +1036,6 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_get_cpu_usage(data, arg);
 		dkprintf("__ihk_os_get_cpu_usage  (ret=%d)\n",ret);
 		break;
-
 
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
@@ -1975,6 +2005,13 @@ struct ihk_cpu_info *ihk_os_get_cpu_info(ihk_os_t os)
 	return __ihk_os_get_cpu_info(os);
 }
 
+void *ihk_os_get_rusage(ihk_os_t ihk_os)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	setup_rusage(os);
+	return os->rusage;
+}
+
 ihk_device_t ihk_os_to_dev(ihk_os_t os)
 {
 	return ((struct ihk_host_linux_os_data *)os)->dev_data;
@@ -2329,3 +2366,4 @@ EXPORT_SYMBOL(ihk_device_linux_cpu_to_hw_id);
 EXPORT_SYMBOL(ihk_host_register_os_notifier);
 EXPORT_SYMBOL(ihk_host_deregister_os_notifier);
 EXPORT_SYMBOL(ihk_os_eventfd);
+EXPORT_SYMBOL(ihk_os_get_rusage);
