@@ -247,8 +247,8 @@ static void (*ihk___smp_cross_call)(const struct cpumask *, unsigned int);
  * If you edit IPI_XXX, you must edit following together.
  * mckernel/arch/arm64/kernel/include/irq.h::INTRID_xxx
  */
-#define INTRID_CPU_STOP  3
-#define INTRID_MEMDUMP   7
+#define INTRID_CPU_STOP	3
+#define INTRID_MULTI_NMI	7
 
 /* ----------------------------------------------- */
 
@@ -1005,35 +1005,29 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 	}
 }
 
-void ihk_smp_memdump_cpu(int hw_id)
-{
-	int i;
-
-	for (i = 0; i < SMP_MAX_CPUS; i++) {
-		if ((ihk_smp_cpus[i].hw_id != hw_id) ||
-		    (ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED))
-			continue;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
-		ihk___smp_cross_call(cpumask_of(hw_id), INTRID_MEMDUMP);
-#else
-		ihk___smp_cross_call(&cpumask_of_cpu(hw_id),
-		                     INTRID_MEMDUMP);
-#endif
-		break;
-	}
-}
-
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 {
-	int i;
+	struct smp_os_data *os = priv;
+	int i, ret;
 
-	for (i = 0; i < SMP_MAX_CPUS; ++i) {
-		if (ihk_smp_cpus[i].os != ihk_os)
-			continue;
-
-		ihk_smp_memdump_cpu(ihk_smp_cpus[i].hw_id);
+	ret = ihk_smp_set_nmi_mode(ihk_os, priv, mode);
+	if (ret) {
+		return ret;
 	}
+
+	/* mode == 0,    for MEMDUMP NMI */
+	/* mode == 1or2, for FREEZER NMI */
+	for (i = 0; i < os->cpu_info.n_cpus; ++i) {
+		int hwid = os->cpu_info.hw_ids[i];
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+		ihk___smp_cross_call(cpumask_of(hwid), INTRID_MULTI_NMI);
+#else
+		ihk___smp_cross_call(&cpumask_of_cpu(hwid), INTRID_MULTI_NMI);
+#endif
+		dprintk("send to NMI CPU:%d\n", hwid);
+	}
+	return 0;
 }
 
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)

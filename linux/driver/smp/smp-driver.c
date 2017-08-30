@@ -1022,6 +1022,30 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	return 0;
 }
 
+int ihk_smp_set_nmi_mode(ihk_os_t ihk_os, void *priv, int mode)
+{
+	unsigned long rpa;
+	unsigned long size;
+	int *nmi_mode;
+	unsigned long pa;
+	unsigned long psize;
+
+	if (smp_ihk_os_get_special_addr(ihk_os, priv, IHK_SPADDR_NMI_MODE,
+				        &rpa, &size)) {
+		return -EINVAL;
+	}
+
+	psize = PAGE_SIZE;
+	pa = smp_ihk_os_map_memory(ihk_os, priv, rpa, psize);
+	nmi_mode = smp_ihk_map_virtual(ihk_os, priv, pa, psize,
+					  NULL, 0);
+	*nmi_mode = mode;
+	smp_ihk_unmap_virtual(ihk_os, priv, nmi_mode, psize);
+	smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
+
+	return 0;
+}
+
 static int smp_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
                                       enum ihk_os_status status,
                                       int sleepable, int timeout)
