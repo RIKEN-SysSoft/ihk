@@ -628,6 +628,7 @@ IHK_RELEASE_DATE
 DCFA_VERSION
 MCKERNEL_VERSION
 IHK_VERSION
+IHK_TMPDIR
 MANDIR
 KMODDIR
 LIBDIR
@@ -3046,6 +3047,9 @@ case $WITH_TARGET in
 	if test "X$INCLUDEDIR" = X; then
 		INCLUDEDIR="$prefix/include"
 	fi
+	if test "X$IHK_TMPDIR" = X; then
+		IHK_TMPDIR="$prefix/tmp"
+	fi
 	;;
     smp-arm64)
 	if test "X$BINDIR" = X; then
@@ -4980,6 +4984,70 @@ else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: rusage is disabled" >&5
 $as_echo "$as_me: rusage is disabled" >&6;}
 fi
+
+libudev=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for udev_new in -ludev" >&5
+$as_echo_n "checking for udev_new in -ludev... " >&6; }
+if ${ac_cv_lib_udev_udev_new+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ludev  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char udev_new ();
+int
+main ()
+{
+return udev_new ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_udev_udev_new=yes
+else
+  ac_cv_lib_udev_udev_new=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_udev_udev_new" >&5
+$as_echo "$ac_cv_lib_udev_udev_new" >&6; }
+if test "x$ac_cv_lib_udev_udev_new" = xyes; then :
+  libudev=yes
+else
+  libudev=no
+fi
+
+ac_fn_c_check_header_mongrel "$LINENO" "libudev.h" "ac_cv_header_libudev_h" "$ac_includes_default"
+if test "x$ac_cv_header_libudev_h" = xyes; then :
+  libudev=yes
+else
+  libudev=no
+fi
+
+
+if test	"x$libudev" = "xno" ; then
+   as_fn_error $? "Install libudev package, e.g. yum install libudev-devel" "$LINENO" 5
+fi
+
+if test "x$IHK_TMPDIR" != "x" ; then
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_TMPDIR "$IHK_TMPDIR"
+_ACEOF
+
+fi
+
 
 
 

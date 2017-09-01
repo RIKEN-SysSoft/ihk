@@ -14,9 +14,10 @@ unsigned long boot_param_pa;
 struct shimos_boot_param *boot_param;
 
 extern void main(void);
-extern void setup_x86(void);
+extern void setup_x86_phase1(void);
+extern void setup_x86_phase2(void);
 extern void init_boot_processor_local(void);
-extern struct ihk_kmsg_buf kmsg_buf;
+extern struct ihk_kmsg_buf *kmsg_buf;
 
 unsigned long x86_kernel_phys_base;
 
@@ -94,7 +95,8 @@ void arch_init(void)
 
 	build_ihk_cpu_info();
 
-	setup_x86();
+	setup_x86_phase1();
+	setup_x86_phase2();
 	boot_param = map_fixed_area(boot_param_pa, sizeof(*boot_param), 0);
 }
 

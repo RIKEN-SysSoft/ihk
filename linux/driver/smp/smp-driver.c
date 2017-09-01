@@ -37,6 +37,7 @@
 #include <ikc/msg.h>
 //#include <linux/shimos.h>
 //#include "builtin_dma.h"
+#include <host_linux.h>
 #include <bootparam.h>
 #include "config.h"
 #include "smp-driver.h"
@@ -251,6 +252,7 @@ static int linux_numa_2_lwk_numa(struct smp_os_data *os, int numa_id)
 /** \brief Boot a kernel. */
 static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
+	struct ihk_host_linux_os_data *ihk_core_os = (struct ihk_host_linux_os_data *)ihk_os;
 	struct smp_os_data *os = priv;
 	struct builtin_device_data *dev = os->dev;
 	unsigned long flags;
@@ -458,6 +460,10 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	strncpy(os->param->kernel_args, os->kernel_args,
 	        sizeof(os->param->kernel_args));
 
+	os->param->msg_buffer = virt_to_phys(ihk_core_os->kmsg_buf_container->kmsg_buf);
+	os->param->msg_buffer_size = sizeof(struct ihk_kmsg_buf); /* Note that it's used for map_fixed_area */
+	dprintk("%s: msg_buffer=%lx,size=%ld\n", __FUNCTION__, os->param->msg_buffer, os->param->msg_buffer_size);
+
 #ifdef POSTK_DEBUG_ARCH_DEP_29
 	os->param->ns_per_tsc = calc_ns_per_tsc();
 #else	/* POSTK_DEBUG_ARCH_DEP_29 */
@@ -466,6 +472,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	getnstimeofday(&now);
 	os->param->boot_sec = now.tv_sec;
 	os->param->boot_nsec = now.tv_nsec;
+
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->cpu_hw_ids_map.set[0],

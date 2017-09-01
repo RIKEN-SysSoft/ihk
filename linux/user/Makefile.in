@@ -7,9 +7,10 @@ SBINDIR=@SBINDIR@
 LIBDIR=@LIBDIR@
 INCLUDEDIR=@INCLUDEDIR@
 MANDIR=@MANDIR@
+IHK_TMPDIR=@IHK_TMPDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
-TARGET=libihk.so ihkconfig ihkosctl memdump pagetable maccess memdump-mic mcklogd
+TARGET=libihk.so ihkconfig ihkosctl memdump pagetable maccess memdump-mic ihkmond
 
 ifeq ($(ARCH), arm64)
 CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
@@ -40,6 +41,9 @@ else
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
 endif
 
+ihkmond: ihkmond.c
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=$(LIBDIR)
+
 %: %.c
 	${CC} ${CFLAGS} -o $@ $< ${LIBS}
 
@@ -56,4 +60,5 @@ install:
 	mkdir -p -m 755 $(MANDIR)/man1
 	install -m 644 ihkconfig.1 $(MANDIR)/man1/ihkconfig.1
 	install -m 644 ihkosctl.1 $(MANDIR)/man1/ihkosctl.1
-	install -m 755 mcklogd $(SBINDIR)/mcklogd
+	install -m 755 ihkmond $(SBINDIR)/ihkmond
+	mkdir -p -m 755 $(IHK_TMPDIR)

@@ -5,20 +5,22 @@
 #include <errno.h>
 #include <registers.h>
 #include "bootparam.h"
+#include <kmsg.h>
 
 /* BUILTIN Setup.c */
 static unsigned char stack[8192] __attribute__((aligned(4096)));
 
 unsigned long boot_param_pa;
 struct smp_boot_param *boot_param;
+int boot_param_size;
+
 unsigned long bootstrap_mem_end;
-static int boot_param_size;
 
 extern void main(void);
 extern void setup_x86_phase1(void);
 extern void setup_x86_phase2(void);
 extern void init_boot_processor_local(void);
-extern struct ihk_kmsg_buf kmsg_buf;
+extern struct ihk_kmsg_buf *kmsg_buf;
 extern int no_turbo;
 
 unsigned long x86_kernel_phys_base;
@@ -49,6 +51,7 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
 
 	init_boot_processor_local();
+
 	main();
 
 	while (1);
@@ -107,14 +110,19 @@ void arch_init(void)
 	}
 
 	setup_x86_phase1();
-	setup_x86_phase2();
 	kprintf("boot_param_size: %lu\n", boot_param_size);
 
-	/* Remap boot parameter structure */
+	/* Map boot parameter structure with the non-bootstrap map */
 	boot_param = map_fixed_area(boot_param_pa, boot_param_size, 0);
 
 	dump_page = (struct ihk_dump_page *)map_fixed_area(boot_param->dump_page_set.phy_page, boot_param->dump_page_set.page_size, 0);
 
+	/* Map kmsg_buf, which is out of kernel image, with the non-bootstrap map. */
+	kmsg_buf = (struct ihk_kmsg_buf *)map_fixed_area(boot_param->msg_buffer, boot_param->msg_buffer_size, 0);
+	kmsg_init();
+	kputs("IHK/McKernel started.\n");
+
+	setup_x86_phase2();
 	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 	build_ihk_cpu_info();
 }
@@ -208,14 +216,6 @@ char *ihk_get_kargs(void)
 {
 	return boot_param->kernel_args;
 }
-
-int ihk_set_kmsg(unsigned long addr, unsigned long size)
-{
-	boot_param->msg_buffer = addr;
-	boot_param->msg_buffer_size = size;
-
-	return 0;
-}	
 
 int ihk_set_monitor(unsigned long addr, unsigned long size)
 {

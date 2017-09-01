@@ -10,7 +10,9 @@
 #ifndef __HEADER_IHK_HOST_LINUX_H
 #define __HEADER_IHK_HOST_LINUX_H
 
+#include <linux/cdev.h>
 #include <ikc/master.h>
+#include <ihk/ihk_debug.h>
 
 /** \brief Structure that manages a manycore device in Linux */
 struct ihk_host_linux_device_data {
@@ -65,12 +67,8 @@ struct ihk_host_linux_os_data {
 
 	/** \brief Mutex for the kernel message */
 	struct mutex kmsg_mutex;
-	/** \brief Host kernel virtual address to the kernel message buffer */
-	void *kmsg_buf;
-	/** \brief Host physical address to the kernel message buffer */
-	unsigned long kmsg_pa;
-	/** \brief Size of the kernel message buffer */
-	unsigned long kmsg_len;
+	/** \brief Kernel message buffer */
+	struct ihk_kmsg_buf_container *kmsg_buf_container;
 
 	/** \brief monitor */
 	struct ihk_os_monitor *monitor;

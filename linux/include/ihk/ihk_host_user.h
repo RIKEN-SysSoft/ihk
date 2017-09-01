@@ -22,6 +22,9 @@
 #define IHK_DEVICE_RELEASE_MEM        0x112905
 #define IHK_DEVICE_QUERY_CPU          0x112906
 #define IHK_DEVICE_QUERY_MEM          0x112907
+#define IHK_DEVICE_GET_KMSG_BUF       0x112908
+#define IHK_DEVICE_READ_KMSG_BUF      0x112909
+#define IHK_DEVICE_RELEASE_KMSG_BUF   0x11290a
 
 #define IHK_DEVICE_DEBUG_START        0x122900
 #define IHK_DEVICE_DEBUG_END          0x1229ff
@@ -122,5 +125,19 @@ struct ihk_os_ioctl_eventfd_desc {
 	int fd;
 	enum ihk_os_eventfd_type type;
 };
+
+/* Used by IHK-core and ihklib */
+struct ihk_device_get_kmsg_buf_desc {
+	int os_index; /* IN: OS index */
+	void* handle; /* OUT: "Pointer" to kmsg_buf container */
+};
+
+/* Used by IHK-core and ihklib */
+struct ihk_device_read_kmsg_buf_desc {
+	void* handle; /* IN: "Pointer" to kmsg_buf container */
+	int shift;    /* IN: Empty the buffer or not */
+	char* buf;    /* OUT: Buffer */
+};
+
 
 #endif /* !defined(__HEADER_IHK_HOST_USER_H) */

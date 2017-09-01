@@ -12,8 +12,10 @@
 #ifndef IHK_OS_EVENTFD_TYPE_DEFINED
 #define IHK_OS_EVENTFD_TYPE_DEFINED
 enum ihk_os_eventfd_type {
-	IHK_OS_EVENTFD_TYPE_OOM = 0, /* Raise a event when physical memory used exceeds the limit */
-	IHK_OS_EVENTFD_TYPE_STATUS = 2 /* Raise an event when detecting hung-up or panic */
+	IHK_OS_EVENTFD_TYPE_OOM = 0, /* Raise an event when physical memory used exceeds the limit */
+	IHK_OS_EVENTFD_TYPE_STATUS = 2, /* Raise an event when detecting hung-up or panic */
+	IHK_OS_EVENTFD_TYPE_KMSG = 101,
+	/* Raise an event when kmsg buffer is full. The kmsg taker is expected to take the kmsg. */
 };
 #endif
 struct ihk_mem_chunk {

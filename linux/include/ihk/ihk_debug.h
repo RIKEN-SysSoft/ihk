@@ -17,8 +17,7 @@ struct ihk_kmsg_buf {
 	int tail;
 	int len;
 	int head;
-	int mode;
-	char padding[4096 - sizeof(int) * 6]; /* Alinmment needed for some systems */
+	char padding[4096 - sizeof(int) * 4]; /* Alignmment needed for some systems */
 	char str[IHK_KMSG_SIZE];
 };
 

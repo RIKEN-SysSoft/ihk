@@ -91,7 +91,7 @@ struct smp_boot_param {
        are loaded, used for boundary check in early_alloc_pages(). */
 	unsigned long bootstrap_mem_end;
 
-	unsigned long msg_buffer;
+	unsigned long msg_buffer; /* Physical address */
 	unsigned long msg_buffer_size;
 	unsigned long mikc_queue_recv, mikc_queue_send;
 

@@ -724,20 +724,24 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 
 	status = os->status;
 
-	if (status == BUILTIN_OS_STATUS_BOOTING) {
+	switch (status) {
+	case BUILTIN_OS_STATUS_BOOTING:
 		if (os->param->status == 1) {
 			return IHK_OS_STATUS_BOOTED;
 		} else if(os->param->status == 2) {
 			/* Restore Linux trampoline once ready */
 			if (using_linux_trampoline) {
-				memcpy(trampoline_va, linux_trampoline_backup,
-				       IHK_SMP_TRAMPOLINE_SIZE);
+				memcpy(trampoline_va, linux_trampoline_backup, 
+						IHK_SMP_TRAMPOLINE_SIZE);
 			}
 			return IHK_OS_STATUS_READY;
 		} else {
 			return IHK_OS_STATUS_BOOTING;
 		}
-	} else {
+		break;
+	case BUILTIN_OS_STATUS_HUNGUP:
+		return IHK_OS_STATUS_HUNGUP;
+	default:
 		return IHK_OS_STATUS_NOT_BOOTED;
 	}
 }

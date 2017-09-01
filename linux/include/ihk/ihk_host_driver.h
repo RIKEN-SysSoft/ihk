@@ -924,4 +924,15 @@ int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
 
 void ihk_os_eventfd(ihk_os_t os, int type);
 
+/* IHK-Core holds only this number of bufs to prevent memory leak */
+#define IHK_MAX_NUM_KMSG_BUFS 4
+
+struct ihk_kmsg_buf_container {
+	struct list_head list;
+	int os_index; /* Identifier */
+	atomic_t count;     /* Track sharing because kmsg_buf lives longer than OS instance */
+	struct ihk_kmsg_buf *kmsg_buf;
+	unsigned int order;
+};
+
 #endif
