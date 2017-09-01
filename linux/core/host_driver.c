@@ -73,15 +73,6 @@ static spinlock_t ihk_os_notifiers_lock;
 extern int ihk_ikc_master_init(ihk_os_t os);
 extern void ikc_master_finalize(ihk_os_t os);
 
-struct ihk_kmsg_buf {
-		int tail;
-		int len;
-		int head;
-		int mode;
-		ihk_spinlock_t lock;
-		char str[0];
-};
-
 struct ihk_event {
 	struct list_head list;
 	int type;
@@ -499,10 +490,11 @@ static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
 
 	mode = kmsg_buf->mode;
 	flags = 0;
+#if 0
 	if (mode == 2) {
 		spin_lock_irqsave(&kmsg_buf->lock, flags);
 	}
-	  
+#endif	  
 	/* XXX: How to share the structure definition with manycore ihk? */
 	tail = kmsg_buf->tail;
 	len = kmsg_buf->len;
@@ -539,9 +531,11 @@ static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
 		}
 	}
 	kmsg_buf->head = tail; 
+#if 0
 	if (mode == 2) {
 		spin_unlock_irqrestore(&kmsg_buf->lock, flags);
 	}
+#endif
 	return len_end + len_start;
 }
 
@@ -639,6 +633,58 @@ setup_rusage(struct ihk_host_linux_os_data *data)
 	data->rusage_len = size;
 }
 
+static int detect_hungup(struct ihk_host_linux_os_data *data)
+{
+	int ret;
+	int n;
+	int i;
+
+	ret = __ihk_os_query_status(data);
+
+	/* Guard objects referenced here
+	   (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
+	   (2) LWK initializes IHK_SPADDR_MONITOR
+	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready() */
+	if (ret != IHK_OS_STATUS_READY) {
+		ret = -EAGAIN;
+		goto out;
+	}
+
+	if (ret == IHK_OS_STATUS_HUNGUP) {
+		goto out;
+	}
+
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		ret = -ENOSYS;
+		goto out;
+	}
+
+	n = data->monitor->num_processors;
+	for (i = 0; i < n; i++) {
+		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC){
+			dkprintf("%s: cpu[%d].status==%d\n", __FUNCTION__, i, data->monitor->cpu[i].status);
+			ret = IHK_OS_STATUS_FAILED;
+			goto out;
+		}
+
+		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_KERNEL){
+			dkprintf(KERN_EMERG "%s: cpu[%d].status==KERNEL,c=%ld,o=%ld\n", __FUNCTION__, i, data->monitor->cpu[i].counter, data->monitor->cpu[i].ocounter);
+			if(data->monitor->cpu[i].counter ==
+			   data->monitor->cpu[i].ocounter) {
+				dkprintf(KERN_EMERG "%s: HUNGUP detected\n", __FUNCTION__);
+				ret = IHK_OS_STATUS_HUNGUP;
+				__ihk_os_notify_hungup(data);
+				ihk_os_eventfd((ihk_os_t)data, IHK_OS_EVENTFD_TYPE_STATUS);
+			}
+		}
+		data->monitor->cpu[i].ocounter = data->monitor->cpu[i].counter;
+	}
+
+ out:
+	return ret;
+}
+
 static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 		char __user *buf)
 {
@@ -663,18 +709,11 @@ static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 	n = data->monitor->num_processors;
 	for (i = 0; i < n; i++) {
 		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC){
+			dkprintf("%s: cpu[%d].status==%d\n", __FUNCTION__, i, data->monitor->cpu[i].status);
 			return IHK_OS_STATUS_FAILED;
 		}
 
-		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_KERNEL){
-			if(data->monitor->cpu[i].counter ==
-			   data->monitor->cpu[i].ocounter)
-				status = IHK_OS_STATUS_HUNGUP;
-		}
-		data->monitor->cpu[i].ocounter = data->monitor->cpu[i].counter;
 	}
-	if (status == IHK_OS_STATUS_HUNGUP)
-		return IHK_OS_STATUS_HUNGUP;
 
 	freezing = data->monitor->cpu[0].status;
 	if (freezing == IHK_OS_MONITOR_KERNEL_FREEZING)
@@ -716,16 +755,19 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 	return 0;
 }
 
-static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned long uarg)
+static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, void __user *_desc)
 {
 	struct ihk_event *ep;
-	int fd = (int)uarg;
-	int type = uarg >> 32;
+	struct ihk_os_ioctl_eventfd_desc desc;
 	struct eventfd_ctx *event;
 	struct file *filp;
 	unsigned long flags;
 
-	filp = eventfd_fget(fd);
+	if (copy_from_user(&desc, _desc, sizeof(desc))) {
+		return -EFAULT;
+	}
+
+	filp = eventfd_fget(desc.fd);
 	if (IS_ERR(filp)) {
 		return PTR_ERR(filp);
 	}
@@ -735,7 +777,7 @@ static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned l
 	}
 	ep = kzalloc(sizeof(struct ihk_event), GFP_KERNEL);
 	ep->event = event;
-	ep->type = type;
+	ep->type = desc.type;
 	spin_lock_irqsave(&os->event_list_lock, flags);
 	list_add_tail(&ep->list, &os->event_list);
 	spin_unlock_irqrestore(&os->event_list_lock, flags);
@@ -750,8 +792,10 @@ void ihk_os_eventfd(ihk_os_t data, int type)
 
 	spin_lock_irqsave(&os->event_list_lock, flags);
 	list_for_each_entry(ep, &os->event_list, list) {
-		if (ep->type == type)
+		if (ep->type == type) {
+			dkprintf(KERN_EMERG "%s: calling eventfd_signal,ep->type=%d,type=%d\n", __FUNCTION__, ep->type, type);		
 			eventfd_signal(ep->event, 1);
+		}
 	}
 	spin_unlock_irqrestore(&os->event_list_lock, flags);
 }
@@ -862,6 +906,7 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 
 	switch (request) {
 	case IHK_OS_QUERY_STATUS:
+	case IHK_OS_GET_NUM_NUMA_NODES:
 	case IHK_OS_QUERY_FREE_MEM:
 	case IHK_OS_ALLOC_CPU:
 	case IHK_OS_ALLOC_MEM:
@@ -871,7 +916,7 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_CLEAR_KMSG:
 	case IHK_OS_QUERY_CPU:
 	case IHK_OS_QUERY_MEM:
-	case IHK_OS_QUERY_IKC_MAP:
+	case IHK_OS_GET_IKC_MAP:
 	case IHK_OS_STATUS:
 	case IHK_OS_GET_USAGE:
 	case IHK_OS_GET_CPU_USAGE:
@@ -956,12 +1001,12 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_release_cpu(data, arg);
 		break;
 
-	case IHK_OS_IKC_MAP:
-		ret = __ihk_os_ikc_map(data, arg);
+	case IHK_OS_SET_IKC_MAP:
+		ret = __ihk_os_set_ikc_map(data, arg);
 		break;
 
-	case IHK_OS_QUERY_IKC_MAP:
-		ret = __ihk_os_query_ikc_map(data, arg);
+	case IHK_OS_GET_IKC_MAP:
+		ret = __ihk_os_get_ikc_map(data, arg);
 		break;
 
 	case IHK_OS_QUERY_CPU:
@@ -984,6 +1029,19 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_query_status(data);
 		break;
 
+	case IHK_OS_DETECT_HUNGUP:
+		ret = detect_hungup(data);
+		break;
+
+	case IHK_OS_NOTIFY_HUNGUP:
+		__ihk_os_notify_hungup(data);
+		ret = 0;
+		break;
+
+	case IHK_OS_GET_NUM_NUMA_NODES:
+		ret = __ihk_os_get_num_numa_nodes(data);
+		break;
+
 	case IHK_OS_QUERY_FREE_MEM:
 		ret = __ihk_os_query_free_mem(data);
 		break;
@@ -998,6 +1056,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
 	case IHK_OS_STATUS:
 		ret = __ihk_os_status(data, (char * __user)arg);
+		dkprintf("%s: __ihk_os_status returned %d\n", __FUNCTION__, ret);
 		break;
 
 	case IHK_OS_CLEAR_KMSG:
@@ -1009,7 +1068,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		break;
 
 	case IHK_OS_REGISTER_EVENT:
-		ret = __ihk_os_register_event(data, arg);
+		ret = __ihk_os_register_event(data, (void __user *)arg);
 		break;
 
 	case IHK_OS_EVENTFD:

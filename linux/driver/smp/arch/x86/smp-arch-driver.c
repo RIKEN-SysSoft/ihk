@@ -42,7 +42,7 @@
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/misc/debug.h>
-#include "config-x86.h"
+#include "config.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"

@@ -15,7 +15,8 @@ unsigned long bootstrap_mem_end;
 static int boot_param_size;
 
 extern void main(void);
-extern void setup_x86(void);
+extern void setup_x86_phase1(void);
+extern void setup_x86_phase2(void);
 extern void init_boot_processor_local(void);
 extern struct ihk_kmsg_buf kmsg_buf;
 extern int no_turbo;
@@ -105,7 +106,8 @@ void arch_init(void)
 		no_turbo = 0;
 	}
 
-	setup_x86();
+	setup_x86_phase1();
+	setup_x86_phase2();
 	kprintf("boot_param_size: %lu\n", boot_param_size);
 
 	/* Remap boot parameter structure */

@@ -1074,6 +1074,20 @@ error_drop_cores:
 	return ret;
 }
 
+/* Called from host_driver.c */
+static void smp_ihk_os_notify_hungup(ihk_os_t ihk_os, void *priv)
+{
+	struct smp_os_data *os = priv;
+	set_os_status(os, BUILTIN_OS_STATUS_HUNGUP);
+}
+
+static int smp_ihk_os_get_num_numa_nodes(ihk_os_t ihk_os, void *priv)
+{
+	struct smp_os_data *os = priv;
+
+	return os->mem_info.n_numa_nodes;
+}
+
 static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 {
 	unsigned long flags;
@@ -1574,7 +1588,7 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	goto fn_exit;
 }
 
-static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret = 0;
 	struct smp_os_data *os = priv;
@@ -1588,7 +1602,7 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	char *token;
 
-	dprintk("%s,ikc_map,arg=%s\n", __FUNCTION__, string);
+	dprintk("%s,set_ikc_map,arg=%s\n", __FUNCTION__, string);
 
 #ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	if (len == 0) {
@@ -1664,7 +1678,7 @@ out:
 	return ret;
 }
 
-static int smp_ihk_os_query_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret = 0;
 	int i, src, dst, max_dst = -1;
@@ -1703,13 +1717,13 @@ static int smp_ihk_os_query_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long a
 			continue;
 
 		rank[src] = ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu];
-		//dprintk("query_ikc_map,src=%d,dst=%d,rank[src]=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, rank[src]);
+		//dprintk("get_ikc_map,src=%d,dst=%d,rank[src]=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, rank[src]);
 		ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]++;
-		//dprintk("query_ikc_map,sset_sizes=%d\n", ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
+		//dprintk("get_ikc_map,sset_sizes=%d\n", ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
 		if(max_dst < ihk_smp_cpus[src].ikc_map_cpu) {
 			max_dst = ihk_smp_cpus[src].ikc_map_cpu;
 		}
-		//dprintk("query_ikc_map,max_dst=%d\n", max_dst);
+		//dprintk("get_ikc_map,max_dst=%d\n", max_dst);
 	}
 
 	for (src = 0; src < SMP_MAX_CPUS; ++src) {
@@ -1726,10 +1740,10 @@ static int smp_ihk_os_query_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long a
 				ret = -ENOMEM;
 				goto fn_fail;
 			}
-			//dprintk("query_ikc_map,kmalloc,dst=%d,sset_sizes=%d\n", ihk_smp_cpus[src].ikc_map_cpu, ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
+			//dprintk("get_ikc_map,kmalloc,dst=%d,sset_sizes=%d\n", ihk_smp_cpus[src].ikc_map_cpu, ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
 		}
 		*(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]) = src;
-		//dprintk("query_ikc_map,src=%d,dst=%d,*(members[dst]+rank[src])=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, *(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]));
+		//dprintk("get_ikc_map,src=%d,dst=%d,*(members[dst]+rank[src])=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, *(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]));
 	}
 
 	memset(query_res, 0, sizeof(query_res));
@@ -1754,7 +1768,7 @@ static int smp_ihk_os_query_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long a
 		}
 	}
 
-	dprintk("query_ikc_map,query_res=%s\n", query_res);
+	dprintk("get_ikc_map,query_res=%s\n", query_res);
 
 	if (strlen(query_res) >= 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
@@ -2245,6 +2259,8 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.shutdown = smp_ihk_os_shutdown,
 	.alloc_resource = smp_ihk_os_alloc_resource,
 	.query_status = smp_ihk_os_query_status,
+	.notify_hungup = smp_ihk_os_notify_hungup,
+	.get_num_numa_nodes = smp_ihk_os_get_num_numa_nodes,
 	.wait_for_status = smp_ihk_os_wait_for_status,
 	.set_kargs = smp_ihk_os_set_kargs,
 	.dump = smp_ihk_os_dump,
@@ -2259,8 +2275,8 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.get_cpu_info = smp_ihk_os_get_cpu_info,
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
-	.ikc_map = smp_ihk_os_ikc_map,
-	.query_ikc_map = smp_ihk_os_query_ikc_map,
+	.set_ikc_map = smp_ihk_os_set_ikc_map,
+	.get_ikc_map = smp_ihk_os_get_ikc_map,
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,

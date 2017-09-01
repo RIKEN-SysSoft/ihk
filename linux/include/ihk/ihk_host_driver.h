@@ -162,6 +162,17 @@ struct ihk_os_ops {
 	 **/
 	enum ihk_os_status (*query_status)(ihk_os_t, void *);
 
+	/** \brief Set architecture dependent kernel status to hungup
+	 *
+	 **/
+	void (*notify_hungup)(ihk_os_t, void *);
+
+	/** \brief Get the number of NUMA nodes
+	 *
+	 *  \return Number of NUMA nodes
+	 **/
+	int (*get_num_numa_nodes)(ihk_os_t, void *);
+
 	/** \brief Query free memory of a kernel
 	 *
 	 *  \return Number of free pages on MIC
@@ -261,14 +272,14 @@ struct ihk_os_ops {
 	* \return Success or failure.
 	* \param List of CPU mappings (see ihkosctl for format).
 	**/
-	int (*ikc_map)(ihk_os_t, void *, unsigned long arg);
+	int (*set_ikc_map)(ihk_os_t, void *, unsigned long arg);
 
 	/** \brief Query IKC CPU mapping.
 	*
 	* \return Success or failure.
 	* \param List of CPU mappings (see ihkosctl for format).
 	**/
-	int (*query_ikc_map)(ihk_os_t, void *, unsigned long arg);
+	int (*get_ikc_map)(ihk_os_t, void *, unsigned long arg);
 
 	/** \brief Query CPU cores of an OS instance
 	 *

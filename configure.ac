@@ -409,9 +409,9 @@ AC_SUBST(uncomment_if_ENABLE_MEMDUMP)
 
 case "$TARGET" in
 smp*)
-	AC_CONFIG_HEADERS([linux/driver/smp/config.h linux/user/config.h])
-	arch=`echo "$TARGET" | sed -e 's/smp-//'`
-	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
+	AC_CONFIG_HEADERS([config.h])
+#	arch=`echo "$TARGET" | sed -e 's/smp-//'`
+#	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
 	;;
 esac
 
@@ -427,7 +427,7 @@ AC_CONFIG_FILES([
 	linux/driver/attached/mic/Makefile
 	linux/user/ihkconfig.1:linux/user/ihkconfig.1in
 	linux/user/ihkosctl.1:linux/user/ihkosctl.1in
-	linux/user/ihklib.h:linux/user/ihklib.h.in
+	linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in
 	cokernel/Makefile.common
 ])
 

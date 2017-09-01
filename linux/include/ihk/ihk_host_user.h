@@ -50,12 +50,15 @@
 #define IHK_OS_RELEASE_MEM            0x112a25
 #define IHK_OS_QUERY_CPU              0x112a26
 #define IHK_OS_QUERY_MEM              0x112a27
-#define IHK_OS_IKC_MAP                0x112a28
-#define IHK_OS_QUERY_IKC_MAP          0x112a29
+#define IHK_OS_SET_IKC_MAP            0x112a28
+#define IHK_OS_GET_IKC_MAP            0x112a29
 #define IHK_OS_FREEZE                 0x112a30
 #define IHK_OS_THAW                   0x112a31
 #define IHK_OS_GET_USAGE              0x112a32
 #define IHK_OS_GET_CPU_USAGE          0x112a33
+#define IHK_OS_GET_NUM_NUMA_NODES     0x112a34
+#define IHK_OS_NOTIFY_HUNGUP          0x112a35
+#define IHK_OS_DETECT_HUNGUP          0x112a36
 
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff
@@ -105,7 +108,7 @@ typedef struct dumpargs_s {
 	void *spare[4];
 } dumpargs_t;
 #define DUMP_ALL_MEM 0
-#define DUMP_CHUNK_MEM 1
+#define DUMP_CHUNK_MEM 24
 
 typedef struct ihk_resource_req_s {
 	char *string;
@@ -114,4 +117,10 @@ typedef struct ihk_resource_req_s {
 
 int _ihklib_os_query_free_mem(int os_index, char *result, ssize_t sz_result);
 
-#endif
+/* Used by IHK-core and ihklib */
+struct ihk_os_ioctl_eventfd_desc {
+	int fd;
+	enum ihk_os_eventfd_type type;
+};
+
+#endif /* !defined(__HEADER_IHK_HOST_USER_H) */

@@ -31,4 +31,17 @@ struct ihk_os_monitor {
 	unsigned long reserve[128];
 	struct ihk_os_cpu_monitor cpu[0]; /* clv[i].monitor = &cpu[i] */
 };
+
+#ifndef IHK_OS_EVENTFD_TYPE_DEFINED
+#define IHK_OS_EVENTFD_TYPE_DEFINED
+/* Used by ihklib-impl, ihklib-user, IHK-core, mckernel */
+enum ihk_os_eventfd_type {
+	IHK_OS_EVENTFD_TYPE_OOM = 0, /* Raise a event when physical memory used exceeds the limit */
+	IHK_OS_EVENTFD_TYPE_STATUS = 2, /* Raise an event when detecting hung-up or panic */
+	IHK_OS_EVENTFD_TYPE_KMSG = 101,
+	/* Tells the subscribers that kmsg buffer is full. The thread of relaying kmsg is expected to
+	   take the kmsg to free it up. */
+};
+#endif
+
 #endif /* !defined(IHK_MONITOR_H_INCLUDED) */
