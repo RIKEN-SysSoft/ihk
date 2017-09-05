@@ -1,3 +1,4 @@
+/* linux.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
 /**
  * \file ikc/linux.c
  * \brief IHK-IKC: Wrapper functions in IHK-Host in Linux for IHK-IKC
@@ -11,7 +12,11 @@
 #include <asm/smp.h>
 #include <linux/interrupt.h>
 
+#ifdef POSTK_DEBUG_TEMP_FIX_49 /* IHK_IKC_RECV_HANDLER_IN_WORKQ enabled */
+#define IHK_IKC_RECV_HANDLER_IN_WORKQ
+#else /* POSTK_DEBUG_TEMP_FIX_49 */
 //#define IHK_IKC_RECV_HANDLER_IN_WORKQ
+#endif /* POSTK_DEBUG_TEMP_FIX_49 */
 
 extern struct list_head *ihk_host_os_get_ikc_channel_list(ihk_os_t ihk_os);
 struct ihk_host_interrupt_handler *ihk_host_os_get_ikc_handler(ihk_os_t ihk_os);

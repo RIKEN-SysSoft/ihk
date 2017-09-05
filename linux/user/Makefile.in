@@ -1,3 +1,4 @@
+# Makefile.in COPYRIGHT FUJITSU LIMITED 2015-2016
 CC=@CC@
 ARCH=@ARCH@
 IHKBASE ?= @abs_srcdir@/../..
@@ -9,6 +10,9 @@ MANDIR=@MANDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
 TARGET=libihk.so ihkconfig ihkosctl memdump pagetable maccess memdump-mic mcklogd
+
+CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
 
 .PHONY: all clean install
 
@@ -24,7 +28,9 @@ ihkconfig: ihkconfig.c
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
 
 ihkosctl: ihkosctl.c
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+## POSTK_DEBUG_ARCH_DEP_69 add -liberty to ihkosctl
+#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -liberty -Wl,-rpath=$(LIBDIR)
 
 %: %.c
 	${CC} ${CFLAGS} -o $@ $< ${LIBS}

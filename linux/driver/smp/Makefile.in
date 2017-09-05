@@ -1,0 +1,42 @@
+# Makefile.in COPYRIGHT FUJITSU LIMITED 2015-2016
+KDIR ?= @KDIR@
+ARCH ?= @ARCH@
+src := @abs_srcdir@
+KMODDIR := @KMODDIR@
+
+ifeq ($(ARCH), x86_64)
+	arch := x86
+	arch_dir := arch/$(arch)
+	arch_objs := $(arch_dir)/smp-x86-startup.o \
+                     $(arch_dir)/smp-x86-trampoline_64.o
+endif
+ifeq ($(ARCH), arm64)
+	arch := arm64
+	arch_dir := arch/$(arch)
+	arch_objs := $(arch_dir)/smp-arm64-startup.o \
+                     $(arch_dir)/smp-arm64-trampoline_64.o
+endif
+
+obj-m += ihk-smp-$(arch).o
+
+ccflags-y := -I$(src)/../../../cokernel/smp/$(arch) -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(src)/../../../ikc/include \
+             -I@abs_builddir@ -I@abs_builddir@/$(arch_dir)
+
+ihk-smp-$(arch)-y += smp-driver.o $(arch_dir)/smp-arch-driver.o $(arch_objs)
+
+KBUILD_EXTRA_SYMBOLS=@abs_builddir@/../../core/Module.symvers
+
+EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
+
+.PHONY: clean install modules
+
+modules:
+	$(MAKE) -C $(KDIR) M=$(PWD) SUBDIRS=$(PWD) ARCH=$(ARCH) modules
+
+clean:
+	$(RM) .*.cmd *.mod.c *.o *.ko* Module.symvers modules.order -r .tmp*
+
+install:
+	mkdir -p -m 755 $(KMODDIR)
+	install -m 644 ihk-smp-$(arch).ko $(KMODDIR)

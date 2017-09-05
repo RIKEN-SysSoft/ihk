@@ -1,3 +1,4 @@
+/* ihk.h COPYRIGHT FUJITSU LIMITED 2015-2016 */
 /**
  * \file ikc/include/ikc/ihk.h
  * \brief IHK-IKC: IHK wrapper functions.
@@ -74,7 +75,15 @@ typedef void * ihk_wait_t;
 #define ihk_ikc_map_virtual(d, p, z, f) ihk_device_map_virtual(d, p, z, NULL, f)
 #define ihk_ikc_unmap_virtual     ihk_device_unmap_virtual
 
+#ifdef POSTK_DEBUG_ARCH_DEP_6 /* cpu_physical_id is arch dep */
+#ifdef __x86_64
 #define ihk_ikc_get_processor_id() cpu_physical_id(smp_processor_id())
+#else /* __x86_64 */
+#define ihk_ikc_get_processor_id() smp_processor_id()
+#endif /* __x86_64 */
+#else /* POSTK_DEBUG_ARCH_DEP_6 */
+#define ihk_ikc_get_processor_id() cpu_physical_id(smp_processor_id())
+#endif /* POSTK_DEBUG_ARCH_DEP_6 */
 #define ihk_ikc_mb                mb
 
 #define kprintf                  printk

@@ -1,3 +1,4 @@
+/* ihkosctl.c COPYRIGHT FUJITSU LIMITED 2015-2016 */
 /**
  * \file ihkosctl.c
  *  License details are found in the file LICENSE.
@@ -671,7 +672,12 @@ static int do_dump(int osfd) {
 		fname = path;
 	}
 
+#ifdef POSTK_DEBUG_ARCH_DEP_34
+	abfd = bfd_fopen(fname, NULL, "w", -1);
+#else	/* POSTK_DEBUG_ARCH_DEP_34 */
 	abfd = bfd_fopen(fname, "elf64-x86-64", "w", -1);
+#endif	/* POSTK_DEBUG_ARCH_DEP_34 */
+
 	if (!abfd) {
 		bfd_perror("bfd_fopen");
 		return 1;

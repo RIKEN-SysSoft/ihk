@@ -1,4 +1,7 @@
-/* linux/driver/smp-x86/config.h.in.  Generated from configure.ac by autoheader.  */
+/* config.h.in COPYRIGHT FUJITSU LIMITED 2015 */
+/* linux/driver/smp/config.h.in.  Generated from configure.ac by autoheader. */
+#ifndef HEADER_SMP_CONFIG_H
+#define HEADER_SMP_CONFIG_H
 
 /* whether memdump feature is enabled */
 #undef ENABLE_MEMDUMP
@@ -36,48 +39,6 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to address of kernel symbol __default_send_IPI_dest_field, or 0 if
-   exported */
-#undef IHK_KSYM___default_send_IPI_dest_field
-
-/* Define to address of kernel symbol alloc_desc, or 0 if exported */
-#undef IHK_KSYM_alloc_desc
-
-/* Define to address of kernel symbol dummy_irq_chip, or 0 if exported */
-#undef IHK_KSYM_dummy_irq_chip
-
-/* Define to address of kernel symbol get_uv_system_type, or 0 if exported */
-#undef IHK_KSYM_get_uv_system_type
-
-/* Define to address of kernel symbol init_deasserted, or 0 if exported */
-#undef IHK_KSYM_init_deasserted
-
-/* Define to address of kernel symbol irq_desc_tree, or 0 if exported */
-#undef IHK_KSYM_irq_desc_tree
-
-/* Define to address of kernel symbol irq_to_desc, or 0 if exported */
-#undef IHK_KSYM_irq_to_desc
-
-/* Define to address of kernel symbol irq_to_desc_alloc_node, or 0 if exported
-   */
-#undef IHK_KSYM_irq_to_desc_alloc_node
-
-/* Define to address of kernel symbol lapic_get_maxlvt, or 0 if exported */
-#undef IHK_KSYM_lapic_get_maxlvt
-
-/* Define to address of kernel symbol per_cpu__vector_irq, or 0 if exported */
-#undef IHK_KSYM_per_cpu__vector_irq
-
-/* Define to address of kernel symbol real_mode_header, or 0 if exported */
-#undef IHK_KSYM_real_mode_header
-
-/* Define to address of kernel symbol vector_irq, or 0 if exported */
-#undef IHK_KSYM_vector_irq
-
-/* Define to address of kernel symbol wakeup_secondary_cpu_via_init, or 0 if
-   exported */
-#undef IHK_KSYM_wakeup_secondary_cpu_via_init
-
 /* Define to address of kernel symbol x86_trampoline_base, or 0 if exported */
 #undef IHK_KSYM_x86_trampoline_base
 
@@ -101,3 +62,5 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+#endif /* HEADER_SMP_CONFIG_H */

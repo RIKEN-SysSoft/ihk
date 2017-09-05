@@ -11,6 +11,7 @@
 ## -------------------- ##
 ## M4sh Initialization. ##
 ## -------------------- ##
+# configure COPYRIGHT FUJITSU LIMITED 2015-2017
 
 # Be more Bourne compatible
 DUALCASE=1; export DUALCASE # for MKS sh
@@ -1321,7 +1322,7 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-kernelsrc=path   Path to 'kernel src', default is
                           /lib/modules/uname_r/build
-  --with-target={attached-mic | builtin-mic | builtin-x86 | smp-x86}
+  --with-target={attached-mic | builtin-mic | builtin-x86 | smp-x86 | smp-arm64}
                           target, default is attached-mic
   --with-system_map=path  Path to 'System.map file', default is
                           /boot/System.map-uname_r
@@ -2135,8 +2136,16 @@ fi
 test "x$prefix" = xNONE && prefix="$ac_default_prefix"
 
 case $WITH_TARGET in
-    attached-mic | builtin-x86 | smp-x86)
-	ARCH=`uname -m`
+# POSTK_DEBUG_ARCH_DEP_30, Expansion of the branch.
+    attached-mic | builtin-x86 | smp-*)
+	case $WITH_TARGET in
+	    attached-mic | builtin-x86 | smp-x86)
+		ARCH=`uname -m`
+		;;
+	    smp-arm64)
+		ARCH=arm64
+		;;
+	esac
 	ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3039,6 +3048,27 @@ case $WITH_TARGET in
 		INCLUDEDIR="$prefix/include"
 	fi
 	;;
+    smp-arm64)
+	if test "X$BINDIR" = X; then
+		BINDIR="$prefix/bin"
+	fi
+	if test "X$SBINDIR" = X; then
+		SBINDIR="$prefix/sbin"
+	fi
+	if test "X$KMODDIR" = X; then
+		KMODDIR="$prefix/kmod"
+	fi
+	if test "X$MANDIR" = X; then
+		MANDIR="$prefix/smp-arm64/man"
+	fi
+	if test "X$LIBDIR" = X; then
+		LIBDIR="$prefix/lib"
+	fi
+	if test "X$INCLUDEDIR" = X; then
+		INCLUDEDIR="$prefix/include"
+	fi
+
+	;;
     *)
 	as_fn_error $? "target $WITH_TARGET is unknwon" "$LINENO" 5
 	;;
@@ -3048,7 +3078,8 @@ case $ENABLE_MEMDUMP in
 	yes|no|auto)
 		;;
 	default)
-		if test "x$WITH_TARGET" = "xsmp-x86" ; then
+# POSTK_DEBUG_ARCH_DEP_30, Expansion of the branch.
+		if test "x$WITH_TARGET" = "xsmp-*"; then
 			ENABLE_MEMDUMP=auto
 		else
 			ENABLE_MEMDUMP=no
@@ -3113,12 +3144,45 @@ IHK_LINUX_SYMTAB_CMD="cat $IHK_LINUX_SYMTAB"
 # If found to be exported, "#define IHK_KSYM_foo 0"
 # If found not to be exported, "#define IHK_KSYM_foo 0x<value>"
 
+# POSTK_DEBUG_ARCH_DEP_10, Enhance IHK_FIND_KSYM macro feature.
+
+# <older version>
+# AC_DEFUN([IHK_FIND_KSYM],[
+#   AC_MSG_CHECKING([[System.map for symbol $1]])
+#   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " $1\$" | cut -d\  -f1`
+#   if test -z $ihk_addr; then
+#     AC_MSG_RESULT([not found])
+#   else
+#     ihk_result=$ihk_addr
+#     ihk_addr="0x$ihk_addr"
+#     m4_ifval([$2],[],[
+#       if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_$1\$" >/dev/null`; then
+# 	ihk_result="exported"
+# 	ihk_addr="0"
+#       fi
+#     ])
+#     AC_MSG_RESULT([$ihk_result])
+#     AC_DEFINE_UNQUOTED(IHK_KSYM_[]$1,$ihk_addr,
+# 			[Define to address of kernel symbol $1, or 0 if exported])
+#   fi
+# ])
 
 if test "$TARGET" = "smp-x86"; then
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol x86_trampoline_base" >&5
 $as_echo_n "checking System.map for symbol x86_trampoline_base... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " x86_trampoline_base\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3143,7 +3207,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol real_mode_header" >&5
 $as_echo_n "checking System.map for symbol real_mode_header... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " real_mode_header\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3168,7 +3243,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol per_cpu__vector_irq" >&5
 $as_echo_n "checking System.map for symbol per_cpu__vector_irq... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " per_cpu__vector_irq\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3193,7 +3279,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol vector_irq" >&5
 $as_echo_n "checking System.map for symbol vector_irq... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " vector_irq\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3218,7 +3315,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol lapic_get_maxlvt" >&5
 $as_echo_n "checking System.map for symbol lapic_get_maxlvt... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " lapic_get_maxlvt\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3243,7 +3351,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol init_deasserted" >&5
 $as_echo_n "checking System.map for symbol init_deasserted... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " init_deasserted\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3268,7 +3387,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol irq_to_desc" >&5
 $as_echo_n "checking System.map for symbol irq_to_desc... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_to_desc\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3293,7 +3423,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol alloc_desc" >&5
 $as_echo_n "checking System.map for symbol alloc_desc... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " alloc_desc\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3318,7 +3459,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol irq_desc_tree" >&5
 $as_echo_n "checking System.map for symbol irq_desc_tree... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_desc_tree\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3343,7 +3495,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol irq_to_desc_alloc_node" >&5
 $as_echo_n "checking System.map for symbol irq_to_desc_alloc_node... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_to_desc_alloc_node\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3368,7 +3531,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol dummy_irq_chip" >&5
 $as_echo_n "checking System.map for symbol dummy_irq_chip... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " dummy_irq_chip\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3393,7 +3567,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol get_uv_system_type" >&5
 $as_echo_n "checking System.map for symbol get_uv_system_type... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " get_uv_system_type\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3418,7 +3603,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol wakeup_secondary_cpu_via_init" >&5
 $as_echo_n "checking System.map for symbol wakeup_secondary_cpu_via_init... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " wakeup_secondary_cpu_via_init\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3443,7 +3639,18 @@ _ACEOF
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol __default_send_IPI_dest_field" >&5
 $as_echo_n "checking System.map for symbol __default_send_IPI_dest_field... " >&6; }
+  symbol_src=
   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " __default_send_IPI_dest_field\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
   if test -z $ihk_addr; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
@@ -3465,12 +3672,833 @@ _ACEOF
 
   fi
 
+elif test "$TARGET" = "smp-arm64"; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol gic_data" >&5
+$as_echo_n "checking System.map for symbol gic_data... " >&6; }
+  symbol_src=irq-gic.c
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " gic_data\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_gic_data_gicv2 $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol gic_data" >&5
+$as_echo_n "checking System.map for symbol gic_data... " >&6; }
+  symbol_src=irq-gic-v3.c
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " gic_data\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_gic_data_gicv3 $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol gic_raise_softirq" >&5
+$as_echo_n "checking System.map for symbol gic_raise_softirq... " >&6; }
+  symbol_src=irq-gic.c
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " gic_raise_softirq\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_gic_raise_softirq_gicv2 $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol gic_raise_softirq" >&5
+$as_echo_n "checking System.map for symbol gic_raise_softirq... " >&6; }
+  symbol_src=irq-gic-v3.c
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " gic_raise_softirq\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_gic_raise_softirq_gicv3 $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol __irq_domain_alloc_irqs" >&5
+$as_echo_n "checking System.map for symbol __irq_domain_alloc_irqs... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " __irq_domain_alloc_irqs\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab___irq_domain_alloc_irqs\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM___irq_domain_alloc_irqs $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol irq_domain_free_irqs" >&5
+$as_echo_n "checking System.map for symbol irq_domain_free_irqs... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_domain_free_irqs\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_irq_domain_free_irqs\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_irq_domain_free_irqs $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol irq_to_desc" >&5
+$as_echo_n "checking System.map for symbol irq_to_desc... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_to_desc\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_irq_to_desc\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_irq_to_desc $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol alloc_desc" >&5
+$as_echo_n "checking System.map for symbol alloc_desc... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " alloc_desc\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_alloc_desc\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_alloc_desc $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol irq_desc_tree" >&5
+$as_echo_n "checking System.map for symbol irq_desc_tree... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_desc_tree\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_irq_desc_tree\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_irq_desc_tree $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol irq_to_desc_alloc_node" >&5
+$as_echo_n "checking System.map for symbol irq_to_desc_alloc_node... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " irq_to_desc_alloc_node\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_irq_to_desc_alloc_node\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_irq_to_desc_alloc_node $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol psci_ops" >&5
+$as_echo_n "checking System.map for symbol psci_ops... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " psci_ops\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_psci_ops\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_psci_ops $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol __cpu_logical_map" >&5
+$as_echo_n "checking System.map for symbol __cpu_logical_map... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " __cpu_logical_map\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab___cpu_logical_map\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM___cpu_logical_map $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol invoke_psci_fn" >&5
+$as_echo_n "checking System.map for symbol invoke_psci_fn... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " invoke_psci_fn\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_invoke_psci_fn\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_invoke_psci_fn $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol __invoke_psci_fn_hvc" >&5
+$as_echo_n "checking System.map for symbol __invoke_psci_fn_hvc... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " __invoke_psci_fn_hvc\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab___invoke_psci_fn_hvc\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM___invoke_psci_fn_hvc $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol __invoke_psci_fn_smc" >&5
+$as_echo_n "checking System.map for symbol __invoke_psci_fn_smc... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " __invoke_psci_fn_smc\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab___invoke_psci_fn_smc\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM___invoke_psci_fn_smc $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol acpi_gic_ver" >&5
+$as_echo_n "checking System.map for symbol acpi_gic_ver... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " acpi_gic_ver\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_acpi_gic_ver\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_acpi_gic_ver $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol cpu_pmu" >&5
+$as_echo_n "checking System.map for symbol cpu_pmu... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " cpu_pmu\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_cpu_pmu\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_cpu_pmu $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol __oprofile_cpu_pmu" >&5
+$as_echo_n "checking System.map for symbol __oprofile_cpu_pmu... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " __oprofile_cpu_pmu\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab___oprofile_cpu_pmu\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM___oprofile_cpu_pmu $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol __irq_set_affinity" >&5
+$as_echo_n "checking System.map for symbol __irq_set_affinity... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " __irq_set_affinity\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab___irq_set_affinity\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM___irq_set_affinity $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol arch_timer_use_virtual" >&5
+$as_echo_n "checking System.map for symbol arch_timer_use_virtual... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " arch_timer_use_virtual\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_arch_timer_use_virtual\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_arch_timer_use_virtual $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol arch_timer_uses_ppi" >&5
+$as_echo_n "checking System.map for symbol arch_timer_uses_ppi... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " arch_timer_uses_ppi\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_arch_timer_uses_ppi\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_arch_timer_uses_ppi $ihk_addr
+_ACEOF
+
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol arch_timer_rate" >&5
+$as_echo_n "checking System.map for symbol arch_timer_rate... " >&6; }
+  symbol_src=
+  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " arch_timer_rate\$" | cut -d\  -f1`
+  ihk_addr_array=($ihk_addr)
+  if test ${#ihk_addr_array[*]} -gt 1 ; then
+    for addr in $ihk_addr ; do
+      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
+      if test $filename = $symbol_src  ; then
+        ihk_addr=$addr
+        break
+      fi
+    done
+  fi
+  if test -z $ihk_addr; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+  else
+    ihk_result=$ihk_addr
+    ihk_addr="0x$ihk_addr"
+
+      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_arch_timer_rate\$" >/dev/null`; then
+        ihk_result="exported"
+        ihk_addr="0"
+      fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
+$as_echo "$ihk_result" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_KSYM_arch_timer_rate $ihk_addr
+_ACEOF
+
+  fi
+
 fi
 
 if test "x$ENABLE_MEMDUMP" != "xno" ; then
 	enableval=yes
+# POSTK_DEBUG_ARCH_DEP_32, AC_CHECK_LIB for libiberty
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for bfd_init in -lbfd" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for hex_init in -liberty" >&5
+$as_echo_n "checking for hex_init in -liberty... " >&6; }
+if ${ac_cv_lib_iberty_hex_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-liberty  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char hex_init ();
+int
+main ()
+{
+return hex_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_iberty_hex_init=yes
+else
+  ac_cv_lib_iberty_hex_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_iberty_hex_init" >&5
+$as_echo "$ac_cv_lib_iberty_hex_init" >&6; }
+if test "x$ac_cv_lib_iberty_hex_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBIBERTY 1
+_ACEOF
+
+  LIBS="-liberty $LIBS"
+
+else
+  enableval=no
+fi
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for bfd_init in -lbfd" >&5
 $as_echo_n "checking for bfd_init in -lbfd... " >&6; }
 if ${ac_cv_lib_bfd_bfd_init+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3974,9 +5002,17 @@ fi
 
 
 
-ac_config_headers="$ac_config_headers linux/driver/smp-x86/config.h linux/user/config.h"
+case "$TARGET" in
+smp*)
+	ac_config_headers="$ac_config_headers linux/driver/smp/config.h linux/user/config.h"
 
-ac_config_files="$ac_config_files Makefile linux/core/Makefile linux/core/Makefile.module linux/core/Makefile.builtin ikc/Makefile linux/user/Makefile linux/driver/builtin/Makefile linux/driver/smp-x86/Makefile linux/driver/attached/mic/Makefile linux/user/ihkconfig.1:linux/user/ihkconfig.1in linux/user/ihkosctl.1:linux/user/ihkosctl.1in linux/user/ihklib.h:linux/user/ihklib.h.in cokernel/Makefile.common"
+	arch=`echo "$TARGET" | sed -e 's/smp-//'`
+	ac_config_headers="$ac_config_headers linux/driver/smp/arch/$arch/config-$arch.h"
+
+	;;
+esac
+
+ac_config_files="$ac_config_files Makefile linux/core/Makefile linux/core/Makefile.module linux/core/Makefile.builtin ikc/Makefile linux/user/Makefile linux/driver/builtin/Makefile linux/driver/smp/Makefile linux/driver/attached/mic/Makefile linux/user/ihkconfig.1:linux/user/ihkconfig.1in linux/user/ihkosctl.1:linux/user/ihkosctl.1in linux/user/ihklib.h:linux/user/ihklib.h.in cokernel/smp/arm64/Makefile.predefines cokernel/Makefile.common"
 
 
 cat >confcache <<\_ACEOF
@@ -4668,8 +5704,9 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "linux/driver/smp-x86/config.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/driver/smp-x86/config.h" ;;
+    "linux/driver/smp/config.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/driver/smp/config.h" ;;
     "linux/user/config.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/user/config.h" ;;
+    "linux/driver/smp/arch/$arch/config-$arch.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/driver/smp/arch/$arch/config-$arch.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "linux/core/Makefile") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile" ;;
     "linux/core/Makefile.module") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile.module" ;;
@@ -4677,11 +5714,12 @@ do
     "ikc/Makefile") CONFIG_FILES="$CONFIG_FILES ikc/Makefile" ;;
     "linux/user/Makefile") CONFIG_FILES="$CONFIG_FILES linux/user/Makefile" ;;
     "linux/driver/builtin/Makefile") CONFIG_FILES="$CONFIG_FILES linux/driver/builtin/Makefile" ;;
-    "linux/driver/smp-x86/Makefile") CONFIG_FILES="$CONFIG_FILES linux/driver/smp-x86/Makefile" ;;
+    "linux/driver/smp/Makefile") CONFIG_FILES="$CONFIG_FILES linux/driver/smp/Makefile" ;;
     "linux/driver/attached/mic/Makefile") CONFIG_FILES="$CONFIG_FILES linux/driver/attached/mic/Makefile" ;;
     "linux/user/ihkconfig.1") CONFIG_FILES="$CONFIG_FILES linux/user/ihkconfig.1:linux/user/ihkconfig.1in" ;;
     "linux/user/ihkosctl.1") CONFIG_FILES="$CONFIG_FILES linux/user/ihkosctl.1:linux/user/ihkosctl.1in" ;;
     "linux/user/ihklib.h") CONFIG_FILES="$CONFIG_FILES linux/user/ihklib.h:linux/user/ihklib.h.in" ;;
+    "cokernel/smp/arm64/Makefile.predefines") CONFIG_FILES="$CONFIG_FILES cokernel/smp/arm64/Makefile.predefines" ;;
     "cokernel/Makefile.common") CONFIG_FILES="$CONFIG_FILES cokernel/Makefile.common" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;

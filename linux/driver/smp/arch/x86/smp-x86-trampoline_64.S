@@ -9,13 +9,13 @@
 #include <asm/segment.h>
 #include <asm/processor-flags.h>
 
-#define BOOT_CS       0x10
-#define BOOT_DS       0x18
-#define BOOT_CS64     0x20
-#define KERN_PAGE_MID 0x63
-#define KERN_PAGE     0x0e3
+#define BOOT_CS		0x10
+#define BOOT_DS		0x18
+#define BOOT_CS64	0x20
+#define KERN_PAGE_MID	0x63
+#define KERN_PAGE	0x0e3
 	
-#define MSR_EFER                0xc0000080
+#define MSR_EFER	0xc0000080
 	
 .section .rodata, "a", @progbits
 .code16
@@ -23,7 +23,7 @@
 .globl ihk_smp_trampoline_data
 base = .
 ihk_smp_trampoline_data:
-	jmp     cpu_start_body
+	jmp	cpu_start_body
 
 	.org	8
 header_pgtbl:
@@ -50,13 +50,13 @@ cpu_start_body:
 
 	/* Adjust GDT ptr to the 32-bit physical address */
 	addl	%ebx, boot_gdtptr + 2 - base
-	addl    %ebx, 2f - base
-	addl    %ebx, start_64_vec - base
+	addl	%ebx, 2f - base
+	addl	%ebx, start_64_vec - base
 	
 	lgdtl	boot_gdtptr - base
 	lidtl	boot_idtptr - base
 
-	jmp     1f
+	jmp	1f
 1:	
 	
 	movl	%cr0, %edx
@@ -70,30 +70,30 @@ cpu_start_body:
 .balign  8
 .code32
 protect_start:
-	movl    $(BOOT_DS), %eax
+	movl	$(BOOT_DS), %eax
 	movl	%eax, %ds
-	movl    %eax, %ss
+	movl	%eax, %ss
 
 	/* Enable PAE */
-	movl    %cr4, %eax
-	orl     $0x20, %eax
-	movl    %eax, %cr4
+	movl	%cr4, %eax
+	orl	$0x20, %eax
+	movl	%eax, %cr4
 
-	leal    (stack_end - base)(%ebx), %esp
+	leal	(stack_end - base)(%ebx), %esp
 	
 	/* Load a page table */
-	movl    (header_pgtbl - base)(%ebx), %eax
+	movl	(header_pgtbl - base)(%ebx), %eax
 	movl	%eax, %cr3
 	
-	movl    (header_load - base)(%ebx), %ecx
+	movl	(header_load - base)(%ebx), %ecx
 	movl	(stack_ptr - base)(%ebx), %eax
 	jz	1f
 	movl	%eax, %esp
 1:
 
 	/* Enable Long Mode */
-	movl    $MSR_EFER, %ecx
-	movl 	$EFER_LME, %eax
+	movl	$MSR_EFER, %ecx
+	movl	$EFER_LME, %eax
 	xorl	%edx, %edx
 	wrmsr
 
@@ -102,16 +102,16 @@ protect_start:
 	orl	$0x80000000, %edx
 	movl	%edx, %cr0
 
-	ljmp    *(start_64_vec - base)(%ebx)
+	ljmp	*(start_64_vec - base)(%ebx)
 	
 .code64
-.balign 8 
+.balign 8
 start_64:
 	/* Okay, we are completely in the long mode ! */
 	movq	%cr3, %rax
 	movq	%rax, %cr3
 
-	movq    (header_load - base)(%ebx), %rcx
+	movq	(header_load - base)(%ebx), %rcx
 	cmpq	$0, %rcx
 	/* If Loading IP is zero, just enter the infinite loop */
 	jz	2f
@@ -153,7 +153,7 @@ start_64_vec:
 	.word   BOOT_CS64, 0
 	
 stack:
-	.org    0x1000
+	.org	0x1000
 stack_end:
 .globl ihk_smp_trampoline_end
 ihk_smp_trampoline_end:

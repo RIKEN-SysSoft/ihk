@@ -1,48 +1,33 @@
+/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
 /**
  * \file smp-x86-driver.c
  * \brief
- *	IHK SMP-x86 Driver: IHK Host Driver 
+ *	IHK SMP-x86 Driver: IHK Host Driver
  *                        for partitioning an x86 SMP chip
  * \author Balazs Gerofi <bgerofi@is.s.u-tokyo.ac.jp> \par
  * Copyright (C) 2014 Balazs Gerofi <bgerofi@is.s.u-tokyo.ac.jp>
- * 
- * Code partially based on IHK Builtin driver written by 
+ *
+ * Code partially based on IHK Builtin driver written by
  * Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */
-#include <config.h>
-#include <linux/string.h>
-#include <linux/version.h>
-#include <linux/sched.h>
-#include <linux/mm.h>
-#include <linux/kernel.h>
 #include <linux/delay.h>
-#include <linux/module.h>
-#include <linux/moduleparam.h>
-#include <linux/fs.h>
-#include <asm/segment.h>
-#include <asm/uaccess.h>
-#include <linux/buffer_head.h>
-#include <linux/errno.h>
-#include <linux/pci.h>
-#include <linux/miscdevice.h>
-#include <linux/uaccess.h>
-#include <linux/cdev.h>
-#include <linux/interrupt.h>
-#include <linux/file.h>
 #include <linux/elf.h>
+#include <linux/file.h>
+#include <linux/pci.h>
+#include <linux/version.h>
 #include <linux/cpu.h>
-#include <linux/radix-tree.h>
 #include <linux/rbtree.h>
-#include <linux/irq.h>
-#include <linux/topology.h>
+#ifdef POSTK_DEBUG_ARCH_DEP_57 /* add ctype.h include for isspace() / isdigit() */
 #include <linux/ctype.h>
+#endif /* POSTK_DEBUG_ARCH_DEP_57 */
+#include <linux/slub_def.h>
 #include <linux/kallsyms.h>
 #include <linux/list_sort.h>
 #include <linux/swap.h>
-#include <asm/hw_irq.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
+#include <asm/uaccess.h>
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
@@ -51,210 +36,17 @@
 #include <ikc/msg.h>
 //#include <linux/shimos.h>
 //#include "builtin_dma.h"
-#include <asm/apic.h>
-#include <asm/ipi.h>
-#include <asm/uv/uv.h>
-#include <asm/nmi.h>
-#include <asm/tlbflush.h>
-#include <asm/mc146818rtc.h>
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-#include <asm/smpboot_hooks.h>
-#endif
-
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
-#include <asm/trampoline.h>
-#elif (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
-#include <asm/trampoline.h>
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
-#include <asm/realmode.h>
-#endif
-
-#include "../../../cokernel/smp/x86/bootparam.h"
-
-#ifdef IHK_DEBUG
-#define dprintk(...) do { if (1) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
-#define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
-#else
-#define dprintk(...) do { if (0) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
-#define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
-#endif
-
-#define ARCHDRV_CHKANDJUMP(cond, msg, err)								\
-	do {																\
-		if(cond) {														\
-			eprintk("%s:%d,"msg"\n", __FUNCTION__, __LINE__);					\
-			ret = err;													\
-			goto fn_fail;												\
-		}																\
-	} while(0)
-
-#define BUILTIN_OS_STATUS_INITIAL  0
-#define BUILTIN_OS_STATUS_LOADING  1
-#define BUILTIN_OS_STATUS_LOADED   2
-#define BUILTIN_OS_STATUS_BOOTING  3
-#define BUILTIN_OS_STATUS_SHUTDOWN  4 /* After shutdown */
-
-#define BUILTIN_COM_VECTOR  0xf1
-
-#define LARGE_PAGE_SIZE	(1UL << 21)
-#define LARGE_PAGE_MASK	(~((unsigned long)LARGE_PAGE_SIZE - 1))
-
-#define MAP_ST_START	0xffff800000000000UL
-#define MAP_KERNEL_START	0xffffffff80000000UL
-
-#define PTL4_SHIFT	39
-#define PTL3_SHIFT	30
-#define PTL2_SHIFT	21
-
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
-	bitmap_scnlistprintf(buf, buflen, maskp, nmaskbits)
-#else
-#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
-	scnprintf(buf, buflen, "%*pbl", nmaskbits, maskp)
-#endif
-
+#include <bootparam.h>
+#include "config.h"
+#include "smp-driver.h"
+#include "smp-arch-driver.h"
+#include "smp-defines-driver.h"
 
 /*
  * IHK-SMP unexported kernel symbols
  */
 
-/* x86_trampoline_base has been introduced in 2.6.38 */
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
-#ifdef IHK_KSYM_x86_trampoline_base
-#if IHK_KSYM_x86_trampoline_base
-unsigned char *x86_trampoline_base = 
-	(void *)
-	IHK_KSYM_x86_trampoline_base;
-#endif
-#endif
-#endif
-
-/* real_mode_header has been introduced in 3.10 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
-#ifdef IHK_KSYM_real_mode_header
-#if IHK_KSYM_real_mode_header
-struct real_mode_header *real_mode_header = 
-	(void *)
-	IHK_KSYM_real_mode_header;
-#endif
-#endif
-#endif
-
-#ifdef IHK_KSYM_per_cpu__vector_irq
-#if IHK_KSYM_per_cpu__vector_irq
-void *_per_cpu__vector_irq = 
-	(void *)
-	IHK_KSYM_per_cpu__vector_irq;
-#endif
-#endif
-
-#ifdef IHK_KSYM_vector_irq
-#if IHK_KSYM_vector_irq
-void *_vector_irq = 
-	(void *)
-	IHK_KSYM_vector_irq;
-#endif
-#endif
-
-#ifdef IHK_KSYM_lapic_get_maxlvt
-#if IHK_KSYM_lapic_get_maxlvt
-typedef int (*int_star_fn_void_t)(void); 
-int (*_lapic_get_maxlvt)(void) = 
-	(int_star_fn_void_t)
-	IHK_KSYM_lapic_get_maxlvt;
-#endif
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
-#ifdef IHK_KSYM_init_deasserted
-#if IHK_KSYM_init_deasserted
-atomic_t *_init_deasserted = 
-	(atomic_t *)
-	IHK_KSYM_init_deasserted;
-#endif
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_to_desc
-#if IHK_KSYM_irq_to_desc
-typedef struct irq_desc *(*irq_desc_star_fn_int_t)(unsigned int);
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = 
-	(irq_desc_star_fn_int_t)
-	IHK_KSYM_irq_to_desc;
-#else // exported
-#include <linux/irqnr.h>
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = irq_to_desc;
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_to_desc_alloc_node
-#if IHK_KSYM_irq_to_desc_alloc_node
-typedef struct irq_desc *(*irq_desc_star_fn_int_int_t)(unsigned int, int);
-struct irq_desc *(*_irq_to_desc_alloc_node)(unsigned int irq, int node) =
-	(irq_desc_star_fn_int_int_t)
-	IHK_KSYM_irq_to_desc_alloc_node;
-#endif
-#endif
-
-#ifdef IHK_KSYM_alloc_desc
-#if IHK_KSYM_alloc_desc
-typedef struct irq_desc *(*irq_desc_star_fn_int_int_module_star_t)
-	(int, int, struct module*);
-struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
-	(irq_desc_star_fn_int_int_module_star_t)
-	IHK_KSYM_alloc_desc;
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_desc_tree
-#if IHK_KSYM_irq_desc_tree
-struct radix_tree_root *_irq_desc_tree = 
-	(struct radix_tree_root *)
-	IHK_KSYM_irq_desc_tree;
-#endif
-#endif
-
-#ifdef IHK_KSYM_dummy_irq_chip
-#if IHK_KSYM_dummy_irq_chip
-struct irq_chip *_dummy_irq_chip =
-	(struct irq_chip *)
-	IHK_KSYM_dummy_irq_chip;
-#else // exported
-struct irq_chip *_dummy_irq_chip = &dummy_irq_chip;
-#endif
-#endif
-
-#ifdef IHK_KSYM_get_uv_system_type
-#if IHK_KSYM_get_uv_system_type
-typedef enum uv_system_type (*uv_system_type_star_fn_void_t)(void); 
-enum uv_system_type (*_get_uv_system_type)(void) = 
-	(uv_system_type_star_fn_void_t)
-	IHK_KSYM_get_uv_system_type;
-#endif
-#else // static
-#define _get_uv_system_type get_uv_system_type
-#endif
-
-#ifdef IHK_KSYM_wakeup_secondary_cpu_via_init
-#if IHK_KSYM_wakeup_secondary_cpu_via_init
-int (*_wakeup_secondary_cpu_via_init)(int phys_apicid, 
-	unsigned long start_eip) = 
-	IHK_KSYM_wakeup_secondary_cpu_via_init;
-#endif
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
-#ifdef IHK_KSYM___default_send_IPI_dest_field
-#if IHK_KSYM___default_send_IPI_dest_field
-typedef void (*void_fn_unsigned_int_int_unsigned_int_t)(void);
-void (*___default_send_IPI_dest_field)(unsigned int mask, 
-	int vector, unsigned int dest)
-	= (void_fn_unsigned_int_int_unsigned_int_t)
-	IHK_KSYM___default_send_IPI_dest_field;
-#endif
-#endif
-#endif
+/* ----------------------------------------------- */
 
 static unsigned long ihk_phys_start = 0;
 module_param(ihk_phys_start, ulong, 0644);
@@ -268,122 +60,48 @@ static unsigned int ihk_cores = 0;
 module_param(ihk_cores, uint, 0644);
 MODULE_PARM_DESC(ihk_cores, "IHK reserved CPU cores");
 
-static unsigned int ihk_start_irq = 0;
-module_param(ihk_start_irq, uint, 0644);
-MODULE_PARM_DESC(ihk_start_irq, "IHK IKC IPI to be scanned from this IRQ vector");
+//#define BUILTIN_COM_VECTOR	0xf1
 
-static unsigned int ihk_ikc_irq_core = 0;
-module_param(ihk_ikc_irq_core, uint, 0644);
-MODULE_PARM_DESC(ihk_ikc_irq_core, "Target CPU of IHK IKC IRQ");
+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
+#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
+        bitmap_scnlistprintf(buf, buflen, maskp, nmaskbits)
+#else
+#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
+        scnprintf(buf, buflen, "%*pbl", nmaskbits, maskp)
+#endif
 
-static unsigned long ihk_trampoline = 0;
-module_param(ihk_trampoline, ulong, 0644);
-MODULE_PARM_DESC(ihk_trampoline, "IHK trampoline page physical address");
+#define BUILTIN_DEV_STATUS_READY	0
+#define BUILTIN_DEV_STATUS_BOOTING	1
 
-#define IHK_SMP_CPU_ONLINE		0
-#define IHK_SMP_CPU_AVAILABLE	1
-#define IHK_SMP_CPU_ASSIGNED	2
-#define IHK_SMP_CPU_TO_OFFLINE	3
-#define IHK_SMP_CPU_OFFLINED	4
-#define IHK_SMP_CPU_TO_ONLINE	5
-
-struct ihk_smp_cpu {
-	int id;
-	int apic_id;
-	int status;
-	ihk_os_t os;
-	int ikc_map_cpu;
-};
-
-static struct ihk_smp_cpu ihk_smp_cpus[SMP_MAX_CPUS];
-struct page *trampoline_page;
+struct ihk_smp_cpu ihk_smp_cpus[SMP_MAX_CPUS];
 unsigned long trampoline_phys;
-int using_linux_trampoline = 0;
-char linux_trampoline_backup[4096];
-void *trampoline_va;
 
 unsigned long ident_page_table;
-int ident_npages_order = 0;
-unsigned long *ident_page_table_virt;
 
-int ihk_smp_irq = 0;
-int ihk_smp_irq_apicid = 0;
 int this_module_put = 0;
-int ihk_smp_reset_cpu(int phys_apicid);
 
-extern const char ihk_smp_trampoline_end[], ihk_smp_trampoline_data[];
-#define IHK_SMP_TRAMPOLINE_SIZE \
-	roundup(ihk_smp_trampoline_end - ihk_smp_trampoline_data, PAGE_SIZE)
+static struct list_head ihk_mem_free_chunks;
+struct list_head ihk_mem_used_chunks;
+
+static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
+                                       enum ihk_special_addr_type type,
+                                       unsigned long *addr,
+                                       unsigned long *size);
+extern unsigned long smp_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
+                                           unsigned long remote_phys,
+                                           unsigned long size);
+static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
+                                 unsigned long phys, unsigned long size,
+                                 void *virt, int flags);
+static int smp_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
+                                  void *virt, unsigned long size);
+extern int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
+                                unsigned long local_phys,
+                                unsigned long size);
+
+extern int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode);
 
 /* ----------------------------------------------- */
-
-/** \brief BUILTIN driver-specific OS structure */
-struct smp_os_data {
-	/** \brief Lock for this structure */
-	spinlock_t lock;
-
-	/** \brief Pointer to the device structure */
-	struct builtin_device_data *dev;
-	/** \brief Allocated CPU core mask */
-	struct smp_coreset cpu_hw_ids_map;
-	/** \brief Start address of the allocated memory region */
-	unsigned long mem_start;
-	/** \brief End address of the allocated memory region */
-	unsigned long mem_end;
-	/** \brief Bitmask of NUMA nodes from where memory or
-	 * CPUs are assigned */
-
-	/* Memory chunk for kernel image and bootstrap page table */
-	unsigned long bootstrap_mem_start, bootstrap_mem_end; 
-	int bootstrap_numa_id;
-
-	unsigned long numa_mask;
-
-	/** \brief APIC ID of the bsp of this OS instance */
-	int boot_cpu;
-	/** \brief Entry point address of this OS instance */
-	unsigned long boot_rip;
-
-	/** \brief IHK Memory information */
-	struct ihk_mem_info mem_info;
-	/** \brief IHK Memory region information */
-	struct ihk_mem_region mem_region;
-	/** \brief IHK CPU information */
-	struct ihk_cpu_info cpu_info;
-	/** \brief APIC ID map of the CPU cores */
-	int cpu_hw_ids[SMP_MAX_CPUS];
-
-	/** \brief Kernel command-line parameter.
-	 *
-	 * This will be copied to boot_param just before booting so that
-	 * it does not change while the kernel is running.
-	 */
-	char kernel_args[256];
-
-	/* LWK NUMA id to Linux NUMA id mapping */
-	int *numa_mapping;
-	int nr_numa_nodes;
-
-	/* LWK CPU id to Linux CPU id mapping */
-	int cpu_mapping[SMP_MAX_CPUS];
-	/* LWK CPU to Linux CPU mapping for IKC IRQ */
-	int cpu_ikc_map[SMP_MAX_CPUS];
-	int cpu_ikc_mapped;
-	int nr_cpus;
-
-	/** \brief Boot parameter for the kernel
-	 *
-	 * This structure is directly accessed (read and written)
-	 * by the manycore kernel. */
-	struct smp_boot_param *param;
-	int param_pages_order;
-
-	/** \brief Status of the kernel */
-	int status;
-};
-
-#define BUILTIN_DEV_STATUS_READY    0
-#define BUILTIN_DEV_STATUS_BOOTING  1
 
 /** \brief Driver-speicific device structure
  *
@@ -409,58 +127,7 @@ struct chunk {
 	int numa_id;
 };
 
-/* ihk_os_mem_chunk represents a memory range which is used by 
- * one of the OSs */
-struct ihk_os_mem_chunk {
-	struct list_head list;
-	uintptr_t addr;
-	size_t size;
-	ihk_os_t os;
-	int numa_id;
-};
-
-static struct list_head ihk_mem_free_chunks;
-static struct list_head ihk_mem_used_chunks;
-
-static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
-                                       enum ihk_special_addr_type type,
-                                       unsigned long *addr,
-                                       unsigned long *size);
-static unsigned long smp_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
-                                           unsigned long remote_phys,
-                                           unsigned long size);
-static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
-                                 unsigned long phys, unsigned long size,
-                                 void *virt, int flags);
-static int smp_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
-                                  void *virt, unsigned long size);
-static int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
-                                unsigned long local_phys,
-                                unsigned long size);
-
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-#else
-/* origin: arch/x86/kernel/smpboot.c */
-static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&rtc_lock, flags);
-	CMOS_WRITE(0xa, 0xf);
-	spin_unlock_irqrestore(&rtc_lock, flags);
-	local_flush_tlb();
-	pr_debug("1.\n");
-	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_HIGH)) =
-							start_eip >> 4;
-	pr_debug("2.\n");
-	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_LOW)) =
-							start_eip & 0xf;
-	pr_debug("3.\n");
-}
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,5)
-#warning smpboot_setup_warm_reset_vector() has been only tested up to 4.3.0 kernels
-#endif
-#endif
+/* ----------------------------------------------- */
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
@@ -468,22 +135,20 @@ void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 
 	/* look up address among used chunks */
 	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-		if (phys >= os_mem_chunk->addr && 
-				(phys + size) <= (os_mem_chunk->addr + 
-					os_mem_chunk->size)) {
-
-			return (phys_to_virt(os_mem_chunk->addr) 
-					+ (phys - os_mem_chunk->addr));
+		if (phys >= os_mem_chunk->addr &&
+		    (phys + size) <= (os_mem_chunk->addr + os_mem_chunk->size)) {
+			return (phys_to_virt(os_mem_chunk->addr) +
+			        (phys - os_mem_chunk->addr));
 		}
 	}
-
+	
 	return 0;
 }
 
 void ihk_smp_unmap_virtual(void *virt)
 {
 	/* TODO: look up chunks and report error if not in range */
-	return;	
+	return;
 }
 
 /** \brief Implementation of ihk_host_get_dma_channel.
@@ -536,169 +201,6 @@ static void __build_os_info(struct smp_os_data *os)
 	os->cpu_info.ikc_mapped = os->cpu_ikc_mapped;
 }
 
-struct ihk_smp_trampoline_header {
-	unsigned long reserved;   /* jmp ins. */
-	unsigned long page_table; /* ident page table */
-	unsigned long next_ip;    /* the program address */
-	unsigned long stack_ptr;  /* stack pointer */
-	unsigned long notify_address; /* notification address */
-};
-
-static int smp_wakeup_secondary_cpu_via_init(int phys_apicid, 
-		unsigned long start_eip)
-{
-	unsigned long send_status, accept_status = 0;
-	int maxlvt, num_starts, j;
-
-	maxlvt = _lapic_get_maxlvt();
-
-	/*
-	 * Be paranoid about clearing APIC errors.
-	 */
-	if (APIC_INTEGRATED(apic_version[phys_apicid])) {
-		if (maxlvt > 3)		/* Due to the Pentium erratum 3AP.  */
-			apic_write(APIC_ESR, 0);
-		apic_read(APIC_ESR);
-	}
-
-	pr_debug("Asserting INIT.\n");
-
-	/*
-	 * Turn INIT on target chip
-	 */
-	/*
-	 * Send IPI
-	 */
-	apic_icr_write(APIC_INT_LEVELTRIG | APIC_INT_ASSERT | APIC_DM_INIT,
-		       phys_apicid);
-
-	pr_debug("Waiting for send to finish...\n");
-	send_status = safe_apic_wait_icr_idle();
-
-	mdelay(10);
-
-	pr_debug("Deasserting INIT.\n");
-
-	/* Target chip */
-	/* Send IPI */
-	apic_icr_write(APIC_INT_LEVELTRIG | APIC_DM_INIT, phys_apicid);
-
-	pr_debug("Waiting for send to finish...\n");
-	send_status = safe_apic_wait_icr_idle();
-
-	mb();
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
-	atomic_set(_init_deasserted, 1);
-#endif
-
-	/*
-	 * Should we send STARTUP IPIs ?
-	 *
-	 * Determine this based on the APIC version.
-	 * If we don't have an integrated APIC, don't send the STARTUP IPIs.
-	 */
-	if (APIC_INTEGRATED(apic_version[phys_apicid]))
-		num_starts = 2;
-	else
-		num_starts = 0;
-
-	/*
-	 * Run STARTUP IPI loop.
-	 */
-	pr_debug("#startup loops: %d.\n", num_starts);
-
-	for (j = 1; j <= num_starts; j++) {
-		pr_debug("Sending STARTUP #%d.\n", j);
-		if (maxlvt > 3)		/* Due to the Pentium erratum 3AP.  */
-			apic_write(APIC_ESR, 0);
-		apic_read(APIC_ESR);
-		pr_debug("After apic_write.\n");
-
-		/*
-		 * STARTUP IPI
-		 */
-
-		/* Target chip */
-		/* Boot on the stack */
-		/* Kick the second */
-		apic_icr_write(APIC_DM_STARTUP | (start_eip >> 12),
-			       phys_apicid);
-
-		/*
-		 * Give the other CPU some time to accept the IPI.
-		 */
-		udelay(300);
-
-		pr_debug("Startup point 1.\n");
-
-		pr_debug("Waiting for send to finish...\n");
-		send_status = safe_apic_wait_icr_idle();
-
-		/*
-		 * Give the other CPU some time to accept the IPI.
-		 */
-		udelay(200);
-		if (maxlvt > 3)		/* Due to the Pentium erratum 3AP.  */
-			apic_write(APIC_ESR, 0);
-		accept_status = (apic_read(APIC_ESR) & 0xEF);
-		if (send_status || accept_status)
-			break;
-	}
-	pr_debug("After Startup.\n");
-
-	if (send_status)
-		printk(KERN_ERR "APIC never delivered???\n");
-	if (accept_status)
-		printk(KERN_ERR "APIC delivery error (%lx).\n", accept_status);
-
-	return (send_status | accept_status);
-}
-
-int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
-{
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
-	atomic_set(_init_deasserted, 0);
-#endif
-
-	if (_get_uv_system_type() != UV_NON_UNIQUE_APIC) {
-
-		pr_debug("Setting warm reset code and vector.\n");
-
-		smpboot_setup_warm_reset_vector(start_eip);
-		/*
-		 * Be paranoid about clearing APIC errors.
-		 */
-		if (APIC_INTEGRATED(apic_version[boot_cpu_physical_apicid])) {
-			apic_write(APIC_ESR, 0);
-			apic_read(APIC_ESR);
-		}
-	}
-
-	if (apic->wakeup_secondary_cpu) {
-		printk("%s: apic->wakeup_secondary_cpu()\n", __FUNCTION__);
-		return apic->wakeup_secondary_cpu(apicid, start_eip);
-	}
-	else {
-		int ret;
-		printk("%s: smp_wakeup_secondary_cpu_via_init()\n", __FUNCTION__);
-
-		preempt_disable();
-		ret = smp_wakeup_secondary_cpu_via_init(apicid, start_eip);
-		preempt_enable();
-
-		return ret;
-	}
-}
-
-unsigned long x2apic_is_enabled(void)
-{
-	unsigned long msr;
-
-	rdmsrl(MSR_IA32_APICBASE, msr);
-
-	return msr & (1 << 10); /* x2APIC enabled? */
-}
-
 /*
  * CPU and NUMA node mapping conversion functions.
  */
@@ -744,7 +246,6 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	struct smp_os_data *os = priv;
 	struct builtin_device_data *dev = os->dev;
 	unsigned long flags;
-	struct ihk_smp_trampoline_header *header;
 	struct timespec now;
 	int param_size, param_pages_order = 0;
 	struct page *param_pages;
@@ -916,7 +417,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 #endif
 	dev->status = BUILTIN_DEV_STATUS_BOOTING;
 	spin_unlock_irqrestore(&dev->lock, flags);
-	
+
 	__build_os_info(os);
 	if (os->cpu_info.n_cpus < 1) {
 		dprintf("builtin: There are no CPU to boot!\n");
@@ -943,37 +444,26 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	strncpy(os->param->kernel_args, os->kernel_args,
 	        sizeof(os->param->kernel_args));
 
+#ifdef POSTK_DEBUG_ARCH_DEP_29
+	os->param->ns_per_tsc = calc_ns_per_tsc();
+#else	/* POSTK_DEBUG_ARCH_DEP_29 */
 	os->param->ns_per_tsc = 1000000000L / tsc_khz;
+#endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 	getnstimeofday(&now);
 	os->param->boot_sec = now.tv_sec;
 	os->param->boot_nsec = now.tv_nsec;
-	os->param->ihk_ikc_irq = ihk_smp_irq;
-	for (i = 0; i < nr_cpu_ids; i++) {
-		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
-	}
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->cpu_hw_ids_map.set[0],
 	        os->param->dma_address
 	);
 
-	/* Make a temporary copy of the Linux trampoline */
-	if (using_linux_trampoline) {
-		memcpy(linux_trampoline_backup, trampoline_va, IHK_SMP_TRAMPOLINE_SIZE);
-	}
+	smp_ihk_setup_trampoline(os);
 
-	/* Prepare trampoline code */
-	memcpy(trampoline_va, ihk_smp_trampoline_data, IHK_SMP_TRAMPOLINE_SIZE);
-
-	header = trampoline_va; 
-	header->page_table = ident_page_table;
-	header->next_ip = os->boot_rip;
-	header->notify_address = __pa(os->param);
-	
-	printk("IHK-SMP: booting OS 0x%lx, calling smp_wakeup_secondary_cpu() \n", 
-		(unsigned long)ihk_os);
+	printk("IHK-SMP: booting OS 0x%lx, calling wakeup_secondary_cpu() \n",
+	       (unsigned long)ihk_os);
 	udelay(300);
-	
+
 	return smp_wakeup_secondary_cpu(os->boot_cpu, trampoline_phys);
 	
 	/* Never reach these.. */
@@ -998,18 +488,6 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	Elf64_Phdr *elf64p;
 	int i;
 	unsigned long entry;
-	unsigned long pml4_p;
-	unsigned long pdp_p;
-	unsigned long pde_p;
-	unsigned long *pml4;
-	unsigned long *pdp;
-	unsigned long *pde;
-	unsigned long *cr3;
-	int n;
-	extern char startup_data[];
-	extern char startup_data_end[];
-	unsigned long startup_p;
-	unsigned long *startup;
 	struct ihk_os_mem_chunk *os_mem_chunk_iter;
 	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 	os->bootstrap_mem_start = 0;
@@ -1111,8 +589,10 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	}
 	entry = elf64->e_entry;
 	elf64p = (Elf64_Phdr *)(((char *)elf64) + elf64->e_phoff);
-	phys = (os->bootstrap_mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
+	phys = (os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
 	maxoffset = phys;
+
+	entry = smp_ihk_adjust_entry(entry, phys);
 
 	for(i = 0; i < elf64->e_phnum; i++){
 		unsigned long end;
@@ -1126,7 +606,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		if (elf64p[i].p_vaddr == 0)
 			continue;
 
-		offset = elf64p[i].p_vaddr - (MAP_KERNEL_START - phys);
+		offset = elf64p[i].p_vaddr - (IHK_SMP_MAP_KERNEL_START -phys);
 		pphys = offset;
 		psize = (elf64p[i].p_memsz + PAGE_SIZE - 1) & PAGE_MASK;
 		size = elf64p[i].p_filesz;
@@ -1182,50 +662,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	fput(file);
 	ihk_smp_unmap_virtual(elf64);
 
-	pml4_p = os->bootstrap_mem_end - PAGE_SIZE;
-	pdp_p = pml4_p - PAGE_SIZE;
-	pde_p = pdp_p - PAGE_SIZE;
-
-	cr3 = ident_page_table_virt;
-	pml4 = ihk_smp_map_virtual(pml4_p, PAGE_SIZE);
-	pdp = ihk_smp_map_virtual(pdp_p, PAGE_SIZE);
-	pde = ihk_smp_map_virtual(pde_p, PAGE_SIZE);
-
-	memset(pml4, '\0', PAGE_SIZE);
-	memset(pdp, '\0', PAGE_SIZE);
-	memset(pde, '\0', PAGE_SIZE);
-
-	/*
-	 * TODO: do this mapping so that holes between memory chunks
-	 * are emitted
-	 */
-	pml4[0] = cr3[0];
-	pml4[(MAP_ST_START >> PTL4_SHIFT) & 511] = cr3[0];
-	pml4[(MAP_KERNEL_START >> PTL4_SHIFT) & 511] = pdp_p | 3;
-	pdp[(MAP_KERNEL_START >> PTL3_SHIFT) & 511] = pde_p | 3;
-	n = (os->bootstrap_mem_end - os->bootstrap_mem_start) >> PTL2_SHIFT;
-	if(n > 511)
-		n = 511;
-
-	for (i = 0; i < n; i++) {
-		pde[i] = (phys + (i << PTL2_SHIFT)) | 0x83;
-	}
-	startup_p = (os->bootstrap_mem_end & LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
-	pde[511] = startup_p | 0x83;
-
-	ihk_smp_unmap_virtual(pde);
-	ihk_smp_unmap_virtual(pdp);
-	ihk_smp_unmap_virtual(pml4);
-
-	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
-	memcpy(startup, startup_data, startup_data_end - startup_data);
-	startup[2] = pml4_p;
-	startup[3] = 0xffffffffc0000000;
-	startup[4] = phys;
-	startup[5] = trampoline_phys;
-	startup[6] = entry;
-	ihk_smp_unmap_virtual(startup);
-	os->boot_rip = startup_p;
+	smp_ihk_os_setup_startup(os, phys, entry);
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 	return 0;
@@ -1292,7 +729,7 @@ static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 	os->boot_rip = os->mem_start;
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
-	
+
 	return 0;
 }
 
@@ -1319,8 +756,7 @@ static void add_free_mem_chunk(struct chunk *chunk)
 	}
 
 	dprintf("IHK-SMP: free mem chunk 0x%lx - 0x%lx added\n",
-			chunk->addr, 
-			chunk->addr + chunk->size);
+	        chunk->addr, chunk->addr + chunk->size);
 }
 
 static void merge_mem_chunks(struct list_head *chunks)
@@ -1332,18 +768,18 @@ rerun:
 	list_for_each_entry_safe(mem_chunk, mem_chunk_next, chunks, chain) {
 
 		if (mem_chunk != mem_chunk_next &&
-			mem_chunk_next->addr == mem_chunk->addr + mem_chunk->size &&
-			mem_chunk_next->numa_id == mem_chunk->numa_id) {
-			
+		    mem_chunk_next->addr == mem_chunk->addr + mem_chunk->size &&
+		    mem_chunk_next->numa_id == mem_chunk->numa_id) {
 			dprintf("IHK-SMP: free 0x%lx - 0x%lx and 0x%lx - 0x%lx merged\n",
-				mem_chunk->addr,
-				mem_chunk->addr + mem_chunk->size,
-				mem_chunk_next->addr,
-				mem_chunk_next->addr + mem_chunk_next->size);
+			        mem_chunk->addr,
+			        mem_chunk->addr + mem_chunk->size,
+			        mem_chunk_next->addr,
+			        mem_chunk_next->addr + mem_chunk_next->size);
 
-			mem_chunk->size = mem_chunk->size + mem_chunk_next->size;
+			mem_chunk->size = mem_chunk->size +
+			                  mem_chunk_next->size;
 			list_del(&mem_chunk_next->chain);
-				
+
 			goto rerun;
 		}
 	}
@@ -1369,11 +805,11 @@ static size_t max_size_mem_chunk(struct rb_root *root)
 static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 {
 	struct smp_os_data *os = priv;
-	int i;
+	int i, ret = 0;
 	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 	struct ihk_os_mem_chunk *next_chunk = NULL;
 	struct chunk *mem_chunk;
-	
+
 	if(os->status == BUILTIN_OS_STATUS_SHUTDOWN) {
 		eprintk("%s,already down\n", __FUNCTION__);
 		return 0;
@@ -1381,16 +817,15 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 
 	/* Reset CPU cores used by this OS */
 	for (i = 0; i < SMP_MAX_CPUS; ++i) {
-		
-		if (ihk_smp_cpus[i].os != ihk_os) 
+		if (ihk_smp_cpus[i].os != ihk_os)
 			continue;
 
-		ihk_smp_reset_cpu(ihk_smp_cpus[i].apic_id);
+		ret = ihk_smp_reset_cpu(ihk_smp_cpus[i].hw_id);
 		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[i].os = (ihk_os_t)0;
 
-		dprintk("IHK-SMP: CPU %d has been deassigned, APIC: %d\n", 
-			ihk_smp_cpus[i].id, ihk_smp_cpus[i].apic_id);
+		dprintk("IHK-SMP: CPU %d has been deassigned, HWID: %d\n",
+		       ihk_smp_cpus[i].id, ihk_smp_cpus[i].hw_id);
 	}
 	os->nr_cpus = 0;
 
@@ -1403,7 +838,6 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		}
 
 		list_del(&os_mem_chunk->list);
-
 		mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
 		mem_chunk->addr = os_mem_chunk->addr;
 		mem_chunk->size = os_mem_chunk->size;
@@ -1431,7 +865,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 
 	//kfree(os); /* done in destroy */
 
-	return 0;
+	return ret;
 }
 
 
@@ -1464,7 +898,7 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 
 		if (resource->cpu_cores > ihk_smp_nr_avail_cpus) {
 			printk("IHK-SMP: error: %d CPUs requested, but only %d available\n",
-					resource->cpu_cores, ihk_smp_nr_avail_cpus);
+			       resource->cpu_cores, ihk_smp_nr_avail_cpus);
 			return -EINVAL;
 		}
 
@@ -1475,9 +909,9 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 				continue;
 			}
 
-			printk("IHK-SMP: CPU APIC %d assigned.\n",
-					ihk_smp_cpus[i].apic_id);
-			CORE_SET(ihk_smp_cpus[i].apic_id, os->cpu_hw_ids_map);
+			printk("IHK-SMP: CPU HWID %d assigned.\n",
+			       ihk_smp_cpus[i].hw_id);
+			CORE_SET(ihk_smp_cpus[i].hw_id, os->cpu_hw_ids_map);
 
 			ihk_smp_cpus[i].status = IHK_SMP_CPU_ASSIGNED;
 			ihk_smp_cpus[i].os = ihk_os;
@@ -1491,7 +925,8 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		struct ihk_os_mem_chunk *os_mem_chunk;
 		struct chunk *mem_chunk_leftover;
 		struct chunk *mem_chunk_iter;
-		os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
+		os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk),
+		                       GFP_KERNEL);
 
 		if (!os_mem_chunk) {
 			printk("IHK-DMP: error: allocating os_mem_chunk\n");
@@ -1501,7 +936,8 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		os_mem_chunk->addr = 0;
 		INIT_LIST_HEAD(&os_mem_chunk->list);
 
-		list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+		list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks,
+		                    chain) {
 			if (mem_chunk_iter->size >= resource->mem_size) {
 
 				os_mem_chunk->addr = mem_chunk_iter->addr;
@@ -1525,12 +961,13 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 
 		/* Split if there is any leftover */
 		if (mem_chunk_iter->size > resource->mem_size) {
-			mem_chunk_leftover = (struct chunk*)
-				phys_to_virt(mem_chunk_iter->addr + resource->mem_size);
+			mem_chunk_leftover =
+			    (struct chunk*)
+			    phys_to_virt(mem_chunk_iter->addr + resource->mem_size);
 			mem_chunk_leftover->addr = mem_chunk_iter->addr +
-				resource->mem_size;
+			                           resource->mem_size;
 			mem_chunk_leftover->size = mem_chunk_iter->size -
-				resource->mem_size;
+			                           resource->mem_size;
 			mem_chunk_leftover->numa_id = mem_chunk_iter->numa_id;
 
 			add_free_mem_chunk(mem_chunk_leftover);
@@ -1540,7 +977,7 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 		os->mem_end = os->mem_start + resource->mem_size;
 
 		dprintf("IHK-SMP: memory 0x%lx - 0x%lx allocated.\n",
-				os->mem_start, os->mem_end);
+		        os->mem_start, os->mem_end);
 	}
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
@@ -1549,44 +986,18 @@ static int smp_ihk_os_alloc_resource(ihk_os_t ihk_os, void *priv,
 error_drop_cores:
 	/* Drop CPU cores for this OS */
 	for (i = 0; i < SMP_MAX_CPUS; ++i) {
-
 		if (ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED ||
-			ihk_smp_cpus[i].os != ihk_os)
+		    ihk_smp_cpus[i].os != ihk_os)
 			continue;
 
-		printk("IHK-SMP: CPU APIC %d deassigned.\n",
-				ihk_smp_cpus[i].apic_id);
+		printk("IHK-SMP: CPU HWID %d deassigned.\n",
+		       ihk_smp_cpus[i].hw_id);
 
 		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[i].os = (ihk_os_t)0;
 	}
 
 	return ret;
-}
-
-static enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
-{
-	struct smp_os_data *os = priv;
-	int status;
-
-	status = os->status;
-
-	if (status == BUILTIN_OS_STATUS_BOOTING) {
-		if (os->param->status == 1) {
-			return IHK_OS_STATUS_BOOTED;
-		} else if(os->param->status == 2) {
-			/* Restore Linux trampoline once ready */
-			if (using_linux_trampoline) {
-				memcpy(trampoline_va, linux_trampoline_backup, 
-						IHK_SMP_TRAMPOLINE_SIZE);
-			}
-			return IHK_OS_STATUS_READY;
-		} else {
-			return IHK_OS_STATUS_BOOTING;
-		}
-	} else {
-		return IHK_OS_STATUS_NOT_BOOTED;
-	}
 }
 
 static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
@@ -1611,10 +1022,8 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	return 0;
 }
 
-static int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
+int ihk_smp_set_nmi_mode(ihk_os_t ihk_os, void *priv, int mode)
 {
-	struct smp_os_data *os = priv;
-	int i;
 	unsigned long rpa;
 	unsigned long size;
 	int *nmi_mode;
@@ -1622,7 +1031,7 @@ static int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 	unsigned long psize;
 
 	if (smp_ihk_os_get_special_addr(ihk_os, priv, IHK_SPADDR_NMI_MODE,
-				        &rpa, &size)) {
+					&rpa, &size)) {
 		return -EINVAL;
 	}
 
@@ -1634,96 +1043,11 @@ static int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 	smp_ihk_unmap_virtual(ihk_os, priv, nmi_mode, psize);
 	smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
 
-	for (i = 0; i < os->cpu_info.n_cpus; i++) {
-
-#ifdef CONFIG_X86_X2APIC
-		if (x2apic_is_enabled()) {
-			safe_apic_wait_icr_idle();
-			apic_icr_write(APIC_DM_NMI, os->cpu_info.hw_ids[i]);
-		}
-		else 		
-#endif
-		{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
-			___default_send_IPI_dest_field(
-					os->cpu_info.hw_ids[i],
-					NMI_VECTOR, APIC_DEST_PHYSICAL);
-#else
-			__default_send_IPI_dest_field(
-					os->cpu_info.hw_ids[i],
-					NMI_VECTOR, APIC_DEST_PHYSICAL);
-#endif
-		}
-	}
 	return 0;
 }
 
-static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
-{
-	struct smp_os_data *os = priv;
-
-	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
-			args->cmd, args->start, args->size, args->buf);
-
-	if (args->cmd == DUMP_NMI) {
-		smp_ihk_os_send_nmi(ihk_os, priv, 0);
-		return 0;
-	}
-
-	if (args->cmd == DUMP_QUERY) {
-		int i = 0;
-		struct ihk_os_mem_chunk *os_mem_chunk;
-		dump_mem_chunks_t *mem_chunks = args->buf;
-
-		/* Collect memory information */
-		list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-			if (os_mem_chunk->os != ihk_os)
-				continue;
-
-			mem_chunks->chunks[i].addr = os_mem_chunk->addr;
-			mem_chunks->chunks[i].size = os_mem_chunk->size;
-			++i;
-		}
-
-		mem_chunks->nr_chunks = i;
-		/* See load_file() for the calculation below */
-		mem_chunks->kernel_base =
-			(os->bootstrap_mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
-
-		return 0;
-	}
-
-	if (args->cmd == DUMP_READ) {
-		void *va;
-
-		va = phys_to_virt(args->start);
-		if (copy_to_user(args->buf, va, args->size)) {
-			return -EFAULT;
-		}
-		return 0;
-	}
-
-	if (args->cmd == DUMP_QUERY_ALL) {
-		args->start = os->mem_start;
-		args->size = os->mem_end - os->mem_start;
-		return 0;
-	}
-
-	if (args->cmd == DUMP_READ_ALL) {
-		void *va;
-
-		va = phys_to_virt(args->start);
-		if (copy_to_user(args->buf, va, args->size)) {
-			return -EFAULT;
-		}
-		return 0;
-	}
-
-	return -EINVAL;
-}
-
 static int smp_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
-                                      enum ihk_os_status status, 
+                                      enum ihk_os_status status,
                                       int sleepable, int timeout)
 {
 	enum ihk_os_status s;
@@ -1733,62 +1057,13 @@ static int smp_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
 	} else {
 		/* Polling */
 		while ((s = smp_ihk_os_query_status(ihk_os, priv)),
-		       s != status && s < IHK_OS_STATUS_SHUTDOWN 
+		       s != status && s < IHK_OS_STATUS_SHUTDOWN
 		       && timeout > 0) {
 			mdelay(100);
 			timeout--;
 		}
 		return s == status ? 0 : -1;
 	}
-}
-
-static int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
-                                      int cpu, int v)
-{
-	struct smp_os_data *os = priv;
-	unsigned long flags;
-
-	/* better calcuation or make map */
-	if (cpu < 0 || cpu >= os->cpu_info.n_cpus) {
-		return -EINVAL;
-	}
-	//printk("smp_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
-	//shimos_issue_ipi(os->cpu_info.hw_ids[cpu], v);
-	
-	local_irq_save(flags);
-#ifdef CONFIG_X86_X2APIC
-	if (x2apic_is_enabled()) {
-		native_x2apic_icr_write(v, os->cpu_info.hw_ids[cpu]);
-	}
-	else
-#endif
-	{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
-		___default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
-			APIC_DEST_PHYSICAL);
-#else
-		__default_send_IPI_dest_field(os->cpu_info.hw_ids[cpu], v, 
-			APIC_DEST_PHYSICAL);
-#endif
-	}
-	local_irq_restore(flags);
-
-	return -EINVAL;
-}
-
-static unsigned long smp_ihk_os_map_memory(ihk_os_t ihk_os, void *priv,
-                                           unsigned long remote_phys,
-                                           unsigned long size)
-{
-	/* We use the same physical memory. So no need to do something */
-	return remote_phys;
-}
-
-static int smp_ihk_os_unmap_memory(ihk_os_t ihk_os, void *priv,
-                                    unsigned long local_phys,
-                                    unsigned long size)
-{
-	return 0;
 }
 
 static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
@@ -1875,7 +1150,7 @@ static int smp_ihk_os_unregister_handler(ihk_os_t os, void *os_priv, int itype,
 	return 0;
 }
 
-static irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data)
+irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data)
 {
 	struct ihk_host_interrupt_handler *h;
 
@@ -1979,7 +1254,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 			int cpu = a;
 			dprintk(KERN_INFO "IHK-SMP: assigned CPU %d to OS %p\n", a, ihk_os);
 
-			CORE_SET(ihk_smp_cpus[cpu].apic_id, os->cpu_hw_ids_map);
+			CORE_SET(ihk_smp_cpus[cpu].hw_id, os->cpu_hw_ids_map);
 			set_bit(cpu_to_node(cpu), &os->numa_mask);
 
 			ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ASSIGNED;
@@ -1987,7 +1262,7 @@ static int __assign_cpus(ihk_os_t ihk_os, struct smp_os_data *os, char *buf)
 			ihk_smp_cpus[cpu].ikc_map_cpu = 0;
 
 			os->cpu_mapping[os->nr_cpus] = cpu;
-			os->cpu_hw_ids[os->nr_cpus] = ihk_smp_cpus[cpu].apic_id;
+			os->cpu_hw_ids[os->nr_cpus] = ihk_smp_cpus[cpu].hw_id;
 			os->nr_cpus++;
 
 			a++;
@@ -2119,7 +1394,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 		ret = -EINVAL;
 		goto out;
 	}
-
+	
 	/* Check if cores to be released are assigned to this OS */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
 	for_each_cpu(cpu, &cpus_to_release) {
@@ -2128,8 +1403,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 #endif
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ASSIGNED ||
 			ihk_smp_cpus[cpu].os != ihk_os) {
-			printk("IHK-SMP: error: CPU core %d is not assigned to %p\n", 
-				cpu, ihk_os);
+			printk("IHK-SMP: error: CPU core %d is not assigned to %p\n",
+			       cpu, ihk_os);
 			ret = -EINVAL;
 			goto out;
 		}
@@ -2143,8 +1418,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 #endif
 		int lwk_cpu;
 
-		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
-		CORE_CLR(ihk_smp_cpus[cpu].apic_id, os->cpu_hw_ids_map);
+		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
+		CORE_CLR(ihk_smp_cpus[cpu].hw_id, os->cpu_hw_ids_map);
 
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
@@ -2167,8 +1442,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 			break;
 		}
 
-		dprintk(KERN_INFO "IHK-SMP: CPU APIC %d released from %p\n",
-				ihk_smp_cpus[cpu].apic_id, ihk_os);
+		dprintk(KERN_INFO "IHK-SMP: CPU HWID %d released from %p\n",
+				ihk_smp_cpus[cpu].hw_id, ihk_os);
 	}
 
 	printk(KERN_INFO "IHK-SMP: released CPUs: %s from OS %p\n",
@@ -2224,10 +1499,34 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_map;
 	unsigned long flags;
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	char *string = NULL;
+	long len = strlen_user((const char __user *)arg);
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
 	char *string = (char *)arg;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	char *token;
 
 	dprintk("%s,ikc_map,arg=%s\n", __FUNCTION__, string);
+
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	if (len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	string = kmalloc(len + 1, GFP_KERNEL);
+	if (!string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(string, (char *)arg, len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -2278,6 +1577,9 @@ static int smp_ihk_os_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	os->cpu_ikc_mapped = 1;
 
 out:
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	if (string) kfree(string);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	return ret;
 }
 
@@ -2428,9 +1730,8 @@ static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
 
 	return 0;
 }
-
 static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
-		size_t mem_size, int numa_id)
+		 size_t mem_size, int numa_id)
 {
 	int ret = 0;
 	struct ihk_os_mem_chunk *os_mem_chunk;
@@ -2512,12 +1813,22 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 				pg = virt_to_page(phys_to_virt(mem_chunk_max->addr + mem_size));
 				/* Do not split compound pages though */
 				if (PageTail(pg)) {
+#ifdef POSTK_DEBUG_ARCH_DEP_73 /* use compound_head() */
+					struct page *head = compound_head(pg);
+					size_t comp_size = PAGE_SIZE << compound_order(head);
+
+					if ((page_to_phys(head) + comp_size) <
+							mem_chunk_max->addr + mem_chunk_max->size) {
+						off_t comp_end_offset = comp_size -
+							(page_to_phys(pg) - page_to_phys(head));
+#else /* POSTK_DEBUG_ARCH_DEP_73 */
 					size_t comp_size = PAGE_SIZE << compound_order(pg->first_page);
 
 					if ((page_to_phys(pg->first_page) + comp_size) <
 							mem_chunk_max->addr + mem_chunk_max->size) {
 						off_t comp_end_offset = comp_size -
 							(page_to_phys(pg) - page_to_phys(pg->first_page));
+#endif /* POSTK_DEBUG_ARCH_DEP_73 */
 
 						mem_chunk_leftover = (struct chunk*)
 							phys_to_virt(mem_chunk_max->addr + mem_size +
@@ -2568,7 +1879,6 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		if (os_mem_chunk_next) {
 			list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
 			dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [in front of 0x%lx]\n",
-					os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
 					os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
 		}
 		/* Add to the end */
@@ -2770,7 +2080,7 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 	/* Collect memory information */
 	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-		if (os_mem_chunk->os != ihk_os) 
+		if (os_mem_chunk->os != ihk_os)
 			continue;
 
 		if (q_len) {
@@ -2876,27 +2186,6 @@ static int smp_ihk_destroy_os(ihk_device_t ihk_dev, void *ihk_dev_priv,
 	return 0;
 }
 
-/** \brief Map a remote physical memory to the local physical memory.
- *
- * In BUILTIN, all the kernels including the host kernel are running in the
- * same physical memory map, thus there is nothing to do. */
-static unsigned long smp_ihk_map_memory(ihk_device_t ihk_dev, void *priv,
-                                        unsigned long remote_phys,
-                                        unsigned long size)
-{
-	/* We use the same physical memory. So no need to do something */
-	return remote_phys;
-}
-
-static int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
-                                unsigned long local_phys,
-                                unsigned long size)
-{
-	return 0;
-}
-
-
-
 static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
                                  unsigned long phys, unsigned long size,
                                  void *virt, int flags)
@@ -2926,7 +2215,7 @@ static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
 }
 
 static int smp_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
-                                  void *virt, unsigned long size)
+                                 void *virt, unsigned long size)
 {
 	ihk_smp_unmap_virtual(virt);
 	return 0;
@@ -2935,7 +2224,7 @@ static int smp_ihk_unmap_virtual(ihk_device_t ihk_dev, void *priv,
 	if ((unsigned long)virt >= PAGE_OFFSET) {
 		iounmap(virt);
 		return 0;
-		//return shimos_other_os_unmap(virt, size);
+		return shimos_other_os_unmap(virt, size);
 	} else {
 		return ihk_host_unmap_generic(ihk_dev, virt, size);
 	}
@@ -2948,123 +2237,6 @@ static long smp_ihk_debug_request(ihk_device_t ihk_dev, void *priv,
 {
 	return -EINVAL;
 }
-
-
-static int smp_ihk_init_ident_page_table(void)
-{
-	int ident_npages = 0;
-	int i, j, k;
-	unsigned long maxmem = 0, *p, physaddr;
-	struct page *ident_pages;
-
-	/* 256GB */
-	maxmem = (unsigned long)256 * (1024 * 1024 * 1024);
-
-	ident_npages = (maxmem + (1UL << PUD_SHIFT) - 1) >> PUD_SHIFT;
-	ident_npages_order = fls(ident_npages + 2) - 1; 
-	if ((2 << ident_npages_order) != ident_npages + 2) {
-		ident_npages_order++;
-	}
-
-	printk("IHK-SMP: page table pages = %d, ident_npages_order = %d\n", 
-			ident_npages, ident_npages_order);
-
-	ident_pages = alloc_pages(GFP_DMA32 | GFP_KERNEL, ident_npages_order);
-	if (!ident_pages) {
-		printk("IHK-SMP: error: allocating identity page tables\n");
-		return ENOMEM;
-	}
-
-	ident_page_table = page_to_phys(ident_pages);
-	ident_page_table_virt = pfn_to_kaddr(page_to_pfn(ident_pages));
-
-	memset(ident_page_table_virt, 0, ident_npages);
-
-	/* First level : We consider only < 512 GB of memory */
-	ident_page_table_virt[0] = (ident_page_table + PAGE_SIZE) | 0x63;
-
-	/* Second level */
-	p = ident_page_table_virt + (PAGE_SIZE / sizeof(*p));
-
-	for (i = 0; i < PTRS_PER_PUD; i++) {
-		if (((unsigned long)i << PUD_SHIFT) < maxmem) {
-			*p = (ident_page_table + PAGE_SIZE * (2 + i)) | 0x63;
-		}
-		else {
-			break;
-		}
-		p++;
-	}
-
-	if (i != ident_npages) {
-		printk("Something wrong for memory map. : %d vs %d\n", i, ident_npages);
-	}
-
-	/* Third level */
-	p = ident_page_table_virt + (PAGE_SIZE * 2 / sizeof(*p));
-	for (j = 0; j < ident_npages; j++) {
-		for (k = 0; k < PTRS_PER_PMD; k++) {
-			physaddr = ((unsigned long)j << PUD_SHIFT) | 
-				((unsigned long)k << PMD_SHIFT);
-			if (physaddr < maxmem) {
-				*p = physaddr | 0xe3;
-				p++;
-			}
-			else {
-				break;
-			}
-		}
-	}
-
-	printk("IHK-SMP: identity page tables allocated\n");
-	return 0;
-}
-
-
-static irqreturn_t smp_ihk_irq_handler(int irq, void *dev_id)
-{
-	ack_APIC_irq();
-	smp_ihk_irq_call_handlers(ihk_smp_irq, NULL);
-	return IRQ_HANDLED;
-}
-
-#ifdef CONFIG_SPARSE_IRQ
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-void (*orig_irq_flow_handler)(struct irq_desc *desc) = NULL;
-void ihk_smp_irq_flow_handler(struct irq_desc *desc)
-#else
-void (*orig_irq_flow_handler)(unsigned int irq, struct irq_desc *desc) = NULL;
-void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0) */
-{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	unsigned int irq = desc->irq_data.irq;
-#endif
-
-	if (!desc->action || !desc->action->handler) {
-		printk("IHK-SMP: no handler for IRQ %d??\n", irq);
-		return;
-	}
-	
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
-	raw_spin_lock(&desc->lock);
-#else
-	spin_lock(&desc->lock);
-#endif
-
-	//printk("IHK-SMP: calling handler for IRQ %d\n", irq);
-	desc->action->handler(irq, NULL);
-	//ack_APIC_irq();
-	
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
-	raw_spin_unlock(&desc->lock);
-#else
-	spin_unlock(&desc->lock);
-#endif
-}
-#endif
-
-#define IHK_RESERVE_PAGE_ORDER	(10)
 
 static int __smp_ihk_free_mem_from_list(struct list_head *list)
 {
@@ -3285,9 +2457,9 @@ static void sort_pagelists(struct zone *zone)
 #define RESERVE_MEM_FAILED_ATTEMPTS 20
 #define RESERVE_MEM_TIMEOUT 15
 
-int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
+static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
-	int order = IHK_RESERVE_PAGE_ORDER;
+	int order = get_order(IHK_SMP_CHUNK_BASE_SIZE);
 	size_t want;
 	size_t allocated;
 	struct chunk *p;
@@ -3298,7 +2470,15 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	int i;
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
+#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+	void (*__drain_all_pages)(struct zone *) = NULL;
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 	void (*__drain_all_pages)(void) = NULL;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_79 */
+	void (*__drain_all_pages)(void) = NULL;
+#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 	int failed_free_attempts = 0;
 	unsigned long res_start = get_seconds();
 
@@ -3310,11 +2490,29 @@ int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	__try_to_free_pages = (unsigned long (*)
 			(struct zonelist *, int, gfp_t, nodemask_t *))
 			kallsyms_lookup_name("try_to_free_pages");
+#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+	__drain_all_pages = (void (*)(struct zone *))
+			kallsyms_lookup_name("drain_all_pages");
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 	__drain_all_pages = (void (*)(void))
 			kallsyms_lookup_name("drain_all_pages");
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_79 */
+	__drain_all_pages = (void (*)(void))
+			kallsyms_lookup_name("drain_all_pages");
+#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 
 	if (__drain_all_pages) {
+#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+		__drain_all_pages(NULL);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 		__drain_all_pages();
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_79 */
+		__drain_all_pages();
+#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 	}
 
 	/* Shrink slab/slub caches */
@@ -3374,7 +2572,15 @@ retry:
 			int freed_pages;
 
 			if (__drain_all_pages) {
+#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+				__drain_all_pages(NULL);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 				__drain_all_pages();
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_79 */
+				__drain_all_pages();
+#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 			}
 
 			if (__try_to_free_pages &&
@@ -3572,25 +2778,24 @@ static int _smp_ihk_write_cpu_sys_file(int cpu_id, char *val)
 	set_fs(get_ds());
 	filp = filp_open(path, O_RDWR, 0);
 	if (IS_ERR(filp)) {
-		set_fs(oldfs);
-		err = PTR_ERR(filp);
-		printk("%s: error opening %s\n", __FUNCTION__, path);
-		return -1;
+		 set_fs(oldfs);
+		 err = PTR_ERR(filp);
+		 printk("%s: error opening %s\n", __FUNCTION__, path);
+		 return -1;
 	}
 
 	ret = kernel_write(filp, val, 1, 0);
 	if (ret != 1) {
-		filp_close(filp, NULL);
-		set_fs(oldfs);
-		printk("%s: error writing %s\n", __FUNCTION__, path);
-		return -1;
+		 filp_close(filp, NULL);
+		 set_fs(oldfs);
+		 printk("%s: error writing %s\n", __FUNCTION__, path);
+		 return -1;
 	}
 
 	filp_close(filp, NULL);
 	set_fs(oldfs);
 	return 0;
 }
-
 
 static int smp_ihk_offline_cpu(int cpu_id)
 {
@@ -3647,7 +2852,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
 		if (cpumask_test_cpu(cpu, &cpus_to_offline)) {
 #else
-		if (cpu_isset(cpu, cpus_to_offline)) {
+ 		if (cpu_isset(cpu, cpus_to_offline)) {
 #endif
 			printk("%s: invalid CPU requested: %d\n",
 					__FUNCTION__, cpu);
@@ -3662,23 +2867,27 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	for_each_cpu_mask(cpu, cpus_to_offline) {
 #endif
 		if (cpu > SMP_MAX_CPUS) {
-			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
+			printk("IHK-SMP: error: CPU %d is out of limit\n",
+			       cpu);
 			ret = -EINVAL;
 			goto err_before_offline;
 		}
 
 		if (!cpu_present(cpu)) {
-			printk("IHK-SMP: error: CPU %d is not present\n", cpu);
+			printk("IHK-SMP: error: CPU %d is not present\n",
+			       cpu);
 			ret = -EINVAL;
 			goto err_before_offline;
 		}
 
 		if (!cpu_online(cpu)) {
 			if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_AVAILABLE)
-				printk("IHK-SMP: error: CPU %d was reserved already\n", cpu);
+				printk("IHK-SMP: error: CPU %d was reserved already\n",
+				       cpu);
 
 			if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ASSIGNED)
-				printk("IHK-SMP: erro: CPU %d was assigned already\n", cpu);
+				printk("IHK-SMP: erro: CPU %d was assigned already\n",
+				       cpu);
 
 			ret = -EINVAL;
 			goto err_before_offline;
@@ -3686,19 +2895,18 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ONLINE) {
 			printk("IHK-SMP: error: CPU %d is in inconsistent state, skipping\n",
-					cpu);
+			       cpu);
 			ret = -EINVAL;
 			goto err_before_offline;
 		}
 
 		ihk_smp_cpus[cpu].id = cpu;
-		ihk_smp_cpus[cpu].apic_id =
-			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[cpu].id);
+		ihk_smp_cpus[cpu].hw_id = ihk_smp_get_hw_id(cpu);
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_TO_OFFLINE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-		dprintk(KERN_INFO "IHK-SMP: CPU %d to be offlined, APIC: %d\n",
-			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+		dprintk(KERN_INFO "IHK-SMP: CPU %d to be offlined, HWID: %d\n",
+		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
 	/* Offline CPU cores */
@@ -3710,15 +2918,14 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 			goto err_during_offline;
 		}
 
-		ihk_smp_cpus[cpu].apic_id =
-			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[cpu].id);
+		ihk_smp_cpus[cpu].hw_id = ihk_smp_get_hw_id(cpu);
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_OFFLINED;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
+		
+		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
 
-		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
-
-		dprintk(KERN_INFO "IHK-SMP: CPU %d offlined successfully, APIC: %d\n",
-			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+		dprintk(KERN_INFO "IHK-SMP: CPU %d offlined successfully, HWID: %d\n",
+		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
 	/* Offlining CPU cores went well, mark them as available */
@@ -3727,8 +2934,8 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 			continue;
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
 
-		dprintk(KERN_INFO "IHK-SMP: CPU %d reserved successfully, APIC: %d\n",
-			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+		dprintk(KERN_INFO "IHK-SMP: CPU %d reserved successfully, HWID: %d\n",
+		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
 	printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n", req_string);
@@ -3748,7 +2955,7 @@ err_before_offline:
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
 			continue;
-
+		
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
 	}
 
@@ -3803,13 +3010,15 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	for_each_cpu_mask(cpu, cpus_to_online) {
 #endif
 		if (cpu > SMP_MAX_CPUS) {
-			printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
+			printk("IHK-SMP: error: CPU %d is out of limit\n",
+			       cpu);
 			ret = -EINVAL;
 			goto err;
 		}
 
 		if (!cpu_present(cpu)) {
-			printk("IHK-SMP: error: CPU %d is not valid\n", cpu);
+			printk("IHK-SMP: error: CPU %d is not valid\n",
+			       cpu);
 			ret = -EINVAL;
 			goto err;
 		}
@@ -3825,13 +3034,12 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		}
 
 		ihk_smp_cpus[cpu].id = cpu;
-		ihk_smp_cpus[cpu].apic_id =
-			per_cpu(x86_cpu_to_apicid, ihk_smp_cpus[cpu].id);
+		ihk_smp_cpus[cpu].hw_id = ihk_smp_get_hw_id(cpu);
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_TO_ONLINE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-		dprintk("IHK-SMP: CPU %d to be onlined, APIC: %d\n",
-			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+		dprintk("IHK-SMP: CPU %d to be onlined, HWID: %d\n",
+		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
 	/* Online CPU cores */
@@ -3846,8 +3054,8 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-		dprintk("IHK-SMP: CPU %d onlined successfully, APIC: %d\n",
-			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
+		dprintk("IHK-SMP: CPU %d onlined successfully, HWID: %d\n",
+		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
 	ret = 0;
@@ -4054,9 +3262,6 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	return 0;
 }
 
-static LIST_HEAD(cpu_topology_list);
-static LIST_HEAD(node_topology_list);
-
 static void free_info(void)
 {
 	struct ihk_cpu_topology *cpu;
@@ -4092,7 +3297,7 @@ static void free_info(void)
 	return;
 } /* free_info() */
 
-static int read_file(void *buf, size_t size, char *fmt, va_list ap)
+int read_file(void *buf, size_t size, char *fmt, va_list ap)
 {
 	int error;
 	int er;
@@ -4155,7 +3360,7 @@ out:
 	return error;
 } /* read_file() */
 
-static int file_readable(char *fmt, ...)
+int file_readable(char *fmt, ...)
 {
 	int ret;
 	va_list ap;
@@ -4196,7 +3401,7 @@ out:
 	return ret;
 }
 
-static int read_long(long *valuep, char *fmt, ...)
+int read_long(long *valuep, char *fmt, ...)
 {
 	int error;
 	char *buf = NULL;
@@ -4233,7 +3438,7 @@ out:
 	return error;
 } /* read_long() */
 
-static int read_bitmap(void *map, int nbits, char *fmt, ...)
+int read_bitmap(void *map, int nbits, char *fmt, ...)
 {
 	int error;
 	char *buf = NULL;
@@ -4268,7 +3473,7 @@ out:
 	return error;
 } /* read_bitmap() */
 
-static int read_string(char **valuep, char *fmt, ...)
+int read_string(char **valuep, char *fmt, ...)
 {
 	int error;
 	char *buf = NULL;
@@ -4315,295 +3520,6 @@ out:
 	dprintk("read_string(%p,%s): %d\n", valuep, fmt, error);
 	return error;
 } /* read_string() */
-
-static int collect_cache_topology(struct ihk_cpu_topology *cpu_topo, int index)
-{
-	int error;
-	char *prefix = NULL;
-	int n;
-	struct ihk_cache_topology *p = NULL;
-
-	dprintk("collect_cache_topology(%p,%d)\n", cpu_topo, index);
-	prefix = kmalloc(PATH_MAX, GFP_KERNEL);
-	if (!prefix) {
-		error = -ENOMEM;
-		eprintk("ihk:collect_cache_topology:"
-				"kmalloc failed. %d\n", error);
-		goto out;
-	}
-
-	n = snprintf(prefix, PATH_MAX,
-			"/sys/devices/system/cpu/cpu%d/cache/index%d",
-			cpu_topo->cpu_number, index);
-	if (n >= PATH_MAX) {
-		error = -ENAMETOOLONG;
-		eprintk("ihk:collect_cache_topology:"
-				"snprintf failed. %d\n", error);
-		goto out;
-	}
-
-	if (!file_readable("%s/level", prefix)) {
-		/* File doesn't exist, it's not an error */
-		error = 0;
-		goto out;
-	}
-
-	p = kzalloc(sizeof(*p), GFP_KERNEL);
-	if (!p) {
-		error = -ENOMEM;
-		eprintk("ihk:collect_cache_topology:"
-				"kzalloc failed. %d\n", error);
-		goto out;
-	}
-
-	p->index = index;
-
-	error = read_long(&p->level, "%s/level", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_long(level) failed. %d\n", error);
-		goto out;
-	}
-
-	error = read_string(&p->type, "%s/type", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_string(type) failed. %d\n", error);
-		goto out;
-	}
-
-	error = read_long(&p->size, "%s/size", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_long(size) failed. %d\n", error);
-		goto out;
-	}
-	p->size *= 1024;	/* XXX */
-
-	error = read_string(&p->size_str, "%s/size", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_string(size) failed. %d\n", error);
-		goto out;
-	}
-
-	error = read_long(&p->coherency_line_size,
-			"%s/coherency_line_size", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_long(coherency_line_size) failed. %d\n",
-				error);
-		goto out;
-	}
-
-	error = read_long(&p->number_of_sets, "%s/number_of_sets", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_long(number_of_sets) failed. %d\n",
-				error);
-		goto out;
-	}
-
-	error = read_long(&p->physical_line_partition,
-			"%s/physical_line_partition", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_long(physical_line_partition) failed."
-				" %d\n", error);
-		goto out;
-	}
-
-	error = read_long(&p->ways_of_associativity,
-			"%s/ways_of_associativity", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_long(ways_of_associativity) failed."
-				" %d\n", error);
-		goto out;
-	}
-
-	error = read_bitmap(&p->shared_cpu_map, nr_cpumask_bits,
-			"%s/shared_cpu_map", prefix);
-	if (error) {
-		eprintk("ihk:collect_cache_topology:"
-				"read_bitmap(shared_cpu_map) failed. %d\n",
-				error);
-		goto out;
-	}
-
-	error = 0;
-	list_add(&p->chain, &cpu_topo->cache_topology_list);
-	p = NULL;
-
-out:
-	if (p) {
-		kfree(p->type);
-		kfree(p->size_str);
-		kfree(p);
-	}
-	kfree(prefix);
-	dprintk("collect_cache_topology(%p,%d): %d\n", cpu_topo, index, error);
-	return error;
-} /* collect_cache_topology() */
-
-static int collect_cpu_topology(int cpu)
-{
-	int error;
-	char *prefix = NULL;
-	int n;
-	struct ihk_cpu_topology *p = NULL;
-	int index;
-
-	dprintk("collect_cpu_topology(%d)\n", cpu);
-	prefix = kmalloc(PATH_MAX, GFP_KERNEL);
-	if (!prefix) {
-		error = -ENOMEM;
-		eprintk("ihk:collect_cpu_topology:"
-				"kmalloc failed. %d\n", error);
-		goto out;
-	}
-
-	n = snprintf(prefix, PATH_MAX, "/sys/devices/system/cpu/cpu%d", cpu);
-	if (n >= PATH_MAX) {
-		error = -ENAMETOOLONG;
-		eprintk("ihk:collect_cpu_topology:"
-				"snprintf failed. %d\n", error);
-		goto out;
-	}
-
-	p = kzalloc(sizeof(*p), GFP_KERNEL);
-	if (!p) {
-		error = -ENOMEM;
-		eprintk("ihk:collect_cpu_topology:"
-				"kzalloc failed. %d\n", error);
-		goto out;
-	}
-
-	INIT_LIST_HEAD(&p->cache_topology_list);
-	p->cpu_number = cpu;
-	p->hw_id = per_cpu(x86_cpu_to_apicid, cpu);
-
-	error = read_long(&p->core_id, "%s/topology/core_id", prefix);
-	if (error) {
-		eprintk("ihk:collect_cpu_info:"
-				"read_long(core_id) failed. %d\n", error);
-		goto out;
-	}
-
-	error = read_bitmap(&p->core_siblings, nr_cpumask_bits,
-			"%s/topology/core_siblings", prefix);
-	if (error) {
-		eprintk("ihk:collect_cpu_info:"
-				"read_bitmap(core_siblings) failed. %d\n",
-				error);
-		goto out;
-	}
-
-	error = read_long(&p->physical_package_id,
-			"%s/topology/physical_package_id", prefix);
-	if (error) {
-		eprintk("ihk:collect_cpu_info:"
-				"read_long(physical_package_id) failed. %d\n",
-				error);
-		goto out;
-	}
-
-	error = read_bitmap(&p->thread_siblings, nr_cpumask_bits,
-			"%s/topology/thread_siblings", prefix);
-	if (error) {
-		eprintk("ihk:collect_cpu_info:"
-				"read_bitmap(thread_siblings) failed. %d\n",
-				error);
-		goto out;
-	}
-
-	for (index = 0; index < 10; ++index) {
-		error = collect_cache_topology(p, index);
-		if (error) {
-			dprintk("collect_cpu_info:"
-					"collect_cache_topology(%d) failed."
-					" %d\n", index, error);
-			break;
-		}
-	}
-
-	error = 0;
-	list_add(&p->chain, &cpu_topology_list);
-	p = NULL;
-
-out:
-	kfree(p);
-	kfree(prefix);
-	dprintk("collect_cpu_topology(%d): %d\n", cpu, error);
-	return error;
-} /* collect_cpu_topology() */
-
-static int collect_node_topology(int node)
-{
-	int error;
-	struct ihk_node_topology *p = NULL;
-
-	dprintk("collect_node_topology(%d)\n", node);
-	p = kzalloc(sizeof(*p), GFP_KERNEL);
-	if (!p) {
-		error = -ENOMEM;
-		eprintk("ihk:collect_node_topology:"
-				"kzalloc failed. %d\n", error);
-		goto out;
-	}
-
-	p->node_number = node;
-
-	error = read_bitmap(&p->cpumap, nr_cpumask_bits,
-			"/sys/devices/system/node/node%d/cpumap", node);
-	if (error) {
-		eprintk("ihk:collect_node_topology:"
-				"read_bitmap failed. %d\n", error);
-		goto out;
-	}
-
-	error = 0;
-	list_add(&p->chain, &node_topology_list);
-	p = NULL;
-
-out:
-	kfree(p);
-	dprintk("collect_node_topology(%d): %d\n", node, error);
-	return error;
-} /* collect_node_topology() */
-
-static int collect_topology(void)
-{
-	int error;
-	int cpu;
-	int node;
-
-	dprintk("collect_topology()\n");
-	for_each_cpu(cpu, cpu_online_mask) {
-		error = collect_cpu_topology(cpu);
-		if (error) {
-			eprintk("ihk:collect_topology:"
-					"collect_cpu_topology failed. %d\n",
-					error);
-			goto out;
-		}
-	}
-
-	for_each_online_node(node) {
-		error = collect_node_topology(node);
-		if (error) {
-			eprintk("ihk:collect_topology:"
-					"collect_node_topology failed. %d\n",
-					error);
-			goto out;
-		}
-	}
-
-	error = 0;
-out:
-	dprintk("collect_topology(): %d\n", error);
-	return error;
-} /* collect_topology() */
 
 static struct ihk_cpu_topology *smp_ihk_get_cpu_topology(ihk_device_t dev, void *priv, int hw_id)
 {
@@ -4660,449 +3576,47 @@ out:
 	return hw_id;
 } /* smp_ihk_linux_cpu_to_hw_id() */
 
-static struct irq_chip ihk_irq_chip = {
-	.name = "ihk_irq",
-};
-
-static int
-vector_is_used(int vector, int core) {
-	int rtn = 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
-	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-					per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-/* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(core)));
-#else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
-				per_cpu_offset(core)));
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	if (vectors[vector] != VECTOR_UNUSED) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
-				vector, core, vectors[vector]);
-		rtn = 1;
-	}
-#else
-	if (vectors[vector] != -1) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
-				vector, core, vectors[vector]);
-		rtn = 1;
-	}
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
-	return rtn;
-}
-
-static void
-set_vector(int vector, int core) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
-	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-						per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(core)));
-#else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
-		per_cpu_offset(core)));
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	if (vectors[vector] == VECTOR_UNUSED) {
-		dprintk(KERN_INFO "IHK-SMP: fixed vector_irq for %d in core %d\n", vector, core);
-		vectors[vector] = desc;
-	}
-#else
-	if (vectors[vector] == -1) {
-		dprintk(KERN_INFO "IHK-SMP: fixed vector_irq for %d in core %d\n", vector, core);
-		vectors[vector] = vector;
-	}
-#endif
-}
-
-static void
-release_vector(int vector, int core) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
-	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(core)));
-#else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
-				per_cpu_offset(core)));
-#endif
-
-	/* Release IRQ vector */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
-	vectors[vector] = VECTOR_UNUSED;
-#else
-	vectors[vector] = -1;
-#endif
-}
-
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
-	int error = 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
-	int vector = ISA_IRQ_VECTOR(15) + 2;
-#else
-	int vector = IRQ15_VECTOR + 2;
-#endif
-	int i = 0;
-	int is_used = 0;
+	int ret;
 
 	INIT_LIST_HEAD(&ihk_mem_free_chunks);
 	INIT_LIST_HEAD(&ihk_mem_used_chunks);
 
 	if (ihk_cores) {
 		if (ihk_cores > (num_present_cpus() - 1)) {
-			printk("IHK-SMP error: only %d CPUs in total are available\n", 
-					num_present_cpus());
-			return EINVAL;	
+			printk("IHK-SMP error: only %d CPUs in total are available\n",
+			       num_present_cpus());
+			return EINVAL;
 		}
-	}
-
-	if (ihk_trampoline) {
-		printk("IHK-SMP: preallocated trampoline phys: 0x%lx\n", ihk_trampoline);
-		
-		trampoline_phys = ihk_trampoline;
-		trampoline_va = ioremap_cache(trampoline_phys, PAGE_SIZE);
-
-	}
-	else {
-#define TRAMP_ATTEMPTS	20
-		int attempts = 0;
-		struct page *bad_pages[TRAMP_ATTEMPTS];
-		
-		memset(bad_pages, 0, TRAMP_ATTEMPTS * sizeof(struct page *));
-
-		/* Try to allocate trampoline page, it has to be under 1M so we can 
-		 * execute real-mode AP code. If allocation fails more than 
-		 * TRAMP_ATTEMPTS times, we will use Linux's one.
-		 * NOTE: using Linux trampoline could potentially cause race 
-		 * conditions with concurrent CPU onlining requests */
-retry_trampoline:
-		trampoline_page = alloc_pages(GFP_DMA | GFP_KERNEL, 1);
-
-		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
-			bad_pages[attempts] = trampoline_page;
-			
-			if (++attempts < TRAMP_ATTEMPTS) {
-				goto retry_trampoline;
-			}
-		}
-
-		/* Free failed attempts.. */
-		for (attempts = 0; attempts < TRAMP_ATTEMPTS; ++attempts) {
-			if (!bad_pages[attempts]) {
-				continue;
-			}
-
-			free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(bad_pages[attempts])), 1);
-		}
-
-		/* Couldn't allocate trampoline page, use Linux' one from real_header */
-		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
-			using_linux_trampoline = 1;
-			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38))
-			trampoline_phys = TRAMPOLINE_BASE;
-#elif ((LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)))
-#ifdef IHK_KSYM_x86_trampoline_base
-#if IHK_KSYM_x86_trampoline_base
-			trampoline_phys = __pa(x86_trampoline_base);
-#endif
-#endif
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0))
-#ifdef IHK_KSYM_real_mode_header
-#if IHK_KSYM_real_mode_header
-			trampoline_phys = real_mode_header->trampoline_start;
-#endif
-#endif
-#endif /* LINUX_VERSION_CODE check */
-			trampoline_va = __va(trampoline_phys);
-		}
-		else {
-			trampoline_phys = page_to_phys(trampoline_page);
-			trampoline_va = pfn_to_kaddr(page_to_pfn(trampoline_page));
-		}
-
-		printk(KERN_INFO "IHK-SMP: trampoline_page phys: 0x%lx\n", trampoline_phys);
 	}
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
-	/* Find a suitable IRQ vector */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
-	for (vector = ihk_start_irq ? ihk_start_irq : (ISA_IRQ_VECTOR(14) + 2); 
-			vector < 256; vector += 1) {
-#else
-	for (vector = ihk_start_irq ? ihk_start_irq : (IRQ14_VECTOR + 2); 
-			vector < 256; vector += 1) {
-#endif	
-#ifdef CONFIG_SPARSE_IRQ
-		struct irq_desc *desc;
-#endif
+	ret = smp_ihk_arch_init();
 
-		if (test_bit(vector, used_vectors)) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: used\n", vector);
-			continue;
-		}
-
-		for (i = 0; i < nr_cpu_ids; i++) {
-			if (vector_is_used(vector, i)) {
-				is_used = 1;
-				break;
-			}
-		}
-
-		if (is_used) {
-			is_used = 0;
-			continue;
-		}
-
-#ifdef CONFIG_SPARSE_IRQ
-		/* If no descriptor, create one */
-		desc = _irq_to_desc(vector);
-		if (!desc) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
-			desc = _alloc_desc(vector, first_online_node, THIS_MODULE);
-			desc->irq_data.chip = _dummy_irq_chip;
-			radix_tree_insert(_irq_desc_tree, vector, desc);
-#else
-			desc = _irq_to_desc_alloc_node(vector, first_online_node);
-			if (!desc) {
-				printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
-				continue;
-			}
-			desc->chip = _dummy_irq_chip;
-#endif
-		}
-		
-		desc = _irq_to_desc(vector);
-		if (!desc) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: no descriptor\n", vector);
-			continue;
-		}
-
-		if (desc->action) {
-			// action is already registered.
-			continue;
-		}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
-		if (desc->status_use_accessors & IRQ_NOREQUEST) {
-			
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
-			
-			desc->status_use_accessors &= ~IRQ_NOREQUEST;
-		}
-#else
-		if (desc->status & IRQ_NOREQUEST) {
-			
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
-			
-			desc->status &= ~IRQ_NOREQUEST;
-		}
-#endif
-		orig_irq_flow_handler = desc->handle_irq;
-		desc->handle_irq = ihk_smp_irq_flow_handler;
-#endif // CONFIG_SPARSE_IRQ
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
-#define IRQF_DISABLED 0x0
-#endif
-		if (request_irq(vector, 
-					smp_ihk_irq_handler, IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
-			continue;
-		}
-
-		/* Pretend a real external interrupt */
-		for (i = 0; i < nr_cpu_ids; i++) {
-			set_vector(vector, i);
-		}
-		break;
-	}
-
-	if (vector >= 256) {
-		printk(KERN_ERR "IHK-SMP: error: allocating IKC irq vector\n");
-		error = EFAULT;
-		goto error_free_trampoline;
-	}
-
-	ihk_smp_irq = vector;
-	ihk_smp_irq_apicid = (int)per_cpu(x86_bios_cpu_apicid, 
-		ihk_ikc_irq_core);
-	printk(KERN_INFO "IHK-SMP: IKC irq vector: %d, CPU logical id: %u, CPU APIC id: %d\n",
-	    ihk_smp_irq, ihk_ikc_irq_core, ihk_smp_irq_apicid);
-
-	irq_set_chip(vector, &ihk_irq_chip);
-	irq_set_chip_data(vector, NULL);
-
-	error = smp_ihk_init_ident_page_table();
-	if (error) {
-		printk(KERN_ERR "IHK-SMP: error: identity page table initialization failed\n");
-		goto error_free_irq;
-	}
-
-	error = collect_topology();
-	if (error) {
-		printk(KERN_ERR "IHK-SMP: error: collecting topology information failed\n");
-		goto error_free_irq;
-	}
-
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-		(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,5)))
-	/* NOTE: this is nasty, but we need to decrease the refcount because
-	 * after Linux 3.0 request_irq holds an extra reference to the module. 
-	 * This causes rmmod to fail and report the module is in use when one
-	 * tries to unload it. To overcome this, we drop one ref here and get
-	 * an extra one before free_irq in the module's exit code */
-	if (module_refcount(THIS_MODULE) == 2) {
-		module_put(THIS_MODULE);
-		this_module_put = 1;
-	}
-#endif
-
-	return error;
-
-error_free_irq:
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
-
-	free_irq(ihk_smp_irq, NULL);
-
-error_free_trampoline:
-	if (trampoline_page) {
-		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);
-	}
-	else {
-		if (!using_linux_trampoline)
-			iounmap(trampoline_va);
-	}
-
-	return error;
+	return ret;
 }
 
-int ihk_smp_reset_cpu(int phys_apicid) {
-	unsigned long send_status;
-	int maxlvt;
-
-	preempt_disable();
-	dprintk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", phys_apicid);
-
-	maxlvt = _lapic_get_maxlvt();
-
-	/*
-	 * Be paranoid about clearing APIC errors.
-	 */
-	if (APIC_INTEGRATED(apic_version[phys_apicid])) {
-		if (maxlvt > 3)         /* Due to the Pentium erratum 3AP.  */
-			apic_write(APIC_ESR, 0);
-		apic_read(APIC_ESR);
-	}
-
-	pr_debug("Asserting INIT.\n");
-
-	/*
-	 * Turn INIT on target chip
-	 */
-	/*
-	 * Send IPI
-	 */
-	apic_icr_write(APIC_INT_LEVELTRIG | APIC_INT_ASSERT | APIC_DM_INIT,
-			phys_apicid);
-
-	pr_debug("Waiting for send to finish...\n");
-	send_status = safe_apic_wait_icr_idle();
-
-	mdelay(10);
-
-	pr_debug("Deasserting INIT.\n");
-
-	/* Target chip */
-	/* Send IPI */
-	apic_icr_write(APIC_INT_LEVELTRIG | APIC_DM_INIT, phys_apicid);
-
-	pr_debug("Waiting for send to finish...\n");
-	send_status = safe_apic_wait_icr_idle();
-
-	preempt_enable();
-	return 0;
-}
-
-
-static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv) 
+static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 {
-	int cpu;
-	int i = 0;
+	int cpu, ret = 0;
 
-#ifdef CONFIG_SPARSE_IRQ
-	struct irq_desc *desc;
-#endif
-
-	/* Release IRQ vector */
-	for (i = 0; i < nr_cpu_ids; i++) {
-		release_vector(ihk_smp_irq, i);
-	}
-
-	irq_set_chip(ihk_smp_irq, NULL);
-
-#ifdef CONFIG_SPARSE_IRQ
-	desc = _irq_to_desc(ihk_smp_irq);
-	desc->handle_irq = orig_irq_flow_handler;
-#endif
-
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
-
-	free_irq(ihk_smp_irq, NULL);
-	
-#ifdef CONFIG_SPARSE_IRQ
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-	irq_free_descs(ihk_smp_irq, 1);
-#endif
-#endif
+	smp_ihk_arch_exit();
 
 	/* Re-enable CPU cores */
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE)
 			continue;
 
-		ihk_smp_reset_cpu(ihk_smp_cpus[cpu].apic_id);
+		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
 
 		if (smp_ihk_online_cpu(cpu) != 0) {
 			continue;
 		}
 
-		printk("IHK-SMP: CPU %d onlined successfully, APIC: %d\n", 
-			ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].apic_id);
-	}
-
-	if (trampoline_page) {
-		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);
-	}
-	else {
-		if (!using_linux_trampoline)
-			iounmap(trampoline_va);
-	}
-
-	if (ident_npages_order) {
-		free_pages((unsigned long)ident_page_table_virt, ident_npages_order);
+		printk("IHK-SMP: CPU %d onlined successfully, HWID: %d\n",
+		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
 	}
 
 	/* Free memory */
@@ -5110,7 +3624,7 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 	free_info();
 
-	return 0;
+	return ret;
 }
 
 static struct ihk_device_ops smp_ihk_device_ops = {
@@ -5162,7 +3676,20 @@ static int __init smp_module_init(void)
 	}
 
 	builtin_data.ihk_dev = ihkd;
-	
+
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
+		(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,5)))
+	/* NOTE: this is nasty, but we need to decrease the refcount because
+	 * after Linux 3.0 request_irq holds an extra reference to the module. 
+	 * This causes rmmod to fail and report the module is in use when one
+	 * tries to unload it. To overcome this, we drop one ref here and get
+	 * an extra one before free_irq in the module's exit code */
+	if (module_refcount(THIS_MODULE) == 2) {
+		module_put(THIS_MODULE);
+		this_module_put = 1;
+	}
+#endif
+
 	return 0;
 }
 

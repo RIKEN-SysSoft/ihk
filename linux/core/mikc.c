@@ -1,3 +1,4 @@
+/* mikc.c COPYRIGHT FUJITSU LIMITED 2015-2016 */
 /** 
  * \file host/linux/mikc.c
  *
@@ -204,7 +205,12 @@ int ihk_ikc_send_interrupt(struct ihk_ikc_channel_desc *channel)
 {
 	return ihk_os_issue_interrupt(channel->remote_os, 
 	                              channel->send.queue->read_cpu,
+/* POSTK_DEBUG_ARCH_DEP_10 */
+#if defined(__aarch64__)
+	                              0x01);
+#else
 	                              0xd1);
+#endif
 }
 
 /** \brief Get the lock for the list of listeners (called from IHK-IKC) */
