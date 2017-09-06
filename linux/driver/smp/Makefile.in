@@ -20,7 +20,7 @@ endif
 obj-m += ihk-smp-$(arch).o
 
 ccflags-y := -I$(src)/../../../cokernel/smp/$(arch) -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(src)/../../../ikc/include \
-             -I@abs_builddir@ -I@abs_builddir@/$(arch_dir)
+             -I@abs_builddir@/$(arch_dir) -I@abs_builddir@ -I$(src) -I$(src)/$(arch_dir)
 
 ihk-smp-$(arch)-y += smp-driver.o $(arch_dir)/smp-arch-driver.o $(arch_objs)
 
