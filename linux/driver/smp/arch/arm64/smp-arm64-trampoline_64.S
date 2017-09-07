@@ -55,6 +55,8 @@ cpu_logical_map:
 	.skip	NR_CPUS * 8	/* array of the MPIDR and the core number */
 rdist_base_pa:
 	.skip	NR_CPUS * 8	/* GIC re-distributor register base addresses */
+retention_state_flag_pa:
+	.quad	0		/* retention state flag address */
 nr_pmu_irq_affiniry:
 	.word	0		/* number of pmu affinity list elements. */
 pmu_irq_affiniry:

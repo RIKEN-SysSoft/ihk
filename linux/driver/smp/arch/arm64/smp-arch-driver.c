@@ -37,6 +37,9 @@
 #include "config-arm64.h"
 #include "smp-driver.h"
 #include "smp-defines-driver.h"
+#ifdef ENABLE_HPCPWR
+#include "pwr_arm64hpcdev_mck.h"
+#endif /*ENABLE_HPCPWR*/
 
 #define UNSUPPORTED_GICV2
 
@@ -418,6 +421,7 @@ struct ihk_smp_trampoline_header {
 	unsigned long cpu_logical_map_size;	/* the cpu-core maximun number */
 	unsigned long cpu_logical_map[NR_CPUS];	/* array of the MPIDR and the core number */
 	unsigned long rdist_base_pa[NR_CPUS];	/* GIC re-distributor register base addresses */
+	unsigned long retention_state_flag_pa;
 	int nr_pmu_irq_affiniry;	/* number of pmu affinity list elements */
 	int pmu_irq_affiniry[SMP_MAX_CPUS];	/* array of the pmu affinity list */
 };
@@ -908,6 +912,9 @@ void smp_ihk_setup_trampoline(void *priv)
 {
 	struct smp_os_data *os = priv;
 	struct ihk_smp_trampoline_header *header;
+#ifdef ENABLE_HPCPWR
+	const unsigned long* retention_state_flag;
+#endif /*ENABLE_HPCPWR*/
 	int nr_irqs;
 
 	os->param->ihk_ikc_irq = (unsigned int)ihk_smp_irq.hwirq & 0x00000000ffffffffUL;
@@ -941,6 +948,11 @@ void smp_ihk_setup_trampoline(void *priv)
 		header->cpu_logical_map_size * sizeof(unsigned long));
 	memcpy(header->rdist_base_pa, ihk_smp_gic_rdist_pa,
 		header->cpu_logical_map_size * sizeof(unsigned long));
+
+#ifdef ENABLE_HPCPWR
+	retention_state_flag = pwr_arm64hpc_lookup_retention_state_flag();
+	header->retention_state_flag_pa = __pa(retention_state_flag);
+#endif /*ENABLE_HPCPWR*/
 
 	nr_irqs = ihk_armpmu_get_irq_affinity(header->pmu_irq_affiniry, *ihk_cpu_pmu, os);
 	if (nr_irqs < 0) {
@@ -1259,6 +1271,167 @@ static int ihk_smp_reserve_irq(void)
 }
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
 
+#ifdef ENABLE_HPCPWR
+static int ihk_pwr_mck_request(pwr_mck_request_handle_t* dest)
+{
+	int ret = 0;
+	ihk_os_t ihk_os;
+	int cpu;
+
+	ret = ihk_get_request_os_cpu(&ihk_os, &cpu);
+	if (ret) {
+		*dest = PWR_MCK_REQUEST_INVALID_HANDLE;
+		if (ret == -EINVAL) {
+			// オフロードからの呼び出しではない場合
+			ret = 0;
+		}
+		goto out;
+	}
+	*dest = (pwr_mck_request_handle_t)ihk_os;
+out:
+	return ret;
+}
+
+static int ihk_pwr_linux_to_mck(pwr_mck_request_handle_t handle, int linux_cpu)
+{
+	int ret = 0;
+	ihk_os_t ihk_os;
+	struct ihk_cpu_info* info;
+	int i;
+
+	if (handle == PWR_MCK_REQUEST_INVALID_HANDLE) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ihk_os = (ihk_os_t)handle;
+
+	info = ihk_os_get_cpu_info(ihk_os);
+	if (info == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	ret = -EINVAL;
+	for (i = 0; i < info->n_cpus; i++) {
+		if (info->mapping[i] == linux_cpu) {
+			ret = i;
+			break;
+		}
+	}
+out:
+	return ret;
+}
+
+static int ihk_pwr_mck_to_linux(pwr_mck_request_handle_t handle, int mck_cpu)
+{
+	int ret = 0;
+	ihk_os_t ihk_os;
+	struct ihk_cpu_info* info;
+
+	if (handle == PWR_MCK_REQUEST_INVALID_HANDLE) {
+		ret = -EINVAL;
+		goto out;
+	}
+	ihk_os = (ihk_os_t)handle;
+
+	info = ihk_os_get_cpu_info(ihk_os);
+	if (info == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (0 <= mck_cpu && mck_cpu < info->n_cpus) {
+		ret = info->mapping[mck_cpu];
+	} else {
+		ret = -EINVAL;
+	}
+out:
+	return ret;
+}
+
+static DEFINE_RWLOCK(ihk_pwr_ipi_register_lock);
+
+static int ihk_pwr_ipi_read_register_locked(pwr_mck_request_handle_t handle, int mck_cpu, u32 sys_reg, u64* value)
+{
+	int ret = 0;
+	ihk_os_t ihk_os;
+	struct ihk_os_cpu_register desc;
+
+	if (handle == PWR_MCK_REQUEST_INVALID_HANDLE) {
+		ret = -EINVAL;
+		goto out;
+	}
+	ihk_os = (ihk_os_t)handle;
+	desc.addr = 0;
+	desc.addr_ext = sys_reg;
+
+	ret = ihk_os_read_cpu_register(ihk_os, mck_cpu, &desc);
+	if (ret) {
+		goto out;
+	}
+	// TODO[確認] struct ihk_os_cpu_register::syncが未定義。IPIの同期はihk_os_read_cpu_register内部でとる？
+	*value = desc.val;
+out:
+	return ret;
+}
+
+static int ihk_pwr_ipi_read_register(pwr_mck_request_handle_t handle, int mck_cpu, u32 sys_reg, u64* value)
+{
+	int ret;
+	unsigned long flags;
+
+	read_lock_irqsave(&ihk_pwr_ipi_register_lock, flags);
+	ret = ihk_pwr_ipi_read_register_locked(handle, mck_cpu, sys_reg, value);
+	read_unlock_irqrestore(&ihk_pwr_ipi_register_lock, flags);
+	return ret;
+}
+
+static int ihk_pwr_ipi_write_register_locked(pwr_mck_request_handle_t handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)
+{
+	int ret = 0;
+	ihk_os_t ihk_os;
+	struct ihk_os_cpu_register desc;
+	u64 value;
+
+	ret = ihk_pwr_ipi_read_register_locked(handle, mck_cpu, sys_reg, &value);
+	if (ret) {
+		goto out;
+	}
+	ihk_os = (ihk_os_t)handle;
+
+	desc.addr = 0;
+	desc.addr_ext = sys_reg;
+	desc.val = (value & ~clear_bit) | set_bit;
+	ret = ihk_os_write_cpu_register(ihk_os, mck_cpu, &desc);
+	if (ret) {
+		goto out;
+	}
+	// TODO[確認] struct ihk_os_cpu_register::syncが未定義。IPIの同期はihk_os_write_cpu_register内部でとる？
+out:
+	return ret;
+}
+
+static int ihk_pwr_ipi_write_register(pwr_mck_request_handle_t handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)
+{
+	int ret;
+	unsigned long flags;
+
+	write_lock_irqsave(&ihk_pwr_ipi_register_lock, flags);
+	ret = ihk_pwr_ipi_write_register_locked(handle, mck_cpu, sys_reg, set_bit, clear_bit);
+	write_unlock_irqrestore(&ihk_pwr_ipi_register_lock, flags);
+	return ret;
+}
+
+static const struct pwr_arm64hpc_ihk_ops pwr_ops = {
+	.mck_request = ihk_pwr_mck_request,
+	.linux_to_mck = ihk_pwr_linux_to_mck,
+	.mck_to_linux = ihk_pwr_mck_to_linux,
+	.ipi_read_register = ihk_pwr_ipi_read_register,
+	.ipi_write_register = ihk_pwr_ipi_write_register,
+};
+#endif /*ENABLE_HPCPWR*/
+
 static int collect_topology(void);
 int smp_ihk_arch_init(void)
 {
@@ -1437,6 +1610,13 @@ retry_trampoline:
 	if (error) {
 		goto error_free_irq;
 	}
+
+#ifdef ENABLE_HPCPWR
+	error = pwr_arm64hpcdev_ihk_ops_register(&pwr_ops);
+	if (error) {
+		goto error_free_irq;
+	}
+#endif /* ENABLE_HPCPWR */
 
 	return error;
 
@@ -1816,6 +1996,10 @@ int ihk_smp_reset_cpu(int hw_id)
 
 void smp_ihk_arch_exit(void)
 {
+#ifdef ENABLE_HPCPWR
+	pwr_arm64hpcdev_ihk_ops_unregister();
+#endif /*ENABLE_HPCPWR*/
+
 #if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
 	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
 	if (this_module_put) {
