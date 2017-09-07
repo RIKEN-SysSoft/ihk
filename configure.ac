@@ -46,6 +46,14 @@ AC_ARG_WITH([system_map],
     [--with-system_map=path],[Path to 'System.map file', default is /boot/System.map-uname_r]),
   [WITH_SYSTEM_MAP=$withval],[WITH_SYSTEM_MAP=yes])
 
+# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
+HPCPWR_DIR_DEFAULT=/opt/FJSVxos/hpcpwr/lib/modules/make_kernelrelease/build
+AC_ARG_WITH([hpcpwr],
+  AS_HELP_STRING(
+    [--with-hpcpwr=path],[Path to 'hpcpwr' "$HPCPWR_DIR_DEFAULT"]),
+  [WITH_HPCPWR=$withval],[WITH_HPCPWR=no])
+# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
+
 case "X$WITH_KERNELSRC" in
     Xyes | Xno | X)
 	WITH_KERNELSRC="/lib/modules/`uname -r`/build"
@@ -223,6 +231,22 @@ case $ENABLE_RUSAGE in
 		;;
 esac
 
+# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
+case "X$WITH_HPCPWR" in
+    Xno | X)
+	;;
+    Xyes)
+	HPCPWR_DIR="yes"
+	;;
+    X/*)
+	HPCPWR_DIR="$WITH_HPCPWR"
+	;;
+    *)
+	HPCPWR_DIR="`pwd`/$WITH_HPCPWR"
+	;;
+esac
+# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
+
 KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
 
@@ -385,6 +409,56 @@ else
 	AC_MSG_NOTICE([rusage is disabled])
 fi
 
+# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
+if test "$TARGET" = "smp-arm64" ; then
+	ENABLE_HPCPWR=no
+
+	if test "$HPCPWR_DIR" = "yes" ; then
+		HPCPWR_KERNEL_RELEASE="$KDIR/include/config/kernel.release"
+		AC_MSG_CHECKING([[for kernel.release]])
+
+		if test ! -f "$HPCPWR_KERNEL_RELEASE" ; then
+			AC_MSG_ERROR([could not find])
+		fi
+
+		if test -z "`eval cat $HPCPWR_KERNEL_RELEASE`"; then
+			AC_MSG_ERROR([could not read kernel.release file, no read permission?])
+		fi
+		AC_MSG_RESULT([$HPCPWR_KERNEL_RELEASE])
+		HPCPWR_DIR="/opt/FJSVxos/hpcpwr/lib/modules/`cat $HPCPWR_KERNEL_RELEASE`/build"
+	fi
+
+	if test -n "$HPCPWR_DIR" ; then
+		AC_MSG_CHECKING([[for Module.symvers]])
+		HPCPWR_MODULE_SYMVERS="$HPCPWR_DIR/Module.symvers"
+
+		if test ! -f "$HPCPWR_MODULE_SYMVERS" ; then
+			AC_MSG_ERROR([could not find])
+		fi
+
+		if test -z "`eval cat $HPCPWR_MODULE_SYMVERS`"; then
+			AC_MSG_ERROR([could not read Module.symvers file, no read permission?])
+		fi
+
+		AC_MSG_RESULT([$HPCPWR_MODULE_SYMVERS])
+
+		CPPFLAGS="$CPPFLAGS -I$HPCPWR_DIR"
+		AC_CHECK_HEADER([pwr_arm64hpcdev_mck.h],[enableval=yes],[enableval="no"])
+		if test "x$enableval" = "xno" ; then
+			AC_MSG_ERROR([power management feature needs pwr_arm64hpcdev_mck.h])
+		fi
+		ENABLE_HPCPWR=$enableval
+	fi
+
+	if test "x$ENABLE_HPCPWR" = "xyes" ; then
+		AC_MSG_NOTICE([power management is enabled])
+		AC_DEFINE([ENABLE_HPCPWR],[1],[whether power management is enabled])
+	else
+		AC_MSG_NOTICE([power management is disabled])
+	fi
+fi
+# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
+
 AC_SUBST(CC)
 AC_SUBST(XCC)
 AC_SUBST(ARCH)
@@ -405,6 +479,10 @@ AC_SUBST(IHK_RELEASE_DATE)
 AC_SUBST(MCKERNEL_RELEASE_DATE)
 AC_SUBST(DCFA_RESEASE_DATE)
 AC_SUBST(uncomment_if_ENABLE_MEMDUMP)
+
+# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
+AC_SUBST(HPCPWR_DIR)
+# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
 
 case "$TARGET" in
 smp*)
