@@ -30,8 +30,11 @@ define make_implicit_src
 $$(O)/%.o: $1/%.c
 	$$(cc_cmd)
 # POSTK_DEBUG_ARCH_DEP_2, build *.S add __ASSEMBLY__ define
+ifeq ($(ARCH), arm64)
 $$(O)/%.o: $1/%.S
 	$$(cc_cmd) -D__ASSEMBLY__
-#$$(O)/%.o: $1/%.S
-#	$$(cc_cmd)
+else
+$$(O)/%.o: $1/%.S
+	$$(cc_cmd)
+endif
 endef

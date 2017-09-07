@@ -26,8 +26,10 @@ ihk-smp-$(arch)-y += smp-driver.o $(arch_dir)/smp-arch-driver.o $(arch_objs)
 
 KBUILD_EXTRA_SYMBOLS=@abs_builddir@/../../core/Module.symvers
 
+ifeq ($(ARCH), arm64)
 EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
 EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
+endif
 
 .PHONY: clean install modules
 

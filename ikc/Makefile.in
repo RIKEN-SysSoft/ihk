@@ -13,7 +13,9 @@ $(if $(O),,$(error IHK-IKC Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
 
 # POSTK_DEBUG_ARCH_DEP_24
+ifeq ($(ARCH), arm64)
 default: all
+endif
 
 BUILD_IHK_COKERNEL ?= $(IHKBASE)
 include $(BUILD_IHK_COKERNEL)/Makefile.common
