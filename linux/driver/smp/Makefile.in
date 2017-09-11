@@ -38,6 +38,7 @@ modules:
 
 clean:
 	$(RM) .*.cmd *.mod.c *.o *.ko* Module.symvers modules.order -r .tmp*
+	$(RM) $(arch_dir)/.*.cmd $(arch_dir)/*.o
 
 install:
 	mkdir -p -m 755 $(KMODDIR)
