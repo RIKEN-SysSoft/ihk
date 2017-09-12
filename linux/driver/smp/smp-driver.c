@@ -340,6 +340,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	os->param->nr_linux_cpus = nr_cpu_ids;
 	os->param->nr_numa_nodes = nr_numa_nodes;
 	os->param->nr_memory_chunks = nr_memory_chunks;
+	os->param->osnum = ihk_host_os_get_index(ihk_os);
 
 	os->nr_numa_nodes = nr_numa_nodes;
 

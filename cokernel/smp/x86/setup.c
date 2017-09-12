@@ -327,6 +327,11 @@ int ihk_mc_get_nr_linux_cores(void)
 	return boot_param->nr_linux_cpus;
 }
 
+int ihk_mc_get_osnum(void)
+{
+	return boot_param->osnum;
+}
+
 int ihk_mc_get_core(int id, unsigned long *linux_core_id, unsigned long *apic_id, int *numa_id)
 {
 	if (id < 0 || id >= boot_param->nr_cpus)

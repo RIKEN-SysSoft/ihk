@@ -112,6 +112,7 @@ struct smp_boot_param {
 	int nr_cpus;
 	int nr_numa_nodes;
 	int nr_memory_chunks;
+	int osnum;
 	unsigned int dump_level;
 	struct ihk_dump_page_set dump_page_set;
 };
