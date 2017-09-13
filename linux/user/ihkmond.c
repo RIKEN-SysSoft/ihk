@@ -285,7 +285,7 @@ static ssize_t syslog_kmsg(FILE **fps, int prod) {
 					goto empty_token;
 				}
 				//dprintf("token=%s\n", token);
-				syslog(LOG_INFO, token);
+				syslog(LOG_INFO, "%s", token);
 				usleep(200); /* Prevent syslog from dropping messages */
 			empty_token:
 				token = strsep(&cur, "\n");
