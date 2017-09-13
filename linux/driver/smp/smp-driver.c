@@ -2219,7 +2219,7 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	while (os->param->dump_page_set.completion_flag !=
 	       IHK_DUMP_PAGE_SET_COMPLETED) {
 
-		rep_nop();
+		cpu_relax();
 
 	}
 
