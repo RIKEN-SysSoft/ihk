@@ -163,7 +163,7 @@ int (*ihk___irq_set_affinity)(unsigned int irq, const struct cpumask *mask, bool
 # error "'__irq_set_affinity' address is unknown."
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0) && !defined(CONFIG_ARM64)
 #ifdef IHK_KSYM_arch_timer_use_virtual
 static unsigned long is_arch_timer_use_virt(void)
 {
