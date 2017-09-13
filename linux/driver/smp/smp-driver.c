@@ -616,7 +616,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 			os->bootstrap_numa_id);
 
 	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) ||
-			os->bootstrap_mem_end - os->bootstrap_mem_start < 0) {
+			os->bootstrap_mem_end < os->bootstrap_mem_start) {
 		printk("%s: OS is not ready to boot\n", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -759,7 +759,7 @@ static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 	dprint_func_enter;
 
 	/* We just load from the lowest address of the private memory */
-	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->mem_end - os->mem_start < 0) {
+	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->mem_end < os->mem_start) {
 		printk("builtin: OS is not ready to boot.\n");
 		return -EINVAL;
 	}
@@ -1777,12 +1777,10 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 
 	dprintk("get_ikc_map,query_res=%s\n", query_res);
 
-	if (strlen(query_res) >= 0) {
-		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
-			printk("IHK-SMP: error: copying CPU string to user-space\n");
-			ret = -EINVAL;
-			goto fn_fail;
-		}
+	if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
+		printk("IHK-SMP: error: copying CPU string to user-space\n");
+		ret = -EINVAL;
+		goto fn_fail;
 	}
 
  fn_fail:
