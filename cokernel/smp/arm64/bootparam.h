@@ -48,6 +48,22 @@ struct ihk_smp_boot_param_numa_node {
 	int linux_numa_id;
 };
 
+struct ihk_dump_page {
+	unsigned long start;
+	unsigned long map_count;
+	unsigned long map[0];
+};
+
+#define IHK_DUMP_PAGE_SET_INCOMPLETE 0
+#define IHK_DUMP_PAGE_SET_COMPLETED  1
+
+struct ihk_dump_page_set {
+	volatile unsigned int completion_flag;
+	unsigned int count;
+	unsigned long page_size;
+	unsigned long phy_page;
+};
+
 /*
  * smp_boot_param holds various boot time arguments.
  * The layout in the memory is the following:
@@ -98,6 +114,8 @@ struct smp_boot_param {
 	int nr_cpus;
 	int nr_numa_nodes;
 	int nr_memory_chunks;
+	unsigned int dump_level;
+	struct ihk_dump_page_set dump_page_set;
 };
 #endif /* !__ASSEMBLY__ */
 
