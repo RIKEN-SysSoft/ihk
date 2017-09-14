@@ -22,10 +22,10 @@ O ?= .
 
 ifeq ($(V),1)
 echo_cmd = 
-submake = make
+submake = $(MAKE)
 else
 echo_cmd = @echo ' ($(TARGET))' $1 $(ECHO_SUFFIX) $2; 
-submake = make --no-print-directory
+submake = $(MAKE) --no-print-directory
 endif
 
 cc_cmd = $(call echo_cmd,CC,$<)$(CC) $(CFLAGS) -c -o $@ $<

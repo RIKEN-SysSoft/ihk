@@ -30,10 +30,10 @@ ihklib.o:  ihklib.c
 libihk.so:  ihklib.o
 	${CC} ${CFLAGS} -shared -o $@ $< -lbfd
 
-ihkconfig: ihkconfig.c
+ihkconfig: ihkconfig.c libihk.so
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
 
-ihkosctl: ihkosctl.c
+ihkosctl: ihkosctl.c libihk.so
 ## POSTK_DEBUG_ARCH_DEP_69 add -liberty to ihkosctl
 ifeq ($(ARCH), arm64)
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -liberty -Wl,-rpath=$(LIBDIR)
