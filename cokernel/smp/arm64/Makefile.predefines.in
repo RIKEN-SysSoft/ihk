@@ -86,7 +86,6 @@ endif
 
 # POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
 hpcpwr_dir := @HPCPWR_DIR@
-$(info @@@$(hpcpwr_dir)@@@)
 ifneq ($(strip $(hpcpwr_dir)),)
 	CFLAGS += -DENABLE_HPCPWR
 endif
