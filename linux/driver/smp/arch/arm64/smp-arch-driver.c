@@ -275,7 +275,31 @@ struct gic_chip_data_v2 {
 	void __iomem *(*get_base)(union gic_base *);
 #endif
 };
+
 #elif ((LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(4,5,1))) //exact:4.5.0-22
+
+struct gic_chip_data_v2 {
+        struct irq_chip chip;
+        union gic_base dist_base;
+        union gic_base cpu_base;
+#ifdef CONFIG_CPU_PM
+        u32 saved_spi_enable[DIV_ROUND_UP(1020, 32)];
+        u32 saved_spi_active[DIV_ROUND_UP(1020, 32)];
+        u32 saved_spi_conf[DIV_ROUND_UP(1020, 16)];
+        u32 saved_spi_target[DIV_ROUND_UP(1020, 4)];
+        u32 __percpu *saved_ppi_enable;
+        u32 __percpu *saved_ppi_active;
+        u32 __percpu *saved_ppi_conf;
+#endif
+        struct irq_domain *domain;
+        unsigned int gic_irqs;
+#ifdef CONFIG_GIC_NON_BANKED
+        void __iomem *(*get_base)(union gic_base *);
+#endif
+};
+
+#elif ((LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,1)) && \
 	(LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)))
 struct gic_chip_data_v2 {
 	union gic_base dist_base;
