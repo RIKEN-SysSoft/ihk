@@ -11,8 +11,10 @@ VPATH=@abs_srcdir@
 LIBS=@LIBS@
 TARGET=libihk.so ihkconfig ihkosctl memdump pagetable maccess memdump-mic mcklogd
 
+ifeq ($(ARCH), arm64)
 CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
 CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
+endif
 
 .PHONY: all clean install
 
@@ -29,8 +31,11 @@ ihkconfig: ihkconfig.c
 
 ihkosctl: ihkosctl.c
 ## POSTK_DEBUG_ARCH_DEP_69 add -liberty to ihkosctl
-#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+ifeq ($(ARCH), arm64)
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -liberty -Wl,-rpath=$(LIBDIR)
+else
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+endif
 
 %: %.c
 	${CC} ${CFLAGS} -o $@ $< ${LIBS}

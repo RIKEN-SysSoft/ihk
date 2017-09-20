@@ -4,8 +4,11 @@ ECHO_SUFFIX = [IHK]
 
 # POSTK_DEBUG_ARCH_DEP_18 coredump arch separation.
 # gencore.o move "mckernel/kernel/Makefile.build.in"
-#IHK_OBJS += string.o vsprintf.o abort.o page_alloc.o mikc.o ikc.o gencore.o bitops.o
+ifeq ($(ARCH), arm64)
 IHK_OBJS += string.o vsprintf.o abort.o page_alloc.o mikc.o ikc.o bitops.o bitmap.o
+else
+IHK_OBJS += string.o vsprintf.o abort.o page_alloc.o mikc.o ikc.o gencore.o bitops.o bitmap.o
+endif
 
 DESTOBJS = $(addprefix $O/,$(IHK_OBJS))
 SUBOPTS = CC=$(CC) LD=$(LD) V=$(V) TARGET=$(TARGET) IHKBASE=$(IHKBASE)
@@ -16,7 +19,9 @@ $(if $(TARGET),,$(error Target is not specified))
 CFLAGS += -I$(SRC)/include -D__KERNEL__
 
 # POSTK_DEBUG_ARCH_DEP_24
+ifeq ($(ARCH), arm64)
 default: all
+endif
 
 BUILD_IHK_COKERNEL ?= .
 include $(BUILD_IHK_COKERNEL)/Makefile.common

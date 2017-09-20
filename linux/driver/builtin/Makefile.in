@@ -11,8 +11,11 @@ ccflags-y := -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(
 ihk_builtin-y = ihk_builtin_driver.o dmacore.o dmacore_intr.o startup.o
 
 KBUILD_EXTRA_SYMBOLS=@abs_builddir@/../../core/Module.symvers
+
+ifeq ($(ARCH), arm64)
 EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
 EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
+endif
 
 .PHONY: clean install modules
 

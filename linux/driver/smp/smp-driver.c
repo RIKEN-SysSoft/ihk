@@ -17,9 +17,7 @@
 #include <linux/version.h>
 #include <linux/cpu.h>
 #include <linux/rbtree.h>
-#ifdef POSTK_DEBUG_ARCH_DEP_57 /* add ctype.h include for isspace() / isdigit() */
 #include <linux/ctype.h>
-#endif /* POSTK_DEBUG_ARCH_DEP_57 */
 #include <linux/slub_def.h>
 #include <linux/kallsyms.h>
 #include <linux/list_sort.h>
