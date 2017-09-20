@@ -489,6 +489,7 @@ ihk_armpmu_get_irq_affinity(int irqs[], const struct arm_pmu *armpmu, const stru
 	return virtid;
 }
 
+#if 0 // TODO[PMU]
 /* @ref.impl arch/arm64/kernel/perf_event.c:armpmu_reserve_hardware */
 static int
 ihk_armpmu_set_irq_affinity(const int irqs[], const struct smp_os_data *os)
@@ -517,6 +518,7 @@ ihk_armpmu_set_irq_affinity(const int irqs[], const struct smp_os_data *os)
 	}
 	return 0;
 }
+#endif
 
 int ihk_smp_get_hw_id(int cpu)
 {
@@ -601,6 +603,7 @@ static int ihk_smp_acpi_parse_entries(char *id, unsigned long table_size,
 #define ACPI_GICV3_CPU_IF_MEM_SIZE	SZ_64K
 #endif
 
+#ifndef UNSUPPORTED_GICV2
 /*
  * @ref.impl drivers/irqchip/irq-gic.c:__init gic_acpi_parse_madt_cpu
  */
@@ -629,6 +632,7 @@ static int ihk_smp_gicv2_acpi_parse_madt_cpu(struct acpi_subtable_header *header
 	cpu_base_assigned = 1;
 	return 0;
 }
+#endif /* !UNSUPPORTED_GICV2 */
 
 static void ihk_smp_gic_collect_rdist(void)
 {
