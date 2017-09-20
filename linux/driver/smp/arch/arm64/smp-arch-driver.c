@@ -1096,6 +1096,8 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 
 		ihk_smp_memdump_cpu(ihk_smp_cpus[i].hw_id);
 	}
+
+	return 0;
 }
 
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
