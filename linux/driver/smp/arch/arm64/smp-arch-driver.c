@@ -36,6 +36,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include "config-arm64.h"
 #include "smp-driver.h"
+#include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
 #ifdef ENABLE_HPCPWR
 #include "pwr_arm64hpcdev_mck.h"
@@ -1072,9 +1073,8 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 
 		mem_chunks->nr_chunks = i;
 		/* See load_file() for the calculation below */
-/* TODO: for patch:ihk-0207 */
-//		mem_chunks->kernel_base =
-//			(os->bootstrap_mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
+		mem_chunks->kernel_base =
+			(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
 
 		return 0;
 	}

@@ -37,7 +37,7 @@ unsigned long calc_ns_per_tsc(void);
 void smp_ihk_setup_trampoline(void *priv);
 unsigned long smp_ihk_adjust_entry(unsigned long entry,
                                           unsigned long phys);
-int smp_ihk_os_setup_startup(void *priv, unsigned long entry,
+void smp_ihk_os_setup_startup(void *priv, unsigned long entry,
                              unsigned long phys);
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args);
 enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv);

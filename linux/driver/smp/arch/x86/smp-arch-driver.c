@@ -38,12 +38,13 @@
 #include <asm/apic.h>
 #include <asm/ipi.h>
 #include <asm/uv/uv.h>
-#include <nmi.h>
+#include <asm/nmi.h>
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/misc/debug.h>
 #include "config-x86.h"
 #include "smp-driver.h"
+#include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
 
 /*
@@ -103,6 +104,7 @@ int (*_lapic_get_maxlvt)(void) =
 atomic_t *_init_deasserted =
 	(atomic_t *)
 	IHK_KSYM_init_deasserted;
+#endif
 #endif
 #endif
 
@@ -424,6 +426,7 @@ unsigned long x2apic_is_enabled(void)
 /** \brief Boot a kernel. */
 void smp_ihk_setup_trampoline(void *priv)
 {
+	int i;
 	struct smp_os_data *os = priv;
 	struct ihk_smp_trampoline_header *header;
 
@@ -497,7 +500,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	for (i = 0; i < n; i++) {
 		pde[i] = (phys + (i << PTL2_SHIFT)) | 0x83;
 	}
-	startup_p = (os->bootstrap_mem_end & LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
+	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
 	pde[511] = startup_p | 0x83;
 
 	ihk_smp_unmap_virtual(pde);
@@ -549,7 +552,7 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 	return 0;
 }
 
-static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
+int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 {
 	struct smp_os_data *os = priv;
 
@@ -580,7 +583,7 @@ static int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		mem_chunks->nr_chunks = i;
 		/* See load_file() for the calculation below */
 		mem_chunks->kernel_base =
-			(os->bootstrap_mem_start + LARGE_PAGE_SIZE * 2 - 1) & LARGE_PAGE_MASK;
+			(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
 
 		return 0;
 	}
@@ -905,6 +908,7 @@ release_vector(int vector, int core) {
 #endif
 }
 
+static int collect_topology(void);
 int smp_ihk_arch_init(void)
 {
 	int error = 0;

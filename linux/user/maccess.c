@@ -12,7 +12,7 @@ static unsigned long rdtsc(void)
 #ifdef __x86_64
 	asm volatile("rdtsc" : "=a"(low), "=d"(high));
 #endif /* __x86_64 */ 
-
+ 
 	return (low | ((unsigned long)high << 32));
 }
 #endif
