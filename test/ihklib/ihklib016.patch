@@ -1,0 +1,73 @@
+diff --git a/arch/x86/kernel/include/syscall_list.h b/arch/x86/kernel/include/syscall_list.h
+index 7c6edcb..52c1ff3 100644
+--- a/arch/x86/kernel/include/syscall_list.h
++++ b/arch/x86/kernel/include/syscall_list.h
+@@ -161,6 +161,7 @@ SYSCALL_HANDLED(__NR_profile, profile)
+ SYSCALL_HANDLED(730, util_migrate_inter_kernel)
+ SYSCALL_HANDLED(731, util_indicate_clone)
+ SYSCALL_HANDLED(732, get_system)
++SYSCALL_HANDLED(900, dump_rusage)
+ 
+ /* McKernel Specific */
+ SYSCALL_HANDLED(801, swapout)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index 78a832b..eae43cf 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -10030,3 +10030,30 @@ long syscall(int num, ihk_mc_user_context_t *ctx)
+ 
+ 	return l;
+ }
++
++SYSCALL_DECLARE(dump_rusage)
++{
++#define NLINE (IHK_KMSG_SIZE / 65 * 4)
++	int i;
++	for (i = 0; i < NLINE; i++) {
++		if (i == 0)	{
++			char buf[256];
++			sprintf(buf, "%s", "first lineaaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa\n");
++			kprintf("%s", buf);
++		} else if (i == NLINE - 1) {
++			char buf[256];
++			sprintf(buf, "%s", "last line eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee\n");
++			kprintf("%s", buf);
++		} else {
++			char buf[256];
++			int j;
++			for (j = 0; j < 64; j++) {
++				buf[j] = 'a' + (i % 26);
++			}
++			buf[j++] = '\n';
++			buf[j] = 0;
++			kputs(buf);
++		}
++	}
++	return 0;
++}
+diff --git a/linux/user/ihkmond.c b/linux/user/ihkmond.c
+index f06e711..fad932d 100644
+--- a/linux/user/ihkmond.c
++++ b/linux/user/ihkmond.c
+@@ -381,7 +381,7 @@ static void* redirect_kmsg(void* _arg) {
+                                ret_lib = syslog_kmsg(fps, prod);
+                                CHKANDJUMP(ret_lib < 0, -EINVAL, "syslog_kmsg returned %d\n", ret_lib);
+                                dprintf("after syslog_kmsg for destroy\n");
+-#if 1
++#if 0
+                                /* Release (i.e. unref) kmsg_buf */
+                                devfd = ihkmond_device_open(arg->dev_index);
+                                CHKANDJUMP(devfd < 0, -errno, "ihkmond_device_open returned %d\n", devfd);
+diff --git a/linux/include/ihk/ihk_host_driver.h b/linux/include/ihk/ihk_host_driver.h
+index af800e0..6ffcd58 100644
+--- a/linux/include/ihk/ihk_host_driver.h
++++ b/linux/include/ihk/ihk_host_driver.h
+@@ -925,1 +925,1 @@ int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
+ void ihk_os_eventfd(ihk_os_t os, int type);
+
+ /* IHK-Core holds only this number of bufs to prevent memory leak */
+-#define IHK_MAX_NUM_KMSG_BUFS 4
++#define IHK_MAX_NUM_KMSG_BUFS 2
+
+ struct ihk_kmsg_buf_container {
+        struct list_head list;

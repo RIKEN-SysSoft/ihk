@@ -1,0 +1,49 @@
+diff --git a/arch/x86/kernel/include/syscall_list.h b/arch/x86/kernel/include/syscall_list.h
+index 7c6edcb..52c1ff3 100644
+--- a/mckernel/arch/x86/kernel/include/syscall_list.h
++++ b/mckernel/arch/x86/kernel/include/syscall_list.h
+@@ -161,6 +161,7 @@ SYSCALL_HANDLED(__NR_profile, profile)
+ SYSCALL_HANDLED(730, util_migrate_inter_kernel)
+ SYSCALL_HANDLED(731, util_indicate_clone)
+ SYSCALL_HANDLED(732, get_system)
++SYSCALL_HANDLED(900, dump_rusage)
+ 
+ /* McKernel Specific */
+ SYSCALL_HANDLED(801, swapout)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index 78a832b..eae43cf 100644
+--- a/mckernel/kernel/syscall.c
++++ b/mckernel/kernel/syscall.c
+@@ -10030,3 +10030,19 @@ long syscall(int num, ihk_mc_user_context_t *ctx)
+ 
+ 	return l;
+ }
++
++SYSCALL_DECLARE(dump_rusage)
++{
++	char buf[256];
++	int i;
++	for (i = 0; i < 5; i++) {
++		char c = 'a' + i;
++		int j;
++		for (j = 0; j < 64; j++) {
++			buf[j] = c;
++		}
++		buf[j] = 0;
++		kputs(buf);
++	}
++	return 0;
++}
+diff --git a/linux/include/ihk/ihk_debug.h b/linux/include/ihk/ihk_debug.h
+index 9b53dd7..2780f63 100644
+--- a/ihk/linux/include/ihk/ihk_debug.h
++++ b/ihk/linux/include/ihk/ihk_debug.h
+@@ -8,7 +8,7 @@
+ #ifndef IHK_DEBUG_H_INCLUDED
+ #define IHK_DEBUG_H_INCLUDED
+ 
+-#define IHK_KMSG_SIZE            8192
++#define IHK_KMSG_SIZE            256/*8192*/
+ #define IHK_KMSG_HIGH_WATER_MARK (IHK_KMSG_SIZE / 2)
+ #define IHK_KMSG_NOTIFY_DELAY    400 /* Unit is us, 400 us would avoid overloading fwrite of ihkmond */
+ 

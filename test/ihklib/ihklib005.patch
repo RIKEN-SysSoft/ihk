@@ -1,0 +1,28 @@
+diff --git a/arch/x86/kernel/include/syscall_list.h b/arch/x86/kernel/include/syscall_list.h
+index 7c6edcb..52c1ff3 100644
+--- a/mckernel/arch/x86/kernel/include/syscall_list.h
++++ b/mckernel/arch/x86/kernel/include/syscall_list.h
+@@ -161,6 +161,7 @@ SYSCALL_HANDLED(__NR_profile, profile)
+ SYSCALL_HANDLED(730, util_migrate_inter_kernel)
+ SYSCALL_HANDLED(731, util_indicate_clone)
+ SYSCALL_HANDLED(732, get_system)
++SYSCALL_HANDLED(900, dump_rusage)
+ 
+ /* McKernel Specific */
+ SYSCALL_HANDLED(801, swapout)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index 78a832b..eae43cf 100644
+--- a/mckernel/kernel/syscall.c
++++ b/mckernel/kernel/syscall.c
+@@ -10030,4 +10030,11 @@ long syscall(int num, ihk_mc_user_context_t *ctx)
+ 
+ 	return l;
+ }
++
++SYSCALL_DECLARE(dump_rusage)
++{
++	while (1) {
++		cpu_halt();
++	}
++}
+ 

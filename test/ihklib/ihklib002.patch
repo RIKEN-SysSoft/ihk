@@ -1,0 +1,101 @@
+diff --git a/arch/x86/kernel/include/syscall_list.h b/arch/x86/kernel/include/syscall_list.h
+index 7c6edcb..52c1ff3 100644
+--- a/arch/x86/kernel/include/syscall_list.h
++++ b/arch/x86/kernel/include/syscall_list.h
+@@ -161,6 +161,7 @@ SYSCALL_HANDLED(__NR_profile, profile)
+ SYSCALL_HANDLED(730, util_migrate_inter_kernel)
+ SYSCALL_HANDLED(731, util_indicate_clone)
+ SYSCALL_HANDLED(732, get_system)
++SYSCALL_HANDLED(900, dump_rusage)
+ 
+ /* McKernel Specific */
+ SYSCALL_HANDLED(801, swapout)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index 78a832b..eae43cf 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -10030,3 +10030,84 @@ long syscall(int num, ihk_mc_user_context_t *ctx)
+ 
+ 	return l;
+ }
++
++SYSCALL_DECLARE(dump_rusage)
++{
++#if 0
++	kprintf("total_memory=%ld,usage=%ld,RUSAGE_MEM_LIMIT=%ld,total-used=%ld\n",
++			rusage->total_memory, rusage->total_memory_usage, RUSAGE_MEM_LIMIT,
++			rusage->total_memory - rusage->total_memory_usage);
++	//kprintf("%s: calling eventfd(IHK_OS_EVENTFD_TYPE_OOM)\n", __FUNCTION__);
++	//eventfd(IHK_OS_EVENTFD_TYPE_OOM);
++#endif
++#if 0
++	kprintf("NULL pointer dereference=%d\n", *(int*)NULL);
++#endif
++#if 1
++	while (1) {
++		cpu_halt();
++	}
++#endif
++#if 0
++#define NLINE (IHK_KMSG_SIZE / 65 * 4)
++	int i;
++	for (i = 0; i < NLINE; i++) {
++		if (i == 0)	{
++			char buf[256];
++			sprintf(buf, "%s", "first lineaaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa\n");
++			kprintf("%s", buf);
++		} else if (i == NLINE - 1) {
++			char buf[256];
++			sprintf(buf, "%s", "last line eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee\n");
++			kprintf("%s", buf);
++		} else {
++			char buf[256];
++			int j;
++			for (j = 0; j < 64; j++) {
++				buf[j] = 'a' + (i % 26);
++			}
++			buf[j++] = '\n';
++			buf[j] = 0;
++			kputs(buf);
++		}
++	}
++#endif
++#if 0
++	char buf[256];
++	int i;
++	for (i = 0; i < 5; i++) {
++		char c = 'a' + i;
++		int j;
++		for (j = 0; j < 64; j++) {
++			buf[j] = c;
++		}
++		buf[j] = 0;
++		kputs(buf);
++	}
++#endif
++#if 0
++	/* rusage debug */
++	int i;
++	for(i = 0; i < IHK_MAX_NUM_PGSIZES; i++) {
++		kprintf("memory_stat_rss[%d]=%ld\n", i, rusage->memory_stat_rss[i]);
++	}
++	for(i = 0; i < IHK_MAX_NUM_PGSIZES; i++) {
++		kprintf("memory_stat_mapped_file[%d]=%ld\n", i, rusage->memory_stat_mapped_file[i]);
++	}
++	kprintf("memory_max_usage=%ld\n", rusage->memory_max_usage);
++	kprintf("memory_kmem_usage=%ld\n", rusage->memory_kmem_usage);
++	kprintf("memory_kmem_max_usage=%ld\n", rusage->memory_kmem_max_usage);
++	for (i = 0; i < rusage->num_numa_nodes; i++) {
++		kprintf("memory_numa_stat[%d]=%ld\n", i, rusage->memory_numa_stat[i]);
++	}
++	kprintf("ns_per_tsc=%ld\n", rusage->ns_per_tsc);
++	for (i = 0; i < rusage->num_processors; i++) {
++		kprintf("cpu[%d].user_tsc=%ld\n", i, rusage->cpu[i].user_tsc);
++		kprintf("cpu[%d].system_tsc=%ld\n", i, rusage->cpu[i].system_tsc);
++	}
++
++	kprintf("num_threads=%d\n", rusage->num_threads);
++	kprintf("max_num_threads=%d\n", rusage->max_num_threads);
++#endif
++	return 0;
++}
