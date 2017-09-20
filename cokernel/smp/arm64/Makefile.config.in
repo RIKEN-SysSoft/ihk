@@ -1,5 +1,5 @@
 # Makefile.config COPYRIGHT FUJITSU LIMITED 2015-2016
-include $(IHKBASE)/$(TARGETDIR)/Makefile.predefines
+include @abs_builddir@/Makefile.predefines
 
 CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
 CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
@@ -10,4 +10,4 @@ IHKARCH = arm64
 
 IHK_OBJS += setup.o
 IHK_OBJS += dma.o
-include $(SRC)/../arch/$(IHKARCH)/kernel/Makefile.arch
+include @abs_top_builddir@/../mckernel/arch/$(IHKARCH)/kernel/Makefile.arch

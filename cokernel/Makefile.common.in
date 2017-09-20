@@ -6,10 +6,17 @@ CFLAGS += -DIHK_OS_MANYCORE
 
 TARGETDIR = $(shell echo $(TARGET) | sed "s/-/\//")
 
+ifeq ($(ARCH), arm64)
+-include @abs_builddir@/$(TARGETDIR)/Makefile.config
+else
 -include $(IHKBASE)/$(TARGETDIR)/Makefile.config
+endif
 
 CFLAGS += -I$(SRC)/../lib/include -I$(SRC)/../arch/$(IHKARCH)/kernel/include
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include
+ifeq ($(ARCH), arm64)
+CFLAGS += -I@abs_builddir@/../../mckernel/arch/arm64/kernel/include
+endif
 
 O ?= .
 

@@ -506,8 +506,14 @@ AC_CONFIG_FILES([
 	linux/user/ihkconfig.1:linux/user/ihkconfig.1in
 	linux/user/ihkosctl.1:linux/user/ihkosctl.1in
 	linux/user/ihklib.h:linux/user/ihklib.h.in
-	cokernel/smp/arm64/Makefile.predefines
 	cokernel/Makefile.common
 ])
+
+if test "$TARGET" = "smp-arm64"; then
+AC_CONFIG_FILES([
+	cokernel/smp/arm64/Makefile.predefines
+	cokernel/smp/arm64/Makefile.config
+])
+fi
 
 AC_OUTPUT
