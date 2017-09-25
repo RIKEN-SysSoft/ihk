@@ -30,6 +30,7 @@
 #else
 #include <linux/uaccess.h>
 #endif
+#include <linux/psci.h>
 #include <uapi/linux/psci.h>
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
@@ -170,19 +171,13 @@ int (*ihk___irq_set_affinity)(unsigned int irq, const struct cpumask *mask, bool
 # error "'__irq_set_affinity' address is unknown."
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0)
 #ifdef IHK_KSYM_arch_timer_use_virtual
 static unsigned long is_arch_timer_use_virt(void)
 {
 	bool *arch_timer_use = (bool *)IHK_KSYM_arch_timer_use_virtual;
 	return (unsigned long)*arch_timer_use;
 }
-#else
-#error "'arch_timer_use_virtual' address is unknown."
-#endif
-
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0) */
-#ifdef IHK_KSYM_arch_timer_uses_ppi
+#elif defined(IHK_KSYM_arch_timer_uses_ppi)
 static unsigned long is_arch_timer_use_virt(void)
 {
 	enum ppi_nr {
@@ -203,10 +198,8 @@ static unsigned long is_arch_timer_use_virt(void)
 	}
 }
 #else
-#error "'arch_timer_uses_ppi' address is unknown."
+#error "'arch_timer_use_virtual' or 'arch_timer_uses_ppi' address is unknown."
 #endif
-
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0) */
 
 #ifdef IHK_KSYM_arch_timer_rate
 u32 *ihk_arch_timer_rate = (u32 *)IHK_KSYM_arch_timer_rate;
@@ -525,6 +518,43 @@ int ihk_smp_get_hw_id(int cpu)
 	return cpu;
 }
 
+#ifndef ACPI_GICV2_DIST_MEM_SIZE
+#define ACPI_GICV2_DIST_MEM_SIZE	SZ_4K
+#endif
+#ifndef ACPI_GICV2_CPU_IF_MEM_SIZE
+#define ACPI_GICV2_CPU_IF_MEM_SIZE	SZ_8K
+#endif
+#ifndef ACPI_GICV3_DIST_MEM_SIZE
+#define ACPI_GICV3_DIST_MEM_SIZE	SZ_64K
+#endif
+#ifndef ACPI_GICV3_CPU_IF_MEM_SIZE
+#define ACPI_GICV3_CPU_IF_MEM_SIZE	SZ_64K
+#endif
+
+static void ihk_smp_gic_collect_rdist(void)
+{
+	int cpu;
+
+	/* Collect redistributor base addresses for all possible cpus */
+	for_each_cpu(cpu, cpu_possible_mask) {
+		ihk_smp_gic_rdist_pa[cpu] = 
+			(per_cpu_ptr(ihk_gic_data_v3->rdists.rdist, cpu))->phys_base;
+	}
+
+	if(ihk_gic_data_v3->redist_stride) {
+		ihk_smp_gic_cpu_size = ihk_gic_data_v3->redist_stride;
+	} else {
+		unsigned long typer = 
+			readq_relaxed(((this_cpu_ptr(ihk_gic_data_v3->rdists.rdist))->rd_base) + GICR_TYPER);
+		if (typer & GICR_TYPER_VLPIS) {
+			ihk_smp_gic_cpu_size = ACPI_GICV3_CPU_IF_MEM_SIZE * 4; /* RD + SGI + VLPI + reserved */
+		} else {
+			ihk_smp_gic_cpu_size = ACPI_GICV3_CPU_IF_MEM_SIZE * 2; /* RD + SGI */
+		}
+	}
+
+}
+
 #ifdef CONFIG_ACPI
 /*
  * @ref.impl drivers/acpi/tables.c:__init acpi_parse_entries
@@ -590,19 +620,6 @@ static int ihk_smp_acpi_parse_entries(char *id, unsigned long table_size,
 	return count;
 }
 
-#ifndef ACPI_GICV2_DIST_MEM_SIZE
-#define ACPI_GICV2_DIST_MEM_SIZE	SZ_4K
-#endif
-#ifndef ACPI_GICV2_CPU_IF_MEM_SIZE
-#define ACPI_GICV2_CPU_IF_MEM_SIZE	SZ_8K
-#endif
-#ifndef ACPI_GICV3_DIST_MEM_SIZE
-#define ACPI_GICV3_DIST_MEM_SIZE	SZ_64K
-#endif
-#ifndef ACPI_GICV3_CPU_IF_MEM_SIZE
-#define ACPI_GICV3_CPU_IF_MEM_SIZE	SZ_64K
-#endif
-
 #ifndef UNSUPPORTED_GICV2
 /*
  * @ref.impl drivers/irqchip/irq-gic.c:__init gic_acpi_parse_madt_cpu
@@ -633,30 +650,6 @@ static int ihk_smp_gicv2_acpi_parse_madt_cpu(struct acpi_subtable_header *header
 	return 0;
 }
 #endif /* !UNSUPPORTED_GICV2 */
-
-static void ihk_smp_gic_collect_rdist(void)
-{
-	int cpu;
-
-	/* Collect redistributor base addresses for all possible cpus */
-	for_each_cpu(cpu, cpu_possible_mask) {
-		ihk_smp_gic_rdist_pa[cpu] = 
-			(per_cpu_ptr(ihk_gic_data_v3->rdists.rdist, cpu))->phys_base;
-	}
-
-	if(ihk_gic_data_v3->redist_stride) {
-		ihk_smp_gic_cpu_size = ihk_gic_data_v3->redist_stride;
-	} else {
-		unsigned long typer = 
-			readq_relaxed(((this_cpu_ptr(ihk_gic_data_v3->rdists.rdist))->rd_base) + GICR_TYPER);
-		if (typer & GICR_TYPER_VLPIS) {
-			ihk_smp_gic_cpu_size = ACPI_GICV3_CPU_IF_MEM_SIZE * 4; /* RD + SGI + VLPI + reserved */
-		} else {
-			ihk_smp_gic_cpu_size = ACPI_GICV3_CPU_IF_MEM_SIZE * 2; /* RD + SGI */
-		}
-	}
-
-}
 
 /*
  * Get distributer base PA and gic version.
