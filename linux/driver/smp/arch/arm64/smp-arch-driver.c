@@ -1176,6 +1176,7 @@ int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
 	}
 //	printk("smp_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
 
+	smp_mb();
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
 	ihk___smp_cross_call(cpumask_of(os->cpu_info.hw_ids[cpu]), v);
 #else
