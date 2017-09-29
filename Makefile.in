@@ -6,7 +6,7 @@ all: core-modules target-modules user
 core-modules:
 	+@(cd linux/core; $(MAKE) modules)
 
-target-modules:
+target-modules: core-modules
 	+@case "$(TARGET)" in \
 	    attached-mic) \
 		(cd linux/driver/attached/mic; $(MAKE) modules) \
