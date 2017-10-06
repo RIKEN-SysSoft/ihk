@@ -2,6 +2,7 @@
  * \file ihk_host_user.h
  * \brief
  *	 IHK-Host: ioctl request numbers
+ *   Definitions related to IHK services for administrator, implemented as user library
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  * \author Balazs Gerofi  <bgerofi@riken.jp> \par
  * Copyright (C) 2011-2017 RIKEN AICS>
@@ -9,7 +10,9 @@
 #ifndef __HEADER_IHK_HOST_USER_H
 #define __HEADER_IHK_HOST_USER_H
 
-#include "ihk_os_status.h"
+#include <ihk/status.h>
+#include <ihk/ihk_monitor.h>
+#include <ihk/ihk_debug.h>
 
 #define IHK_DEVICE_CREATE_OS          0x112900
 #define IHK_DEVICE_DESTROY_OS         0x112901
@@ -19,6 +22,9 @@
 #define IHK_DEVICE_RELEASE_MEM        0x112905
 #define IHK_DEVICE_QUERY_CPU          0x112906
 #define IHK_DEVICE_QUERY_MEM          0x112907
+#define IHK_DEVICE_GET_KMSG_BUF       0x112908
+#define IHK_DEVICE_READ_KMSG_BUF      0x112909
+#define IHK_DEVICE_RELEASE_KMSG_BUF   0x11290a
 
 #define IHK_DEVICE_DEBUG_START        0x122900
 #define IHK_DEVICE_DEBUG_END          0x1229ff
@@ -47,12 +53,15 @@
 #define IHK_OS_RELEASE_MEM            0x112a25
 #define IHK_OS_QUERY_CPU              0x112a26
 #define IHK_OS_QUERY_MEM              0x112a27
-#define IHK_OS_IKC_MAP                0x112a28
-#define IHK_OS_QUERY_IKC_MAP          0x112a29
+#define IHK_OS_SET_IKC_MAP            0x112a28
+#define IHK_OS_GET_IKC_MAP            0x112a29
 #define IHK_OS_FREEZE                 0x112a30
 #define IHK_OS_THAW                   0x112a31
 #define IHK_OS_GET_USAGE              0x112a32
 #define IHK_OS_GET_CPU_USAGE          0x112a33
+#define IHK_OS_GET_NUM_NUMA_NODES     0x112a34
+#define IHK_OS_NOTIFY_HUNGUP          0x112a35
+#define IHK_OS_DETECT_HUNGUP          0x112a36
 
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff
@@ -66,6 +75,7 @@
 #define IHK_OS_AUX_PERF_ENABLE     0x11290103
 #define IHK_OS_AUX_PERF_DISABLE    0x11290104
 #define IHK_OS_AUX_PERF_DESTROY    0x11290105
+#define IHK_OS_GETRUSAGE           0x11290106
 
 #define FLAG_IHK_OS_SHUTDOWN_FORCE    0x40000000
 
@@ -89,14 +99,19 @@ typedef struct dumpargs_s {
 #define DUMP_READ 3
 #define DUMP_QUERY_ALL 4
 #define DUMP_READ_ALL 5
-	int pad;
+#define DUMP_SET_LEVEL 6
+#define DUMP_QUERY_NUM_MEM_AREAS 7
+#define DUMP_QUERY_MEM_AREAS 8
+	unsigned int level;
+#define DUMP_LEVEL_ALL 0
+#define DUMP_LEVEL_USER_UNUSED_EXCLUDE 24
 	long start;
 	long size;
 	void *buf;
 	void *spare[4];
 } dumpargs_t;
 #define DUMP_ALL_MEM 0
-#define DUMP_CHUNK_MEM 1
+#define DUMP_CHUNK_MEM 24
 
 typedef struct ihk_resource_req_s {
 	char *string;
@@ -105,4 +120,24 @@ typedef struct ihk_resource_req_s {
 
 int _ihklib_os_query_free_mem(int os_index, char *result, ssize_t sz_result);
 
-#endif
+/* Used by IHK-core and ihklib */
+struct ihk_os_ioctl_eventfd_desc {
+	int fd;
+	enum ihk_os_eventfd_type type;
+};
+
+/* Used by IHK-core and ihklib */
+struct ihk_device_get_kmsg_buf_desc {
+	int os_index; /* IN: OS index */
+	void* handle; /* OUT: "Pointer" to kmsg_buf container */
+};
+
+/* Used by IHK-core and ihklib */
+struct ihk_device_read_kmsg_buf_desc {
+	void* handle; /* IN: "Pointer" to kmsg_buf container */
+	int shift;    /* IN: Empty the buffer or not */
+	char* buf;    /* OUT: Buffer */
+};
+
+
+#endif /* !defined(__HEADER_IHK_HOST_USER_H) */

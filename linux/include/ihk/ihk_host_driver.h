@@ -2,14 +2,17 @@
  * \file ihk_host_driver.h
  * \brief
  *	IHK-Host: Structures
+ *  Definitions related to IHK services for administrator, implemented as driver
  * \author Taku Shimosawa  <shimosawa@is.s.u-tokyo.ac.jp> \par
  *	Copyright (C) 2011-2012 Taku Shimosawa <shimosawa@is.s.u-tokyo.ac.jp>
  */
 #ifndef __HEADER_IHK_HOST_DRIVER_H
 #define __HEADER_IHK_HOST_DRIVER_H
 
-#include "ihk/archdefs.h"
-#include "ihk_os_status.h"
+#include <ihk/archdefs.h>
+#include <ihk/status.h>
+#include <ihk/ihk_monitor.h>
+#include <ihk/ihk_debug.h>
 
 /** \brief Status of a manycore device */
 enum ihk_cpu_status {
@@ -26,7 +29,8 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_MIKC_QUEUE_RECV = 2,
 	IHK_SPADDR_MIKC_QUEUE_SEND = 3,
 	IHK_SPADDR_MONITOR = 4,
-	IHK_SPADDR_NMI_MODE = 5,
+	IHK_SPADDR_RUSAGE = 5,
+	IHK_SPADDR_NMI_MODE = 6,
 };
 
 /** \brief Type of an IHK device */
@@ -158,6 +162,17 @@ struct ihk_os_ops {
 	 **/
 	enum ihk_os_status (*query_status)(ihk_os_t, void *);
 
+	/** \brief Set architecture dependent kernel status to hungup
+	 *
+	 **/
+	void (*notify_hungup)(ihk_os_t, void *);
+
+	/** \brief Get the number of NUMA nodes
+	 *
+	 *  \return Number of NUMA nodes
+	 **/
+	int (*get_num_numa_nodes)(ihk_os_t, void *);
+
 	/** \brief Query free memory of a kernel
 	 *
 	 *  \return Number of free pages on MIC
@@ -257,14 +272,14 @@ struct ihk_os_ops {
 	* \return Success or failure.
 	* \param List of CPU mappings (see ihkosctl for format).
 	**/
-	int (*ikc_map)(ihk_os_t, void *, unsigned long arg);
+	int (*set_ikc_map)(ihk_os_t, void *, unsigned long arg);
 
 	/** \brief Query IKC CPU mapping.
 	*
 	* \return Success or failure.
 	* \param List of CPU mappings (see ihkosctl for format).
 	**/
-	int (*query_ikc_map)(ihk_os_t, void *, unsigned long arg);
+	int (*get_ikc_map)(ihk_os_t, void *, unsigned long arg);
 
 	/** \brief Query CPU cores of an OS instance
 	 *
@@ -306,6 +321,9 @@ struct ihk_os_ops {
 	 **/
 	int (*thaw)(ihk_os_t ihk_os, void *priv);
 
+	/** \brief panic notifier
+	 **/
+	void (*panic_notifier)(ihk_os_t ihk_os, void *priv);
 };
 
 struct ihk_register_os_data;
@@ -643,6 +661,8 @@ struct ihk_cpu_info {
 struct ihk_mem_info *ihk_os_get_memory_info(ihk_os_t os);
 /** \brief Get information of CPU cores which the OS kernel uses */
 struct ihk_cpu_info *ihk_os_get_cpu_info(ihk_os_t os);
+/** \brief Get address of memory area to which OS-global rerouce usage is recorded */
+void *ihk_os_get_rusage(ihk_os_t os);
 
 /** \brief Denote to allocate all the available cpus */
 #define IHK_RESOURCE_CPU_ALL  -1
@@ -904,41 +924,15 @@ int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion);
 
 void ihk_os_eventfd(ihk_os_t os, int type);
 
-/** \brief IHK-Monitor */
-struct ihk_os_cpu_monitor {
-	int status;
-#define IHK_OS_MONITOR_NOT_BOOT 0
-#define IHK_OS_MONITOR_IDLE 1
-#define IHK_OS_MONITOR_USER 2
-#define IHK_OS_MONITOR_KERNEL 3
-#define IHK_OS_MONITOR_KERNEL_HEAVY 4
-#define IHK_OS_MONITOR_KERNEL_OFFLOAD 5
-#define IHK_OS_MONITOR_PANIC 99
-	int status_bak;
-	unsigned long counter;
-	unsigned long ocounter;
-	unsigned long user_tsc;
-	unsigned long system_tsc;
+/* IHK-Core holds only this number of bufs to prevent memory leak */
+#define IHK_MAX_NUM_KMSG_BUFS 4
+
+struct ihk_kmsg_buf_container {
+	struct list_head list;
+	int os_index; /* Identifier */
+	atomic_t count;     /* Track sharing because kmsg_buf lives longer than OS instance */
+	struct ihk_kmsg_buf *kmsg_buf;
+	unsigned int order;
 };
 
-struct ihk_os_monitor {
-	unsigned long rusage_max_num_threads;
-	unsigned long rusage_num_threads;
-	unsigned long rusage_rss_max;
-	long rusage_rss_current;
-	unsigned long rusage_kmem_usage;
-	unsigned long rusage_kmem_max_usage;
-	unsigned long rusage_hugetlb_usage;
-	unsigned long rusage_hugetlb_max_usage;
-	unsigned long rusage_total_memory;
-	unsigned long rusage_total_memory_usage;
-	unsigned long rusage_total_memory_max_usage;
-	unsigned long num_numa_nodes;
-	unsigned long num_processors;
-	unsigned long ns_per_tsc;
-	unsigned long reserve[128];
-	unsigned long rusage_numa_stat[1024];
-
-	struct ihk_os_cpu_monitor cpu[0];
-};
 #endif

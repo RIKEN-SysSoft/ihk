@@ -49,6 +49,8 @@ use_virt_timer:
 	.quad	0		/* virt timer or phys timer ? */
 evtstrm_timer_rate:
 	.quad	0		/* event stream timer rate */
+default_vl:
+	.quad	0		/* SVE default VL */
 cpu_logical_map_size:
 	.quad	0		/* the cpu-core maximun number */
 cpu_logical_map:

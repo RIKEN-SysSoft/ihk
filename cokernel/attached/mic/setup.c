@@ -14,12 +14,13 @@
 #define MIC_BOOT_MAGIC_READY        0x25470293
 
 extern void main(void);
-extern void setup_x86(void);
+extern void setup_x86_phase1(void);
+extern void setup_x86_phase2(void);
 extern void init_sfi(void);
 extern void init_boot_processor_local(void);
 
 static unsigned char stack[8192] __attribute__((aligned(4096)));
-extern struct ihk_kmsg_buf kmsg_buf;
+extern struct ihk_kmsg_buf *kmsg_buf;
 
 static struct mic_boot_param *boot_param;
 
@@ -164,7 +165,8 @@ void arch_init(void)
 
 	init_sfi();
 
-	setup_x86();
+	setup_x86_phase1();
+	setup_x86_phase2();
 
 	sbox_base = map_fixed_area(SBOX_BASE, SBOX_SIZE, 1);
 	boot_param = map_fixed_area((unsigned long)boot_param,

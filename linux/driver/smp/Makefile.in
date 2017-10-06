@@ -28,9 +28,11 @@ obj-m += ihk-smp-$(arch).o
 
 # POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
 #ccflags-y := -I$(src)/../../../cokernel/smp/$(arch) -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(src)/../../../ikc/include \
-#             -I@abs_builddir@ -I@abs_builddir@/$(arch_dir)
+#             -I@abs_builddir@/$(arch_dir) -I@abs_builddir@ -I@abs_builddir@/../../../ -I$(src) -I$(src)/$(arch_dir) \
+#	-I$(src)/../../core
 ccflags-y := -I$(src)/../../../cokernel/smp/$(arch) -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(src)/../../../ikc/include \
-             -I@abs_builddir@/$(arch_dir) -I@abs_builddir@ -I$(src) -I$(src)/$(arch_dir) $(arch_ccflags-y)
+             -I@abs_builddir@/$(arch_dir) -I@abs_builddir@ -I@abs_builddir@/../../../ -I$(src) -I$(src)/$(arch_dir) \
+	-I$(src)/../../core $(arch_ccflags-y)
 # POSTK_DEBUG_ARCH_DEP_84 power management support [END]
 
 ihk-smp-$(arch)-y += smp-driver.o $(arch_dir)/smp-arch-driver.o $(arch_objs)
@@ -48,6 +50,7 @@ endif
 .PHONY: clean install modules
 
 modules:
+	mkdir -p @abs_builddir@/$(arch_dir)
 	$(MAKE) -C $(KDIR) M=$(PWD) SUBDIRS=$(PWD) ARCH=$(ARCH) modules
 
 clean:

@@ -1,4 +1,4 @@
-# Makefile.predefines.in COPYRIGHT FUJITSU LIMITED 2016
+# Makefile.predefines.in COPYRIGHT FUJITSU LIMITED 2016-2017
 
 #  ARM64_MEMORY_LAYOUT
 #  ----+-----------+-----------------------
@@ -90,3 +90,5 @@ ifneq ($(strip $(hpcpwr_dir)),)
 	CFLAGS += -DENABLE_HPCPWR
 endif
 # POSTK_DEBUG_ARCH_DEP_84 power management support [END]
+
+CFLAGS += -DCONFIG_ARM64_SVE

@@ -70,17 +70,11 @@ static int os_max_minor = 0;
 static struct list_head ihk_os_notifiers;
 static spinlock_t ihk_os_notifiers_lock;
 
+static struct list_head ihk_kmsg_bufs;
+static spinlock_t ihk_kmsg_bufs_lock;
+
 extern int ihk_ikc_master_init(ihk_os_t os);
 extern void ikc_master_finalize(ihk_os_t os);
-
-struct ihk_kmsg_buf {
-		int tail;
-		int len;
-		int head;
-		int mode;
-		ihk_spinlock_t lock;
-		char str[0];
-};
 
 struct ihk_event {
 	struct list_head list;
@@ -283,6 +277,26 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
 	int index = ihk_host_os_get_index(data);
+	int found = 0;
+	struct ihk_kmsg_buf_container *cont;
+	unsigned long flags;
+
+	/* Get the latest kmsg_buf */
+	spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+	list_for_each_entry_reverse(cont, &ihk_kmsg_bufs, list) {
+		if (cont->os_index == data->minor) {
+			data->kmsg_buf_container = cont;
+			dkprintf("%s: got kmsg_buf %p\n", __FUNCTION__, cont);
+			atomic_inc(&cont->count); /* OS instance is referring to it */
+			found = 1;
+			break;
+		}
+	}
+	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+	
+	if (!found) {
+		return -EINVAL;
+	}
 
 	if (data->ops->boot) {
 		ret = data->ops->boot(data, data->priv, flag);
@@ -305,22 +319,37 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 	return ret;
 }
 
+static void delete_kmsg_buf(struct ihk_kmsg_buf_container* cont) {
+	__free_pages(virt_to_page(cont->kmsg_buf), cont->order);
+	dkprintf("%s: __free_pages kmsg_buf\n", __FUNCTION__);
+	
+	list_del(&cont->list);
+	kfree(cont);
+	dkprintf("%s: kmsg_buf %p deleted\n", __FUNCTION__, cont);
+}
+
+static int release_kmsg_buf(struct ihk_kmsg_buf_container* cont) {
+	unsigned long flags;
+
+	if (atomic_read(&cont->count) == 0) {
+		dkprintf("%s: Trying to unref kmsg_buf with count of zero\n", __FUNCTION__);
+		return -EINVAL;
+	}
+	
+    spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+	if (atomic_dec_return(&cont->count) == 0) {
+		delete_kmsg_buf(cont);
+	}
+    spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+	return 0;
+}
+
 /** \brief Shutdown the kernel related to the OS file */
 static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
 	struct ihk_os_notifier *_ion;
 	int index = ihk_host_os_get_index(data);
-	
-	/* No need for this 
-	void *buf;
-	if (data->kmsg_buf) {
-		buf = data->kmsg_buf;
-		data->kmsg_buf = NULL;
-		iounmap(data->kmsg_buf);
-		__ihk_os_unmap_memory(data, data->kmsg_pa, data->kmsg_len);
-	}
-	*/
 
 	/* Call OS notifiers */
 	spin_lock(&ihk_os_notifiers_lock);
@@ -334,6 +363,13 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 
 	if (data->ops->shutdown) {
 		ret = data->ops->shutdown(data, data->priv, flag);
+	}
+
+	/* Release kmsg_buf */
+	if (data->kmsg_buf_container) {
+		if (release_kmsg_buf(data->kmsg_buf_container)) {
+			return -EINVAL;
+		}
 	}
 
 	printk("IHK: OS shutdown OK\n"); 
@@ -440,109 +476,85 @@ static int __ihk_os_reserve_mem(struct ihk_host_linux_os_data *data,
 	return __ihk_os_alloc_resource(data, &resource);
 }
 
-/** \brief Initialize the kernel message buffer of the OS
- *
- * This function asks the locations of the buffer and maps it.
- */
-static void __ihk_os_init_kmsg(struct ihk_host_linux_os_data *data)
+static int read_kmsg(struct ihk_kmsg_buf *kmsg_buf, char *buf, int shift)
 {
-	unsigned long rpa, pa, size;
+	int len_bottom, len_top;
+	unsigned long flags;
 
-	dprint_func_enter;
-
-	if (data->kmsg_buf) {
-		dprintf("data->kmsg_buf is not null: %p\n", data->kmsg_buf);
-		return;
+	if (!kmsg_buf) {
+		return -EINVAL;
 	}
-	
-	if (__ihk_os_get_special_addr(data, IHK_SPADDR_KMSG, &rpa, &size)) {
-		dprintf("get_special_addr: failed.\n");
-		return;
-	}
-	dprint_var_x8(rpa);
 
-	pa = __ihk_os_map_memory(data, rpa, size);
-	dprint_var_x8(pa);
-
-#ifdef CONFIG_MIC
-	if ((long)pa <= 0) {
-		return;
+	/* Inter-kernel lock for struct ihk_kmsg_buf */
+	local_irq_save(flags);
+	while(__sync_val_compare_and_swap(&kmsg_buf->lock, 0, 1) != 0) {
+		cpu_relax();
 	}
-	
-	data->kmsg_buf = ioremap_nocache(pa, size);
-#else
-	data->kmsg_buf = ihk_device_map_virtual(data->dev_data, pa, size, NULL, 0);
-#endif
-	data->kmsg_pa = pa;
-	data->kmsg_len = size;
-	dprint_var_p(data->kmsg_buf);
+  
+	if (kmsg_buf->head > kmsg_buf->tail) {
+		len_bottom = strnlen(&kmsg_buf->str[kmsg_buf->head], kmsg_buf->len - kmsg_buf->head);
+		len_top = kmsg_buf->tail;
+	} else {
+		len_bottom = kmsg_buf->tail - kmsg_buf->head;
+		len_top = 0;
+	}
+	dkprintf("kmsg head=%d,tail=%d,len=%d,len_bottom=%d,len_top=%d\n", kmsg_buf->head, kmsg_buf->tail, kmsg_buf->len, len_bottom, len_top);
+
+	/* Print the end of the buffer */
+	if (len_bottom > 0) {
+		memcpy(buf, &kmsg_buf->str[kmsg_buf->head], len_bottom);
+	}
+
+	/* Then the front of it */
+	if (len_top > 0) {
+		memcpy(buf + len_bottom, kmsg_buf->str, len_top);
+	}
+
+	if (shift) {
+		kmsg_buf->head = kmsg_buf->tail; 
+	}
+	kmsg_buf->lock = 0;
+	local_irq_restore(flags);
+
+	return len_bottom + len_top;
 }
 
 /** \brief ioctl handler for reading the kernel message to the buffer */
 static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
-                              char __user *buf)
+                              char __user *_buf)
 {
-	int tail, len, len_end, len_start, head, mode, read_top;
-	unsigned long flags;
-	struct ihk_kmsg_buf *kmsg_buf;
+	int ret = 0;
+	char *buf;
 
-	if (!data->kmsg_buf) {
-		mutex_lock(&data->kmsg_mutex);
-		__ihk_os_init_kmsg(data);
-		mutex_unlock(&data->kmsg_mutex);
-	}
-	if (!data->kmsg_buf) {
+	if (!data->kmsg_buf_container) {
 		return -EINVAL;
 	}
 
-	kmsg_buf = (struct ihk_kmsg_buf *)data->kmsg_buf;
-
-	mode = kmsg_buf->mode;
-	flags = 0;
-	if (mode == 2) {
-		spin_lock_irqsave(&kmsg_buf->lock, flags);
-	}
-	  
-	/* XXX: How to share the structure definition with manycore ihk? */
-	tail = kmsg_buf->tail;
-	len = kmsg_buf->len;
-	head = kmsg_buf->head;
-	if (mode != 0) {
-		read_top = head;
-		if (head > tail) {
-			len_end = strnlen(&kmsg_buf->str[head], len - head);
-			len_start = tail;
-		} else {
-			len_end = tail - head;
-			len_start = 0;
-		}
-	} else {
-		read_top = tail + 1;
-		len_end = strnlen(&kmsg_buf->str[tail+1], len - tail);
-		len_start = tail;
-	}
-	//kprintf("kmsg tail: %d, len: %d, len_end: %d len_start: %d head: %d read_top = %d\n", tail, len, len_end, len_start, head, read_top);
-
-	/* Print the end of the buffer */
-	if (len_end > 0) {
-		if (copy_to_user(buf, &kmsg_buf->str[read_top], len_end)) {
-			dprintf("error: copying string to user-space\n");
-			return -EINVAL;
-		}
+	if (!data->kmsg_buf_container->kmsg_buf) {
+		return -EINVAL;
 	}
 
-	/* Then the front of it */
-	if (len_start > 0) {
-		if (copy_to_user(buf + len_end, kmsg_buf->str, len_start)) {
-			dprintf("error: copying string to user-space\n");
-			return -EINVAL;
-		}
+	buf = kmalloc(IHK_KMSG_SIZE, GFP_KERNEL);
+	if (!buf) {
+		ret = -ENOMEM;
+		goto out;
 	}
-	kmsg_buf->head = tail; 
-	if (mode == 2) {
-		spin_unlock_irqrestore(&kmsg_buf->lock, flags);
+
+	ret = read_kmsg(data->kmsg_buf_container->kmsg_buf, buf, 0);
+	if (ret < 0) {
+		goto out;
 	}
-	return len_end + len_start;
+
+	if (copy_to_user(_buf, buf, ret)) {
+		dprintf("error: copying string to user-space\n");
+		ret = -EINVAL;
+		goto out;
+	}
+ out:
+	if (buf) {
+		kfree(buf);
+	}
+	return ret;
 }
 
 /** \brief Set the kernel command-line parameter for the kernel
@@ -606,6 +618,92 @@ setup_monitor(struct ihk_host_linux_os_data *data)
 	data->monitor_len = size;
 }
 
+static void
+setup_rusage(struct ihk_host_linux_os_data *data)
+{
+	unsigned long rpa;
+	unsigned long pa;
+	unsigned long size;
+	unsigned long psize;
+
+	if (data->rusage)
+		return;
+
+	if (__ihk_os_get_special_addr(data, IHK_SPADDR_RUSAGE, &rpa, &size)) {
+		dprintf("get_special_addr: failed.\n");
+		return;
+	}
+
+	psize = ((size + PAGE_SIZE - 1) / PAGE_SIZE) * PAGE_SIZE;
+	pa = __ihk_os_map_memory(data, rpa, psize);
+
+#ifdef CONFIG_MIC
+	if ((long)pa <= 0) {
+		return;
+	}
+
+	data->rusage = ioremap_nocache(pa, psize);
+#else
+	data->rusage = ihk_device_map_virtual(data->dev_data, pa, psize,
+	                                       NULL, 0);
+#endif
+	data->rusage_pa = pa;
+	data->rusage_len = size;
+}
+
+static int detect_hungup(struct ihk_host_linux_os_data *data)
+{
+	int ret;
+	int n;
+	int i;
+
+	ret = __ihk_os_query_status(data);
+	dkprintf("%s: __ihk_os_query_status returned %d", __FUNCTION__, ret);
+
+	/* Guard objects referenced here
+	   (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
+	   (2) LWK initializes IHK_SPADDR_MONITOR
+	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready() */
+	if (ret == IHK_OS_STATUS_HUNGUP) {
+		goto out;
+	} else if (ret != IHK_OS_STATUS_READY) {
+		ret = -EAGAIN;
+		goto out;
+	}
+
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		ret = -ENOSYS;
+		goto out;
+	}
+
+	n = data->monitor->num_processors;
+	for (i = 0; i < n; i++) {
+		dkprintf("%s: data->monitor->cpu[%d].status=%d\n", __FUNCTION__, i, data->monitor->cpu[i].status);
+		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC){
+			dkprintf("%s: cpu[%d].status==%d\n", __FUNCTION__, i, data->monitor->cpu[i].status);
+			ret = IHK_OS_STATUS_FAILED;
+			goto out;
+		}
+
+		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_KERNEL){
+			dkprintf("%s: cpu[%d].status==KERNEL,c=%ld,o=%ld\n", __FUNCTION__, i, data->monitor->cpu[i].counter, data->monitor->cpu[i].ocounter);
+			if(data->monitor->cpu[i].counter ==
+			   data->monitor->cpu[i].ocounter) {
+				dkprintf("%s: HUNGUP detected\n", __FUNCTION__);
+				ret = IHK_OS_STATUS_HUNGUP;
+				__ihk_os_notify_hungup(data);
+				ihk_os_eventfd((ihk_os_t)data, IHK_OS_EVENTFD_TYPE_STATUS);
+			}
+		}
+		data->monitor->cpu[i].ocounter = data->monitor->cpu[i].counter;
+	}
+
+ out:
+	dkprintf("%s: returning %d\n", __FUNCTION__, ret);
+	return ret;
+}
+
 static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 		char __user *buf)
 {
@@ -630,18 +728,11 @@ static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 	n = data->monitor->num_processors;
 	for (i = 0; i < n; i++) {
 		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC){
+			dkprintf("%s: cpu[%d].status==%d\n", __FUNCTION__, i, data->monitor->cpu[i].status);
 			return IHK_OS_STATUS_FAILED;
 		}
 
-		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_KERNEL){
-			if(data->monitor->cpu[i].counter ==
-			   data->monitor->cpu[i].ocounter)
-				status = IHK_OS_STATUS_HUNGUP;
-		}
-		data->monitor->cpu[i].ocounter = data->monitor->cpu[i].counter;
 	}
-	if (status == IHK_OS_STATUS_HUNGUP)
-		return IHK_OS_STATUS_HUNGUP;
 
 	freezing = data->monitor->cpu[0].status;
 	if (freezing == IHK_OS_MONITOR_KERNEL_FREEZING)
@@ -672,27 +763,47 @@ static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 /** \brief Clear the kernel message buffer. */
 static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
 {
-	if (!data->kmsg_buf) {
+	struct ihk_kmsg_buf *kmsg_buf;
+	unsigned long flags;
+
+	if (!data->kmsg_buf_container) {
+		return -EINVAL;
+	}
+	
+	if (!data->kmsg_buf_container->kmsg_buf) {
 		return -EINVAL;
 	}
 
-	memset(((struct ihk_kmsg_buf *) data->kmsg_buf)->str,'\0',((struct ihk_kmsg_buf *)data->kmsg_buf)->len);
-	((struct ihk_kmsg_buf *) data->kmsg_buf)->head = 0;
-	((struct ihk_kmsg_buf *) data->kmsg_buf)->tail = 0;
-	
+	kmsg_buf = data->kmsg_buf_container->kmsg_buf;
+
+	local_irq_save(flags);
+	while(__sync_val_compare_and_swap(&kmsg_buf->lock, 0, 1) != 0) {
+		cpu_relax();
+	}
+
+	memset(kmsg_buf->str, 0, kmsg_buf->len);
+	kmsg_buf->head = 0;
+	kmsg_buf->tail = 0;
+
+	kmsg_buf->lock = 0;
+	local_irq_restore(flags);
+
 	return 0;
 }
 
-static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned long uarg)
+static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, void __user *_desc)
 {
 	struct ihk_event *ep;
-	int fd = (int)uarg;
-	int type = uarg >> 32;
+	struct ihk_os_ioctl_eventfd_desc desc;
 	struct eventfd_ctx *event;
 	struct file *filp;
 	unsigned long flags;
 
-	filp = eventfd_fget(fd);
+	if (copy_from_user(&desc, _desc, sizeof(desc))) {
+		return -EFAULT;
+	}
+
+	filp = eventfd_fget(desc.fd);
 	if (IS_ERR(filp)) {
 		return PTR_ERR(filp);
 	}
@@ -702,7 +813,7 @@ static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, unsigned l
 	}
 	ep = kzalloc(sizeof(struct ihk_event), GFP_KERNEL);
 	ep->event = event;
-	ep->type = type;
+	ep->type = desc.type;
 	spin_lock_irqsave(&os->event_list_lock, flags);
 	list_add_tail(&ep->list, &os->event_list);
 	spin_unlock_irqrestore(&os->event_list_lock, flags);
@@ -717,8 +828,10 @@ void ihk_os_eventfd(ihk_os_t data, int type)
 
 	spin_lock_irqsave(&os->event_list_lock, flags);
 	list_for_each_entry(ep, &os->event_list, list) {
-		if (ep->type == type)
+		if (ep->type == type) {
+			dkprintf("%s: calling eventfd_signal,ep->type=%d,type=%d\n", __FUNCTION__, ep->type, type);		
 			eventfd_signal(ep->event, 1);
+		}
 	}
 	spin_unlock_irqrestore(&os->event_list_lock, flags);
 }
@@ -763,8 +876,7 @@ static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
 	return error;
 }
 
-static int
-__ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
+static int __ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
 {
 	struct ihk_os_monitor *__user buf;
 
@@ -781,8 +893,7 @@ __ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
 	return 0;
 }
 
-static int
-__ihk_os_get_cpu_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
+static int __ihk_os_get_cpu_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
 {
 	struct ihk_os_cpu_monitor *__user buf;
 	int size;
@@ -831,6 +942,7 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 
 	switch (request) {
 	case IHK_OS_QUERY_STATUS:
+	case IHK_OS_GET_NUM_NUMA_NODES:
 	case IHK_OS_QUERY_FREE_MEM:
 	case IHK_OS_ALLOC_CPU:
 	case IHK_OS_ALLOC_MEM:
@@ -840,7 +952,7 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_CLEAR_KMSG:
 	case IHK_OS_QUERY_CPU:
 	case IHK_OS_QUERY_MEM:
-	case IHK_OS_QUERY_IKC_MAP:
+	case IHK_OS_GET_IKC_MAP:
 	case IHK_OS_STATUS:
 	case IHK_OS_GET_USAGE:
 	case IHK_OS_GET_CPU_USAGE:
@@ -925,12 +1037,12 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_release_cpu(data, arg);
 		break;
 
-	case IHK_OS_IKC_MAP:
-		ret = __ihk_os_ikc_map(data, arg);
+	case IHK_OS_SET_IKC_MAP:
+		ret = __ihk_os_set_ikc_map(data, arg);
 		break;
 
-	case IHK_OS_QUERY_IKC_MAP:
-		ret = __ihk_os_query_ikc_map(data, arg);
+	case IHK_OS_GET_IKC_MAP:
+		ret = __ihk_os_get_ikc_map(data, arg);
 		break;
 
 	case IHK_OS_QUERY_CPU:
@@ -953,6 +1065,19 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_query_status(data);
 		break;
 
+	case IHK_OS_DETECT_HUNGUP:
+		ret = detect_hungup(data);
+		break;
+
+	case IHK_OS_NOTIFY_HUNGUP:
+		__ihk_os_notify_hungup(data);
+		ret = 0;
+		break;
+
+	case IHK_OS_GET_NUM_NUMA_NODES:
+		ret = __ihk_os_get_num_numa_nodes(data);
+		break;
+
 	case IHK_OS_QUERY_FREE_MEM:
 		ret = __ihk_os_query_free_mem(data);
 		break;
@@ -967,6 +1092,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
 	case IHK_OS_STATUS:
 		ret = __ihk_os_status(data, (char * __user)arg);
+		dkprintf("%s: __ihk_os_status returned %d\n", __FUNCTION__, ret);
 		break;
 
 	case IHK_OS_CLEAR_KMSG:
@@ -978,11 +1104,11 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		break;
 
 	case IHK_OS_REGISTER_EVENT:
-		ret = __ihk_os_register_event(data, arg);
+		ret = __ihk_os_register_event(data, (void __user *)arg);
 		break;
 
 	case IHK_OS_EVENTFD:
-		ihk_os_eventfd(data, 1);
+		ihk_os_eventfd(data, (int)arg);
 		ret = 0;
 		break;
 
@@ -1005,7 +1131,6 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_os_get_cpu_usage(data, arg);
 		dkprintf("__ihk_os_get_cpu_usage  (ret=%d)\n",ret);
 		break;
-
 
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
@@ -1068,6 +1193,85 @@ static struct file_operations mcos_cdev_ops = {
 /*
  * Device character device file operations.
  */
+
+static int __ihk_device_get_kmsg_buf(struct file *file, void __user * _desc)
+{
+	int found = 0;
+	struct ihk_kmsg_buf_container *cont;
+	struct ihk_device_get_kmsg_buf_desc desc;
+	unsigned long flags;
+
+    if (copy_from_user(&desc, _desc, sizeof(desc))) {
+        return -EFAULT;
+    }
+
+	dkprintf("%s: os_index=%d\n", __FUNCTION__, desc.os_index);
+
+	/* Get the latest kmsg_buf */
+	spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+	list_for_each_entry_reverse(cont, &ihk_kmsg_bufs, list) {
+		if (cont->os_index == desc.os_index) {
+			dkprintf("%s: got kmsg_buf %p\n", __FUNCTION__, cont);
+			atomic_inc(&cont->count); /* ihkmond is referring to it */
+			found = 1;
+			break;
+		}
+	}
+	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+	
+	if (!found) {
+		return -EINVAL;
+	}
+
+	desc.handle = cont;
+	if (copy_to_user(_desc, &desc, sizeof(desc))) {
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+/** \brief ioctl handler for reading the kernel message to the buffer */
+static int __ihk_device_read_kmsg_buf(struct file *file, void __user *_desc)
+{
+	int ret = 0;
+	char *buf;
+	struct ihk_kmsg_buf_container *cont;
+	struct ihk_device_read_kmsg_buf_desc desc;
+
+	if (copy_from_user(&desc, _desc, sizeof(desc))) {
+        return -EFAULT;
+    }
+
+	buf = kmalloc(IHK_KMSG_SIZE, GFP_KERNEL);
+	if (!buf) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	cont = (struct ihk_kmsg_buf_container *)desc.handle;
+	ret = read_kmsg(cont->kmsg_buf, buf, desc.shift);
+	if (ret < 0) {
+		goto out;
+	}
+
+	if (copy_to_user(desc.buf, buf, ret)) {
+		dprintf("error: copying string to user-space\n");
+		ret = -EINVAL;
+		goto out;
+	}
+ out:
+	if (buf) {
+		kfree(buf);
+	}
+	return ret;
+}
+
+static int __ihk_device_release_kmsg_buf(struct file *file, unsigned long arg)
+{
+	return release_kmsg_buf((struct ihk_kmsg_buf_container *)arg);
+}
+
 /** \brief open handler for a device file */
 static int ihk_host_device_open(struct inode *inode, struct file *file)
 {
@@ -1105,8 +1309,9 @@ static int ihk_host_device_open(struct inode *inode, struct file *file)
 /** \brief release handler for a device file */
 static int ihk_host_device_release(struct inode *inode, struct file *file)
 {
+	int ret = 0;
 	struct ihk_host_linux_device_data *data;
-	
+
 	data = file->private_data;
 
 	if (data->ops->close) {
@@ -1114,8 +1319,7 @@ static int ihk_host_device_release(struct inode *inode, struct file *file)
 	}
 
 	atomic_dec(&data->refcount);
-	
-	return 0;
+	return ret;
 }
 
 /** \brief release handler for a device file */
@@ -1209,6 +1413,12 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	int i, minor, ret;
 	unsigned long flags;
 	struct ihk_host_linux_os_data *os = NULL;
+	int kmsg_buf_size;
+	unsigned int kmsg_buf_order;
+	struct page *kmsg_buf_pages;
+	struct ihk_kmsg_buf_container *cont;
+	struct ihk_kmsg_buf *kmsg_buf;
+	int nbufs = 0;
 
 	/* first check if there is any free slot */
 	spin_lock_irqsave(&os_data_lock, flags);
@@ -1235,6 +1445,55 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 		os_data[minor] = NULL;
 		return ret;
 	}
+
+	/* Allocate kmsg_buf. Note that IHK-Core owns the buf. */
+	kmsg_buf_size = (sizeof(struct ihk_kmsg_buf) + PAGE_SIZE - 1) & PAGE_MASK;
+	kmsg_buf_order = 0;
+	while (((size_t)PAGE_SIZE << kmsg_buf_order) < kmsg_buf_size)
+		++kmsg_buf_order;
+
+	kmsg_buf_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, kmsg_buf_order);
+	if (!kmsg_buf_pages) {
+		ekprintf("IHK: Cannot allocate kmsg buffer\n");
+		return -ENOMEM;
+	}
+
+	/* Initialize kmsg_buf */
+	kmsg_buf = (struct ihk_kmsg_buf *)pfn_to_kaddr(page_to_pfn(kmsg_buf_pages));
+	kmsg_buf->tail = 0;
+	kmsg_buf->len = sizeof(kmsg_buf->str);
+	kmsg_buf->head = 0;
+	kmsg_buf->lock = 0;
+	memset(kmsg_buf->str, 0, sizeof(kmsg_buf->str));
+	dkprintf("%s: kmsg_buf=%p\n", __FUNCTION__, kmsg_buf);
+
+	/* Release stray kmsg_bufs */
+	spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+	list_for_each_entry(cont, &ihk_kmsg_bufs, list) {
+		nbufs++;
+	}
+	dkprintf("%s: number of kmsg_buf=%d\n", __FUNCTION__, nbufs);
+	for (i = 0; i < nbufs - (IHK_MAX_NUM_KMSG_BUFS - 1); i++) {
+		cont = list_first_entry(&ihk_kmsg_bufs, struct ihk_kmsg_buf_container, list);
+		delete_kmsg_buf(cont);
+		ekprintf("%s: Warning: stray kmsg_buf %p freed\n", __FUNCTION__, cont);
+	}
+	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+
+	/* Insert it into the list */
+	cont = kmalloc(sizeof(struct ihk_kmsg_buf_container), GFP_KERNEL);
+	if (!cont) {
+		return -ENOMEM;
+	}
+	cont->os_index = minor;
+	cont->kmsg_buf = kmsg_buf;
+	atomic_set(&cont->count, 0);
+	cont->order = kmsg_buf_order;
+	spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+	list_add_tail(&cont->list, &ihk_kmsg_bufs);
+	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+	dkprintf("%s: kmsg_buf %p added\n", __FUNCTION__, cont);
+
 
 	os->cdev.owner = THIS_MODULE;
 	os->dev_num = mcos_dev_num + minor;
@@ -1274,7 +1533,7 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 		dkprintf("%s: pointer invalid\n", __FUNCTION__);
 		return -EINVAL;
 	}
-
+	
 	if (atomic_read(&os->refcount) > 0) {
 		dkprintf("%s: refcount != 0\n", __FUNCTION__);
 		return -EBUSY;
@@ -1452,6 +1711,18 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 		ret = __ihk_device_query_mem(data, arg);
 		break;
 
+	case IHK_DEVICE_GET_KMSG_BUF:
+		ret = __ihk_device_get_kmsg_buf(file, (void __user *)arg);
+		break;
+
+	case IHK_DEVICE_READ_KMSG_BUF:
+		ret = __ihk_device_read_kmsg_buf(file, (void __user *)arg);
+		break;
+
+	case IHK_DEVICE_RELEASE_KMSG_BUF:
+		ret = __ihk_device_release_kmsg_buf(file, arg);
+		break;
+
 	default:
 		if (request >= IHK_DEVICE_DEBUG_START && 
 		    request <= IHK_DEVICE_DEBUG_END) {
@@ -1605,6 +1876,25 @@ static struct file_operations mcd_cdev_ops = {
 	.release = ihk_host_device_release,
 };
 
+static int ihk_panic(struct notifier_block *this, unsigned long ev, void *ptr)
+{
+	int i;
+
+	for (i = 0; i < os_max_minor; i++) {
+		if (!os_data[i])
+			continue;
+		if (os_data[i]->ops->panic_notifier)
+			os_data[i]->ops->panic_notifier(os_data[i],
+			                                os_data[i]->priv);
+	}
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block ihk_panic_block = {
+	.notifier_call = ihk_panic,
+};
+
 /** \brief Initialization function of the IHK-Host drivers.
  *
  * This function registers character device classes, and gets prepared to
@@ -1637,6 +1927,11 @@ static int __init ihk_host_driver_init(void)
 	INIT_LIST_HEAD(&ihk_os_notifiers);
 	spin_lock_init(&ihk_os_notifiers_lock);
 
+	atomic_notifier_chain_register(&panic_notifier_list, &ihk_panic_block);
+
+	INIT_LIST_HEAD(&ihk_kmsg_bufs);
+	spin_lock_init(&ihk_kmsg_bufs_lock);
+
 	printk("IHK Initialized: Device number: Device %x, OS %x\n",
 	       mcd_dev_num, mcos_dev_num);
 
@@ -1668,6 +1963,8 @@ static void __exit ihk_exit(void)
 	int i;
 	ihk_device_t dev;
 	unsigned long flags;
+
+	atomic_notifier_chain_unregister(&panic_notifier_list, &ihk_panic_block);
 
 	for (i = 0; i < dev_max_minor; i++) {
 		spin_lock_irqsave(&dev_data_lock, flags);
@@ -1777,6 +2074,7 @@ ihk_device_t ihk_register_device(struct ihk_register_device_data *param)
 int ihk_unregister_device(ihk_device_t ihkdev)
 {
 	struct ihk_host_linux_device_data *data = ihkdev;
+	unsigned long flags;
 
 	if (atomic_read(&data->refcount) > 0) {
 		return -EBUSY;
@@ -1784,6 +2082,16 @@ int ihk_unregister_device(ihk_device_t ihkdev)
 	if (__destroy_all_os(data) != 0) {
 		return -EBUSY;
 	}
+
+	/* Release stray kmsg_bufs */
+	spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+	while (!list_empty(&ihk_kmsg_bufs)) {
+		struct ihk_kmsg_buf_container *cont;
+		cont = list_first_entry(&ihk_kmsg_bufs, struct ihk_kmsg_buf_container, list);
+		delete_kmsg_buf(cont);
+		ekprintf("%s: Warning: stray kmsg_buf %p freed\n", __FUNCTION__, cont);
+	}
+	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
 
 	cdev_del(&data->cdev);
 	device_destroy(mcd_class, data->dev_num);
@@ -1952,6 +2260,13 @@ struct ihk_cpu_info *ihk_os_get_cpu_info(ihk_os_t os)
 	return __ihk_os_get_cpu_info(os);
 }
 
+void *ihk_os_get_rusage(ihk_os_t ihk_os)
+{
+	struct ihk_host_linux_os_data *os = ihk_os;
+	setup_rusage(os);
+	return os->rusage;
+}
+
 ihk_device_t ihk_os_to_dev(ihk_os_t os)
 {
 	return ((struct ihk_host_linux_os_data *)os)->dev_data;
@@ -1981,71 +2296,39 @@ ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
 
 void ihk_host_print_os_kmsg(ihk_os_t os)
 {
-	int tail, len, len_end, len_start, head, mode, read_top;
-	int printed = 0;
-	struct ihk_kmsg_buf *kmsg_buf;
+	int nread;
+	char *buf;
+	char *lines, *line;
+	struct ihk_host_linux_os_data *data = (struct ihk_host_linux_os_data *)os;
 
+	buf = kmalloc(IHK_KMSG_SIZE, GFP_KERNEL);
+	if (!buf) {
+		goto out;
+	}
 	if (!os)
-		return;
+		goto out;
 
-	kmsg_buf = (struct ihk_kmsg_buf *)
-		((struct ihk_host_linux_os_data *)os)->kmsg_buf;
+	nread = read_kmsg(data->kmsg_buf_container->kmsg_buf, buf, 0);
 
-	if (!kmsg_buf) {
-		mutex_lock(&((struct ihk_host_linux_os_data *)os)->kmsg_mutex);
-		__ihk_os_init_kmsg(os);
-		mutex_unlock(&((struct ihk_host_linux_os_data *)os)->kmsg_mutex);
-		kmsg_buf = (struct ihk_kmsg_buf *)
-			((struct ihk_host_linux_os_data *)os)->kmsg_buf;
-
-		if (!kmsg_buf) {
-			printk("%s: failed to initialize kmsg\n", __FUNCTION__);
-			return;
-		}
+	if (nread < 0) {
+		printk("%s: kmsg_buf is not available\n", __FUNCTION__);
+		goto out;
 	}
 
-	tail = kmsg_buf->tail;
-	len = kmsg_buf->len;
-	head = kmsg_buf->head;
-	mode = kmsg_buf->mode;
-	if (mode != 0) {
-		read_top = head;
-		if (head > tail) {
-			len_end = strnlen(&kmsg_buf->str[head], len - head);
-			len_start = tail;
-		} else {
-			len_end = tail - head;
-			len_start = 0;
-		}
-	} else {
-		read_top = tail + 1;
-		len_end = strnlen(&kmsg_buf->str[tail+1], len - tail);
-		len_start = tail;
-	}
-
-	/* Print the end of the buffer */
-	if (len_end > 0) {
-		printk("%s", &kmsg_buf->str[read_top]);
-		printed = 1;
-	}
-
-	/* Then the front of it */
-	if (len_start > 0) {
-		char *line;
-		char *lines = kmsg_buf->str;
-
-		/* Print line-by-line */
+	/* Print line-by-line */
+	lines = buf;
+	line = strsep(&lines, "\n");
+	while (line) {
+		printk("%s\n", line);
 		line = strsep(&lines, "\n");
-		while (line) {
-			printk("%s\n", line);
-			line = strsep(&lines, "\n");
-		}
-
-		printed = 1;
 	}
 
-	if (!printed) {
+	if (nread == 0) {
 		printk("%s: kmsg buffer is empty\n", __FUNCTION__);
+	}
+ out:
+	if (buf) {
+		kfree(buf);
 	}
 }
 
@@ -2306,3 +2589,4 @@ EXPORT_SYMBOL(ihk_device_linux_cpu_to_hw_id);
 EXPORT_SYMBOL(ihk_host_register_os_notifier);
 EXPORT_SYMBOL(ihk_host_deregister_os_notifier);
 EXPORT_SYMBOL(ihk_os_eventfd);
+EXPORT_SYMBOL(ihk_os_get_rusage);

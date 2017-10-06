@@ -19,7 +19,8 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
-#include "ihklib.h"
+#include <ihk/ihklib.h>
+#include <ihk/ihklib_private.h>
 
 int __argc;
 char **__argv;
@@ -43,6 +44,9 @@ char **__argv;
 		}																\
 	} while(0)
 
+
+#define PHYSMEM_NAME_SIZE 32
+
 static int usage(char **arg)
 {
 	char	*cmd;
@@ -63,18 +67,18 @@ static int usage(char **arg)
 	fprintf(stderr, "    release cpu|mem \n");
 	fprintf(stderr, "            cpu (cpu_list) \n");
 	fprintf(stderr, "            mem (size@NUMA) \n");
-	fprintf(stderr, "    ikc_map (cpu_list:cpu+cpu_list:cpu+..) \n");
+	fprintf(stderr, "    set ikc_map (cpu_list:cpu+cpu_list:cpu+..) \n");
+	fprintf(stderr, "    get ikc_map\n");
 	fprintf(stderr, "    query [cpu|mem]\n");
 	fprintf(stderr, "    query_free_mem\n");
 	fprintf(stderr, "    kargs (kernel arg)\n");
-	fprintf(stderr, "    status\n");
-	fprintf(stderr, "    getosinfo\n");
+	fprintf(stderr, "    get status\n");
 	fprintf(stderr, "    kmsg\n");
 	fprintf(stderr, "    clear_kmsg\n");
 	fprintf(stderr, "    intr cpu irq_vector\n");
 	fprintf(stderr, "    ioctl (req) (arg)\n");
 #ifdef ENABLE_MEMDUMP
-	fprintf(stderr, "    dump [file]\n");
+	fprintf(stderr, "    dump [-d level] [file]\n");
 #endif /* ENABLE_MEMDUMP */
 
 	return 0;
@@ -90,11 +94,90 @@ static int do_boot(int fd)
 	return r;
 }
 
-static int do_status(int fd)
+static int do_get_status(int index)
 {
-	int r = ioctl(fd, IHK_OS_STATUS, 0);
-	printf("ret = %d\n", r);
-	return r;
+	int ret = 0, ret_ihklib;
+	
+	ret_ihklib = ihk_os_get_status(index);
+	IHKOSCTL_CHKANDJUMP(ret_ihklib < 0, "error: ihk_os_get_status", -1);
+
+	switch (ret_ihklib) {
+		case IHK_STATUS_INACTIVE:
+			printf("INACTIVE\n");
+			break;
+		case IHK_STATUS_BOOTING:
+			printf("BOOTING\n");
+			break;
+		case IHK_STATUS_RUNNING:
+			printf("RUNNING\n");
+			break;
+		case IHK_STATUS_SHUTDOWN:
+			printf("SHUTDOWN\n");
+			break;
+		case IHK_STATUS_PANIC:
+			printf("PANIC\n");
+			break;
+		case IHK_STATUS_HUNGUP:
+			printf("HUNGUP\n");
+			break;
+		case IHK_STATUS_FREEZING:
+			printf("FREEZING\n");
+			break;
+		case IHK_STATUS_FROZEN:
+			printf("FROZEN\n");
+			break;
+	}	
+
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
+}
+
+static int do_get_ikc_map(int index)
+{
+	int ret = 0, ret_ioctl;
+    char query_result[8 * (IHK_MAX_NUM_CPUS + IHK_MAX_NUM_NUMA_NODES)];
+	int fd = -1;
+    char fn[128];
+
+	sprintf(fn, "/dev/mcos%d", atoi(__argv[1]));
+
+	fd = open(fn, O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		ret = -1;
+		goto fn_fail;
+	}
+
+	memset(query_result, 0, sizeof(query_result));
+	ret_ioctl = ioctl(fd, IHK_OS_GET_IKC_MAP, query_result);
+    IHKOSCTL_CHKANDJUMP(ret_ioctl != 0, "ioctl", -1);
+
+	printf("%s\n", query_result);
+
+ fn_exit:
+	return ret;
+ fn_fail:
+	goto fn_exit;
+}
+
+static int do_get(int index)
+{
+	if (__argc < 4) {
+		usage(__argv);
+		return -1;
+	}
+
+	if (!strcmp(__argv[3], "status")) {
+		return do_get_status(index);
+	} else if (!strcmp(__argv[3], "ikc_map")) {
+		return do_get_ikc_map(index);
+	} else {
+        fprintf(stderr, "Unknown target : %s\n", __argv[3]);
+		usage(__argv);
+		return -1;
+    }
 }
 
 static int do_load(int fd)
@@ -205,24 +288,45 @@ static int do_reserve_mem(int fd)
 	return r;
 }
 
-static int do_ikc_map(int fd)
+static int do_set_ikc_map(int fd)
 {
-	int ret;
+	int ret = 0, ret_ioctl;
 
+	if (__argc < 5) {
+		usage(__argv);
+		ret = -1;
+		goto out;
+	}
+
+	ret_ioctl = ioctl(fd, IHK_OS_SET_IKC_MAP, __argv[4]);
+
+	if (ret_ioctl != 0) {
+		fprintf(stderr, "error: setting up IKC map: %s\n", __argv[4]);
+		ret = -1;
+		goto out;
+	}
+
+ out:
+	dprintf("ret = %d\n", ret);
+	return ret;
+}
+
+static int do_set(int fd)
+{
 	if (__argc < 4) {
 		usage(__argv);
 		return -1;
 	}
 
-	ret = ioctl(fd, IHK_OS_IKC_MAP, __argv[3]);
-
-	if (ret != 0) {
-		fprintf(stderr, "error: setting up IKC map: %s\n", __argv[3]);
-	}
-
-	dprintf("ret = %d\n", ret);
-	return ret;
+	if (!strcmp(__argv[3], "ikc_map")) {
+		return do_set_ikc_map(fd);
+	} else {
+        fprintf(stderr, "Unknown target : %s\n", __argv[3]);
+		usage(__argv);
+		return -1;
+    }
 }
+
 
 static int do_assign(int fd)
 {
@@ -404,7 +508,7 @@ static int do_kargs(int fd)
 
 static int do_kmsg(int fd)
 {
-	char buf[16384];
+	char buf[IHK_KMSG_SIZE];
 	int r = ioctl(fd, IHK_OS_READ_KMSG, (unsigned long)buf);
 	if (r >= 0) {
 		buf[r] = 0;
@@ -415,131 +519,6 @@ static int do_kmsg(int fd)
 		fprintf(stderr, "error querying kmsg\n");
 		return 1;
 	}
-}
-
-static int do_getosinfo(int fd) {
-	int ret = 0, ret_ihklib;
-	int i, j;
-	int index = atoi(__argv[1]);
-
-	ihk_osinfo osinfo;
-	bzero(&osinfo, sizeof(osinfo));
-	ret_ihklib = ihk_getosinfo(index, &osinfo);
-    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
-
-    osinfo.mem_chunks = (ihk_mem_chunk *)calloc(osinfo.num_mem_chunks, sizeof(ihk_mem_chunk));
-    IHKOSCTL_CHKANDJUMP(osinfo.mem_chunks == NULL, "calloc", -1);
-
-    osinfo.cpus = (int *)calloc(osinfo.num_cpus, sizeof(int));
-    IHKOSCTL_CHKANDJUMP(osinfo.cpus == NULL, "calloc", -1);
-
-    osinfo.ikc_sset_sizes = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
-    IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_sizes == NULL, "calloc", -1);
-	
-    osinfo.ikc_sset_members = (int**)calloc(osinfo.num_ikc_ssets, sizeof(int*));
-    IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_members == NULL, "calloc", -1);
-
-    osinfo.ikc_map = (int*)calloc(osinfo.num_ikc_ssets, sizeof(int));
-    IHKOSCTL_CHKANDJUMP(osinfo.ikc_map == NULL, "calloc", -1);
-
-	ret_ihklib = ihk_getosinfo(index, &osinfo);
-    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
-
-    for(i = 0; i < osinfo.num_ikc_ssets; i++) {
-        dprintf("%s,ikc_sset_sizes[%d]=%d\n", __FILE__, i, osinfo.ikc_sset_sizes[i]);
-        osinfo.ikc_sset_members[i] = calloc(osinfo.ikc_sset_sizes[i], sizeof(int));
-		IHKOSCTL_CHKANDJUMP(osinfo.ikc_sset_members[i] == NULL, "calloc", -1);
-    }
-
-	ret_ihklib = ihk_getosinfo(index, &osinfo);
-    IHKOSCTL_CHKANDJUMP(ret_ihklib == -1, "ihk_getosinfo", -1);
-
-    printf("Assigned_mem: ");
-    for (i = 0; i < osinfo.num_mem_chunks; i++) {
-		printf("%lu@%d",
-			   osinfo.mem_chunks[i].size,
-			   osinfo.mem_chunks[i].numa_node_number);
-		if(i != osinfo.num_mem_chunks - 1) {
-            printf(",");
-        }
-    }
-    printf("\n");
-
-	printf("Assigned_cpu: ");
-	for (i = 0; i < osinfo.num_cpus; i++) {
-		printf("%d", osinfo.cpus[i]);
-		if(i != osinfo.num_cpus - 1) {
-			printf(",");
-		}
-	}
-    printf("\n");
-
-    printf("IKC_map: ");
-	for (i = 0; i < osinfo.num_ikc_ssets; i++) {
-		for (j = 0; j < osinfo.ikc_sset_sizes[i]; j++) {
-			printf("%d", *(osinfo.ikc_sset_members[i] + j));
-			if(j != osinfo.ikc_sset_sizes[i] - 1) {
-				printf(",");
-			}
-		}
-		printf(":");
-		printf("%d", osinfo.ikc_map[i]);
-		if(i != osinfo.num_ikc_ssets - 1) {
-			printf("+");
-		}
-	}
-    printf("\n");
-
-	switch (osinfo.status) {
-		case IHK_STATUS_INACTIVE:
-			printf("Status: INACTIVE\n");
-			break;
-		case IHK_STATUS_BOOTING:
-			printf("Status: BOOTING\n");
-			break;
-		case IHK_STATUS_RUNNING:
-			printf("Status: RUNNING\n");
-			break;
-		case IHK_STATUS_SHUTDOWN:
-			printf("Status: SHUTDOWN\n");
-			break;
-		case IHK_STATUS_PANIC:
-			printf("Status: PANIC\n");
-			break;
-		case IHK_STATUS_HUNGUP:
-			printf("Status: HUNGUP\n");
-			break;
-		case IHK_STATUS_FREEZING:
-			printf("Status: FREEZING\n");
-			break;
-		case IHK_STATUS_FROZEN:
-			printf("Status: FROZEN\n");
-			break;
-	}	
-
- fn_fail:
-	if(osinfo.ikc_sset_members) {
-		for (i = 0; i < osinfo.num_ikc_ssets; ++i) {
-			if(osinfo.ikc_sset_members[i]) {
-				free(osinfo.ikc_sset_members[i]);
-			}
-		}
-	}
-	if(osinfo.ikc_map) {
-		free(osinfo.ikc_map);
-	}
-	if(osinfo.ikc_sset_members) {
-		free(osinfo.ikc_sset_members);
-	}
-	if(osinfo.ikc_sset_sizes) {
-		free(osinfo.ikc_sset_sizes);
-	}
-	if(osinfo.mem_chunks) {
-		free(osinfo.mem_chunks);
-	}
-
-	// fn_exit:
-    return ret;
 }
 
 static int do_clear_kmsg(int fd)
@@ -572,312 +551,73 @@ static int do_ioctl(int fd)
 }
 
 #ifdef ENABLE_MEMDUMP
-#include <bfd.h>
 #include <inttypes.h>
 #include <time.h>
 #include <limits.h>
 #include <pwd.h>
+#include <getopt.h>
 
-static int do_dump(int osfd) {
-	static char path[PATH_MAX];
-	static char hname[HOST_NAME_MAX+1];
-	bfd *abfd = NULL;
-	char *fname;
-	bfd_boolean ok;
-	asection *scn;
-	dumpargs_t args;
-	unsigned long phys_size, phys_offset;
-	int error, i;
-	size_t bsize;
-	void *buf = NULL;
-	uintptr_t addr;
-	size_t cpsize;
-	time_t t;
-	struct tm *tm;
-	size_t n;
-	char *date;
-	struct passwd *pw;
-	dump_mem_chunks_t *mem_chunks;
-	int interactive = 0;
+static struct option do_dump_options[] = {
+	{
+		.name =		"interactive",
+		.has_arg =	no_argument,
+		.flag =		0,
+		.val =		1
+	},
+	/* end */
+	{ NULL, 0, NULL, 0}
+};
 
-	if (__argc > 4 &&
-			(!strcmp("--interactive", __argv[4]) ||
-			 !strcmp("-i", __argv[4]))) {
-		interactive = 1;
+static int do_dump(int os_index) {
+	char path[PATH_MAX];
+	char *dump_file;
+	int dump_level = DUMP_LEVEL_ALL;
+	int opt, interactive = 0;
+
+	while ((opt = getopt_long(__argc, __argv, "id:", do_dump_options, NULL)) != -1) {
+		switch (opt) {
+			case 1:   /* '--interactive' */
+			case 'i': /* '-i' */
+				interactive = 1;
+				break;
+			case 'd': /* '-d' */
+				dump_level = atoi(optarg);
+				break;
+			default: /* '?' */
+				fprintf(stderr, "dump [-d level] [-i|--interactive] [file]\n");
+				return 1;
+		}
 	}
 
-	mem_chunks = malloc(PHYS_CHUNKS_DESC_SIZE);
-	if (!mem_chunks) {
-		perror("allocating mem_chunks buffer: ");
-		return 1;
-	}
+	dprintf("%s: __argc=%d,optind=%d\n", __FUNCTION__, __argc, optind);
+	if (__argc > (optind + 2)) {
+		dump_file = __argv[optind + 2];
+	} else {
+		time_t t;
+		struct tm *tm;
+		size_t n;
 
-	t = time(NULL);
-	if (t == (time_t)-1) {
-		perror("time");
-		return 1;
-	}
-	tm = localtime(&t);
-	if (!tm) {
-		perror("localtime");
-		return 1;
-	}
-	gethostname(hname, sizeof(hname));
-
-	pw = getpwuid(getuid());
-
-	args.cmd = DUMP_NMI;
-	error = ioctl(osfd, IHK_OS_DUMP, &args);
-	if (error) {
-		perror("DUMP_NMI");
-		return 1;
-	}
-
-	args.cmd = DUMP_QUERY;
-	args.buf = (void *)mem_chunks;
-	error = ioctl(osfd, IHK_OS_DUMP, &args);
-	if (error) {
-		perror("DUMP_QUERY");
-		return 1;
-	}
-
-	phys_size = 0;
-	dprintf("%s: nr chunks: %d\n", __FUNCTION__, mem_chunks->nr_chunks);
-	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
-		dprintf("%s: 0x%lx:%lu\n",
-				__FUNCTION__,
-				mem_chunks->chunks[i].addr,
-				mem_chunks->chunks[i].size);
-		phys_size += mem_chunks->chunks[i].size;
-	}
-
-	bsize = 0x100000;
-	buf = malloc(bsize);
-	if (!buf) {
-		perror("malloc");
-		return 1;
-	}
-
-	bfd_init();
-
-	if (__argc >= 4) {
-		fname = __argv[3];
-	}
-	else {
+		t = time(NULL);
+		if (t == (time_t)-1) {
+			perror("time");
+			return 1;
+		}
+		tm = localtime(&t);
+		if (!tm) {
+			perror("localtime");
+			return 1;
+		}
 		n = strftime(path, sizeof(path), "mcdump_%Y%m%d_%H%M%S", tm);
+
 		if (!n) {
 			perror("strftime");
 			return 1;
 		}
-		fname = path;
+
+		dump_file = path;
 	}
-
-#ifdef POSTK_DEBUG_ARCH_DEP_34
-	abfd = bfd_fopen(fname, NULL, "w", -1);
-#else	/* POSTK_DEBUG_ARCH_DEP_34 */
-	abfd = bfd_fopen(fname, "elf64-x86-64", "w", -1);
-#endif	/* POSTK_DEBUG_ARCH_DEP_34 */
-
-	if (!abfd) {
-		bfd_perror("bfd_fopen");
-		return 1;
-	}
-
-	ok = bfd_set_format(abfd, bfd_object);
-	if (!ok) {
-		bfd_perror("bfd_set_format");
-		return 1;
-	}
-
-	date = asctime(tm);
-	if (date) {
-		cpsize = strlen(date) - 1;	/* exclude trailing '\n' */
-		scn = bfd_make_section_anyway(abfd, "date");
-		if (!scn) {
-			bfd_perror("bfd_make_section_anyway(date)");
-			return 1;
-		}
-
-		ok = bfd_set_section_size(abfd, scn, cpsize);
-		if (!ok) {
-			bfd_perror("bfd_set_section_size");
-			return 1;
-		}
-
-		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
-		if (!ok) {
-			bfd_perror("bfd_set_setction_flags");
-			return 1;
-		}
-	}
-	error = gethostname(hname, sizeof(hname));
-	if (!error) {
-		cpsize = strlen(hname);
-		scn = bfd_make_section_anyway(abfd, "hostname");
-		if (!scn) {
-			bfd_perror("bfd_make_section_anyway(hostname)");
-			return 1;
-		}
-
-		ok = bfd_set_section_size(abfd, scn, cpsize);
-		if (!ok) {
-			bfd_perror("bfd_set_section_size");
-			return 1;
-		}
-
-		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
-		if (!ok) {
-			bfd_perror("bfd_set_setction_flags");
-			return 1;
-		}
-	}
-	pw = getpwuid(getuid());
-	if (pw) {
-		cpsize = strlen(pw->pw_name);
-		scn = bfd_make_section_anyway(abfd, "user");
-		if (!scn) {
-			bfd_perror("bfd_make_section_anyway(user)");
-			return 1;
-		}
-
-		ok = bfd_set_section_size(abfd, scn, cpsize);
-		if (!ok) {
-			bfd_perror("bfd_set_section_size");
-			return 1;
-		}
-
-		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
-		if (!ok) {
-			bfd_perror("bfd_set_setction_flags");
-			return 1;
-		}
-	}
-
-	/* Add section for physical memory chunks information */
-	scn = bfd_make_section_anyway(abfd, "physchunks");
-	if (!scn) {
-		bfd_perror("bfd_make_section_anyway(physchunks)");
-		return 1;
-	}
-
-	ok = bfd_set_section_size(abfd, scn, PHYS_CHUNKS_DESC_SIZE);
-	if (!ok) {
-		bfd_perror("bfd_set_section_size");
-		return 1;
-	}
-
-	ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
-	if (!ok) {
-		bfd_perror("bfd_set_setction_flags");
-		return 1;
-	}
-
-	/* Physical memory contents section */
-	scn = bfd_make_section_anyway(abfd, "physmem");
-	if (!scn) {
-		bfd_perror("bfd_make_section_anyway(physmem)");
-		return 1;
-	}
-
-	if (interactive) {
-		ok = bfd_set_section_size(abfd, scn, 4096);
-	}
-	else {
-		ok = bfd_set_section_size(abfd, scn, phys_size);
-	}
-
-	if (!ok) {
-		bfd_perror("bfd_set_section_size");
-		return 1;
-	}
-
-	ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
-	if (!ok) {
-		bfd_perror("bfd_set_setction_flags");
-		return 1;
-	}
-	scn->vma = mem_chunks->chunks[0].addr;
-
-	scn = bfd_get_section_by_name(abfd, "date");
-	if (scn) {
-		ok = bfd_set_section_contents(abfd, scn, date, 0, scn->size);
-		if (!ok) {
-			bfd_perror("bfd_set_section_contents(date)");
-			return 1;
-		}
-	}
-
-	scn = bfd_get_section_by_name(abfd, "hostname");
-	if (scn) {
-		ok = bfd_set_section_contents(abfd, scn, hname, 0, scn->size);
-		if (!ok) {
-			bfd_perror("bfd_set_section_contents(hostname)");
-			return 1;
-		}
-	}
-
-	scn = bfd_get_section_by_name(abfd, "user");
-	if (scn) {
-		ok = bfd_set_section_contents(abfd, scn, pw->pw_name, 0, scn->size);
-		if (!ok) {
-			bfd_perror("bfd_set_section_contents(user)");
-			return 1;
-		}
-	}
-
-	scn = bfd_get_section_by_name(abfd, "physchunks");
-	if (scn) {
-		ok = bfd_set_section_contents(abfd, scn, mem_chunks, 0, PHYS_CHUNKS_DESC_SIZE);
-		if (!ok) {
-			bfd_perror("bfd_set_section_contents(physchunks)");
-			return 1;
-		}
-	}
-
-	if (interactive)
-		goto out;
-
-	scn = bfd_get_section_by_name(abfd, "physmem");
-	phys_offset = 0;
-	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
-
-		for (addr = mem_chunks->chunks[i].addr;
-				addr < (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size);
-				addr += cpsize) {
-
-			cpsize = (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size) - addr;
-			if (cpsize > bsize) {
-				cpsize = bsize;
-			}
-
-			args.cmd = DUMP_READ;
-			args.start = addr;
-			args.size = cpsize;
-			args.buf = buf;
-
-			error = ioctl(osfd, IHK_OS_DUMP, &args);
-			if (error) {
-				perror("DUMP_READ");
-				return 1;
-			}
-
-			ok = bfd_set_section_contents(abfd, scn, buf, phys_offset, cpsize);
-			if (!ok) {
-				bfd_perror("bfd_set_section_contents(physmem)");
-				return 1;
-			}
-
-			phys_offset += cpsize;
-		}
-	}
-
-out:
-	ok = bfd_close(abfd);
-	if (!ok) {
-		bfd_perror("bfd_close");
-		return 1;
-	}
-	return 0;
+	dprintf("%s: os_index=%d,dump_file=%s,dump_level=%d,interactive=%d\n", __FUNCTION__, os_index, dump_file, dump_level, interactive);
+	return ihk_os_makedumpfile(os_index, dump_file, dump_level, interactive);
 }
 #else /* ENABLE_MEMDUMP */
 static int do_dump(int osfd)
@@ -887,6 +627,7 @@ static int do_dump(int osfd)
 }
 #endif /* ENABLE_MEMDUMP */
 
+#define HANDLER_WITH_INDEX(name) if (!strcmp(argv[2], #name)) { int r = do_##name(atoi(argv[1])); return r; }
 #define HANDLER(name) if (!strcmp(argv[2], #name)) { int r = do_##name(fd); close(fd); return r; }
 int main(int argc, char **argv)
 {
@@ -901,11 +642,14 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	HANDLER_WITH_INDEX(get)
+	else HANDLER_WITH_INDEX(dump)
+
 	sprintf(fn, "/dev/mcos%d", atoi(argv[1]));
 
 	fd = open(fn, O_RDONLY);
 	if (fd < 0) {
-		perror("open");
+		perror("error: open failed");
 		return 1;
 	}
 
@@ -917,17 +661,14 @@ int main(int argc, char **argv)
 	else HANDLER(reserve_mem)
 	else HANDLER(assign)
 	else HANDLER(release)
-	else HANDLER(ikc_map)
+	else HANDLER(set)
 	else HANDLER(query)
-	else HANDLER(status)
-	else HANDLER(getosinfo)
 	else HANDLER(query_free_mem)
 	else HANDLER(kargs)
 	else HANDLER(kmsg)
 	else HANDLER(clear_kmsg)
 	else HANDLER(intr)
 	else HANDLER(ioctl)
-	else HANDLER(dump)
 	else {
 		fprintf(stderr, "Unknown action : %s\n", argv[2]);
 		usage(argv);

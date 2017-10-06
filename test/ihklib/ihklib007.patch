@@ -1,0 +1,48 @@
+diff --git a/arch/x86/kernel/include/syscall_list.h b/arch/x86/kernel/include/syscall_list.h
+index 7c6edcb..52c1ff3 100644
+--- a/mckernel/arch/x86/kernel/include/syscall_list.h
++++ b/mckernel/arch/x86/kernel/include/syscall_list.h
+@@ -161,6 +161,7 @@ SYSCALL_HANDLED(__NR_profile, profile)
+ SYSCALL_HANDLED(730, util_migrate_inter_kernel)
+ SYSCALL_HANDLED(731, util_indicate_clone)
+ SYSCALL_HANDLED(732, get_system)
++SYSCALL_HANDLED(900, dump_rusage)
+ 
+ /* McKernel Specific */
+ SYSCALL_HANDLED(801, swapout)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index 78a832b..eae43cf 100644
+--- a/mckernel/kernel/syscall.c
++++ b/mckernel/kernel/syscall.c
+@@ -10030,3 +10030,31 @@ long syscall(int num, ihk_mc_user_context_t *ctx)
+ 
+ 	return l;
+ }
++
++SYSCALL_DECLARE(dump_rusage)
++{
++#define NLINE (IHK_KMSG_SIZE / 65 * 4)
++	int i;
++	for (i = 0; i < NLINE; i++) {
++		if (i == 0)	{
++			char buf[256];
++			sprintf(buf, "%s", "first lineaaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa\n");
++			kprintf("%s", buf);
++		} else if (i == NLINE - 1) {
++			char buf[256];
++			sprintf(buf, "%s", "last line eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee eeee\n");
++			kprintf("%s", buf);
++		} else {
++			char buf[256];
++			int j;
++			for (j = 0; j < 64; j++) {
++				buf[j] = 'a' + (i % 26);
++			}
++			buf[j++] = '\n';
++			buf[j] = 0;
++			kputs(buf);
++		}
++	}
++#endif
++	return 0;
++}

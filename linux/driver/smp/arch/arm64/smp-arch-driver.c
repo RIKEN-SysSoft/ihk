@@ -35,7 +35,7 @@
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include "config-arm64.h"
+#include "config.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
@@ -412,6 +412,7 @@ struct ihk_smp_trampoline_header {
 	unsigned long psci_method;	/* psci_method value (smc or hvc ?) */
 	unsigned long use_virt_timer;	/* use_virt_value */
 	unsigned long evtstrm_timer_rate;	/* arch_timer_rate */
+	unsigned long default_vl;		/* SVE default VL */
 	unsigned long cpu_logical_map_size;	/* the cpu-core maximun number */
 	unsigned long cpu_logical_map[NR_CPUS];	/* array of the MPIDR and the core number */
 	unsigned long rdist_base_pa[NR_CPUS];	/* GIC re-distributor register base addresses */
@@ -906,6 +907,45 @@ unsigned long calc_ns_per_tsc(void)
 }
 #endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 
+#ifdef CONFIG_ARM64_SVE
+unsigned long get_sve_default_vl(void)
+{
+	struct file* filp = NULL;
+	mm_segment_t oldfs;
+	int ret, vl = 0;
+	const char *path = "/proc/cpu/sve_default_vector_length";
+	char buf[16] = "";
+
+	oldfs = get_fs();
+	set_fs(get_ds());
+
+	filp = filp_open(path, O_RDONLY, 0);
+	if (IS_ERR(filp)) {
+		printk("%s: Leave the decision of SVE-default-VL to McKernel.\n", __FUNCTION__);
+		goto open_err;
+	}
+
+	ret = kernel_read(filp, 0, buf, sizeof(buf));
+	if (ret < 0) {
+		printk("%s: ERROR reading %s\n", __FUNCTION__, path);
+		goto read_err;
+	}
+	vl = strtoul(buf, NULL, 0);
+
+read_err:
+	filp_close(filp, NULL);
+open_err:
+	set_fs(oldfs);
+	return vl;
+
+}
+#else /* CONFIG_ARM64_SVE */
+unsigned long get_sve_default_vl(void)
+{
+	return 0;
+}
+#endif /* CONFIG_ARM64_SVE */
+
 void smp_ihk_setup_trampoline(void *priv)
 {
 	struct smp_os_data *os = priv;
@@ -941,6 +981,7 @@ void smp_ihk_setup_trampoline(void *priv)
 	header->psci_method = ihk_smp_psci_method;
 	header->use_virt_timer = is_arch_timer_use_virt();
 	header->evtstrm_timer_rate = (unsigned long)*ihk_arch_timer_rate;
+	header->default_vl = get_sve_default_vl();
 	header->cpu_logical_map_size = sizeof(header->cpu_logical_map) / sizeof(unsigned long);
 	memcpy(header->cpu_logical_map, ihk___cpu_logical_map,
 		header->cpu_logical_map_size * sizeof(unsigned long));
@@ -1002,7 +1043,8 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 
 	status = os->status;
 
-	if (status == BUILTIN_OS_STATUS_BOOTING) {
+	switch (status) {
+	case BUILTIN_OS_STATUS_BOOTING:
 		if (os->param->status == 1) {
 			return IHK_OS_STATUS_BOOTED;
 		} else if(os->param->status == 2) {
@@ -1010,7 +1052,10 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		} else {
 			return IHK_OS_STATUS_BOOTING;
 		}
-	} else {
+		break;
+	case BUILTIN_OS_STATUS_HUNGUP:
+		return IHK_OS_STATUS_HUNGUP;
+	default:
 		return IHK_OS_STATUS_NOT_BOOTED;
 	}
 }
@@ -1043,66 +1088,166 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 {
 	struct smp_os_data *os = priv;
+	struct ihk_dump_page *dump_page = NULL;
+	int i,j,k,mem_num,index;
+	struct ihk_os_mem_chunk *os_mem_chunk;
+	unsigned long map_start, bit_count;
+	dump_mem_chunks_t *mem_chunks;
+	void *va;
+	extern struct list_head ihk_mem_used_chunks;
 
 	if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
 			args->cmd, args->start, args->size, args->buf);
 
-	if (args->cmd == DUMP_NMI) {
-		smp_ihk_os_send_nmi(ihk_os, priv, 0);
-		return 0;
+	switch (args->cmd) {
+		
+		case DUMP_SET_LEVEL:
+			/* Set dump level information */
+			switch (args->level) {
+				case DUMP_LEVEL_ALL:
+				case DUMP_LEVEL_USER_UNUSED_EXCLUDE:
+					os->param->dump_level = args->level;
+					break;
+				default:
+					printk("%s:invalid dump level:%d\n", __FUNCTION__, args->level);
+					return -EINVAL;
+			}
+			break;
+
+		case DUMP_NMI:
+			if (os->param->dump_page_set.completion_flag !=  IHK_DUMP_PAGE_SET_COMPLETED) {
+				smp_ihk_os_send_nmi(ihk_os, priv, 0);
+			}
+			break;
+
+		case DUMP_QUERY_NUM_MEM_AREAS:
+			while (1) {
+				if (IHK_DUMP_PAGE_SET_COMPLETED == os->param->dump_page_set.completion_flag)
+					break;
+
+				msleep(10); /* 10ms sleep */
+			}
+
+			dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
+
+			for (i = 0, mem_num = 0; i < os->param->dump_page_set.count; i++) {
+
+				if (i) {
+					dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+				}
+
+				for (j = 0, bit_count = 0; j < dump_page->map_count; j++) {
+					for ( k = 0; k < 64; k++) {
+						if ((dump_page->map[j] >> k) & 0x1) {
+							bit_count++;
+						} else {
+							if (bit_count) {
+								mem_num++;
+								bit_count = 0;
+							}
+						}
+					}
+				}
+
+				if (bit_count) {
+					mem_num++;
+				}
+			}
+
+			args->size = (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));
+
+			break;
+
+		case DUMP_QUERY:
+			i = 0;
+			mem_chunks = args->buf;
+
+			/* Collect memory information */
+			list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+				if (os_mem_chunk->os != ihk_os)
+					continue;
+
+				mem_chunks->chunks[i].addr = os_mem_chunk->addr;
+				mem_chunks->chunks[i].size = os_mem_chunk->size;
+				++i;
+			}
+
+			mem_chunks->nr_chunks = i;
+			/* See load_file() for the calculation below */
+			mem_chunks->kernel_base =
+				(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+			break;
+
+		case DUMP_QUERY_MEM_AREAS:
+
+			mem_chunks = args->buf;
+			dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
+
+			for (i = 0, index = 0; i < os->param->dump_page_set.count; i++) {
+
+				if (i) {
+					dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+				}
+
+				for (j = 0, bit_count = 0; j < dump_page->map_count; j++) {
+					for (k = 0; k < 64; k++) {
+						if ((dump_page->map[j] >> k) & 0x1) {
+							if (!bit_count) {
+								map_start = (unsigned long)(dump_page->start + ((unsigned long)j << (PAGE_SHIFT+6)));
+								map_start = map_start + ((unsigned long)k << PAGE_SHIFT);
+							}
+							bit_count++;
+						} else {
+							if (bit_count) {
+								mem_chunks->chunks[index].addr = map_start;
+								mem_chunks->chunks[index].size = (bit_count << PAGE_SHIFT);
+								index++;
+								bit_count = 0;
+							}
+						}
+					}
+				}
+
+				if (bit_count) {
+					mem_chunks->chunks[index].addr = map_start;
+					mem_chunks->chunks[index].size = (bit_count << PAGE_SHIFT);
+					index++;
+				}
+			}
+
+			mem_chunks->nr_chunks = index;
+
+			/* See load_file() for the calculation below */
+			mem_chunks->kernel_base =
+				(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+
+			break;
+
+		case DUMP_READ:
+			va = phys_to_virt(args->start);
+			if (copy_to_user(args->buf, va, args->size)) {
+				return -EFAULT;
+			}
+
+			break;
+
+		case DUMP_QUERY_ALL:
+			args->start = os->mem_start;
+			args->size = os->mem_end - os->mem_start;
+			break;
+
+		case DUMP_READ_ALL:
+			va = phys_to_virt(args->start);
+			if (copy_to_user(args->buf, va, args->size)) {
+				return -EFAULT;
+			}
+			break;
+
+		default:
+			return -EINVAL;
 	}
 
-	if (args->cmd == DUMP_QUERY) {
-		int i = 0;
-		struct ihk_os_mem_chunk *os_mem_chunk;
-		dump_mem_chunks_t *mem_chunks = args->buf;
-		extern struct list_head ihk_mem_used_chunks;
-
-		/* Collect memory information */
-		list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-			if (os_mem_chunk->os != ihk_os)
-				continue;
-
-			mem_chunks->chunks[i].addr = os_mem_chunk->addr;
-			mem_chunks->chunks[i].size = os_mem_chunk->size;
-			++i;
-		}
-
-		mem_chunks->nr_chunks = i;
-		/* See load_file() for the calculation below */
-		mem_chunks->kernel_base =
-			(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
-
-		return 0;
-	}
-
-	if (args->cmd == DUMP_READ) {
-		void *va;
-
-		va = phys_to_virt(args->start);
-		if (copy_to_user(args->buf, va, args->size)) {
-			return -EFAULT;
-		}
-		return 0;
-	}
-
-	if (args->cmd == DUMP_QUERY_ALL) {
-		args->start = os->mem_start;
-		args->size = os->mem_end - os->mem_start;
-		return 0;
-	}
-
-	if (args->cmd == DUMP_READ_ALL) {
-		void *va;
-
-		va = phys_to_virt(args->start);
-		if (copy_to_user(args->buf, va, args->size)) {
-			return -EFAULT;
-		}
-		return 0;
-	}
-
-	return -EINVAL;
+	return 0;
 }
 
 int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,

@@ -9,16 +9,18 @@
 #include <arch/cpu.h>
 #include <irq.h>
 #include "bootparam.h"
+#include <kmsg.h>
 
 /* BUILTIN Setup.c */
 unsigned long boot_param_pa;
 struct smp_boot_param *boot_param;
+int boot_param_size;
+
 unsigned long bootstrap_mem_end;
-static int boot_param_size;
 
 extern void main(void);
 extern void setup_arm64(void);
-extern struct ihk_kmsg_buf kmsg_buf;
+extern struct ihk_kmsg_buf *kmsg_buf;
 
 unsigned long ap_trampoline = 0;
 unsigned long arm64_kernel_phys_base = 0;
@@ -26,6 +28,8 @@ unsigned long arm64_st_phys_base = 0;
 unsigned long arm64_st_phys_size = 0;
 unsigned int ihk_ikc_irq = 0;
 unsigned int ihk_ikc_irq_apicid = 0;
+
+struct ihk_dump_page * dump_page;
 
 struct start_kernel_param {
 	unsigned long param_addr;
@@ -132,7 +136,7 @@ void arch_init(void)
 
 	kprintf("boot_param_size: %lu\n", boot_param_size);
 
-	/* Remap boot parameter structure */
+	/* Map boot parameter structure with the non-bootstrap map */
 	boot_param = map_fixed_area(boot_param_pa, boot_param_size, 0);
 	build_ihk_cpu_info();
 
@@ -152,6 +156,14 @@ void arch_init(void)
 			addr += pgsize;
 		}
 	}
+
+	dump_page = (struct ihk_dump_page *)map_fixed_area(boot_param->dump_page_set.phy_page, boot_param->dump_page_set.page_size, 0);
+
+	/* Map kmsg_buf, which is out of kernel image, with the non-bootstrap map. */
+	kmsg_buf = (struct ihk_kmsg_buf *)map_fixed_area(boot_param->msg_buffer, boot_param->msg_buffer_size, 0);
+	kmsg_init();
+	kputs("IHK/McKernel started.\n");
+
 	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
 }
 
@@ -244,18 +256,18 @@ char *ihk_get_kargs(void)
 	return boot_param->kernel_args;
 }
 
-int ihk_set_kmsg(unsigned long addr, unsigned long size)
-{
-	boot_param->msg_buffer = addr;
-	boot_param->msg_buffer_size = size;
-
-	return 0;
-}	
-
 int ihk_set_monitor(unsigned long addr, unsigned long size)
 {
 	boot_param->monitor = addr;
 	boot_param->monitor_size = size;
+	
+	return 0;
+}
+
+int ihk_set_rusage(unsigned long addr, unsigned long size)
+{
+	boot_param->rusage = addr;
+	boot_param->rusage_size = size;
 	
 	return 0;
 }
@@ -364,6 +376,11 @@ int ihk_mc_get_nr_linux_cores(void)
 	return boot_param->nr_linux_cpus;
 }
 
+int ihk_mc_get_osnum(void)
+{
+	return boot_param->osnum;
+}
+
 int ihk_mc_get_core(int id, unsigned long *linux_core_id, unsigned long *apic_id, int *numa_id)
 {
 	if (id < 0 || id >= boot_param->nr_cpus)
@@ -437,3 +454,24 @@ static unsigned int perf_map_nehalem[] =
 };
 
 unsigned int *arm64_march_perfmap = perf_map_nehalem;
+
+void ihk_mc_set_dump_level(unsigned int level)
+{
+	boot_param->dump_level = level;
+	return;
+}
+
+unsigned int ihk_mc_get_dump_level(void)
+{
+	return (boot_param->dump_level);
+}
+
+struct ihk_dump_page_set *ihk_mc_get_dump_page_set(void)
+{
+	return (&boot_param->dump_page_set);
+}
+
+struct ihk_dump_page *ihk_mc_get_dump_page(void)
+{
+	return (dump_page);
+}

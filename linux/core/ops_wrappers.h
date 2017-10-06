@@ -75,6 +75,13 @@
 	} \
 	} while (0)
 
+#define IHK_OPS_BODY_VOID_NOARG(name)	  \
+	do { \
+	if (data->ops->name) { \
+		data->ops->name(data, data->priv); \
+	} \
+	} while (0)
+
 IHK_OS_OPS_BEGIN(int, assign_cpu,
                  unsigned long arg)
 {
@@ -87,16 +94,16 @@ IHK_OS_OPS_BEGIN(int, release_cpu,
 	IHK_OPS_BODY(release_cpu, arg);
 }
 
-IHK_OS_OPS_BEGIN(int, ikc_map,
+IHK_OS_OPS_BEGIN(int, set_ikc_map,
                  unsigned long arg)
 {
-	IHK_OPS_BODY(ikc_map, arg);
+	IHK_OPS_BODY(set_ikc_map, arg);
 }
 
-IHK_OS_OPS_BEGIN(int, query_ikc_map,
+IHK_OS_OPS_BEGIN(int, get_ikc_map,
                  unsigned long arg)
 {
-	IHK_OPS_BODY(query_ikc_map, arg);
+	IHK_OPS_BODY(get_ikc_map, arg);
 }
 
 IHK_OS_OPS_BEGIN(int, query_cpu,
@@ -181,6 +188,16 @@ IHK_OS_OPS_BEGIN_NOARG(struct ihk_cpu_info *, get_cpu_info)
 IHK_OS_OPS_BEGIN_NOARG(int, query_status)
 {
 	IHK_OPS_BODY_NOARG(query_status);
+}
+
+IHK_OS_OPS_BEGIN_NOARG(void, notify_hungup)
+{
+	IHK_OPS_BODY_VOID_NOARG(notify_hungup);
+}
+
+IHK_OS_OPS_BEGIN_NOARG(int, get_num_numa_nodes)
+{
+	IHK_OPS_BODY_NOARG(get_num_numa_nodes);
 }
 
 IHK_OS_OPS_BEGIN_NOARG(int, query_free_mem)

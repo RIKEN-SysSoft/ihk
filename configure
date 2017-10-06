@@ -630,6 +630,7 @@ IHK_RELEASE_DATE
 DCFA_VERSION
 MCKERNEL_VERSION
 IHK_VERSION
+IHK_TMPDIR
 MANDIR
 KMODDIR
 LIBDIR
@@ -3062,6 +3063,9 @@ case $WITH_TARGET in
 	if test "X$INCLUDEDIR" = X; then
 		INCLUDEDIR="$prefix/include"
 	fi
+	if test "X$IHK_TMPDIR" = X; then
+		IHK_TMPDIR="$prefix/tmp"
+	fi
 	;;
     smp-arm64)
 	if test "X$BINDIR" = X; then
@@ -3082,7 +3086,9 @@ case $WITH_TARGET in
 	if test "X$INCLUDEDIR" = X; then
 		INCLUDEDIR="$prefix/include"
 	fi
-
+	if test "X$IHK_TMPDIR" = X; then
+		IHK_TMPDIR="$prefix/tmp"
+	fi
 	;;
     *)
 	as_fn_error $? "target $WITH_TARGET is unknwon" "$LINENO" 5
@@ -5078,6 +5084,70 @@ $as_echo "$as_me: power management is disabled" >&6;}
 fi
 # POSTK_DEBUG_ARCH_DEP_84 power management support [END]
 
+libudev=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for udev_new in -ludev" >&5
+$as_echo_n "checking for udev_new in -ludev... " >&6; }
+if ${ac_cv_lib_udev_udev_new+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ludev  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char udev_new ();
+int
+main ()
+{
+return udev_new ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_udev_udev_new=yes
+else
+  ac_cv_lib_udev_udev_new=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_udev_udev_new" >&5
+$as_echo "$ac_cv_lib_udev_udev_new" >&6; }
+if test "x$ac_cv_lib_udev_udev_new" = xyes; then :
+  libudev=yes
+else
+  libudev=no
+fi
+
+ac_fn_c_check_header_mongrel "$LINENO" "libudev.h" "ac_cv_header_libudev_h" "$ac_includes_default"
+if test "x$ac_cv_header_libudev_h" = xyes; then :
+  libudev=yes
+else
+  libudev=no
+fi
+
+
+if test	"x$libudev" = "xno" ; then
+   as_fn_error $? "Install libudev package, e.g. yum install libudev-devel" "$LINENO" 5
+fi
+
+if test "x$IHK_TMPDIR" != "x" ; then
+
+cat >>confdefs.h <<_ACEOF
+#define IHK_TMPDIR "$IHK_TMPDIR"
+_ACEOF
+
+fi
+
+
 
 
 
@@ -5105,15 +5175,14 @@ fi
 
 case "$TARGET" in
 smp*)
-	ac_config_headers="$ac_config_headers linux/driver/smp/config.h linux/user/config.h"
+	ac_config_headers="$ac_config_headers config.h"
 
-	arch=`echo "$TARGET" | sed -e 's/smp-//'`
-	ac_config_headers="$ac_config_headers linux/driver/smp/arch/$arch/config-$arch.h"
-
+#	arch=`echo "$TARGET" | sed -e 's/smp-//'`
+#	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
 	;;
 esac
 
-ac_config_files="$ac_config_files Makefile linux/core/Makefile linux/core/Makefile.module linux/core/Makefile.builtin ikc/Makefile linux/user/Makefile linux/driver/builtin/Makefile linux/driver/smp/Makefile linux/driver/attached/mic/Makefile linux/user/ihkconfig.1:linux/user/ihkconfig.1in linux/user/ihkosctl.1:linux/user/ihkosctl.1in linux/user/ihklib.h:linux/user/ihklib.h.in cokernel/Makefile.common"
+ac_config_files="$ac_config_files Makefile linux/core/Makefile linux/core/Makefile.module linux/core/Makefile.builtin ikc/Makefile linux/user/Makefile linux/driver/builtin/Makefile linux/driver/smp/Makefile linux/driver/attached/mic/Makefile linux/user/ihkconfig.1:linux/user/ihkconfig.1in linux/user/ihkosctl.1:linux/user/ihkosctl.1in linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in cokernel/Makefile.common"
 
 
 if test "$TARGET" = "smp-arm64"; then
@@ -5810,9 +5879,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "linux/driver/smp/config.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/driver/smp/config.h" ;;
-    "linux/user/config.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/user/config.h" ;;
-    "linux/driver/smp/arch/$arch/config-$arch.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/driver/smp/arch/$arch/config-$arch.h" ;;
+    "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "linux/core/Makefile") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile" ;;
     "linux/core/Makefile.module") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile.module" ;;
@@ -5824,7 +5891,7 @@ do
     "linux/driver/attached/mic/Makefile") CONFIG_FILES="$CONFIG_FILES linux/driver/attached/mic/Makefile" ;;
     "linux/user/ihkconfig.1") CONFIG_FILES="$CONFIG_FILES linux/user/ihkconfig.1:linux/user/ihkconfig.1in" ;;
     "linux/user/ihkosctl.1") CONFIG_FILES="$CONFIG_FILES linux/user/ihkosctl.1:linux/user/ihkosctl.1in" ;;
-    "linux/user/ihklib.h") CONFIG_FILES="$CONFIG_FILES linux/user/ihklib.h:linux/user/ihklib.h.in" ;;
+    "linux/include/ihk/ihklib.h") CONFIG_FILES="$CONFIG_FILES linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in" ;;
     "cokernel/Makefile.common") CONFIG_FILES="$CONFIG_FILES cokernel/Makefile.common" ;;
     "cokernel/smp/arm64/Makefile.predefines") CONFIG_FILES="$CONFIG_FILES cokernel/smp/arm64/Makefile.predefines" ;;
     "cokernel/smp/arm64/Makefile.config") CONFIG_FILES="$CONFIG_FILES cokernel/smp/arm64/Makefile.config" ;;

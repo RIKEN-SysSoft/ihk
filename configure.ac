@@ -177,6 +177,9 @@ case $WITH_TARGET in
 	if test "X$INCLUDEDIR" = X; then
 		INCLUDEDIR="$prefix/include"
 	fi
+	if test "X$IHK_TMPDIR" = X; then
+		IHK_TMPDIR="$prefix/tmp"
+	fi
 	;;
     smp-arm64)
 	if test "X$BINDIR" = X; then
@@ -197,7 +200,9 @@ case $WITH_TARGET in
 	if test "X$INCLUDEDIR" = X; then
 		INCLUDEDIR="$prefix/include"
 	fi
-
+	if test "X$IHK_TMPDIR" = X; then
+		IHK_TMPDIR="$prefix/tmp"
+	fi
 	;;
     *)
 	AC_MSG_ERROR([target $WITH_TARGET is unknwon])
@@ -460,6 +465,17 @@ if test "$TARGET" = "smp-arm64" ; then
 fi
 # POSTK_DEBUG_ARCH_DEP_84 power management support [END]
 
+libudev=no
+AC_CHECK_LIB([udev],[udev_new],[libudev=yes],[libudev=no])
+AC_CHECK_HEADER([libudev.h],[libudev=yes],[libudev=no])
+if test	"x$libudev" = "xno" ; then
+   AC_MSG_ERROR([Install libudev package, e.g. yum install libudev-devel])
+fi
+
+if test "x$IHK_TMPDIR" != "x" ; then
+   AC_DEFINE_UNQUOTED(IHK_TMPDIR,"$IHK_TMPDIR",[Temporary directory used by IHK])
+fi
+
 AC_SUBST(CC)
 AC_SUBST(XCC)
 AC_SUBST(ARCH)
@@ -471,6 +487,7 @@ AC_SUBST(INCLUDEDIR)
 AC_SUBST(LIBDIR)
 AC_SUBST(KMODDIR)
 AC_SUBST(MANDIR)
+AC_SUBST(IHK_TMPDIR)
 AC_SUBST(CFLAGS)
 
 AC_SUBST(IHK_VERSION)
@@ -487,9 +504,9 @@ AC_SUBST(HPCPWR_DIR)
 
 case "$TARGET" in
 smp*)
-	AC_CONFIG_HEADERS([linux/driver/smp/config.h linux/user/config.h])
-	arch=`echo "$TARGET" | sed -e 's/smp-//'`
-	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
+	AC_CONFIG_HEADERS([config.h])
+#	arch=`echo "$TARGET" | sed -e 's/smp-//'`
+#	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
 	;;
 esac
 
@@ -505,7 +522,7 @@ AC_CONFIG_FILES([
 	linux/driver/attached/mic/Makefile
 	linux/user/ihkconfig.1:linux/user/ihkconfig.1in
 	linux/user/ihkosctl.1:linux/user/ihkosctl.1in
-	linux/user/ihklib.h:linux/user/ihklib.h.in
+	linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in
 	cokernel/Makefile.common
 ])
 
