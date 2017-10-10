@@ -5074,13 +5074,19 @@ case "$TARGET" in
 smp*)
 	ac_config_headers="$ac_config_headers config.h"
 
-#	arch=`echo "$TARGET" | sed -e 's/smp-//'`
-#	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
+	arch=`echo "$ARCH"`
+	ac_config_headers="$ac_config_headers linux/driver/smp/arch/$arch/config-$arch.h"
+
 	;;
 esac
 
 ac_config_files="$ac_config_files Makefile linux/core/Makefile linux/core/Makefile.module linux/core/Makefile.builtin ikc/Makefile linux/user/Makefile linux/driver/builtin/Makefile linux/driver/smp/Makefile linux/driver/attached/mic/Makefile linux/user/ihkconfig.1:linux/user/ihkconfig.1in linux/user/ihkosctl.1:linux/user/ihkosctl.1in linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in cokernel/Makefile.common"
 
+
+if test "$TARGET" = "smp-x86"; then
+ac_config_files="$ac_config_files cokernel/smp/x86_64/Makefile.config"
+
+fi
 
 if test "$TARGET" = "smp-arm64"; then
 ac_config_files="$ac_config_files cokernel/smp/arm64/Makefile.predefines cokernel/smp/arm64/Makefile.config"
@@ -5777,6 +5783,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
+    "linux/driver/smp/arch/$arch/config-$arch.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/driver/smp/arch/$arch/config-$arch.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "linux/core/Makefile") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile" ;;
     "linux/core/Makefile.module") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile.module" ;;
@@ -5790,6 +5797,7 @@ do
     "linux/user/ihkosctl.1") CONFIG_FILES="$CONFIG_FILES linux/user/ihkosctl.1:linux/user/ihkosctl.1in" ;;
     "linux/include/ihk/ihklib.h") CONFIG_FILES="$CONFIG_FILES linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in" ;;
     "cokernel/Makefile.common") CONFIG_FILES="$CONFIG_FILES cokernel/Makefile.common" ;;
+    "cokernel/smp/x86_64/Makefile.config") CONFIG_FILES="$CONFIG_FILES cokernel/smp/x86_64/Makefile.config" ;;
     "cokernel/smp/arm64/Makefile.predefines") CONFIG_FILES="$CONFIG_FILES cokernel/smp/arm64/Makefile.predefines" ;;
     "cokernel/smp/arm64/Makefile.config") CONFIG_FILES="$CONFIG_FILES cokernel/smp/arm64/Makefile.config" ;;
 

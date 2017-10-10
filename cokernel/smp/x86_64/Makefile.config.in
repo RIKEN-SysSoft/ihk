@@ -1,0 +1,12 @@
+ARCH=@ARCH@
+
+CFLAGS += -DBUILTIN_X86
+CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -fno-stack-protector
+CFLAGS += -mcmodel=large -mno-red-zone
+
+IHK_SRCDIRS += $(SRC)/../arch/$(ARCH)/kernel
+IHKARCH = x86
+
+IHK_OBJS += setup.o
+IHK_OBJS += dma.o
+include $(SRC)/../arch/$(ARCH)/kernel/Makefile.arch

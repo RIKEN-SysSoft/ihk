@@ -425,8 +425,8 @@ AC_SUBST(uncomment_if_ENABLE_MEMDUMP)
 case "$TARGET" in
 smp*)
 	AC_CONFIG_HEADERS([config.h])
-#	arch=`echo "$TARGET" | sed -e 's/smp-//'`
-#	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
+	arch=`echo "$ARCH"`
+	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
 	;;
 esac
 
@@ -445,6 +445,12 @@ AC_CONFIG_FILES([
 	linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in
 	cokernel/Makefile.common
 ])
+
+if test "$TARGET" = "smp-x86"; then
+AC_CONFIG_FILES([
+	cokernel/smp/x86_64/Makefile.config
+])
+fi
 
 if test "$TARGET" = "smp-arm64"; then
 AC_CONFIG_FILES([

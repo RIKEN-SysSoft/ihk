@@ -1,18 +1,27 @@
 # Makefile.common COPYRIGHT FUJITSU LIMITED 2015-2016
+ARCH=@ARCH@
+TARGETDIR="smp/@ARCH@"
+
 CFLAGS += @CFLAGS@
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O2 -g
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include -Wno-unused-function -I$(IHKBASE)/../ikc/include -I$(IHKBASE)/../linux/include
 CFLAGS += -DIHK_OS_MANYCORE
-
-TARGETDIR = $(shell echo $(TARGET) | sed "s/-/\//")
+CFLAGS += -mcmodel=large -mno-red-zone
 
 ifeq ($(ARCH), arm64)
--include @abs_builddir@/$(TARGETDIR)/Makefile.config
-else
--include $(IHKBASE)/$(TARGETDIR)/Makefile.config
+include @abs_builddir@/Makefile.predefines
+CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
+CFLAGS += -mgeneral-regs-only
 endif
 
-CFLAGS += -I@abs_builddir@/../../mckernel -I$(SRC)/../lib/include -I$(SRC)/../arch/$(IHKARCH)/kernel/include
+IHK_SRCDIRS += $(SRC)/../arch/$(ARCH)/kernel
+
+IHK_OBJS += setup.o
+IHK_OBJS += dma.o
+include @abs_top_builddir@/../mckernel/arch/$(ARCH)/kernel/Makefile.arch
+
+CFLAGS += -I@abs_builddir@/../../mckernel -I$(SRC)/../lib/include -I$(SRC)/../arch/$(ARCH)/kernel/include
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include
 ifeq ($(ARCH), arm64)
 CFLAGS += -I@abs_builddir@/../../mckernel/arch/arm64/kernel/include
