@@ -17,7 +17,9 @@ $(if $(O),,$(error IHK Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
 
 CFLAGS += -I$(SRC)/include -D__KERNEL__
+ifneq ($(ARCH), arm64)
 CFLAGS += -mcmodel=large -mno-red-zone
+endif
 
 # POSTK_DEBUG_ARCH_DEP_24
 ifeq ($(ARCH), arm64)
