@@ -21,6 +21,21 @@ extern unsigned long X86_IA32_FIXED_PERF_COUNTERS_MASK;
 #define MSR_PERF_GLOBAL_CTRL 0x0000038f
 #define MSR_PERF_GLOBAL_OVF_CTRL     0x00000390
 
+#define MSR_OFFCORE_RSP_0       0x000001a6
+#define MSR_OFFCORE_RSP_1       0x000001a7
+
+enum extra_reg_type {
+	EXTRA_REG_NONE  = -1,   /* not used */
+
+	EXTRA_REG_RSP_0 = 0,    /* offcore_response_0 */
+	EXTRA_REG_RSP_1 = 1,    /* offcore_response_1 */
+	EXTRA_REG_LBR   = 2,    /* lbr_select */
+	EXTRA_REG_LDLAT = 3,    /* ld_lat_threshold */
+	EXTRA_REG_FE    = 4,    /* fe_* */
+
+	EXTRA_REG_MAX      /* number of entries needed */
+};
+
 #define ENABLE_SSE
 
 #endif
