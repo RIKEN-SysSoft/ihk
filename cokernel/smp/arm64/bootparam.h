@@ -100,6 +100,9 @@ struct smp_boot_param {
 	unsigned long monitor;
 	unsigned long monitor_size;
 
+	unsigned long rusage;
+	unsigned long rusage_size;
+
 	unsigned long nmi_mode_addr;
 
 	unsigned long dma_address;
@@ -114,6 +117,7 @@ struct smp_boot_param {
 	int nr_cpus;
 	int nr_numa_nodes;
 	int nr_memory_chunks;
+	int osnum;
 	unsigned int dump_level;
 	struct ihk_dump_page_set dump_page_set;
 };

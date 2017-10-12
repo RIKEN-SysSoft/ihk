@@ -265,6 +265,14 @@ int ihk_set_monitor(unsigned long addr, unsigned long size)
 	return 0;
 }
 
+int ihk_set_rusage(unsigned long addr, unsigned long size)
+{
+	boot_param->rusage = addr;
+	boot_param->rusage_size = size;
+
+	return 0;
+}
+
 int ihk_set_nmi_mode_addr(unsigned long addr)
 {
 	boot_param->nmi_mode_addr = addr;
@@ -367,6 +375,11 @@ int ihk_mc_get_nr_cores(void)
 int ihk_mc_get_nr_linux_cores(void)
 {
 	return boot_param->nr_linux_cpus;
+}
+
+int ihk_mc_get_osnum(void)
+{
+	return boot_param->osnum;
 }
 
 int ihk_mc_get_core(int id, unsigned long *linux_core_id, unsigned long *apic_id, int *numa_id)
