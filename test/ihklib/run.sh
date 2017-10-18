@@ -8,6 +8,7 @@ kill="n"
 dryrun="n"
 sleepopt="0.4"
 home=$(eval echo \$\{HOME\})
+groups=`groups | cut -d' ' -f 1`
 install=${home}/project/os/install
 
 echo Executing ${testname}
@@ -30,8 +31,19 @@ case ${testname} in
 	printf "*** Refer to ${testname}.patch to enable syscall #900 and make ihkmond not release kmsg_buf and the number of stray kmsg_buf allowed in host_driver.c to 2 and then recompile IHK/McKernel.\n"
 	printf "*** Let host_driver.c outputs debug messages by defining DEBUG_IKC.\n"
 	;;
+    ihklib017)
+	printf "*** Refer to ${testname}.patch to enable syscall #900 and then recompile IHK/McKernel.\n"
+	printf "*** Let host_driver.c outputs debug messages by defining DEBUG_IKC.\n"
+	;;
 esac
-read -p "*** Hit return when ready!" key
+
+case ${testname} in
+    ihklib001)
+	;;
+    *)
+	read -p "*** Hit return when ready!" key
+	;;
+esac
 
 case ${testname} in
     ihklib001)
@@ -39,7 +51,7 @@ case ${testname} in
 	make clean > /dev/null 2> /dev/null
 	make ${bn_lin}
 	;;
-     ihklib002 | ihklib003 | ihklib004 | ihklib005 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016)
+     ihklib002 | ihklib003 | ihklib004 | ihklib005 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
 	bn_lin="${testname}_lin"
 	bn_mck="${testname}_mck"
 	make clean > /dev/null 2> /dev/null
@@ -70,7 +82,7 @@ case ${testname} in
     ihklib004 | ihklib005)
 	bootopt="-k 1 -m 256M -i 2"
 	;;
-    ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016)
+    ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
 	;;
     *)
 	echo Unknown test case 
@@ -105,7 +117,7 @@ case ${testname} in
 	    exit 255
 	fi
 	;;
-     ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib013 | ihklib014 | ihklib015 | ihklib016)
+     ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
 	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
 	    exit 255
 	fi
@@ -150,7 +162,7 @@ if [ ${kill} == "y" ]; then
 else
     case ${testname} in
 	ihklib001)
-	    sudo ./${bn_lin} ${testopt}
+	    sudo GROUPS=${groups} HOME=${home} ./${bn_lin} ${testopt}
 	;;
 	ihklib003)
 	    sudo ./${bn_lin} ${testopt}
@@ -205,7 +217,7 @@ else
 	    fi
 	    sudo cat /var/log/local6 > ./${testname}.log
 	;;
-	ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016)
+	ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
 	    sudo ./${bn_lin} ${testopt}
 	;;
 	*)
@@ -219,7 +231,7 @@ case ${testname} in
 	;;
     ihklib003)
 	;;
-    ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016)
+    ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
 	;;
     *)
 	sudo ${install}/sbin/mcstop+release.sh
@@ -235,6 +247,9 @@ case ${testname} in
 	;;
     ihklib016)
 	printf "*** See Linux kmsg to the first kmsg buffer is deleted when the third one is created and the remaining two kmsg buffers are deleted when /dev/mcd0 is destroyed.\n"
+	;;
+    ihklib017)
+	printf "*** See Linux stdout to confirm panic is detected and ihkmond successfully relay kmsg of the next OS instance.\n"
 	;;
     *)
 	printf "*** It behaves as expected when there's no [NG] and \"All tests finished\" is shown\n"

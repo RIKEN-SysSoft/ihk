@@ -66,3 +66,6 @@ ihkmond acquires/releases kmsg_buf with passing "-k 1" to ihkmond [OK]
 
 ihklib016:
 host_driver.c deletes stray kmsg_buf when too many  [OK]
+
+ihklib017:
+perform syslog() when detecting panic/hungup [OK]
