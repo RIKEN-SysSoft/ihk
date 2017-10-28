@@ -514,6 +514,7 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 	int r = -ENOENT;
 
 	if (!channel) {
+		kprintf("%s: ERROR: channel doesn't exist\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -526,6 +527,7 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 	}
 
 	if ((r = ihk_ikc_recv(channel, p, opt | IKC_NO_NOTIFY)) != 0) {
+		kprintf("%s: ERROR: ihk_ikc_recv returned %d\n", __FUNCTION__, r);
 		ihk_ikc_free(p);
 		goto out;
 	}
