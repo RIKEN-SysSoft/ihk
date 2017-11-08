@@ -2202,6 +2202,7 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int q_len = 0;
+	int q_added;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 
 	memset(query_res, 0, sizeof(query_res));
@@ -2211,14 +2212,18 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		if (os_mem_chunk->os != ihk_os)
 			continue;
 
-		if (q_len) {
-			q_len += sprintf(query_res + q_len, ",%lu@%d",
-					os_mem_chunk->size, os_mem_chunk->numa_id);
+		q_added = snprintf(query_res + q_len,
+				sizeof(query_res) - q_len,
+				",%lu@%d",
+				os_mem_chunk->size, os_mem_chunk->numa_id);
+
+		if (q_added >= sizeof(query_res) - q_len) {
+			printk("IHK-SMP: %s(): error: query_res is not large enough\n",
+				__FUNCTION__);
+			return -EINVAL;
 		}
-		else {
-			q_len = sprintf(query_res, "%lu@%d",
-					os_mem_chunk->size, os_mem_chunk->numa_id);
-		}
+
+		q_len += q_added;
 	}
 
 	if (strlen(query_res) > 0) {
@@ -3408,6 +3413,7 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int q_len = 0;
+	int q_added;
 	struct chunk *mem_chunk;
 
 	memset(query_res, 0, sizeof(query_res));
@@ -3415,14 +3421,18 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	/* Collect memory information */
 	list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
 
-		if (q_len) {
-			q_len += sprintf(query_res + q_len, ",%lu@%d",
-					mem_chunk->size, mem_chunk->numa_id);
+		q_added = snprintf(query_res + q_len,
+				sizeof(query_res) - q_len,
+				",%lu@%d",
+				mem_chunk->size, mem_chunk->numa_id);
+
+		if (q_added >= sizeof(query_res) - q_len) {
+			printk("IHK-SMP: %s(): error: query_res is not large enough\n",
+				__FUNCTION__);
+			return -EINVAL;
 		}
-		else {
-			q_len = sprintf(query_res, "%lu@%d",
-					mem_chunk->size, mem_chunk->numa_id);
-		}
+
+		q_len += q_added;
 	}
 
 	if (strlen(query_res) > 0) {
