@@ -54,8 +54,11 @@ int main(int argc, char** argv) {
     int ret = 0, ret_lib;
 
 	ret_lib = syscall(900);
-	CHKANDJUMP(ret_lib != 0, 255, "syscall\n"); /* It generates 32KB of kmsg */
-	printf("ihklib007_mck exit OK\n");
+	if (ret_lib != 0) {
+		printf("McKernel process exits NG\n");
+	} else {
+		printf("McKernel process exits OK\n");
+	}
 
  fn_exit:
     return ret;

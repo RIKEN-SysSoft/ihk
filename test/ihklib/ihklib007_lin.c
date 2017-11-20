@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system insmod");
 
-	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86.ko ihk_start_irq=240 ihk_ikc_irq_core=0", PREFIX);
+	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86_64.ko ihk_start_irq=240 ihk_ikc_irq_core=0", PREFIX);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system insmod");
 
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
 	fp = popen(PREFIX "/bin/mcexec ./ihklib007_mck", "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
-	OKNG(strstr(buf, "ihklib007_mck exit OK") != NULL, "mcexec\n");
+	OKNG(strstr(buf, "McKernel process exits OK") != NULL, "kprintf of many lines\n");
 	
 #if 0
 	// kmsg
@@ -218,22 +218,6 @@ int main(int argc, char** argv) {
 		printf("%s", buf);
 	}
 	_exit(255);
-#endif
-#if 1
-	// Check the first IHK_KMSG_SIZE bytes is transferred to /var/log/local5
-	usleep(250 * 1000); // Wait for nothing is in-flight
-	fp = popen("cat /var/log/local5", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(strstr(buf, "first line") != NULL, "first line is transferred?\n");
-
-	// head /var/log/local5
-	printf("head -n30 /var/log/local5\n");
-	fp = popen("head -n30 /var/log/local5 | tail -n10", "r");
-	while ((nread = fread(buf, 1, sizeof(buf), fp)), nread > 0) {
-		buf[nread] = 0;
-		printf("%s", buf);
-	}
 #endif
 	// destroy os
 	for(i = 0; i < 4; i++) {
@@ -245,6 +229,22 @@ int main(int argc, char** argv) {
 		}
 	}
 	CHKANDJUMP(i == 4, 255, "ihk_destroy_os failed four times\n");
+#if 1
+	// Check the first IHK_KMSG_SIZE bytes is transferred to /var/log/local5
+	usleep(1000 * 1000); // Wait for nothing is in-flight
+	fp = popen("cat /var/log/local5", "r");
+	nread = fread(buf, 1, sizeof(buf), fp);
+	buf[nread] = 0;
+	OKNG(strstr(buf, "first line") != NULL, "first line is transferred?\n");
+
+	// head /var/log/local5
+	printf("head -n5 /var/log/local5\n");
+	fp = popen("head -n5 /var/log/local5", "r");
+	while ((nread = fread(buf, 1, sizeof(buf), fp)), nread > 0) {
+		buf[nread] = 0;
+		printf("%s", buf);
+	}
+#endif
 #if 1
 	// Check the last part of kmsg is transferred to /var/log/local5
 	fp = popen("cat /var/log/local5", "r");
@@ -278,7 +278,7 @@ int main(int argc, char** argv) {
 		 strstr(buf, "/tmp/mcos/mcos0_sys") == NULL, "ihk_os_destroy_pseudofs (3)\n");
 
 	// rmmod ihk-smp-x86
-	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86.ko", PREFIX);
+	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86_64.ko", PREFIX);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system rmmod");
 
@@ -292,6 +292,15 @@ int main(int argc, char** argv) {
  fn_exit:
     return ret;
  fn_fail:
+#if 0
+	// kmsg
+	fp = popen(PREFIX "/sbin/ihkosctl 0 kmsg", "r");
+	while ((nread = fread(buf, 1, sizeof(buf), fp)), nread > 0) {
+		buf[nread] = 0;
+		printf("%s", buf);
+	}
+	goto fn_exit;
+#endif
 	// destroy os
 	for(i = 0; i < 4; i++) {
 		usleep(250 * 1000); // Wait for nothing is in-flight
