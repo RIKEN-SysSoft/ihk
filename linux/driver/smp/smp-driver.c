@@ -2658,8 +2658,8 @@ static void sort_pagelists(struct zone *zone)
 	}
 }
 
-#define RESERVE_MEM_FAILED_ATTEMPTS 20
-#define RESERVE_MEM_TIMEOUT 15
+#define RESERVE_MEM_FAILED_ATTEMPTS 10
+#define RESERVE_MEM_TIMEOUT 30
 
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
@@ -2685,6 +2685,9 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 #endif /* POSTK_DEBUG_ARCH_DEP_79 */
 	int failed_free_attempts = 0;
 	unsigned long res_start = get_seconds();
+#ifdef CONFIG_MOVABLE_NODE
+	bool *__movable_node_enabled = NULL;
+#endif
 
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
@@ -2706,6 +2709,11 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	__drain_all_pages = (void (*)(void))
 			kallsyms_lookup_name("drain_all_pages");
 #endif /* POSTK_DEBUG_ARCH_DEP_79 */
+
+#ifdef CONFIG_MOVABLE_NODE
+	__movable_node_enabled =
+		(bool *)kallsyms_lookup_name("movable_node_enabled");
+#endif
 
 	if (__drain_all_pages) {
 #ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
@@ -2764,7 +2772,7 @@ retry:
 	/* Allocate and merge pages until we get a contigous area
 	 * or run out of free memory. Keep the longest areas */
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
-		struct page *pg;
+		struct page *pg = NULL;
 
 		pg = __alloc_pages_nodemask(
 				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
@@ -2772,6 +2780,19 @@ retry:
 				//| __GFP_REPEAT,
 				order,
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
+
+#ifdef CONFIG_MOVABLE_NODE
+		/* Try movable pages if supported */
+		if (!pg && __movable_node_enabled && *__movable_node_enabled) {
+			pg = __alloc_pages_nodemask(
+					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
+					__GFP_NORETRY,
+					//| __GFP_REPEAT,
+					order,
+					node_zonelist(numa_id, __GFP_COMP), &nodemask);
+		}
+#endif
+
 		if (!pg) {
 			int freed_pages;
 
@@ -2807,7 +2828,7 @@ retry:
 			 * We ran out of memory using the current order of compound
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
-			if (order > 3) {
+			if (order > 2) {
 				--order;
 				failed_free_attempts = 0;
 				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
@@ -2931,8 +2952,10 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 			struct page *page = virt_to_page(va);
 
 			if (!PageCompound(page) || !PageHead(page)) {
-				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
-					__FUNCTION__);
+				dprintk(KERN_ERR "%s: WARNING: page is not compound or not head"
+						", freeing single page\n",
+						__FUNCTION__);
+				free_page(va);
 				size_left -= PAGE_SIZE;
 				va += PAGE_SIZE;
 				continue;
