@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86.ko ihk_start_irq=240 ihk_ikc_irq_core=0", prefix);
+	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86_64.ko ihk_start_irq=240 ihk_ikc_irq_core=0", prefix);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -869,7 +869,7 @@ int main(int argc, char** argv) {
 	OKNG(ret_ihklib == 0 &&
 		 strstr(buf, "/tmp/mcos/mcos0_sys") == NULL, "ihk_os_destroy_pseudofs (3)\n");
 
-	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86.ko", prefix);
+	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86_64.ko", prefix);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
