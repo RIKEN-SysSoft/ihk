@@ -895,6 +895,9 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		eprintk("%s,already down\n", __FUNCTION__);
 		return 0;
 	}
+#ifdef POSTK_DEBUG_TEMP_FIX_82 /* ihk_os_get_status() SHUTDOWN detect fix */
+	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
+#endif /* POSTK_DEBUG_TEMP_FIX_82 */
 
 	/* Reset CPU cores used by this OS */
 	for (i = 0; i < SMP_MAX_CPUS; ++i) {
@@ -934,7 +937,9 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		kfree(os_mem_chunk);
 	}
 
+#ifndef POSTK_DEBUG_TEMP_FIX_82 /* ihk_os_get_status() SHUTDOWN detect fix */
 	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
+#endif /* !POSTK_DEBUG_TEMP_FIX_82 */
 	if (os->numa_mapping) {
 		kfree(os->numa_mapping);
 		os->numa_mapping = NULL;

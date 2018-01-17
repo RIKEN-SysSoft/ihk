@@ -1055,6 +1055,10 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		break;
 	case BUILTIN_OS_STATUS_HUNGUP:
 		return IHK_OS_STATUS_HUNGUP;
+#ifdef POSTK_DEBUG_TEMP_FIX_82 /* ihk_os_get_status() SHUTDOWN detect fix */
+	case BUILTIN_OS_STATUS_SHUTDOWN:
+		return IHK_OS_STATUS_SHUTDOWN;
+#endif /* POSTK_DEBUG_TEMP_FIX_82 */
 	default:
 		return IHK_OS_STATUS_NOT_BOOTED;
 	}
