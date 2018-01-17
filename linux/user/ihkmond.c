@@ -115,6 +115,26 @@ static ssize_t reap_event(int evfd) {
 	return ret;
 }
 
+#ifdef POSTK_DEBUG_TEMP_FIX_83 /* FIX: ihklib_os_open() is a possibility of failure. */
+static int ihkmond_os_open(int os_index) {
+	int i, osfd;
+	const int limit = 4;
+
+	for (i = 0; i < limit; i++) {
+		osfd = ihklib_os_open(os_index);
+		if (osfd >= 0) {
+			break;
+		}
+		usleep(200);
+	}
+
+	if (i == limit) {
+		eprintf("Warning: %s failed %d times\n", __FUNCTION__, i);
+	}
+	return osfd;
+}
+#endif /* POSTK_DEBUG_TEMP_FIX_83 */
+
 static void* detect_hungup(void* _arg) {
 	struct thr_args *arg = (struct thr_args *)_arg;
 	int osfd = -1, epfd = -1;
@@ -146,7 +166,11 @@ static void* detect_hungup(void* _arg) {
  next:
 	dprintf("next\n");
 
+#ifdef POSTK_DEBUG_TEMP_FIX_83 /* FIX: ihklib_os_open() is a possibility of failure. */
+	osfd = ihkmond_os_open(arg->os_index);
+#else /* POSTK_DEBUG_TEMP_FIX_83 */
 	osfd = ihklib_os_open(arg->os_index);
+#endif /* POSTK_DEBUG_TEMP_FIX_83 */
     CHKANDJUMP(osfd < 0, -errno, "ihklib_os_open failed\n");
 
 	ret_lib = ioctl(osfd, IHK_OS_DETECT_HUNGUP);
