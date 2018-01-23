@@ -162,6 +162,32 @@ static int do_get_ikc_map(int index)
 	goto fn_exit;
 }
 
+static int do_get_buildid(int index)
+{
+	int ret = 0;
+	int fd = -1;
+    char fn[128];
+    char query_result[sizeof(BUILDID)];
+
+	sprintf(fn, "/dev/mcos%d", index);
+
+	fd = open(fn, O_RDONLY);
+	IHKOSCTL_CHKANDJUMP(fd < 0, "open", -1);
+
+	ret = ioctl(fd, IHK_OS_GET_BUILDID, query_result);
+    IHKOSCTL_CHKANDJUMP(ret != 0, "IHK_OS_GET_BUILDID", -1);
+
+	printf("%s\n", query_result);
+
+ fn_exit:
+	if (fd != -1) {
+		close(fd);
+	}
+	return ret;
+ fn_fail:
+	goto fn_exit;
+}
+
 static int do_get(int index)
 {
 	if (__argc < 4) {
@@ -173,6 +199,8 @@ static int do_get(int index)
 		return do_get_status(index);
 	} else if (!strcmp(__argv[3], "ikc_map")) {
 		return do_get_ikc_map(index);
+	} else if (!strcmp(__argv[3], "buildid")) {
+		return do_get_buildid(index);
 	} else {
         fprintf(stderr, "Unknown target : %s\n", __argv[3]);
 		usage(__argv);

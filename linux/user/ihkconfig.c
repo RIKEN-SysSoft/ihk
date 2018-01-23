@@ -9,6 +9,8 @@
  */
 #ifdef POSTK_DEBUG_ARCH_DEP_70 /* add config.h include to ihkconfig */
 #include <config.h>
+#else
+#include <config.h>
 #endif /* POSTK_DEBUG_ARCH_DEP_70 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,7 +71,7 @@ static int usage(char **arg)
 	fprintf(stderr, "    release mem\n");
 	fprintf(stderr, "    query cpu|mem\n");
 	fprintf(stderr, "    get os_instances\n");
-
+	fprintf(stderr, "    get buildid\n");
 	return 0;
 }
 
@@ -397,6 +399,32 @@ fn_exit:
 	goto fn_exit;
 }
 
+static int do_get_buildid(int index)
+{
+	int ret = 0;
+	int fd = -1;
+	char fn[128];
+	char query_result[sizeof(BUILDID)];
+
+	sprintf(fn, "/dev/mcd%d", index);
+
+	fd = open(fn, O_RDONLY);
+	IHKCONFIG_CHKANDJUMP(fd < 0, "open", -1);
+
+	ret = ioctl(fd, IHK_DEVICE_GET_BUILDID, query_result);
+	IHKCONFIG_CHKANDJUMP(ret != 0, "IHK_DEVICE_GET_BUILDID", -1);
+
+	printf("%s\n", query_result);
+
+ fn_exit:
+	if (fd != -1) {
+		close(fd);
+	}
+	return ret;
+ fn_fail:
+	goto fn_exit;
+}
+
 static int do_get(int index)
 {
 	if (__argc < 4) {
@@ -406,6 +434,8 @@ static int do_get(int index)
 
 	if (!strcmp(__argv[3], "os_instances")) {
 		return do_get_os_instances(index);
+	} else if (!strcmp(__argv[3], "buildid")) {
+		return do_get_buildid(index);
 	} else {
 		fprintf(stderr, "Unknown target : %s\n", __argv[3]);
 		usage(__argv);

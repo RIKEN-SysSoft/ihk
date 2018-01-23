@@ -1862,6 +1862,15 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	return ret;
 }
 
+static int smp_ihk_os_get_buildid(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	char buildid[] = BUILDID;
+	if (copy_to_user((void*)arg, buildid, sizeof(buildid))) {
+		return -EFAULT;
+	}
+	return 0;
+}
+
 static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
 {
 	char *oldp;
@@ -2341,6 +2350,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.release_cpu = smp_ihk_os_release_cpu,
 	.set_ikc_map = smp_ihk_os_set_ikc_map,
 	.get_ikc_map = smp_ihk_os_get_ikc_map,
+	.get_buildid = smp_ihk_os_get_buildid,
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,

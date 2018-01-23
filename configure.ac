@@ -7,7 +7,6 @@ m4_define([IHK_RELEASE_DATE_m4],[2013-11-18])dnl
 m4_define([MCKERNEL_RELEASE_DATE_m4],[2013-11-18])dnl
 m4_define([DCFA_RELEASE_DATE_m4],[2013-11-18])dnl
 
-
 AC_INIT([ihk], IHK_VERSION_m4)
 
 IHK_VERSION=IHK_VERSION_m4
@@ -412,6 +411,16 @@ if test "x$ENABLE_PERF" = "xyes" ; then
 else
 	AC_MSG_NOTICE([perf is disabled])
 fi
+
+ABS_SRCDIR=$( cd $( dirname $0 ); pwd )
+IHK_ABS_SRCDIR=${ABS_SRCDIR}/../ihk
+BUILDID=$( cd $IHK_ABS_SRCDIR; git rev-list -1 HEAD | cut -c1-8 )
+AC_MSG_NOTICE([BUILDID=$BUILDID])
+if test "x$BUILDID" != "x" ; then
+   AC_DEFINE_UNQUOTED(BUILDID,"$BUILDID",[IHK build-id to confirm IHK and McKernel built at the same time are used])
+)
+fi
+AC_SUBST(BUILDID)
 
 AC_SUBST(CC)
 AC_SUBST(XCC)

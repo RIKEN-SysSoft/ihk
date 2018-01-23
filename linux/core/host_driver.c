@@ -36,6 +36,7 @@
 #include <ihk/misc/debug.h>
 #include "host_linux.h"
 #include "ops_wrappers.h"
+#include <config.h>
 
 //#define DEBUG_IKC
 
@@ -953,6 +954,7 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_QUERY_CPU:
 	case IHK_OS_QUERY_MEM:
 	case IHK_OS_GET_IKC_MAP:
+	case IHK_OS_GET_BUILDID:
 	case IHK_OS_STATUS:
 	case IHK_OS_GET_USAGE:
 	case IHK_OS_GET_CPU_USAGE:
@@ -1043,6 +1045,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
 	case IHK_OS_GET_IKC_MAP:
 		ret = __ihk_os_get_ikc_map(data, arg);
+		break;
+
+	case IHK_OS_GET_BUILDID:
+		ret = __ihk_os_get_buildid(data, arg);
 		break;
 
 	case IHK_OS_QUERY_CPU:
@@ -1402,6 +1408,16 @@ ERR:
 	return ret;
 }
 
+static int __ihk_device_get_buildid(struct ihk_host_linux_device_data *data,
+                                  unsigned long arg)
+{
+	char buildid[] = BUILDID;
+	if (copy_to_user((void*)arg, buildid, sizeof(buildid))) {
+		return -EFAULT;
+	}
+	return 0;
+}
+
 /** \brief Create a OS file in the kernel
  *
  * @return minor number */
@@ -1672,6 +1688,10 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 	data = file->private_data;
 
 	switch (request) {
+	case IHK_DEVICE_GET_BUILDID:
+		ret = __ihk_device_get_buildid(data, arg);
+		break;
+
 	case IHK_DEVICE_CREATE_OS:
 		ret = __ihk_device_create_os(data, arg);
 		break;
