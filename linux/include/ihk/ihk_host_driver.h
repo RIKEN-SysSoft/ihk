@@ -198,6 +198,15 @@ struct ihk_os_ops {
 	 **/
 	int (*issue_interrupt)(ihk_os_t, void *, int cpu, int vector);
 
+	/** \brief Send NMI to a kernel
+	 *
+	 *  \param mode   0 : dump
+	 *                1 : freeze
+	 *                2 : thaw
+	 *                3 : force shutdown      
+	 **/
+	int (*send_nmi)(ihk_os_t, void *, int mode);
+
 	/** \brief Set a kernel command line paramter
 	 *
 	 * \param buf Parameter string */
@@ -772,6 +781,16 @@ int ihk_os_unmap_memory(ihk_os_t os, unsigned long pa, unsigned long size);
  * \param vector Vector number used for the interrupt
  */
 int ihk_os_issue_interrupt(ihk_os_t os, int cpu, int vector);
+
+/**
+ * \brief Send NMI to the OS instance
+ *
+ * \param mode   0 : dump
+ *               1 : freeze
+ *               2 : thaw
+ *               3 : force shutdown      
+ */
+int ihk_os_send_nmi(ihk_os_t ihk_os, int mode);
 
 /**
  * \brief Get the device instance from a OS instance.

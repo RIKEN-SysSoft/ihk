@@ -13,7 +13,8 @@ enum ihk_os_status {
 	IHK_OS_STATUS_NOT_BOOTED,
 	IHK_OS_STATUS_BOOTING,
 	IHK_OS_STATUS_BOOTED,    /* OS booted and acked */
-	IHK_OS_STATUS_READY,     /* OS is ready and fully functional */
+	IHK_OS_STATUS_READY,     /* OS is ready to initialize IKC from Linux */
+	IHK_OS_STATUS_RUNNING,   /* OS is running */
 	IHK_OS_STATUS_FREEZING,  /* OS is freezing */
 	IHK_OS_STATUS_FROZEN,    /* OS is frozen */
 	IHK_OS_STATUS_SHUTDOWN,  /* OS is shutting down */

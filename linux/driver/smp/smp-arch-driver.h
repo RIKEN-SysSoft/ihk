@@ -57,5 +57,6 @@ int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 int smp_ihk_arch_init(void);
 int ihk_smp_reset_cpu(int hw_id);
 void smp_ihk_arch_exit(void);
+int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode);
 
 #endif /* HEADER_SMP_SMP_ARCH_DRIVER_H */

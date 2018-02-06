@@ -2338,6 +2338,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.set_kargs = smp_ihk_os_set_kargs,
 	.dump = smp_ihk_os_dump,
 	.issue_interrupt = smp_ihk_os_issue_interrupt,
+	.send_nmi = smp_ihk_os_send_nmi,
 	.map_memory = smp_ihk_os_map_memory,
 	.unmap_memory = smp_ihk_os_unmap_memory,
 	.register_handler = smp_ihk_os_register_handler,

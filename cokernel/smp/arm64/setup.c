@@ -167,6 +167,13 @@ void arch_ready(void)
 	barrier();
 }
 
+void done_init(void)
+{
+	/* Make it running */
+	boot_param->status = 3;
+	barrier();
+}
+
 void arch_set_mikc_queue(void *rq, void *wq)
 {
 	boot_param->mikc_queue_recv = virt_to_phys(wq);

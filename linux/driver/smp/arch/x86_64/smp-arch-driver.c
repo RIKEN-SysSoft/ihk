@@ -735,6 +735,8 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 						IHK_SMP_TRAMPOLINE_SIZE);
 			}
 			return IHK_OS_STATUS_READY;
+		} else if(os->param->status == 3) {
+			return IHK_OS_STATUS_RUNNING;
 		} else {
 			return IHK_OS_STATUS_BOOTING;
 		}
