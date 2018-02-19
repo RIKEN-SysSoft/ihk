@@ -1100,6 +1100,19 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	}
 	os->nr_cpus = 0;
 
+	if (lwk_va) {
+		unsigned long flags;
+
+		/* Unmap LWK from Linux kernel virtual */
+		unmap_kernel_range_noflush(MAP_KERNEL_START,
+				MODULES_END - MAP_KERNEL_START);
+
+		spin_lock_irqsave(ihk_smp_vmap_area_lock, flags);
+		ihk_smp_free_vmap_area(lwk_va);
+		lwk_va = NULL;
+		spin_unlock_irqrestore(ihk_smp_vmap_area_lock, flags);
+	}
+
 	/* Free bootstrap page tables */
 	if (os->boot_pt) {
 		ihk_smp_free_page_tables(os->boot_pt);
@@ -1351,6 +1364,8 @@ static int smp_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
 		       s != status && s < IHK_OS_STATUS_SHUTDOWN
 		       && timeout > 0) {
 			mdelay(100);
+			dprintk("%s: waiting for: %d, status: %d\n",
+				__FUNCTION__, status, s);
 			timeout--;
 		}
 		return s == status ? 0 : -1;
