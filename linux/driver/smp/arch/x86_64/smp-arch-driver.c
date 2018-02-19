@@ -381,6 +381,10 @@ void smp_ihk_setup_trampoline(void *priv)
 		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
 	}
 
+	os->param->linux_kernel_pgt_phys = __pa(&init_level4_pgt[0]);
+	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n",
+		__FUNCTION__, &init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
+
 	/* Make a temporary copy of the Linux trampoline */
 	if (using_linux_trampoline) {
 		memcpy(linux_trampoline_backup, trampoline_va, IHK_SMP_TRAMPOLINE_SIZE);
