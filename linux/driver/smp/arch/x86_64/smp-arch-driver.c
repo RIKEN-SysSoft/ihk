@@ -13,6 +13,7 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/mm.h>
+#include <linux/io.h>
 #include <linux/module.h>
 #include <linux/radix-tree.h>
 #include <linux/irq.h>
@@ -493,12 +494,12 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 
 static struct vmap_area *lwk_va = NULL;
 
-void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
+int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
 	struct smp_os_data *os = priv;
+	unsigned long flags;
 	unsigned long _virt, _phys, _len;
-	int i;
 	unsigned long stack_p;
 	extern char startup_data[];
 	extern char startup_data_end[];
@@ -515,7 +516,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	/* Map identity (256GB) */
 	_len = 0x4000000000UL;
 	for (_virt = 0, _phys = 0; _virt < _len;
-			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+			_virt += IHK_SMP_LARGE_PAGE, _phys += IHK_SMP_LARGE_PAGE) {
 		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
 			printk("%s: error: mapping identity\n", __FUNCTION__);
 			return -ENOMEM;
@@ -525,7 +526,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 #if 0
 	/* Map PAGE_OFFSET */
 	for (_virt = PAGE_OFFSET, _phys = 0; _virt < (PAGE_OFFSET + _len);
-			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+			_virt += IHK_SMP_LARGE_PAGE, _phys += IHK_SMP_LARGE_PAGE) {
 		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
 			printk("%s: error: mapping Linux area\n", __FUNCTION__);
 			return -ENOMEM;
@@ -534,8 +535,8 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 #endif
 
 	/* Map ST */
-	for (_virt = MAP_ST_START, _phys = 0; _virt < (MAP_ST_START + _len);
-			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+	for (_virt = IHK_SMP_MAP_ST_START, _phys = 0; _virt < (IHK_SMP_MAP_ST_START + _len);
+			_virt += IHK_SMP_LARGE_PAGE, _phys += IHK_SMP_LARGE_PAGE) {
 		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
 			printk("%s: error: mapping straight area\n", __FUNCTION__);
 			return -ENOMEM;
@@ -543,10 +544,10 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	}
 
 	/* Map kernel image */
-	_len = (4 * LARGE_PAGE_SIZE);
-	for (_virt = MAP_KERNEL_START, _phys = phys; 
-			_virt < (MAP_KERNEL_START + _len);
-			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+	_len = (4 * IHK_SMP_LARGE_PAGE);
+	for (_virt = IHK_SMP_MAP_KERNEL_START, _phys = phys; 
+			_virt < (IHK_SMP_MAP_KERNEL_START + _len);
+			_virt += IHK_SMP_LARGE_PAGE, _phys += IHK_SMP_LARGE_PAGE) {
 		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
 			printk("%s: error: mapping kernel image\n", __FUNCTION__);
 			return -ENOMEM;
@@ -573,7 +574,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 
 		if (p) {
 			tmp_va = rb_entry(p, struct vmap_area, rb_node);
-			if (tmp_va->va_start >= MAP_KERNEL_START)
+			if (tmp_va->va_start >= IHK_SMP_MAP_KERNEL_START)
 				vmap_area_taken = 1;
 		}
 	}
@@ -585,7 +586,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 				__FUNCTION__);
 	}
 	else {
-		lwk_va->va_start = MAP_KERNEL_START;
+		lwk_va->va_start = IHK_SMP_MAP_KERNEL_START;
 		lwk_va->va_end = MODULES_END;
 		lwk_va->flags = 0;
 		ihk_smp_insert_vmap_area(lwk_va);
@@ -595,7 +596,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	if (vmap_area_taken)
 		return -1;
 
-	if (ioremap_page_range(MAP_KERNEL_START, MODULES_END,
+	if (ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
 				phys, PAGE_KERNEL_EXEC) < 0) {
 		printk("%s: error: mapping LWK to Linux kernel space\n",
 				__FUNCTION__);
@@ -610,6 +611,24 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	startup[6] = entry;
 	ihk_smp_unmap_virtual(startup);
 	os->boot_rip = startup_p;
+
+	return 0;
+}
+
+int smp_ihk_os_unmap_lwk() {
+	if (lwk_va) {
+		unsigned long flags;
+
+		/* Unmap LWK from Linux kernel virtual */
+		unmap_kernel_range_noflush(IHK_SMP_MAP_KERNEL_START,
+				MODULES_END - IHK_SMP_MAP_KERNEL_START);
+
+		spin_lock_irqsave(ihk_smp_vmap_area_lock, flags);
+		ihk_smp_free_vmap_area(lwk_va);
+		lwk_va = NULL;
+		spin_unlock_irqrestore(ihk_smp_vmap_area_lock, flags);
+	}
+	return 0;
 }
 
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)

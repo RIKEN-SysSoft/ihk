@@ -37,7 +37,7 @@ unsigned long calc_ns_per_tsc(void);
 void smp_ihk_setup_trampoline(void *priv);
 unsigned long smp_ihk_adjust_entry(unsigned long entry,
                                           unsigned long phys);
-void smp_ihk_os_setup_startup(void *priv, unsigned long entry,
+int smp_ihk_os_setup_startup(void *priv, unsigned long entry,
                              unsigned long phys);
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args);
 enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv);
@@ -57,6 +57,7 @@ int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 int smp_ihk_arch_init(void);
 int ihk_smp_reset_cpu(int hw_id);
 void smp_ihk_arch_exit(void);
+int smp_ihk_os_unmap_lwk(void);
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode);
 
 #endif /* HEADER_SMP_SMP_ARCH_DRIVER_H */
