@@ -7,6 +7,12 @@
    exported */
 #undef IHK_KSYM___default_send_IPI_dest_field
 
+/* Define to address of kernel symbol __free_vmap_area, or 0 if exported */
+#undef IHK_KSYM___free_vmap_area
+
+/* Define to address of kernel symbol __insert_vmap_area, or 0 if exported */
+#undef IHK_KSYM___insert_vmap_area
+
 /* Define to address of kernel symbol alloc_desc, or 0 if exported */
 #undef IHK_KSYM_alloc_desc
 
@@ -40,6 +46,12 @@
 
 /* Define to address of kernel symbol vector_irq, or 0 if exported */
 #undef IHK_KSYM_vector_irq
+
+/* Define to address of kernel symbol vmap_area_lock, or 0 if exported */
+#undef IHK_KSYM_vmap_area_lock
+
+/* Define to address of kernel symbol vmap_area_root, or 0 if exported */
+#undef IHK_KSYM_vmap_area_root
 
 /* Define to address of kernel symbol wakeup_secondary_cpu_via_init, or 0 if
  * exported */

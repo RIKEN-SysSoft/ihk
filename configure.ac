@@ -335,6 +335,10 @@ if test "$TARGET" = "smp-x86"; then
 	IHK_FIND_KSYM([get_uv_system_type])
 	IHK_FIND_KSYM([wakeup_secondary_cpu_via_init])
 	IHK_FIND_KSYM([__default_send_IPI_dest_field])
+	IHK_FIND_KSYM([vmap_area_root])
+	IHK_FIND_KSYM([vmap_area_lock])
+	IHK_FIND_KSYM([__insert_vmap_area])
+	IHK_FIND_KSYM([__free_vmap_area])
 elif test "$TARGET" = "smp-arm64"; then
 	IHK_FIND_KSYM([gic_data], [irq-gic.c], [_gicv2])
 	IHK_FIND_KSYM([gic_data], [irq-gic-v3.c], [_gicv3])

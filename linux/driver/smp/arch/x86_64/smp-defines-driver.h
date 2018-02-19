@@ -15,7 +15,12 @@
 
 #define IHK_SMP_LARGE_PAGE_SHIFT	21
 
-#define IHK_SMP_MAP_KERNEL_START	0xffff870000000000UL
+/*
+ * MAP_KERNEL_START is 8MB below MODULES_END.
+ * We map the LWK image at the end of the modules section
+ * so that Linux can call into LWK text.
+ */
+#define IHK_SMP_MAP_KERNEL_START   0xFFFFFFFFFE800000UL
 
 #define IHK_SMP_CHUNK_BASE_SIZE	4194304
 
