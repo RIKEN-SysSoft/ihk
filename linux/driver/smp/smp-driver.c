@@ -632,7 +632,7 @@ static void ihk_smp_free_page_tables(pgd_t *pt)
 	free_page((unsigned long)pt);
 }
 
-static int ihk_smp_map_kernel(pgd_t *pt,
+int ihk_smp_map_kernel(pgd_t *pt,
 		unsigned long vaddr,
 		phys_addr_t paddr)
 {
@@ -675,8 +675,8 @@ static int ihk_smp_map_kernel(pgd_t *pt,
 
 	/* Large page aligned and no mapping yet? Map it large then */
 	if (!pmd_present(*pmd) &&
-			!(vaddr & (LARGE_PAGE_SIZE - 1)) &&
-			!(paddr & (LARGE_PAGE_SIZE - 1))) {
+			!(vaddr & (IHK_SMP_LARGE_PAGE - 1)) &&
+			!(paddr & (IHK_SMP_LARGE_PAGE - 1))) {
 		set_pmd(pmd, pfn_pmd(paddr >> PAGE_SHIFT, PAGE_KERNEL_LARGE_EXEC));
 	}
 	else {
@@ -741,6 +741,7 @@ int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
+	int ret;
 	struct smp_os_data *os = priv;
 	struct file *file;
 	loff_t pos = 0;
@@ -929,8 +930,11 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 	fput(file);
 	ihk_smp_unmap_virtual(elf64);
-
-	smp_ihk_os_setup_startup(os, phys, entry);
+	
+	if ((ret = smp_ihk_os_setup_startup(os, phys, entry))) {
+		printk("%s: ERROR: smp_ihk_os_setup_startup failed (%d)\n", __FUNCTION__, ret);
+		return ret;
+	}
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 
@@ -1100,17 +1104,8 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	}
 	os->nr_cpus = 0;
 
-	if (lwk_va) {
-		unsigned long flags;
-
-		/* Unmap LWK from Linux kernel virtual */
-		unmap_kernel_range_noflush(MAP_KERNEL_START,
-				MODULES_END - MAP_KERNEL_START);
-
-		spin_lock_irqsave(ihk_smp_vmap_area_lock, flags);
-		ihk_smp_free_vmap_area(lwk_va);
-		lwk_va = NULL;
-		spin_unlock_irqrestore(ihk_smp_vmap_area_lock, flags);
+	if ((ret = smp_ihk_os_unmap_lwk())) {
+		printk("%s: ERROR: smp_ihk_os_unmap_lwk failed (%d)\n", __FUNCTION__, ret);
 	}
 
 	/* Free bootstrap page tables */

@@ -830,7 +830,7 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 	return entry;
 }
 
-void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
+int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
 	struct smp_os_data *os = priv;
@@ -850,6 +850,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	startup[6] = entry;
 	ihk_smp_unmap_virtual(startup);
 	os->boot_rip = startup_p;
+	return 0;
 }
 
 enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
