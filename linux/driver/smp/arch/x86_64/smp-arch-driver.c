@@ -382,59 +382,57 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
 	struct smp_os_data *os = priv;
-	unsigned long pml4_p;
-	unsigned long pdp_p;
-	unsigned long pde_p;
+	unsigned long _virt, _phys, _len;
+	int i;
 	unsigned long stack_p;
-	unsigned long *pml4;
-	unsigned long *pdp;
-	unsigned long *pde;
-	unsigned long *cr3;
-	int n, i;
 	extern char startup_data[];
 	extern char startup_data_end[];
 	unsigned long startup_p;
 	unsigned long *startup;
 
-	pml4_p = os->bootstrap_mem_end - PAGE_SIZE;
-	pdp_p = pml4_p - PAGE_SIZE;
-	pde_p = pdp_p - PAGE_SIZE;
-	stack_p = pde_p; /* Grows down.. */
-
-	cr3 = ident_page_table_virt;
-	pml4 = ihk_smp_map_virtual(pml4_p, PAGE_SIZE);
-	pdp = ihk_smp_map_virtual(pdp_p, PAGE_SIZE);
-	pde = ihk_smp_map_virtual(pde_p, PAGE_SIZE);
-
-	memset(pml4, '\0', PAGE_SIZE);
-	memset(pdp, '\0', PAGE_SIZE);
-	memset(pde, '\0', PAGE_SIZE);
-
-	/*
-	 * TODO: do this mapping so that holes between memory chunks
-	 * are emitted
-	 */
-	pml4[0] = cr3[0];
-	pml4[(IHK_SMP_MAP_ST_START >> PTL4_SHIFT) & 511] = cr3[0];
-	pml4[(IHK_SMP_MAP_KERNEL_START >> PTL4_SHIFT) & 511] = pdp_p | 3;
-	pdp[(IHK_SMP_MAP_KERNEL_START >> PTL3_SHIFT) & 511] = pde_p | 3;
-	n = (os->bootstrap_mem_end - os->bootstrap_mem_start) >> PTL2_SHIFT;
-	if(n > 511)
-	n = 511;
-
-	for (i = 0; i < n; i++) {
-		pde[i] = (phys + (i << PTL2_SHIFT)) | 0x83;
+	os->boot_pt = (pgd_t *)get_zeroed_page(GFP_KERNEL);
+	if (!os->boot_pt) {
+		printk("%s: error: allocating boot PT\n", __FUNCTION__);
+		return -ENOMEM;
 	}
-	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
-	pde[511] = startup_p | 0x83;
 
-	ihk_smp_unmap_virtual(pde);
-	ihk_smp_unmap_virtual(pdp);
-	ihk_smp_unmap_virtual(pml4);
+	/* Map identity (256GB) */
+	_len = 0x4000000000UL;
+	for (_virt = 0, _phys = 0; _virt < _len;
+			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping identity\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+
+	/* Map ST */
+	for (_virt = MAP_ST_START, _phys = 0; _virt < (MAP_ST_START + _len);
+			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping straight area\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+
+	/* Map kernel image */
+	_len = (4 * LARGE_PAGE_SIZE);
+	for (_virt = MAP_KERNEL_START, _phys = phys; 
+			_virt < (MAP_KERNEL_START + _len);
+			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping kernel image\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+
+	/* Stack grows down.. */
+	stack_p = os->bootstrap_mem_end - PAGE_SIZE; 
+	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
 
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
-	startup[2] = pml4_p;
+	startup[2] = __pa(os->boot_pt);
 	startup[3] = stack_p;
 	startup[4] = phys;
 	startup[5] = trampoline_phys;
