@@ -1535,6 +1535,143 @@ out:
 	return error;
 } /* collect_topology() */
 
+#ifdef POSTK_DEBUG_ARCH_DEP_98 /* smp_ihk_os_set_ikc_map() move arch depend. */
+int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret = 0;
+	struct smp_os_data *os = priv;
+	cpumask_t cpus_to_map;
+	unsigned long flags;
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	char *string = NULL;
+	long len = strlen_user((const char __user *)arg);
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
+	char *string = (char *)arg;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	char *token;
+
+	dprintk("%s,set_ikc_map,arg=%s\n", __FUNCTION__, string);
+
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	if (len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	string = kmalloc(len + 1, GFP_KERNEL);
+	if (!string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(string, (char *)arg, len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		ret = -EBUSY;
+		goto out;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	token = strsep(&string, "+");
+	while (token) {
+		char *cpu_list;
+		char *ikc_cpu;
+		int cpu;
+
+		cpu_list = strsep(&token, ":");
+		if (!cpu_list) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		memset(&cpus_to_map, 0, sizeof(cpus_to_map));
+		cpulist_parse(cpu_list, &cpus_to_map);
+
+		ikc_cpu = strsep(&token, ":");
+		if (!ikc_cpu) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		printk("%s: %s -> %s\n", __FUNCTION__, cpu_list, ikc_cpu);
+		/* Store IKC target CPU */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+		for_each_cpu(cpu, &cpus_to_map) {
+#else
+		for_each_cpu_mask(cpu, cpus_to_map) {
+#endif
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+			unsigned int int_ikc_cpu = 0;
+			int st = 0;
+
+			if (kstrtoint(ikc_cpu, 10, &int_ikc_cpu)) {
+				printk("kstrtoint() failed\n");
+				ret = -EINVAL;
+				goto out;
+			}
+
+			if (SMP_MAX_CPUS <= int_ikc_cpu) {
+				printk("ikc_map included over SMP_MAX_CPUS(%d) number(%d).\n",
+					SMP_MAX_CPUS, int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			}
+			st = ihk_smp_cpus[int_ikc_cpu].status;
+
+			if (st == IHK_SMP_CPU_ASSIGNED) {
+				printk("ikc_map included McKernel-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else if (st != IHK_SMP_CPU_ONLINE) {
+				printk("ikc_map included Blank-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else {
+				ihk_smp_cpus[cpu].ikc_map_cpu = int_ikc_cpu;
+			}
+#else /* POSTK_DEBUG_TEMP_FIX_90 */
+			/* TODO: check if CPU belongs to OS */
+			if (kstrtoint(ikc_cpu, 10, &ihk_smp_cpus[cpu].ikc_map_cpu)) {
+				ret = -EINVAL;
+				goto out;
+			}
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
+		}
+
+		token = strsep(&string, "+");
+	}
+	/* Mapping has been requested */
+	os->cpu_ikc_mapped = 1;
+
+out:
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+	/* In case of no mapped, restore default setting */
+	if (os->cpu_ikc_mapped != 1) {
+		for (i = 0; i < SMP_MAX_CPUS; i++) {
+			if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+			    (ihk_smp_cpus[i].os != ihk_os)) {
+				continue;
+			}
+			ihk_smp_cpus[i].ikc_map_cpu = 0;
+		}
+	}
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	if (string) kfree(string);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	return ret;
+}
+#endif /* POSTK_DEBUG_ARCH_DEP_98 */
+
 int ihk_smp_reset_cpu(int phys_apicid)
 {
 	unsigned long send_status;

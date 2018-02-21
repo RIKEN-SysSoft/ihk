@@ -285,8 +285,10 @@ void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channe
 	}
 
 	if (!c) {
+#ifndef POSTK_DEBUG_TEMP_FIX_89 /* Suppressing mass output by setting ikc_map */
 		kprintf("%s: WARNING: can't release on NULL channel\n",
 				__FUNCTION__);
+#endif /* !POSTK_DEBUG_TEMP_FIX_89 */
 		ihk_ikc_free(p);
 		return;
 	}

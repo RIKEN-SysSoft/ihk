@@ -20,7 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/perf_event.h>
 #include <linux/irqchip/arm-gic-v3.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 # include <asm/pmu.h>
 #else
 # include <linux/perf/arm_pmu.h>
@@ -217,6 +217,10 @@ static unsigned long ihk_trampoline = 0;
 module_param(ihk_trampoline, ulong, 0644);
 MODULE_PARM_DESC(ihk_trampoline, "IHK trampoline page physical address");
 
+static unsigned int ihk_nr_irq = 1;
+module_param(ihk_nr_irq, uint, 0444);
+MODULE_PARM_DESC(ihk_nr_irq, "Number of IHK IKC vector");
+
 #define D(fmt, ...) \
         printk( "%s(%d) " fmt, __func__, __LINE__, ## __VA_ARGS__ )
 
@@ -226,7 +230,12 @@ static void *trampoline_va;
 static int ident_npages_order = 0;
 static unsigned long *ident_page_table_virt;
 
-struct ihk_smp_irq_table ihk_smp_irq;
+struct ihk_smp_irq_table {
+	int irq;
+	int hwirq;
+	char irq_name[16];
+};
+static struct ihk_smp_irq_table ihk_smp_irq[SMP_MAX_IRQS];
 
 extern const char ihk_smp_trampoline_end[], ihk_smp_trampoline_data[];
 #define IHK_SMP_TRAMPOLINE_SIZE ((unsigned long)(ihk_smp_trampoline_end - ihk_smp_trampoline_data))
@@ -383,11 +392,6 @@ struct psci_operations {
 	int (*migrate_info_type)(void);
 };
 #endif
-
-struct ihk_smp_irq_table {
-	int irq;
-	int hwirq;
-};
 
 struct ihk_smp_trampoline_header {
 	unsigned long reserved;	/* jmp ins. */
@@ -954,10 +958,15 @@ void smp_ihk_setup_trampoline(void *priv)
 	const unsigned long* retention_state_flag;
 #endif /*ENABLE_HPCPWR*/
 	int nr_irqs;
+	int i = 0;
 
-	os->param->ihk_ikc_irq = (unsigned int)ihk_smp_irq.hwirq & 0x00000000ffffffffUL;
-/* TODO: for patch:ihk-0208 */
-//	os->param->ihk_ikc_irq_apicid = 0;
+	for (i = 0; i < SMP_MAX_IRQS; i++) {
+		os->param->ihk_ikc_irqs[i] = ihk_smp_irq[i].hwirq;
+	}
+
+	for (i = 0; i < nr_cpu_ids; i++) {
+		os->param->ihk_ikc_cpu_hwids[i] = ihk_smp_get_hw_id(i);
+	}
 
 	/* Prepare trampoline code */
 	memcpy(trampoline_va, ihk_smp_trampoline_data,
@@ -1311,41 +1320,32 @@ int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 
 static irqreturn_t smp_ihk_irq_handler(int irq, void *dev_id)
 {
-	/* temporary fix1 */
-	if(ihk_smp_irq.irq != irq) {
-		return IRQ_NONE;
-	}
-	/* temporary fix1 */
-
-	smp_ihk_irq_call_handlers(ihk_smp_irq.hwirq, NULL);
+	smp_ihk_irq_call_handlers(irq, NULL);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0))
-	/* temporary fix2 */
+	/* temporary fix */
 	irq_set_irqchip_state(irq, IRQCHIP_STATE_PENDING, false);
-	/* temporary fix2 */
+	/* temporary fix */
 #endif
 
 	return IRQ_HANDLED;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0))
-#define IRQF_DISABLED 0x0
-#endif
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-static int ihk_smp_reserve_irq(void)
+static int ihk_smp_reserve_irq(struct ihk_smp_irq_table *smp_irq,
+				unsigned int start_irq, int nr)
 {
 	unsigned int virq, hwirq;
 	struct irq_domain *domain;
 	struct irq_fwspec fw_args;
 	struct irq_desc *desc;
 
-	if (ihk_start_irq < 32){
+	if (start_irq < 32){
 		hwirq = 32; // base of SPI.
-	} else if (ihk_start_irq > ihk_gic_max_vector) {
+	} else if (start_irq > ihk_gic_max_vector) {
 		hwirq = ihk_gic_max_vector - 1;
 	} else {
-		hwirq = ihk_start_irq;
+		hwirq = start_irq;
 	}
 
 	if(ihk_gic_version >= ACPI_MADT_GIC_VERSION_V3) {
@@ -1402,21 +1402,138 @@ static int ihk_smp_reserve_irq(void)
 		desc->status &= ~IRQ_NOREQUEST;
 	}
 #endif
-
+	snprintf(smp_irq->irq_name, sizeof(smp_irq->irq_name), "IHK-SMP%d", nr);
 	if (request_irq(virq, smp_ihk_irq_handler,
-		IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
+			IRQF_NOBALANCING, smp_irq->irq_name, NULL) != 0) {
 		printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", virq);
 		return -EFAULT;
 	}
 
-	ihk_smp_irq.irq = virq;
-	ihk_smp_irq.hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);
-	printk("IHK-SMP: IKC irq vector: %d, hwirq#: %d\n", 
-		ihk_smp_irq.irq, ihk_smp_irq.hwirq);
+	smp_irq->irq = virq;
+	smp_irq->hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);
+	printk("IHK-SMP: IKC irq vector: %d, hwirq#: %d\n",
+			smp_irq->irq, smp_irq->hwirq);
 
 	return virq;
 }
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
+static int ihk_smp_reserve_irq(struct ihk_smp_irq_table *smp_irq,
+				unsigned int start_irq, int nr)
+{
+	unsigned int vector;
+	int error;
+
+	/* Find a suitable IRQ vector */
+	for (vector = start_irq ? start_irq : ihk_gic_max_vector/3;
+		vector < ihk_gic_max_vector; vector += 1) {
+		struct irq_desc *desc;
+
+#ifdef CONFIG_SPARSE_IRQ
+		desc = _irq_to_desc(vector);
+		if (!desc) {
+			int result;
+			struct irq_domain *domain;
+
+			struct of_phandle_args of_args;
+			if(ihk_gic_version >= ACPI_MADT_GIC_VERSION_V3) {
+				domain = ihk_gic_data_v3->domain;
+			} else {
+				domain = ihk_gic_data_v2->domain;
+			}
+
+			of_args.np = domain->of_node;
+			of_args.args[0] = GIC_SPI;
+			of_args.args[1] = vector;
+			of_args.args[2] = IRQ_TYPE_LEVEL_HIGH;
+			of_args.args_count = 3;
+
+			result = ihk___irq_domain_alloc_irqs(
+					domain,			/* struct irq_domain *domain */
+					vector,			/* int irq_base */
+					1,			/*  unsigned int nr_irqs */
+					-1,			/* int node */
+					(void *)&of_args,	/* void *arg */
+					false);			/* bool realloc */
+
+			if (result <= 0){
+				printk("IRQ vector %d: irq_domain_alloc_irqs failed.(%d)\n", vector, result);
+				continue;
+			}
+			vector = result;
+		} else {
+			printk("IRQ vector %d: has descriptor\n", vector);
+			continue;
+		}
+
+		desc = _irq_to_desc(vector);
+		if (!desc) {
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
+			continue;
+		}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+		if (desc->status_use_accessors & IRQ_NOREQUEST) {
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
+
+			desc->status_use_accessors &= ~IRQ_NOREQUEST;
+		}
+#else
+		if (desc->status & IRQ_NOREQUEST) {
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
+
+			desc->status &= ~IRQ_NOREQUEST;
+		}
+#endif
+#endif /* CONFIG_SPARSE_IRQ */
+
+		snprintf(smp_irq->irq_name, sizeof(smp_irq->irq_name), "IHK-SMP%d", nr);
+		if (request_irq(vector, smp_ihk_irq_handler, 
+			IRQF_NOBALANCING, smp_irq->irq_name, NULL) != 0) {
+			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
+
+			irq_free_descs(vector, 1);
+			continue;
+		}
+
+		/* get HwIRQ# through desc->irq_data */
+		smp_irq->hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);
+		break;
+	}
+
+	if (vector >= ihk_gic_max_vector) {
+		printk("IHK-SMP: error: allocating IKC irq vector\n");
+		error = EFAULT;
+		goto error_free_trampoline;
+	}
+
+	printk("IHK-SMP: IKC irq vector: %d, hwirq#: %d\n", vector,
+	       smp_irq->hwirq);
+	smp_irq->irq = vector;
+	return vector;
+
+error_free_trampoline:
+	if (trampoline_page) {
+		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);
+	}
+	return error;
+}
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
+
+static void ihk_smp_release_irq(struct ihk_smp_irq_table *smp_irq)
+{
+	if (smp_irq->irq == -1) {
+		return;
+	}
+
+	free_irq(smp_irq->irq, NULL);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+	irq_dispose_mapping(smp_irq->irq);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
+#ifdef CONFIG_SPARSE_IRQ
+	ihk_irq_domain_free_irqs(smp_irq->irq, 1);
+#endif /* CONFIG_SPARSE_IRQ */
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
+}
 
 #ifdef ENABLE_HPCPWR
 static int ihk_pwr_mck_request(pwr_mck_request_handle_t* dest)
@@ -1582,10 +1699,8 @@ static const struct pwr_arm64hpc_ihk_ops pwr_ops = {
 static int collect_topology(void);
 int smp_ihk_arch_init(void)
 {
-	int error;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-	unsigned int vector;
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) */
+	int error, i;
+	unsigned int start_irq = ihk_start_irq;
 
 	/* psci_method check */
 	if (ihk_invoke_psci_fn) {
@@ -1657,101 +1772,29 @@ retry_trampoline:
 			return -EINVAL;
 		}
 	}
-	
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-	/* do request_irq for IKC */
-	error = ihk_smp_reserve_irq();
-	if (error <= 0) {
-		printk("IHK-SMP: error: request IRQ faild.\n");
-		return error;
-	}
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
-	/* Find a suitable IRQ vector */
-	for (vector = ihk_start_irq ? ihk_start_irq : ihk_gic_max_vector/3;
-		vector < ihk_gic_max_vector; vector += 1) {
-		struct irq_desc *desc;
 
-#ifdef CONFIG_SPARSE_IRQ
-		desc = _irq_to_desc(vector);
-		if (!desc) {
-			int result;
-			struct irq_domain *domain;
-
-			struct of_phandle_args of_args;
-			if(ihk_gic_version >= ACPI_MADT_GIC_VERSION_V3) {
-				domain = ihk_gic_data_v3->domain;
-			} else {
-				domain = ihk_gic_data_v2->domain;
-			}
-
-			of_args.np = domain->of_node;
-			of_args.args[0] = GIC_SPI;
-			of_args.args[1] = vector;
-			of_args.args[2] = IRQ_TYPE_LEVEL_HIGH;
-			of_args.args_count = 3;
-
-			result = ihk___irq_domain_alloc_irqs(
-					domain,			/* struct irq_domain *domain */
-					vector,			/* int irq_base */
-					1,			/*  unsigned int nr_irqs */
-					-1,			/* int node */
-					(void *)&of_args,	/* void *arg */
-					false);			/* bool realloc */
-
-			if (result <= 0){
-				printk("IRQ vector %d: irq_domain_alloc_irqs failed.(%d)\n", vector, result);
-				continue;
-			}
-			vector = result;
-		} else {
-			printk("IRQ vector %d: has descriptor\n", vector);
-			continue;
-		}
-
-		desc = _irq_to_desc(vector);
-		if (!desc) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
-			continue;
-		}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
-		if (desc->status_use_accessors & IRQ_NOREQUEST) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
-
-			desc->status_use_accessors &= ~IRQ_NOREQUEST;
-		}
-#else
-		if (desc->status & IRQ_NOREQUEST) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
-
-			desc->status &= ~IRQ_NOREQUEST;
-		}
-#endif
-#endif /* CONFIG_SPARSE_IRQ */
-
-		if (request_irq(vector, smp_ihk_irq_handler, 
-			IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
-
-			irq_free_descs(vector, 1);
-			continue;
-		}
-
-		/* get HwIRQ# through desc->irq_data */
-		ihk_smp_irq.hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);
-		break;
+	/* check module_param ihk_nr_irq */
+	if (SMP_MAX_IRQS < ihk_nr_irq) {
+		printk("%s: Since ihk_nr_irq is larger than %d,\n",
+			__FUNCTION__, SMP_MAX_IRQS);
+		return -EINVAL;
 	}
 
-	if (vector >= ihk_gic_max_vector) {
-		printk("IHK-SMP: error: allocating IKC irq vector\n");
-		error = EFAULT;
-		goto error_free_trampoline;
+	/* initialized ihk_smp_irq array */
+	for (i = 0; i < SMP_MAX_IRQS; i++) {
+		ihk_smp_irq[i].irq = -1;
+		ihk_smp_irq[i].hwirq = -1;
 	}
 
-	printk("IHK-SMP: IKC irq vector: %d, hwirq#: %d\n", vector,
-	       ihk_smp_irq.hwirq);
-	ihk_smp_irq.irq = vector;
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
+	for (i = 0; i < ihk_nr_irq; i++) {
+		/* do request_irq for IKC */
+		error = ihk_smp_reserve_irq(&ihk_smp_irq[i], start_irq, i);
+		if (error <= 0) {
+			printk("IHK-SMP%d: error: request IRQ faild.(ret=%d)\n", i, error);
+			goto error_free_irq;
+		}
+		start_irq = ihk_smp_irq[i].hwirq + 1;
+	}
 
 	error = collect_topology();
 	if (error) {
@@ -1775,15 +1818,9 @@ error_free_irq:
 	}
 #endif
 
-	free_irq(ihk_smp_irq.irq, NULL);
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
-error_free_trampoline:
-	if (trampoline_page) {
-		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);
+	for (i = 0; i < ihk_nr_irq; i++) {
+		ihk_smp_release_irq(&ihk_smp_irq[i]);
 	}
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
 	return error;
 }
 
@@ -2117,6 +2154,176 @@ out:
 	return error;
 } /* collect_topology() */
 
+#ifdef POSTK_DEBUG_ARCH_DEP_98 /* smp_ihk_os_set_ikc_map() move arch depend. */
+static int check_ikc_map(ihk_os_t ihk_os)
+{
+	int i = 0, j = 0, cpu_count = 0, ret = 0, min = INT_MAX;
+	uint8_t checkers[SMP_MAX_CPUS];
+
+	memset(checkers, 0, sizeof(checkers));
+	for (i = 0; i < SMP_MAX_CPUS; i++) {
+		if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+		    (ihk_smp_cpus[i].os != ihk_os) ||
+		    (checkers[i] == 1)) {
+			continue;
+		}
+
+		for (j = 0; j < SMP_MAX_CPUS; j++) {
+			if ((ihk_smp_cpus[j].status != IHK_SMP_CPU_ASSIGNED) ||
+			    (ihk_smp_cpus[j].os != ihk_os)) {
+				continue;
+			}
+
+			if (ihk_smp_cpus[i].ikc_map_cpu == ihk_smp_cpus[j].ikc_map_cpu) {
+				checkers[j] = 1;
+			}
+		}
+
+		if (ihk_smp_cpus[i].ikc_map_cpu < min) {
+			min = ihk_smp_cpus[i].ikc_map_cpu;
+		}
+		cpu_count++;
+		dprintk("%s: ihk_smp_cpus[%d].ikc_map_cpu=%d\n",
+			__FUNCTION__, i, ihk_smp_cpus[i].ikc_map_cpu);
+	}
+
+	if (min != 0) {
+		dprintk("%s: min is not 0.\n", __FUNCTION__);
+		cpu_count++;
+	}
+
+	dprintk("%s: ihk_nr_irq=%d, cpu_count=%d\n", __FUNCTION__, ihk_nr_irq, cpu_count);
+	if (ihk_nr_irq < cpu_count) {
+		ret = 1;
+	}
+	return ret;
+}
+
+int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret = 0, i = 0;
+	struct smp_os_data *os = priv;
+	cpumask_t cpus_to_map;
+	unsigned long flags;
+	char *string = NULL;
+	long len = strlen_user((const char __user *)arg);
+	char *token;
+
+	dprintk("%s,set_ikc_map,arg=%s\n", __FUNCTION__, string);
+
+	if (len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	string = kmalloc(len + 1, GFP_KERNEL);
+	if (!string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(string, (char *)arg, len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		ret = -EBUSY;
+		goto out;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	token = strsep(&string, "+");
+	while (token) {
+		char *cpu_list;
+		char *ikc_cpu;
+		int cpu;
+
+		cpu_list = strsep(&token, ":");
+		if (!cpu_list) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		memset(&cpus_to_map, 0, sizeof(cpus_to_map));
+		cpulist_parse(cpu_list, &cpus_to_map);
+
+		ikc_cpu = strsep(&token, ":");
+		if (!ikc_cpu) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		printk("%s: %s -> %s\n", __FUNCTION__, cpu_list, ikc_cpu);
+		/* Store IKC target CPU */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+		for_each_cpu(cpu, &cpus_to_map) {
+#else
+		for_each_cpu_mask(cpu, cpus_to_map) {
+#endif
+			unsigned int int_ikc_cpu = 0;
+			int st = 0;
+
+			if (kstrtoint(ikc_cpu, 10, &int_ikc_cpu)) {
+				printk("kstrtoint() failed\n");
+				ret = -EINVAL;
+				goto out;
+			}
+
+			if (SMP_MAX_CPUS <= int_ikc_cpu) {
+				printk("ikc_map included over SMP_MAX_CPUS(%d) number(%d).\n",
+					SMP_MAX_CPUS, int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			}
+			st = ihk_smp_cpus[int_ikc_cpu].status;
+
+			if (st == IHK_SMP_CPU_ASSIGNED) {
+				printk("ikc_map included McKernel-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else if (st != IHK_SMP_CPU_ONLINE) {
+				printk("ikc_map included Blank-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else {
+				ihk_smp_cpus[cpu].ikc_map_cpu = int_ikc_cpu;
+			}
+		}
+
+		token = strsep(&string, "+");
+	}
+
+	if (check_ikc_map(ihk_os) == 0) {
+		/* Mapping has been requested */
+		os->cpu_ikc_mapped = 1;
+	} else {
+		printk("%s: ikc_map sections over ihk_nr_irqs, used default setting.\n",
+				__FUNCTION__);
+	}
+
+out:
+	/* In case of no mapped, restore default setting */
+	if (os->cpu_ikc_mapped != 1) {
+		for (i = 0; i < SMP_MAX_CPUS; i++) {
+			if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+			    (ihk_smp_cpus[i].os != ihk_os)) {
+				continue;
+			}
+			ihk_smp_cpus[i].ikc_map_cpu = 0;
+		}
+	}
+
+	if (string) kfree(string);
+	return ret;
+}
+#endif /* POSTK_DEBUG_ARCH_DEP_98 */
+
 int ihk_smp_reset_cpu(int hw_id)
 {
 	int ret = 0;
@@ -2143,6 +2350,8 @@ int ihk_smp_reset_cpu(int hw_id)
 
 void smp_ihk_arch_exit(void)
 {
+	int i = 0;
+
 #ifdef ENABLE_HPCPWR
 	pwr_arm64hpcdev_ihk_ops_unregister();
 #endif /*ENABLE_HPCPWR*/
@@ -2153,15 +2362,10 @@ void smp_ihk_arch_exit(void)
 		try_module_get(THIS_MODULE);
 	}
 #endif
-	free_irq(ihk_smp_irq.irq, NULL);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-	irq_dispose_mapping(ihk_smp_irq.irq);
-#else
-#ifdef CONFIG_SPARSE_IRQ
-	ihk_irq_domain_free_irqs(ihk_smp_irq.irq, 1);
-#endif
-#endif
+	for (i = 0; i < ihk_nr_irq; i++) {
+		ihk_smp_release_irq(&ihk_smp_irq[i]);
+	}
 
 	if (trampoline_page) {
 		int order = get_order(IHK_SMP_TRAMPOLINE_SIZE);

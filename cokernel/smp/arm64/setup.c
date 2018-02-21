@@ -26,8 +26,9 @@ unsigned long ap_trampoline = 0;
 unsigned long arm64_kernel_phys_base = 0;
 unsigned long arm64_st_phys_base = 0;
 unsigned long arm64_st_phys_size = 0;
-unsigned int ihk_ikc_irq = 0;
-unsigned int ihk_ikc_irq_apicid = 0;
+
+int spi_table[SMP_MAX_CPUS];
+int nr_spi_table = 0;
 
 struct ihk_dump_page * dump_page;
 
@@ -50,8 +51,6 @@ struct start_kernel_param {
 /* get paramater into:
  *   param_addr:         struct ihk_smp_trampoline_header::notify_address
  *   phys_address:       startup[4] (phys)
- *   ihk_ikc_irq:        boot_param->ihk_ikc_irq
- *   ihk_ikc_irq_apicid: boot_param->ihk_ikc_irq_apicid
  */
 void start_kernel(struct start_kernel_param *param)
 {
@@ -66,7 +65,6 @@ void start_kernel(struct start_kernel_param *param)
 	/* head.S: BLOCK_SIZE == LARGE_PAGE_SIZE */
 	boot_param = (void*)(MAP_BOOT_PARAM + large_page_offset(boot_param_pa));
 #endif /*CONFIG_ARM64_64K_PAGES*/
-	ihk_ikc_irq = boot_param->ihk_ikc_irq;
 	bootstrap_mem_end = boot_param->bootstrap_mem_end;
 	boot_param_size = boot_param->param_size;
 
@@ -104,6 +102,79 @@ static void build_ihk_cpu_info(void)
 	ihk_cpu_info->ncpus = boot_param->nr_cpus;
 }
 
+static void build_spi_table(void)
+{
+	int checkers[SMP_MAX_CPUS];
+	int ikc_cpus[SMP_MAX_IRQS] = { 0 };
+	int i, j, k = 0;
+	int max = ihk_cpu_info->ikc_cpus[0];
+	int min = ihk_cpu_info->ikc_cpus[0];
+
+	/* initialize spi_table */
+	for (i = 0; i < SMP_MAX_CPUS; i++) {
+		spi_table[i] = -1;
+	}
+
+	/* initialize check table */
+	if (SMP_MAX_CPUS < ihk_cpu_info->ncpus) {
+		panic("ihk_cpu_info->ncpus over SMP_MAX_CPUS.");
+	}
+
+	for (i = 0; i < ihk_cpu_info->ncpus; i++) {
+		checkers[i] = 0;
+	}
+
+	/* pickup same value in ihk_cpu_info->ikc_cpus[i] */
+	for (i = 0; i < ihk_cpu_info->ncpus; i++) {
+		if (checkers[i] == 1) {
+			continue;
+		}
+
+		if (max < ihk_cpu_info->ikc_cpus[i]) {
+			max = ihk_cpu_info->ikc_cpus[i];
+		}
+
+		if (ihk_cpu_info->ikc_cpus[i] < min) {
+			min = ihk_cpu_info->ikc_cpus[i];
+		}
+
+		for (j = 0; j < ihk_cpu_info->ncpus; j++) {
+			if (ihk_cpu_info->ikc_cpus[i] == ihk_cpu_info->ikc_cpus[j]) {
+				checkers[j] = 1;
+			}
+		}
+
+		if (k < SMP_MAX_IRQS) {
+			ikc_cpus[k] = ihk_cpu_info->ikc_cpus[i];
+			k++;
+		} else {
+			panic("ikc_map pattern over SMP_MAX_IRQS.");
+		}
+	}
+	nr_spi_table = ++max;
+
+	/* set spi_table */
+	/* must HOST-Linux#0 core setting */
+	if (min != 0) {
+		if (boot_param->ihk_ikc_irqs[0] != -1) {
+			spi_table[0] = boot_param->ihk_ikc_irqs[0];
+		} else {
+			panic("ihk_ikc_irqs for HOST-Linux#0 core is empty.");
+		}
+		j = 1;
+	} else {
+		j = 0;
+	}
+
+	for (i = 0; i < k; i++, j++) {
+		if (boot_param->ihk_ikc_irqs[j] != -1) {
+			spi_table[ikc_cpus[i]] = boot_param->ihk_ikc_irqs[j];
+		} else {
+			panic("ikc_map pattern over ihk_nr_irqs.");
+		}
+	}
+}
+
 int ihk_mc_get_numa_id(void)
 {
 	if (ihk_cpu_info) {
@@ -139,6 +210,7 @@ void arch_init(void)
 	/* Map boot parameter structure with the non-bootstrap map */
 	boot_param = map_fixed_area(boot_param_pa, boot_param_size, 0);
 	build_ihk_cpu_info();
+	build_spi_table();
 
 	setup_arm64();
 
@@ -216,10 +288,15 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 	/* No hole */
 }
 
+static int ihk_mc_get_irq(int linux_core_id)
+{
+	return spi_table[linux_core_id];
+}
+
 extern void (*arm64_issue_ipi)(int, int);
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
-	(*arm64_issue_ipi)(ihk_mc_get_apicid(cpu), ihk_ikc_irq);
+	(*arm64_issue_ipi)(ihk_mc_get_apicid(cpu), ihk_mc_get_irq(cpu));
 	return 0;
 }
 
@@ -402,7 +479,7 @@ int ihk_mc_get_ikc_cpu(int id)
 }
 
 int ihk_mc_get_apicid(int linux_core_id) {
-	return boot_param->ihk_ikc_irq_apicids[linux_core_id];
+	return boot_param->ihk_ikc_cpu_hwids[linux_core_id];
 }
 
 /* @ref.impl linux-linaro/init/main.c::loops_per_jiffy, get from partitioning module */

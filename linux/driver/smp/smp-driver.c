@@ -1605,6 +1605,7 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	goto fn_exit;
 }
 
+#ifndef POSTK_DEBUG_ARCH_DEP_98 /* smp_ihk_os_set_ikc_map() move arch depend. */
 static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret = 0;
@@ -1676,11 +1677,44 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 #else
 		for_each_cpu_mask(cpu, cpus_to_map) {
 #endif
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+			int int_ikc_cpu = 0;
+			int st = 0;
+
+			if (kstrtoint(ikc_cpu, 10, &int_ikc_cpu)) {
+				printk("kstrtoint() failed\n");
+				ret = -EINVAL;
+				goto out;
+			}
+
+			if (SMP_MAX_CPUS < int_ikc_cpu) {
+				printk("ikc_map included over SMP_MAX_CPUS(%d) number(%d).\n",
+					SMP_MAX_CPUS, int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			}
+			st = ihk_smp_cpus[int_ikc_cpu].status;
+
+			if (st == IHK_SMP_CPU_ASSIGNED) {
+				printk("ikc_map included McKernel-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else if (st != IHK_SMP_CPU_ONLINE) {
+				printk("ikc_map included Blank-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else {
+				ihk_smp_cpus[cpu].ikc_map_cpu = int_ikc_cpu;
+			}
+#else /* POSTK_DEBUG_TEMP_FIX_90 */
 			/* TODO: check if CPU belongs to OS */
 			if (kstrtoint(ikc_cpu, 10, &ihk_smp_cpus[cpu].ikc_map_cpu)) {
 				ret = -EINVAL;
 				goto out;
 			}
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 		}
 
 		token = strsep(&string, "+");
@@ -1689,11 +1723,24 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	os->cpu_ikc_mapped = 1;
 
 out:
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+	/* In case of no mapped, restore default setting */
+	if (os->cpu_ikc_mapped != 1) {
+		for (i = 0; i < SMP_MAX_CPUS; i++) {
+			if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+			    (ihk_smp_cpus[i].os != ihk_os)) {
+				continue;
+			}
+			ihk_smp_cpus[i].ikc_map_cpu = 0;
+		}
+	}
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 #ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	if (string) kfree(string);
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	return ret;
 }
+#endif /* !POSTK_DEBUG_ARCH_DEP_98 */
 
 static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
@@ -3763,6 +3810,9 @@ out:
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 	int ret;
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+	int cpu = 0;
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 
 	INIT_LIST_HEAD(&ihk_mem_free_chunks);
 	INIT_LIST_HEAD(&ihk_mem_used_chunks);
@@ -3777,6 +3827,16 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	for_each_cpu(cpu, cpu_online_mask) {
+#else
+	for_each_cpu_mask(cpu, *cpu_online_mask) {
+#endif
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
+	}
+
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 	ret = smp_ihk_arch_init();
 
 	return ret;
@@ -3790,8 +3850,15 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 	/* Re-enable CPU cores */
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+		if ((ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE) ||
+		    (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_NONE)) {
+			continue;
+		}
+#else /* POSTK_DEBUG_TEMP_FIX_90 */
 		if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE)
 			continue;
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 
 		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
 
