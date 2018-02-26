@@ -43,7 +43,7 @@ KBUILD_EXTRA_SYMBOLS=@abs_builddir@/../../core/Module.symvers $(arch_kbuild_extr
 # POSTK_DEBUG_ARCH_DEP_84 power management support [END]
 
 ifeq ($(ARCH), arm64)
-EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+EXTRA_CFLAGS += $(foreach i, $(shell seq 6 106), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
 EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
 endif
 
