@@ -135,8 +135,13 @@ struct chunk {
 };
 
 /* ----------------------------------------------- */
+#ifdef POSTK_DEBUG_ARCH_DEP_101 /* Fixed to symbols are not lost by optimization */
+unsigned long dump_page_set_addr;
+unsigned long dump_bootstrap_mem_start;
+#else /* POSTK_DEBUG_ARCH_DEP_101 */
 static unsigned long dump_page_set_addr;
 static unsigned long dump_bootstrap_mem_start;
+#endif /* POSTK_DEBUG_ARCH_DEP_101 */
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
