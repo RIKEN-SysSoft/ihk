@@ -1,6 +1,11 @@
 /**
  * \file ihklib.c
  */
+#ifdef POSTK_DEBUG_TEMP_FIX_93 /* krm issue #209 fix */
+#define _GNU_SOURCE
+#include <sched.h>
+#include <assert.h>
+#endif /* POSTK_DEBUG_TEMP_FIX_93 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -74,11 +79,106 @@ static void cpus_array2str(char* cpu_list, ssize_t sz_cpu_list, int num_cpus, in
 	}
 }
 
+#ifdef POSTK_DEBUG_TEMP_FIX_93 /* krm issue #209 fix */
+static void
+_set_range_cpumask(int cpu_start, int cpu_end, cpu_set_t *cpumask)
+{
+	int cpu;
+
+	for (cpu = cpu_start; cpu <= cpu_end; cpu += 1) {
+		CPU_SET(cpu, cpumask);
+	}
+}
+
+static void
+parse_cpulist(char *buf, cpu_set_t *cpumask)
+{
+	char *buf_dup, *p, *prev;
+	int cpu, prev_cpu = 0;
+	int in_range;
+
+	buf_dup = strdup(buf);
+	assert(NULL != buf_dup);
+
+	prev = buf_dup;
+	in_range = 0;
+	for (p = buf_dup; '\0' != *p; p += 1) {
+		switch (*p) {
+		case ',':
+			*p = '\0';
+			cpu = atoi(prev);
+			CPU_SET(cpu, cpumask);
+			if (in_range) {
+				_set_range_cpumask(prev_cpu, cpu, cpumask);
+				in_range = 0;
+			}
+			prev = p + 1;
+			break;
+
+		case '-':
+			*p = '\0';
+			prev_cpu = atoi(prev);
+			in_range = 1;
+			prev = p + 1;
+			break;
+
+		default:
+			break;
+		}
+	}
+	cpu = atoi(prev);
+	prev_cpu = (in_range ? prev_cpu : cpu);
+	_set_range_cpumask(prev_cpu, cpu, cpumask);
+
+	free(buf_dup);
+}
+
+static void
+cpus_range_expansion(char *cpulist,
+    char *cpulist_expanded, size_t cpulist_expanded_len)
+{
+	cpu_set_t cpumask;
+	int count, cpu;
+	char *dst;
+	size_t dst_len;
+
+	CPU_ZERO(&cpumask);
+	parse_cpulist(cpulist, &cpumask);
+
+	dst = cpulist_expanded;
+	dst_len = cpulist_expanded_len;
+	count = CPU_COUNT(&cpumask);
+	cpu = 0;
+	while (0 < count) {
+		if (CPU_ISSET(cpu, &cpumask)) {
+			int len;
+
+			len = snprintf(dst, dst_len, "%d,", cpu);
+			assert(len < dst_len);
+			dst += len;
+			dst_len -= len;
+
+			count -= 1;
+		}
+
+		cpu += 1;
+	}
+	cpulist_expanded[strlen(cpulist_expanded) - 1] = '\0';
+}
+#endif /* POSTK_DEBUG_TEMP_FIX_93 */
+
 static int cpus_str2array(char* cpu_list, int *num_cpus, int* cpus) {
 	int cpu_rank = 0, ret = 0;
 	char* token;
 	
+#ifndef POSTK_DEBUG_TEMP_FIX_93 /* krm issue #209 fix */
 	CHKANDJUMP(strchr(cpu_list, '-'), -1, "range expression not supported,cpu_list=%s\n", cpu_list);
+#else /* !POSTK_DEBUG_TEMP_FIX_93 */
+	char cpulist_expanded[BUFSIZ];
+	cpus_range_expansion(cpu_list,
+	    cpulist_expanded, sizeof(cpulist_expanded));
+	cpu_list = cpulist_expanded;
+#endif /* !POSTK_DEBUG_TEMP_FIX_93 */
 	
 	token = strsep(&cpu_list, ",");
 	while (token != NULL) {
@@ -96,7 +196,9 @@ static int cpus_str2array(char* cpu_list, int *num_cpus, int* cpus) {
 	*num_cpus = cpu_rank;
 	dprintf("%s,num_cpus=%d\n", __FUNCTION__, *num_cpus);
 
+#ifndef POSTK_DEBUG_TEMP_FIX_93 /* krm issue #209 fix */
  out:
+#endif /* POSTK_DEBUG_TEMP_FIX_93 */
 	return ret;
 }
 
