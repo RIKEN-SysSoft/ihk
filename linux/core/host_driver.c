@@ -367,7 +367,13 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 
 	/* Release kmsg_buf */
 	if (data->kmsg_buf_container) {
+#ifdef POSTK_DEBUG_TEMP_FIX_92 /* krm issue #203 fix */
+		struct ihk_kmsg_buf_container *cont = data->kmsg_buf_container;
+		data->kmsg_buf_container = NULL;
+		if (release_kmsg_buf(cont)) {
+#else /* POSTK_DEBUG_TEMP_FIX_92 */
 		if (release_kmsg_buf(data->kmsg_buf_container)) {
+#endif /* POSTK_DEBUG_TEMP_FIX_92 */
 			return -EINVAL;
 		}
 	}
