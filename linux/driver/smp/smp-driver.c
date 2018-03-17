@@ -2839,7 +2839,7 @@ retry:
 			 * We ran out of memory using the current order of compound
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
-			if (order > 2) {
+			if (order > 3) {
 				--order;
 				failed_free_attempts = 0;
 				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
