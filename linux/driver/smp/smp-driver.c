@@ -2901,6 +2901,57 @@ retry:
 				__FUNCTION__, p->addr);
 		}
 
+		/* Is the chunk bigger than what we need? */
+		if (allocated + max > want) {
+			struct page *leftover_page;
+			struct chunk *leftover = (struct chunk *)(phys_to_virt(p->addr) +
+				(want - allocated));
+
+			/* Not in front of compound page? */
+			leftover_page = virt_to_page(leftover);
+			if (PageCompound(leftover_page) && !PageHead(leftover_page)) {
+#ifdef POSTK_DEBUG_ARCH_DEP_73 /* use compound_head() */
+				struct page *head = compound_head(leftover_page);
+				leftover = (struct chunk *)
+					phys_to_virt(page_to_phys(head)) +
+					(PAGE_SIZE << compound_order(head));
+
+				printk("%s: adjusted leftover chunk to compound "
+						"page border: 0x%llx:%lu\n",
+						__FUNCTION__,
+						page_to_phys(head),
+						(PAGE_SIZE << compound_order(head)));
+#else /* POSTK_DEBUG_ARCH_DEP_73 */
+				leftover = (struct chunk *)
+					phys_to_virt(page_to_phys(leftover_page->first_page)) +
+					(PAGE_SIZE << compound_order(leftover_page->first_page));
+
+				printk("%s: adjusted leftover chunk to compound "
+						"page border: 0x%llx:%lu\n",
+						__FUNCTION__,
+						page_to_phys(leftover_page->first_page),
+						(PAGE_SIZE << compound_order(leftover_page->first_page)));
+#endif /* POSTK_DEBUG_ARCH_DEP_73 */
+			}
+
+			/* Only if there is really something left.. */
+			if (virt_to_phys(leftover) < p->addr + max) {
+				leftover->addr = virt_to_phys(leftover);
+				leftover->size = p->addr + max - leftover->addr;
+				leftover->numa_id = p->numa_id;
+				__mem_chunk_insert(&tmp_chunks, leftover);
+
+				/* Update original chunk */
+				max = (leftover->addr - p->addr);
+				p->size = max;
+
+				printk("%s: leftover chunk from allocation: 0x%lx:%lu\n",
+					__FUNCTION__,
+					leftover->addr,
+					leftover->size);
+			}
+		}
+
 		/* Insert the chunk in physical address ascending order */
 		list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
 			if (p->addr < q->addr) {
