@@ -2677,6 +2677,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	int order = get_order(IHK_SMP_CHUNK_BASE_SIZE);
 	size_t want;
 	size_t allocated;
+	size_t available;
 	struct chunk *p;
 	struct chunk *q;
 	int ret = 0;
@@ -2778,12 +2779,23 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		& ~((PAGE_SIZE << order) - 1);
 	dprintk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
 	allocated = 0;
+	available = (size_t)node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
 
 retry:
 	/* Allocate and merge pages until we get a contigous area
 	 * or run out of free memory. Keep the longest areas */
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
 		struct page *pg = NULL;
+
+		/*
+		 * Do not allow to grab more than 95% of available
+		 * memory on NUMA 0 to avoid Linux crashing...
+		 */
+		if (numa_id == 0 && allocated > (available * 95 / 100)) {
+			printk("%s: 95%% of NUMA %d taken, breaking allocation loop..\n",
+					__FUNCTION__, numa_id);
+			goto pre_out;
+		}
 
 		pg = __alloc_pages_nodemask(
 				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
@@ -2851,6 +2863,7 @@ retry:
 				}
 			}
 
+pre_out:
 			/*
 			 * Otherwise, we may have run out of memory altogether before
 			 * finding a single contigous chunk, but do we have enough in
