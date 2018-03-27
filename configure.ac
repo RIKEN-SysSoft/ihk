@@ -174,9 +174,6 @@ case $WITH_TARGET in
 	if test "X$INCLUDEDIR" = X; then
 		INCLUDEDIR="$prefix/include"
 	fi
-	if test "X$IHK_TMPDIR" = X; then
-		IHK_TMPDIR="$prefix/tmp"
-	fi
 	;;
     smp-arm64)
 	if test "X$BINDIR" = X; then
@@ -401,10 +398,6 @@ if test	"x$libudev" = "xno" ; then
    AC_MSG_ERROR([Install libudev package, e.g. yum install libudev-devel])
 fi
 
-if test "x$IHK_TMPDIR" != "x" ; then
-   AC_DEFINE_UNQUOTED(IHK_TMPDIR,"$IHK_TMPDIR",[Temporary directory used by IHK])
-fi
-
 if test "x$ENABLE_PERF" = "xyes" ; then
 	AC_MSG_NOTICE([perf is enabled])
 	AC_DEFINE([ENABLE_PERF],[1],[whether perf is enabled])
@@ -432,7 +425,6 @@ AC_SUBST(INCLUDEDIR)
 AC_SUBST(LIBDIR)
 AC_SUBST(KMODDIR)
 AC_SUBST(MANDIR)
-AC_SUBST(IHK_TMPDIR)
 AC_SUBST(CFLAGS)
 
 AC_SUBST(IHK_VERSION)

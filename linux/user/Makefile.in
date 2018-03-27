@@ -7,7 +7,6 @@ SBINDIR=@SBINDIR@
 LIBDIR=@LIBDIR@
 INCLUDEDIR=@INCLUDEDIR@
 MANDIR=@MANDIR@
-IHK_TMPDIR=@IHK_TMPDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
 TARGET=libihk.so ihkconfig ihkosctl memdump pagetable maccess memdump-mic ihkmond
@@ -61,4 +60,3 @@ install:
 	install -m 644 ihkconfig.1 $(MANDIR)/man1/ihkconfig.1
 	install -m 644 ihkosctl.1 $(MANDIR)/man1/ihkosctl.1
 	install -m 755 ihkmond $(SBINDIR)/ihkmond
-	mkdir -p -m 757 $(IHK_TMPDIR)

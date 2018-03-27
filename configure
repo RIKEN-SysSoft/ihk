@@ -628,7 +628,6 @@ IHK_RELEASE_DATE
 DCFA_VERSION
 MCKERNEL_VERSION
 IHK_VERSION
-IHK_TMPDIR
 MANDIR
 KMODDIR
 LIBDIR
@@ -3058,9 +3057,6 @@ case $WITH_TARGET in
 	if test "X$INCLUDEDIR" = X; then
 		INCLUDEDIR="$prefix/include"
 	fi
-	if test "X$IHK_TMPDIR" = X; then
-		IHK_TMPDIR="$prefix/tmp"
-	fi
 	;;
     smp-arm64)
 	if test "X$BINDIR" = X; then
@@ -5051,14 +5047,6 @@ if test	"x$libudev" = "xno" ; then
    as_fn_error $? "Install libudev package, e.g. yum install libudev-devel" "$LINENO" 5
 fi
 
-if test "x$IHK_TMPDIR" != "x" ; then
-
-cat >>confdefs.h <<_ACEOF
-#define IHK_TMPDIR "$IHK_TMPDIR"
-_ACEOF
-
-fi
-
 if test "x$ENABLE_PERF" = "xyes" ; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: perf is enabled" >&5
 $as_echo "$as_me: perf is enabled" >&6;}
@@ -5082,7 +5070,6 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 fi
-
 
 
 

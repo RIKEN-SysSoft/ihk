@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system insmod");
 
-	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86.ko ihk_start_irq=240 ihk_ikc_irq_core=0", PREFIX);
+	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86_64.ko ihk_start_irq=240 ihk_ikc_irq_core=0", PREFIX);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system insmod");
 
@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
 
 	// create 0
     ret_ihklib = ihk_create_os(0);
-	OKNG(ret_ihklib == 0, "ihk_create_os (2)\n");
+	OKNG(ret_ihklib == 0, "ihk_create_os\n");
 
 	sprintf(cmd, "chown takagi:takagi /dev/mcos*\n");
 	status = system(cmd);
@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "ihklib006_mck exit OK") != NULL, "mcexec\n");
-	
+
 	// check /var/log/local5. Note that kmsg is flushed on destroying /dev/mcos0
 	fp = popen("cat /var/log/local5", "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
@@ -209,6 +209,7 @@ int main(int argc, char** argv) {
 		ret_ihklib = ihk_destroy_os(0, 0);
 		if (ret_ihklib == 0) {
 			OKNG(1, "ihk_destroy_os (4), trial #%d succeeded\n", i + 1);
+			break;
 		}
 	}
 	CHKANDJUMP(i == 4, 255, "ihk_destroy_os failed four times\n");
@@ -245,7 +246,7 @@ int main(int argc, char** argv) {
 		 strstr(buf, "/tmp/mcos/mcos0_sys") == NULL, "ihk_os_destroy_pseudofs (3)\n");
 
 	// rmmod ihk-smp-x86
-	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86.ko", PREFIX);
+	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86_64.ko", PREFIX);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system rmmod");
 
@@ -261,6 +262,5 @@ int main(int argc, char** argv) {
  fn_fail:
 	// kill ihkmond
 	status = system("pid=`pidof ihkmond`&&if [ \"${pid}\" != \"\" ]; then kill -9 ${pid}; fi");
-	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
     goto fn_exit;
 }
