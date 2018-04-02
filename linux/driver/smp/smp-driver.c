@@ -2669,8 +2669,9 @@ static void sort_pagelists(struct zone *zone)
 	}
 }
 
-#define RESERVE_MEM_FAILED_ATTEMPTS 10
+#define RESERVE_MEM_FAILED_ATTEMPTS 1
 #define RESERVE_MEM_TIMEOUT 30
+//#define USE_TRY_TO_FREE_PAGES
 
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
@@ -2684,8 +2685,10 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	struct rb_root tmp_chunks = RB_ROOT;
 	nodemask_t nodemask;
 	int i;
+#ifdef USE_TRY_TO_FREE_PAGES
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
+#endif // USE_TRY_TO_FREE_PAGES
 #ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	void (*__drain_all_pages)(struct zone *) = NULL;
@@ -2706,9 +2709,11 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 
 	dprintk(KERN_INFO "IHK-SMP: __ihk_smp_reserve_mem: %lu bytes\n", ihk_mem);
 
+#ifdef USE_TRY_TO_FREE_PAGES
 	__try_to_free_pages = (unsigned long (*)
 			(struct zonelist *, int, gfp_t, nodemask_t *))
 			kallsyms_lookup_name("try_to_free_pages");
+#endif // USE_TRY_TO_FREE_PAGES
 #ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	__drain_all_pages = (void (*)(struct zone *))
@@ -2780,6 +2785,8 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	dprintk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
 	allocated = 0;
 	available = (size_t)node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
+	printk("%s: NUMA %d (online nodes: %d), free mem: %lu bytes\n",
+		__FUNCTION__, numa_id, num_online_nodes(), available);
 
 retry:
 	/* Allocate and merge pages until we get a contigous area
@@ -2792,8 +2799,9 @@ retry:
 		 * memory on NUMA 0 to avoid Linux crashing...
 		 */
 		if (numa_id == 0 && allocated > (available * 95 / 100)) {
-			printk("%s: 95%% of NUMA %d taken, breaking allocation loop..\n",
-					__FUNCTION__, numa_id);
+			printk("%s: 95%% of NUMA %d taken, breaking allocation"
+					" loop (current order: %d)..\n",
+					__FUNCTION__, numa_id, order);
 			goto pre_out;
 		}
 
@@ -2817,7 +2825,9 @@ retry:
 #endif
 
 		if (!pg) {
+#ifdef USE_TRY_TO_FREE_PAGES
 			int freed_pages;
+#endif // USE_TRY_TO_FREE_PAGES
 
 			if (__drain_all_pages) {
 #ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
@@ -2831,8 +2841,13 @@ retry:
 #endif /* POSTK_DEBUG_ARCH_DEP_79 */
 			}
 
-			if (__try_to_free_pages &&
-					failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS) {
+#ifdef USE_TRY_TO_FREE_PAGES
+			/*
+			 * Don't stress NUMA node 0, unless it is the only one
+			 */
+			if ((num_online_nodes() > 1 && numa_id > 0) &&
+					(__try_to_free_pages &&
+					 failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS)) {
 
 				freed_pages = __try_to_free_pages(
 						node_zonelist(numa_id, GFP_KERNEL),
@@ -2846,12 +2861,13 @@ retry:
 						__FUNCTION__, freed_pages, order);
 				goto retry;
 			}
+#endif // USE_TRY_TO_FREE_PAGES
 
 			/*
 			 * We ran out of memory using the current order of compound
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
-			if (order > 3) {
+			if (order > 2) {
 				--order;
 				failed_free_attempts = 0;
 				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
