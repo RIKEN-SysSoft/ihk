@@ -18,7 +18,7 @@
  *
  */
 
-#if !defined __cpu_set_t_defined
+#if !defined __cpu_set_t_defined && !defined _BITS_CPU_SET_H
 # define __cpu_set_t_defined
 /* Size definition for CPU sets.  */
 # define __CPU_SETSIZE	1024
