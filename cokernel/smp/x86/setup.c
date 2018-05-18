@@ -100,6 +100,8 @@ extern char *strstr(const char *haystack, const char *needle);
 
 void arch_init(void)
 {
+	unsigned long msg_buffer, msg_buffer_size;
+
 	/* Ack boot (trampoline code shall be free'd) */
 	boot_param->status = 1;
 
@@ -118,7 +120,8 @@ void arch_init(void)
 	dump_page = (struct ihk_dump_page *)map_fixed_area(boot_param->dump_page_set.phy_page, boot_param->dump_page_set.page_size, 0);
 
 	/* Map kmsg_buf, which is out of kernel image, with the non-bootstrap map. */
-	kmsg_buf = (struct ihk_kmsg_buf *)map_fixed_area(boot_param->msg_buffer, boot_param->msg_buffer_size, 0);
+	ihk_get_kmsg_buf(&msg_buffer, &msg_buffer_size);
+	kmsg_buf = (struct ihk_kmsg_buf *)map_fixed_area(msg_buffer, msg_buffer_size, 0);
 	kmsg_init();
 	kputs("IHK/McKernel started.\n");
 
@@ -215,6 +218,13 @@ void ihk_mc_get_boot_time(unsigned long *tv_sec, unsigned long *tv_nsec)
 char *ihk_get_kargs(void)
 {
 	return boot_param->kernel_args;
+}
+
+int ihk_get_kmsg_buf(unsigned long *addr, unsigned long *size)
+{
+	*addr = boot_param->msg_buffer;
+	*size = boot_param->msg_buffer_size;
+	return 0;
 }
 
 int ihk_set_monitor(unsigned long addr, unsigned long size)
