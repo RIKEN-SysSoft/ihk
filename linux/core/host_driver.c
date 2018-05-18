@@ -368,7 +368,9 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 
 	/* Release kmsg_buf */
 	if (data->kmsg_buf_container) {
-		if (release_kmsg_buf(data->kmsg_buf_container)) {
+		struct ihk_kmsg_buf_container *cont = data->kmsg_buf_container;
+		data->kmsg_buf_container = NULL;
+		if (release_kmsg_buf(cont)) {
 			return -EINVAL;
 		}
 	}
