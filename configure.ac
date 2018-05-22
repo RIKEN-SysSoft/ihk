@@ -250,11 +250,11 @@ case "X$WITH_SYSTEM_MAP" in
 esac
 
 AC_MSG_CHECKING([[for System.map]])
-if test -f "$IHK_LINUX_SYMTAB"; then
+if test -r "$IHK_LINUX_SYMTAB"; then
 	IHK_LINUX_SYMTAB="$IHK_LINUX_SYMTAB"
-elif test -f "/boot/System.map-`uname -r`"; then
+elif test -r "/boot/System.map-`uname -r`"; then
 	IHK_LINUX_SYMTAB="/boot/System.map-`uname -r`"	
-elif test -f "$KDIR/System.map"; then
+elif test -r "$KDIR/System.map"; then
 	IHK_LINUX_SYMTAB="$KDIR/System.map"	
 fi
 
