@@ -138,13 +138,13 @@ static int ihkmond_os_open(int os_index) {
 static void* detect_hungup(void* _arg) {
 	struct thr_args *arg = (struct thr_args *)_arg;
 	int osfd = -1, epfd = -1;
-    struct epoll_event event;
-    struct epoll_event events[1];
+	struct epoll_event event;
+	struct epoll_event events[1];
 	int ret = 0, ret_lib;
 	int i;
 
-    epfd = epoll_create(1);
-    CHKANDJUMP(epfd == -1, 255, "epoll_create failed\n");
+	epfd = epoll_create(1);
+	CHKANDJUMP(epfd == -1, 255, "epoll_create failed\n");
 	
 	memset(&event, 0, sizeof(struct epoll_event));
 	event.events = EPOLLIN;
@@ -171,7 +171,7 @@ static void* detect_hungup(void* _arg) {
 #else /* POSTK_DEBUG_TEMP_FIX_83 */
 	osfd = ihklib_os_open(arg->os_index);
 #endif /* POSTK_DEBUG_TEMP_FIX_83 */
-    CHKANDJUMP(osfd < 0, -errno, "ihklib_os_open failed\n");
+	CHKANDJUMP(osfd < 0, -errno, "ihklib_os_open failed\n");
 
 	ret_lib = ioctl(osfd, IHK_OS_DETECT_HUNGUP);
 	if(ret_lib == -1) {
@@ -186,15 +186,15 @@ static void* detect_hungup(void* _arg) {
 	close(osfd);
 	osfd = -1;
 
-    do {
-        int nfd = epoll_wait(epfd, events, 1, arg->interval * 1000);
+	do {
+		int nfd = epoll_wait(epfd, events, 1, arg->interval * 1000);
 		if (nfd < 0 && errno == EINTR)
 			continue;
 		CHKANDJUMP(nfd < 0, -EINVAL, "epoll_wait failed\n");
 		if (nfd == 0) {
 			goto next;
 		}
-        for (i = 0; i < nfd; i++) {
+		for (i = 0; i < nfd; i++) {
 			if (events[i].data.fd == arg->evfd_mcos_removed) {
 				dprintf("mcos remove event detected\n");
 				goto wait_for_add;
@@ -215,7 +215,7 @@ out:
 
 static int ihkmond_device_open(int dev_index) {
 	int i, devfd;
-    for (i = 0; i < 4; i++) {
+	for (i = 0; i < 4; i++) {
 		devfd = ihklib_device_open(dev_index);
 		if (devfd >= 0) {
 			break;
@@ -238,7 +238,7 @@ static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, in
 	struct ihk_device_read_kmsg_buf_desc desc = { .handle = handle, .shift = shift, .buf = buf };
 	
 	devfd = ihkmond_device_open(dev_index);
-    CHKANDJUMP(devfd < 0, -errno, "ihkmond_device_open returned %d\n", -errno);
+	CHKANDJUMP(devfd < 0, -errno, "ihkmond_device_open returned %d\n", -errno);
 
 	nread = ioctl(devfd, IHK_DEVICE_READ_KMSG_BUF, (unsigned long)&desc);
 	CHKANDJUMP(nread < 0 || nread > sizeof(buf), nread, "ioctl failed\n");
@@ -327,22 +327,22 @@ static ssize_t syslog_kmsg(FILE **fps, int prod) {
 static void* redirect_kmsg(void* _arg) {
 	struct thr_args *arg = (struct thr_args *)_arg;
 	int devfd = -1, evfd_kmsg = -1, epfd = -1;
-    struct epoll_event event;
-    struct epoll_event events[2];
+	struct epoll_event event;
+	struct epoll_event events[2];
 	int ret = 0, ret_lib;
 	int i;
 	FILE* fps[IHKMOND_NUM_FILEBUF_SLOTS];
 	int sizes[IHKMOND_NUM_FILEBUF_SLOTS];
 	int prod = 0; /* Producer pointer */
-    struct ihk_device_get_kmsg_buf_desc desc_get;
+	struct ihk_device_get_kmsg_buf_desc desc_get;
 
 	memset(fps, 0, sizeof(fps));
 	memset(sizes, 0, sizeof(sizes));
 
 	openlog(arg->logid, LOG_PID, arg->facility);
 
-    epfd = epoll_create(1);
-    CHKANDJUMP(epfd == -1, 255, "epoll_create failed\n");
+	epfd = epoll_create(1);
+	CHKANDJUMP(epfd == -1, 255, "epoll_create failed\n");
 	
 	/* mcos remove event live longer than /dev/mcosX itself */
 	memset(&event, 0, sizeof(struct epoll_event));
@@ -387,12 +387,12 @@ static void* redirect_kmsg(void* _arg) {
 	ret_lib = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd_kmsg, &event);
 	CHKANDJUMP(ret_lib != 0, -EINVAL, "epoll_ctl failed\n");
 
-    do {
-        int nfd = epoll_wait(epfd, events, 2, -1);
+	do {
+		int nfd = epoll_wait(epfd, events, 2, -1);
 		if (nfd < 0 && errno == EINTR)
 			continue;
 		CHKANDJUMP(nfd < 0, -EINVAL, "epoll_wait failed\n");
-        for (i = 0; i < nfd; i++) {
+		for (i = 0; i < nfd; i++) {
 			if (events[i].data.fd == evfd_kmsg) {
 				reap_event(evfd_kmsg);
 				dprintf("kmsg event detected\n");
@@ -472,8 +472,8 @@ int main(int argc, char** argv) {
 	int ret = 0, ret_lib;
 	int opt;
 	int evfd_mcos = -1, epfd = -1;
-    struct epoll_event event;
-    struct epoll_event events[1];
+	struct epoll_event event;
+	struct epoll_event events[1];
 	int i;
 	struct udev *udev = NULL;
 	struct udev_monitor *mon_mcos = NULL;
@@ -579,8 +579,8 @@ int main(int argc, char** argv) {
 	CHKANDJUMP(evfd_mcos < 0, 255, "udev_monitor_get_fd returned %s\n", strerror(-evfd_mcos));
 
 	/* Add evfds to epoll fd */
-    epfd = epoll_create(1);
-    CHKANDJUMP(epfd == -1, 255, "epoll_create failed\n");
+	epfd = epoll_create(1);
+	CHKANDJUMP(epfd == -1, 255, "epoll_create failed\n");
 	
 	memset(&event, 0, sizeof(struct epoll_event));
 	event.events = EPOLLIN;
@@ -588,9 +588,9 @@ int main(int argc, char** argv) {
 	ret_lib = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd_mcos, &event);
 	CHKANDJUMP(ret_lib != 0, 255, "epoll_ctl failed\n");
 
-    do {
-        int nfd = epoll_wait(epfd, events, 1, -1);
-        for (i = 0; i < nfd; i++) {
+	do {
+		int nfd = epoll_wait(epfd, events, 1, -1);
+		for (i = 0; i < nfd; i++) {
 			if (events[i].data.fd == evfd_mcos) {
 				char action[256];
 				char node[256];
@@ -643,11 +643,11 @@ int main(int argc, char** argv) {
 					}
 				}
 			}
-        }
-    } while (1);
+		}
+	} while (1);
  out:
 	udev_monitor_unref(mon_mcos);
-    udev_unref(udev);
+	udev_unref(udev);
 	for (i = 0; i < MCKUDEV_MAX_NUM_OS_INSTANCES; i++) {
 		if (mon_interval != -1) {
 			if (mon_args[i].evfd_mcos_removed != -1) {
@@ -666,5 +666,5 @@ int main(int argc, char** argv) {
 	if (epfd != -1) {
 		close(epfd);
 	}
-    return ret;
+	return ret;
 }
