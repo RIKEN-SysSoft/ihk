@@ -1194,9 +1194,7 @@ static long ihk_host_os_write(struct file *file, const char __user *buf,
 	struct ihk_host_linux_os_data *data = ifile->osdata;
 	char *ubuf;
 
-	if (size < 0) {
-		return -EINVAL;
-	} else if (size > PAGE_SIZE * 16) {
+	if (size > PAGE_SIZE * 16) {
 		return -E2BIG;
 	}
 	ubuf = kmalloc(size, GFP_KERNEL);
