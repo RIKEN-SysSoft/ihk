@@ -188,6 +188,8 @@ static void* detect_hungup(void* _arg) {
 
     do {
         int nfd = epoll_wait(epfd, events, 1, arg->interval * 1000);
+		if (nfd < 0 && errno == EINTR)
+			continue;
 		CHKANDJUMP(nfd < 0, -EINVAL, "epoll_wait failed\n");
 		if (nfd == 0) {
 			goto next;
@@ -387,6 +389,8 @@ static void* redirect_kmsg(void* _arg) {
 
     do {
         int nfd = epoll_wait(epfd, events, 2, -1);
+		if (nfd < 0 && errno == EINTR)
+			continue;
 		CHKANDJUMP(nfd < 0, -EINVAL, "epoll_wait failed\n");
         for (i = 0; i < nfd; i++) {
 			if (events[i].data.fd == evfd_kmsg) {
