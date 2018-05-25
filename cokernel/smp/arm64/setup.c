@@ -195,7 +195,7 @@ void arch_init(void)
 
 	extern char _head[], _end[];
 	if (((unsigned long)_head != MAP_KERNEL_START) || 
-		(MAP_KERNEL_START + MAP_KERNEL_SIZE < (unsigned long)_end)) {
+		((unsigned long)_end + MAP_EARLY_ALLOC_SIZE + MAP_BOOT_PARAM_SIZE < (unsigned long)_end)) {
 		panic("kernel image too large.");
 	}
 
