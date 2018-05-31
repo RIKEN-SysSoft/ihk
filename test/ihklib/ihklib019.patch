@@ -1,0 +1,42 @@
+diff --git arch/x86_64/kernel/include/syscall_list.h arch/x86_64/kernel/include/syscall_list.h
+index 48b1ea0..1295158 100644
+--- arch/x86_64/kernel/include/syscall_list.h
++++ arch/x86_64/kernel/include/syscall_list.h
+@@ -161,6 +161,7 @@ SYSCALL_HANDLED(__NR_profile, profile)
+ SYSCALL_HANDLED(730, util_migrate_inter_kernel)
+ SYSCALL_HANDLED(731, util_indicate_clone)
+ SYSCALL_HANDLED(732, get_system)
++SYSCALL_HANDLED(900, my_halt)
+ 
+ /* McKernel Specific */
+ SYSCALL_HANDLED(801, swapout)
+diff --git arch/x86_64/tools/mcreboot-smp-x86.sh.in arch/x86_64/tools/mcreboot-smp-x86.sh.in
+index 55bb71e..ea12662 100644
+--- arch/x86_64/tools/mcreboot-smp-x86.sh.in
++++ arch/x86_64/tools/mcreboot-smp-x86.sh.in
+@@ -93,6 +93,7 @@ pid=`pidof ihkmond`
+ if [ "${pid}" != "" ]; then
+     sudo kill -9 ${pid} > /dev/null 2> /dev/null
+ fi
++mon_interval=10
+ if [ "${redirect_kmsg}" != "0" -o "${mon_interval}" != "-1" ]; then
+     ${SBINDIR}/ihkmond -f ${facility} -k ${redirect_kmsg} -i ${mon_interval}
+ fi
+diff --git kernel/syscall.c kernel/syscall.c
+index 8dc0a0e..bbf2702 100644
+--- kernel/syscall.c
++++ kernel/syscall.c
+@@ -9332,6 +9332,13 @@ set_cputime(int mode)
+ 	cpu_enable_interrupt();
+ }
+ 
++SYSCALL_DECLARE(my_halt)
++{
++	while (1) {
++		cpu_halt();
++	}
++}
++
+ long syscall(int num, ihk_mc_user_context_t *ctx)
+ {
+ 	long l;
