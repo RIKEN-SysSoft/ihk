@@ -11,7 +11,6 @@
 ## -------------------- ##
 ## M4sh Initialization. ##
 ## -------------------- ##
-# configure COPYRIGHT FUJITSU LIMITED 2015-2017
 
 # Be more Bourne compatible
 DUALCASE=1; export DUALCASE # for MKS sh
@@ -622,7 +621,6 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-HPCPWR_DIR
 uncomment_if_ENABLE_MEMDUMP
 DCFA_RESEASE_DATE
 MCKERNEL_RELEASE_DATE
@@ -697,7 +695,6 @@ with_target
 enable_memdump
 enable_rusage
 with_system_map
-with_hpcpwr
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1329,7 +1326,6 @@ Optional Packages:
                           target, default is attached-mic
   --with-system_map=path  Path to 'System.map file', default is
                           /boot/System.map-uname_r
-  --with-hpcpwr=path      Path to 'hpcpwr' "$HPCPWR_DIR_DEFAULT"
 
 Some influential environment variables:
   CC          C compiler command
@@ -2105,18 +2101,6 @@ else
   WITH_SYSTEM_MAP=yes
 fi
 
-
-# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
-HPCPWR_DIR_DEFAULT=/opt/FJSVxos/hpcpwr/lib/modules/make_kernelrelease/build
-
-# Check whether --with-hpcpwr was given.
-if test "${with_hpcpwr+set}" = set; then :
-  withval=$with_hpcpwr; WITH_HPCPWR=$withval
-else
-  WITH_HPCPWR=no
-fi
-
-# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
 
 case "X$WITH_KERNELSRC" in
     Xyes | Xno | X)
@@ -3122,22 +3106,6 @@ case $ENABLE_RUSAGE in
 		as_fn_error $? "unknown rusage argument: $ENABLE_RUSAGE" "$LINENO" 5
 		;;
 esac
-
-# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
-case "X$WITH_HPCPWR" in
-    Xno | X)
-	;;
-    Xyes)
-	HPCPWR_DIR="yes"
-	;;
-    X/*)
-	HPCPWR_DIR="$WITH_HPCPWR"
-	;;
-    *)
-	HPCPWR_DIR="`pwd`/$WITH_HPCPWR"
-	;;
-esac
-# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
 
 KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
@@ -5019,71 +4987,6 @@ else
 $as_echo "$as_me: rusage is disabled" >&6;}
 fi
 
-# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
-if test "$TARGET" = "smp-arm64" ; then
-	ENABLE_HPCPWR=no
-
-	if test "$HPCPWR_DIR" = "yes" ; then
-		HPCPWR_KERNEL_RELEASE="$KDIR/include/config/kernel.release"
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for kernel.release" >&5
-$as_echo_n "checking for kernel.release... " >&6; }
-
-		if test ! -f "$HPCPWR_KERNEL_RELEASE" ; then
-			as_fn_error $? "could not find" "$LINENO" 5
-		fi
-
-		if test -z "`eval cat $HPCPWR_KERNEL_RELEASE`"; then
-			as_fn_error $? "could not read kernel.release file, no read permission?" "$LINENO" 5
-		fi
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $HPCPWR_KERNEL_RELEASE" >&5
-$as_echo "$HPCPWR_KERNEL_RELEASE" >&6; }
-		HPCPWR_DIR="/opt/FJSVxos/hpcpwr/lib/modules/`cat $HPCPWR_KERNEL_RELEASE`/build"
-	fi
-
-	if test -n "$HPCPWR_DIR" ; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Module.symvers" >&5
-$as_echo_n "checking for Module.symvers... " >&6; }
-		HPCPWR_MODULE_SYMVERS="$HPCPWR_DIR/Module.symvers"
-
-		if test ! -f "$HPCPWR_MODULE_SYMVERS" ; then
-			as_fn_error $? "could not find" "$LINENO" 5
-		fi
-
-		if test -z "`eval cat $HPCPWR_MODULE_SYMVERS`"; then
-			as_fn_error $? "could not read Module.symvers file, no read permission?" "$LINENO" 5
-		fi
-
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $HPCPWR_MODULE_SYMVERS" >&5
-$as_echo "$HPCPWR_MODULE_SYMVERS" >&6; }
-
-		CPPFLAGS="$CPPFLAGS -I$HPCPWR_DIR"
-		ac_fn_c_check_header_mongrel "$LINENO" "pwr_arm64hpcdev_mck.h" "ac_cv_header_pwr_arm64hpcdev_mck_h" "$ac_includes_default"
-if test "x$ac_cv_header_pwr_arm64hpcdev_mck_h" = xyes; then :
-  enableval=yes
-else
-  enableval="no"
-fi
-
-
-		if test "x$enableval" = "xno" ; then
-			as_fn_error $? "power management feature needs pwr_arm64hpcdev_mck.h" "$LINENO" 5
-		fi
-		ENABLE_HPCPWR=$enableval
-	fi
-
-	if test "x$ENABLE_HPCPWR" = "xyes" ; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: power management is enabled" >&5
-$as_echo "$as_me: power management is enabled" >&6;}
-
-$as_echo "#define ENABLE_HPCPWR 1" >>confdefs.h
-
-	else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: power management is disabled" >&5
-$as_echo "$as_me: power management is disabled" >&6;}
-	fi
-fi
-# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
-
 libudev=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for udev_new in -ludev" >&5
 $as_echo_n "checking for udev_new in -ludev... " >&6; }
@@ -5168,10 +5071,6 @@ fi
 
 
 
-
-# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
-
-# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
 
 case "$TARGET" in
 smp*)

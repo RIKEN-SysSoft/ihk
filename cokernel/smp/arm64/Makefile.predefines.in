@@ -84,11 +84,4 @@ ifeq ($(HOST_KERNEL_CONFIG_ARM_ARCH_TIMER_EVTSTREAM), y)
 CFLAGS += -DCONFIG_ARM_ARCH_TIMER_EVTSTREAM
 endif
 
-# POSTK_DEBUG_ARCH_DEP_84 power management support [BEGIN]
-hpcpwr_dir := @HPCPWR_DIR@
-ifneq ($(strip $(hpcpwr_dir)),)
-	CFLAGS += -DENABLE_HPCPWR
-endif
-# POSTK_DEBUG_ARCH_DEP_84 power management support [END]
-
 CFLAGS += -DCONFIG_ARM64_SVE
