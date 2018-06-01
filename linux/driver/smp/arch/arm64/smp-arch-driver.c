@@ -39,9 +39,6 @@
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
-#ifdef ENABLE_HPCPWR
-#include "pwr_arm64hpcdev_mck.h"
-#endif /*ENABLE_HPCPWR*/
 
 #define UNSUPPORTED_GICV2
 
@@ -950,13 +947,30 @@ unsigned long get_sve_default_vl(void)
 }
 #endif /* CONFIG_ARM64_SVE */
 
+static const unsigned long *__pwr_g_retention_state_flag;
+DEFINE_RAW_SPINLOCK(__retention_state_lock);
+
+void ihk_pwr_set_retention_state_flag_address(const unsigned long* addr)
+{
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&__retention_state_lock, flags);
+	__pwr_g_retention_state_flag = addr;
+	raw_spin_unlock_irqrestore(&__retention_state_lock, flags);
+}
+EXPORT_SYMBOL(ihk_pwr_set_retention_state_flag_address);
+
+void ihk_pwr_clear_retention_state_flag_address(void)
+{
+	ihk_pwr_set_retention_state_flag_address(NULL);
+}
+EXPORT_SYMBOL(ihk_pwr_clear_retention_state_flag_address);
+
 void smp_ihk_setup_trampoline(void *priv)
 {
 	struct smp_os_data *os = priv;
 	struct ihk_smp_trampoline_header *header;
-#ifdef ENABLE_HPCPWR
-	const unsigned long* retention_state_flag;
-#endif /*ENABLE_HPCPWR*/
+	unsigned long flags;
 	int nr_irqs;
 	int i = 0;
 
@@ -997,10 +1011,11 @@ void smp_ihk_setup_trampoline(void *priv)
 	memcpy(header->rdist_base_pa, ihk_smp_gic_rdist_pa,
 		header->cpu_logical_map_size * sizeof(unsigned long));
 
-#ifdef ENABLE_HPCPWR
-	retention_state_flag = pwr_arm64hpc_lookup_retention_state_flag();
-	header->retention_state_flag_pa = __pa(retention_state_flag);
-#endif /*ENABLE_HPCPWR*/
+	raw_spin_lock_irqsave(&__retention_state_lock, flags);
+	if (__pwr_g_retention_state_flag) {
+		header->retention_state_flag_pa = __pa(__pwr_g_retention_state_flag);
+	}
+	raw_spin_unlock_irqrestore(&__retention_state_lock, flags);
 
 	nr_irqs = ihk_armpmu_get_irq_affinity(header->pmu_irq_affiniry, *ihk_cpu_pmu, os);
 	if (nr_irqs < 0) {
@@ -1535,8 +1550,7 @@ static void ihk_smp_release_irq(struct ihk_smp_irq_table *smp_irq)
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
 }
 
-#ifdef ENABLE_HPCPWR
-static int ihk_pwr_mck_request(pwr_mck_request_handle_t* dest)
+int ihk_pwr_mck_request(void** handle)
 {
 	int ret = 0;
 	ihk_os_t ihk_os;
@@ -1544,26 +1558,28 @@ static int ihk_pwr_mck_request(pwr_mck_request_handle_t* dest)
 
 	ret = ihk_get_request_os_cpu(&ihk_os, &cpu);
 	if (ret) {
-		*dest = PWR_MCK_REQUEST_INVALID_HANDLE;
+		*handle = NULL;
 		if (ret == -EINVAL) {
 			// オフロードからの呼び出しではない場合
 			ret = 0;
 		}
 		goto out;
 	}
-	*dest = (pwr_mck_request_handle_t)ihk_os;
+	*handle = (void *)ihk_os;
 out:
 	return ret;
 }
+EXPORT_SYMBOL(ihk_pwr_mck_request);
 
-static int ihk_pwr_linux_to_mck(pwr_mck_request_handle_t handle, int linux_cpu)
+#if 0 /* no support */
+int ihk_pwr_linux_to_mck(void *handle, int linux_cpu)
 {
 	int ret = 0;
 	ihk_os_t ihk_os;
 	struct ihk_cpu_info* info;
 	int i;
 
-	if (handle == PWR_MCK_REQUEST_INVALID_HANDLE) {
+	if (handle == NULL) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1586,14 +1602,16 @@ static int ihk_pwr_linux_to_mck(pwr_mck_request_handle_t handle, int linux_cpu)
 out:
 	return ret;
 }
+EXPORT_SYMBOL(ihk_pwr_linux_to_mck);
+#endif /* no support */
 
-static int ihk_pwr_mck_to_linux(pwr_mck_request_handle_t handle, int mck_cpu)
+int ihk_pwr_mck_to_linux(void *handle, int mck_cpu)
 {
 	int ret = 0;
 	ihk_os_t ihk_os;
 	struct ihk_cpu_info* info;
 
-	if (handle == PWR_MCK_REQUEST_INVALID_HANDLE) {
+	if (handle == NULL) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1613,16 +1631,17 @@ static int ihk_pwr_mck_to_linux(pwr_mck_request_handle_t handle, int mck_cpu)
 out:
 	return ret;
 }
+EXPORT_SYMBOL(ihk_pwr_mck_to_linux);
 
 static DEFINE_RWLOCK(ihk_pwr_ipi_register_lock);
 
-static int ihk_pwr_ipi_read_register_locked(pwr_mck_request_handle_t handle, int mck_cpu, u32 sys_reg, u64* value)
+static int ihk_pwr_ipi_read_register_locked(void *handle, int mck_cpu, u32 sys_reg, u64* value)
 {
 	int ret = 0;
 	ihk_os_t ihk_os;
 	struct ihk_os_cpu_register desc;
 
-	if (handle == PWR_MCK_REQUEST_INVALID_HANDLE) {
+	if (handle == NULL) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1640,7 +1659,7 @@ out:
 	return ret;
 }
 
-static int ihk_pwr_ipi_read_register(pwr_mck_request_handle_t handle, int mck_cpu, u32 sys_reg, u64* value)
+static int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value)
 {
 	int ret;
 	unsigned long flags;
@@ -1650,8 +1669,9 @@ static int ihk_pwr_ipi_read_register(pwr_mck_request_handle_t handle, int mck_cp
 	read_unlock_irqrestore(&ihk_pwr_ipi_register_lock, flags);
 	return ret;
 }
+EXPORT_SYMBOL(ihk_pwr_ipi_read_register);
 
-static int ihk_pwr_ipi_write_register_locked(pwr_mck_request_handle_t handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)
+static int ihk_pwr_ipi_write_register_locked(void *handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)
 {
 	int ret = 0;
 	ihk_os_t ihk_os;
@@ -1676,7 +1696,7 @@ out:
 	return ret;
 }
 
-static int ihk_pwr_ipi_write_register(pwr_mck_request_handle_t handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)
+static int ihk_pwr_ipi_write_register(void *handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)
 {
 	int ret;
 	unsigned long flags;
@@ -1686,15 +1706,7 @@ static int ihk_pwr_ipi_write_register(pwr_mck_request_handle_t handle, int mck_c
 	write_unlock_irqrestore(&ihk_pwr_ipi_register_lock, flags);
 	return ret;
 }
-
-static const struct pwr_arm64hpc_ihk_ops pwr_ops = {
-	.mck_request = ihk_pwr_mck_request,
-	.linux_to_mck = ihk_pwr_linux_to_mck,
-	.mck_to_linux = ihk_pwr_mck_to_linux,
-	.ipi_read_register = ihk_pwr_ipi_read_register,
-	.ipi_write_register = ihk_pwr_ipi_write_register,
-};
-#endif /*ENABLE_HPCPWR*/
+EXPORT_SYMBOL(ihk_pwr_ipi_write_register);
 
 static int collect_topology(void);
 int smp_ihk_arch_init(void)
@@ -1800,13 +1812,6 @@ retry_trampoline:
 	if (error) {
 		goto error_free_irq;
 	}
-
-#ifdef ENABLE_HPCPWR
-	error = pwr_arm64hpcdev_ihk_ops_register(&pwr_ops);
-	if (error) {
-		goto error_free_irq;
-	}
-#endif /* ENABLE_HPCPWR */
 
 	return error;
 
@@ -2351,10 +2356,6 @@ int ihk_smp_reset_cpu(int hw_id)
 void smp_ihk_arch_exit(void)
 {
 	int i = 0;
-
-#ifdef ENABLE_HPCPWR
-	pwr_arm64hpcdev_ihk_ops_unregister();
-#endif /*ENABLE_HPCPWR*/
 
 #if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
 	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
