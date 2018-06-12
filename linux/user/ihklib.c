@@ -1645,7 +1645,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	}
 
 out:
-	if (abfd >= 0) {
+	if (abfd) {
 		ok = bfd_close(abfd);
 		if (!ok) {
 			eprintf("bfd_close failed: %s\n", bfd_errmsg(bfd_get_error()));
