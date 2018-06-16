@@ -50,6 +50,8 @@
 /** Get the bit number in a map element */
 #define MAP_BIT(n)      ((n) & 0x3f)
 
+#define IHK_SMP_MEM_ALL	(-1UL)
+
 /*
  * IHK-SMP unexported kernel symbols
  */
@@ -1878,7 +1880,17 @@ static int smp_ihk_parse_mem(char *p, size_t *mem_size, int *numa_id)
 	/* Parse memory string provided by the user
 	 * FIXME: validate userspace buffer */
 	oldp = p;
-	*mem_size = memparse(p, &p);
+
+	if (!strncmp(p, "all", 3) ||
+			!strncmp(p, "ALL", 3) ||
+			!strncmp(p, "All", 3)) {
+		*mem_size = IHK_SMP_MEM_ALL;
+		p += 3;
+	}
+	else {
+		*mem_size = memparse(p, &p);
+	}
+
 	if (p == oldp)
 		return -EINVAL;
 
@@ -1911,6 +1923,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 	struct chunk *mem_chunk_max;
 	struct chunk *mem_chunk_match;
 	size_t mem_size_left = mem_size;
+	size_t want = mem_size;
 	struct list_head to_be_assigned_chunks;
 
 	INIT_LIST_HEAD(&to_be_assigned_chunks);
@@ -1950,6 +1963,11 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		}
 
 		if (!mem_chunk_max && !mem_chunk_match) {
+			/* Special condition for "all" */
+			if (want == IHK_SMP_MEM_ALL) {
+				break;
+			}
+
 			printk(KERN_ERR "IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
 			kfree(os_mem_chunk);
 			ret = -ENOMEM;
@@ -2780,8 +2798,11 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		}
 	}
 
-	want = (ihk_mem + ((PAGE_SIZE << order) - 1))
-		& ~((PAGE_SIZE << order) - 1);
+	want = ihk_mem;
+	if (want != IHK_SMP_MEM_ALL) {
+		want = (ihk_mem + ((PAGE_SIZE << order) - 1))
+			& ~((PAGE_SIZE << order) - 1);
+	}
 	dprintk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
 	allocated = 0;
 	available = (size_t)node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
@@ -2885,7 +2906,7 @@ pre_out:
 			 * finding a single contigous chunk, but do we have enough in
 			 * multiple chunks?
 			 */
-			if (allocated >= want) break;
+			if (allocated >= want || want == IHK_SMP_MEM_ALL) break;
 
 			printk(KERN_ERR "IHK-SMP: error: __alloc_pages_node() failed\n");
 
@@ -3453,7 +3474,8 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 			break;
 		}
 
-		if (mem_size % (1024 * 1024 * 4) != 0) {
+		if (mem_size != IHK_SMP_MEM_ALL &&
+				mem_size % (1024 * 1024 * 4) != 0) {
 			printk("%s: error: mem_size must be in multiples of %d bytes\n",
 					__FUNCTION__, 1024 * 1024 * 4);
 			ret = -1;
