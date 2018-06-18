@@ -118,6 +118,11 @@ IHK_OS_OPS_BEGIN(int, query_cpu,
 	IHK_OPS_BODY(query_cpu, arg);
 }
 
+IHK_OS_OPS_BEGIN_NOARG(int, get_num_cpus)
+{
+	IHK_OPS_BODY_NOARG(get_num_cpus);
+}
+
 IHK_OS_OPS_BEGIN(int, assign_mem,
                  unsigned long arg)
 {

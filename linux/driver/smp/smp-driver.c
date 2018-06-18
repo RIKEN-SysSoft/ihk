@@ -1655,6 +1655,14 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	goto fn_exit;
 }
 
+static int smp_ihk_os_get_num_cpus(ihk_os_t ihk_os, void *priv)
+{
+	struct smp_os_data *os = priv;
+
+	return os->nr_cpus;
+}
+
+
 static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret = 0;
@@ -2370,6 +2378,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.set_ikc_map = smp_ihk_os_set_ikc_map,
 	.get_ikc_map = smp_ihk_os_get_ikc_map,
 	.get_buildid = smp_ihk_os_get_buildid,
+	.get_num_cpus = smp_ihk_os_get_num_cpus,
 	.query_cpu = smp_ihk_os_query_cpu,
 	.assign_mem = smp_ihk_os_assign_mem,
 	.release_mem = smp_ihk_os_release_mem,
@@ -2377,7 +2386,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.freeze = smp_ihk_os_freeze,
 	.thaw = smp_ihk_os_thaw,
 	.panic_notifier = smp_ihk_os_panic_notifier,
-};	
+};
 
 static struct ihk_register_os_data builtin_os_reg_data = {
 	.name = "builtinos",
@@ -3406,6 +3415,21 @@ out:
 	return ret;
 }
 
+static int smp_ihk_get_num_cpus(ihk_device_t ihk_dev)
+{
+	int cpu;
+	int num_cpus = 0;
+
+	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
+			continue;
+
+		num_cpus++;
+	}
+
+	return num_cpus;
+}
+
 static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int cpu;
@@ -3999,12 +4023,13 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.release_cpu = smp_ihk_release_cpu,
 	.reserve_mem = smp_ihk_reserve_mem,
 	.release_mem = smp_ihk_release_mem,
+	.get_num_cpus = smp_ihk_get_num_cpus,
 	.query_cpu = smp_ihk_query_cpu,
 	.query_mem = smp_ihk_query_mem,
 	.get_cpu_topology = smp_ihk_get_cpu_topology,
 	.get_node_topology = smp_ihk_get_node_topology,
 	.linux_cpu_to_hw_id = smp_ihk_linux_cpu_to_hw_id,
-};	
+};
 
 /** \brief The driver-specific driver structure
  *

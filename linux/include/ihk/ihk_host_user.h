@@ -26,6 +26,7 @@
 #define IHK_DEVICE_READ_KMSG_BUF      0x112909
 #define IHK_DEVICE_RELEASE_KMSG_BUF   0x11290a
 #define IHK_DEVICE_GET_BUILDID        0x11290b
+#define IHK_DEVICE_GET_NUM_CPUS       0x11290c
 
 #define IHK_DEVICE_DEBUG_START        0x122900
 #define IHK_DEVICE_DEBUG_END          0x1229ff
@@ -64,6 +65,7 @@
 #define IHK_OS_NOTIFY_HUNGUP          0x112a35
 #define IHK_OS_DETECT_HUNGUP          0x112a36
 #define IHK_OS_GET_BUILDID            0x112a37
+#define IHK_OS_GET_NUM_CPUS           0x112a38
 
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff

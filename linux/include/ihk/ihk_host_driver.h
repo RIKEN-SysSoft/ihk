@@ -297,6 +297,12 @@ struct ihk_os_ops {
 	**/
 	int (*get_buildid)(ihk_os_t, void *, unsigned long arg);
 
+	/** \brief Get number of CPU cores assigned to OS instance
+	 *
+	 *  \return The number of CPU cores on success, -1 on failure.
+	 **/
+	int (*get_num_cpus)(ihk_os_t ihk_os, void *priv);
+
 	/** \brief Query CPU cores of an OS instance
 	 *
 	 *  \return Success or failure.
@@ -428,6 +434,14 @@ struct ihk_device_ops {
 	 * \param arg     CPU core ID list
 	 */
 	int (*release_mem)(ihk_device_t, unsigned long arg);
+
+	/**
+	 * \brief Get number of CPU cores
+	 *
+	 * Get the number of CPU cores reserved for IHK.
+	 * \return The number of CPU cores on success, -1 on failure.
+	 */
+	int (*get_num_cpus)(ihk_device_t ihk_dev);
 
 	/**
 	 * \brief Query CPU cores

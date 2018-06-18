@@ -963,6 +963,7 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_GET_USAGE:
 	case IHK_OS_GET_CPU_USAGE:
 	case IHK_OS_REGISTER_EVENT:
+	case IHK_OS_GET_NUM_CPUS:
 		break;
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
@@ -1054,6 +1055,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
 	case IHK_OS_GET_BUILDID:
 		ret = __ihk_os_get_buildid(data, arg);
+		break;
+
+	case IHK_OS_GET_NUM_CPUS:
+		ret = __ihk_os_get_num_cpus(data);
 		break;
 
 	case IHK_OS_QUERY_CPU:
@@ -1663,6 +1668,15 @@ static int __ihk_device_release_mem(struct ihk_host_linux_device_data *data,
 	return data->ops->release_mem(data, arg);
 }
 
+/** \brief Query number of CPU cores */
+static int __ihk_device_get_num_cpus(struct ihk_host_linux_device_data *data)
+{
+	if (!data->ops || !data->ops->get_num_cpus)
+		return -1;
+
+	return data->ops->get_num_cpus(data);
+}
+
 /** \brief Query CPU cores */
 static int __ihk_device_query_cpu(struct ihk_host_linux_device_data *data,
 		unsigned long arg)
@@ -1724,6 +1738,10 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 
 	case IHK_DEVICE_RELEASE_MEM:
 		ret = __ihk_device_release_mem(data, arg);
+		break;
+
+	case IHK_DEVICE_GET_NUM_CPUS:
+		ret = __ihk_device_get_num_cpus(data);
 		break;
 
 	case IHK_DEVICE_QUERY_CPU:

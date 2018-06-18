@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 # Modify this line
-install=${home}/project/os/install
+install=${HOME}/project/os/install
 
 testname=$1
 bootopt="-m 256M"
@@ -44,7 +44,7 @@ case ${testname} in
 esac
 
 case ${testname} in
-    ihklib001)
+    ihklib001 | ihklib020 | ihklib021)
 	;;
     *)
 	read -p "*** Hit return when ready!" key
@@ -52,7 +52,7 @@ case ${testname} in
 esac
 
 case ${testname} in
-    ihklib001)
+    ihklib001 | ihklib020 | ihklib021)
 	bn_lin="${testname}_lin"
 	make clean > /dev/null 2> /dev/null
 	make ${bn_lin}
@@ -87,7 +87,10 @@ case ${testname} in
     ihklib004 | ihklib005 | ihklib018)
 	bootopt="-k 1 -m 256M -i 2"
 	;;
-    ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017 | ihklib019)
+    ihklib002 | ihklib006 | ihklib007 | ihklib008 | \
+    ihklib009 | ihklib010 | ihklib011 | ihklib012 | \
+    ihklib013 | ihklib014 | ihklib015 | ihklib016 | \
+    ihklib017 | ihklib019 | ihklib020 | ihklib021)
 	;;
     *)
 	echo Unknown test case 
@@ -99,7 +102,7 @@ if [ ${dryrun} == "y" ]; then
 fi
 
 case ${testname} in
-    ihklib001 | ihklib002)
+    ihklib001 | ihklib002 | ihklib020 | ihklib021)
 	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
 	    exit 255
 	fi
@@ -161,12 +164,15 @@ esac
 if [ ${kill} == "y" ]; then
     ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt} &
     sleep ${sleepopt}
-    sudo ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
+    ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
     pidof mcexec | xargs -r sudo kill -9 > /dev/null 2> /dev/null
 else
     case ${testname} in
 	ihklib001)
 	    sudo GROUPS=${groups} HOME=${home} ./${bn_lin} ${testopt}
+	;;
+	ihklib020 | ihklib021)
+	    sudo GROUPS=${groups} HOME=${home} ./${bn_lin}
 	;;
 	ihklib003)
 	    sudo ./${bn_lin} ${testopt}
@@ -232,14 +238,18 @@ else
 	ihklib019)
 	    ./${testname}.sh
 	    ;;
+	ihklib020 | ihklib021)
+	    sudo ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt}
+	    ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
+	    ;;
 	*)
 	    ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt}
-	    sudo ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
+	    ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
     esac
 fi
 
 case ${testname} in
-    ihklib001)
+    ihklib001 | ihklib020 | ihklib021)
 	;;
     ihklib003)
 	;;
