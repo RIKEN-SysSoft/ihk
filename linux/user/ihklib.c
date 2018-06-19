@@ -34,32 +34,32 @@ char **__argv;
 //#define DEBUG
 
 #ifdef DEBUG
-#define	dprintf(...)											\
-	do {														\
-		char msg[1024];											\
-		sprintf(msg, __VA_ARGS__);								\
-		fprintf(stderr, "%s,%s", __FUNCTION__, msg);			\
-	} while (0);
+#define	dprintf(...)					\
+	do {							\
+		char msg[1024];				\
+		sprintf(msg, __VA_ARGS__);			\
+		fprintf(stderr, "%s: %s", __func__, msg);	\
+	} while (0)
 #else
 #define dprintf(...) do {  } while (0)
 #endif
 
-#define	eprintf(...)											\
-	do {														\
-		char msg[1024];											\
-		sprintf(msg, __VA_ARGS__);								\
-		fprintf(stderr, "%s,%s", __FUNCTION__, msg);			\
-	} while (0);
+#define	eprintf(...)					\
+	do {							\
+		char msg[1024];				\
+		sprintf(msg, __VA_ARGS__);			\
+		fprintf(stderr, "%s: %s", __func__, msg);	\
+	} while (0)
 
 #define PHYSMEM_NAME_SIZE 32
 
-#define CHKANDJUMP(cond, err, ...)										\
-	do {																\
-		if(cond) {														\
-			eprintf(__VA_ARGS__);										\
-			ret = err;													\
-			goto out;												\
-		}																\
+#define CHKANDJUMP(cond, err, ...)				\
+	do {							\
+		if (cond) {					\
+			eprintf(__VA_ARGS__);			\
+			ret = err;				\
+			goto out;				\
+		}						\
 	} while(0)
 
 static void cpus_array2str(char* cpu_list, ssize_t sz_cpu_list, int num_cpus, int* cpus) {
@@ -75,28 +75,82 @@ static void cpus_array2str(char* cpu_list, ssize_t sz_cpu_list, int num_cpus, in
 	}
 }
 
-static int cpus_str2array(char* cpu_list, int *num_cpus, int* cpus) {
-	int cpu_rank = 0, ret = 0;
-	char* token;
-	
-	CHKANDJUMP(strchr(cpu_list, '-'), -1, "range expression not supported,cpu_list=%s\n", cpu_list);
-	
+/* Return number of CPUs on success, negative on failure */
+static int do_cpus_str2array(char *_cpu_list, int *cpus)
+{
+	int ret = 0;
+	int i;
+	int cpu_rank = 0;
+	char *cpu_list;
+	char *token, *minus;
+
+	dprintf("%s: cpu_list=%s\n", __func__, _cpu_list);
+	if (!(cpu_list = strdup(_cpu_list))) {
+		fprintf(stderr, "%s: Out of memory\n", __func__);
+		ret = -errno;
+		goto out;
+	}
+
 	token = strsep(&cpu_list, ",");
-	while (token != NULL) {
-		if(*token == 0) {
-			goto empty_cpu;
+	while (token) {
+		if (*token == 0) {
+			fprintf(stderr, "%s: Illegal expression: %s\n",
+				__func__, _cpu_list); /* empty token */
+			ret = -EINVAL;
+			goto out;
 		}
-		if(*num_cpus > cpu_rank) {
-			cpus[cpu_rank] = atol(token);
-			dprintf("%s,cpus[%d]=%d\n", __FUNCTION__, cpu_rank, cpus[cpu_rank]);
-		}	
-		cpu_rank++;
-	empty_cpu:
+		if ((minus = strchr(token, '-'))) {
+			int start, end;
+
+			if (*(minus + 1) == 0) {
+				fprintf(stderr, "%s: Illegal expression: %s\n",
+					__func__, _cpu_list); /* empty token */
+				ret = -EINVAL;
+				goto out;
+			}
+			*minus = 0;
+			start = atoi(token);
+			end = atoi(minus + 1);
+			for (i = start; i <= end; i++) {
+				dprintf("%s: cpus[%d]=%d\n",
+					__func__, cpu_rank, i);
+				if (cpus) {
+					cpus[cpu_rank++] = i;
+				}
+			}
+		} else {
+			dprintf("%s: cpus[%d]=%d\n", __func__,
+				cpu_rank, atoi(token));
+			if (cpus) {
+				cpus[cpu_rank++] = atoi(token);
+			}
+		}
 		token = strsep(&cpu_list, ",");
 	}
-	*num_cpus = cpu_rank;
-	dprintf("%s,num_cpus=%d\n", __FUNCTION__, *num_cpus);
 
+	ret = cpu_rank;
+
+ out:
+	free(cpu_list);
+	return ret;
+}
+
+/* Return number of CPUs on success, negative on failure */
+int cpus_str2count(char *cpu_list)
+{
+	return do_cpus_str2array(cpu_list, NULL);
+}
+
+/* Return 0 on success, negative on failure */
+int cpus_str2array(char *cpu_list, int *cpus)
+{
+	int ret = 0;
+
+	if ((ret = do_cpus_str2array(cpu_list, cpus)) < 0) {
+		goto out;
+	}
+
+	ret = 0;
  out:
 	return ret;
 }
@@ -259,12 +313,20 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
-	ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, result);
-	CHKANDJUMP(ret != 0, -errno, "ioctl failed\n");
+	if ((ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, result))) {
+		fprintf(stderr, "%s: IHK_DEVICE_QUERY_CPU failed\n",
+			__func__);
+		ret = -errno;
+		goto out;
+	}
+
 	dprintf("%s,result=%s\n", __func__, result);
 
-	ret = cpus_str2array(result, &num_cpus, cpus);
-	CHKANDJUMP(ret != 0, -EINVAL, "cpus_str2array failed\n");
+	if ((ret = cpus_str2array(result, cpus))) {
+		fprintf(stderr, "%s: cpus_str2array failed\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
 
  out:
 	free(result);
@@ -533,9 +595,12 @@ int ihklib_os_open(int index)
 	struct stat file_stat;
 
 	sprintf(fn, "/dev/mcos%d", index);
-	ret = stat(fn, &file_stat);
-	CHKANDJUMP(ret != 0, -ENOENT,
-		"os instance (/dev/mcos%d) not found\n", index);
+	if ((ret = stat(fn, &file_stat))) {
+		fprintf(stderr, "%s: error: stat %s failed: %s\n",
+			__func__, fn, strerror(errno));
+		ret = -errno;
+		goto out;
+	}
 
 	if ((ret = open(fn, O_RDONLY)) == -1) {
 		fprintf(stderr, "%s: error: open %s failed: %s\n",
@@ -599,7 +664,7 @@ int ihk_os_get_num_assigned_cpus(int index)
 
 int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 {
-	int ret = 0, ret_ioctl, ret_ihklib;
+	int ret = 0;
 	char *result = NULL;
 	int fd = -1;
 
@@ -639,13 +704,20 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_QUERY_CPU, result);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	if ((ret = ioctl(fd, IHK_OS_QUERY_CPU, result))) {
+		fprintf(stderr, "%s: IHK_OS_QUERY_CPU failed (%d)\n",
+			__func__, errno);
+		ret = -errno;
+		goto out;
+	}
+
 	dprintf("%s,result=%s\n", __FUNCTION__, result);
 
-	ret_ihklib = cpus_str2array(result, &num_cpus, cpus);
-	CHKANDJUMP(ret_ihklib != 0, -EINVAL, "cpus_str2array failed\n");
-	dprintf("%s,def,num_cpus=%d\n", __FUNCTION__, num_cpus);
+	if ((ret = cpus_str2array(result, cpus))) {
+		fprintf(stderr, "%s: cpus_str2array failed\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
 
  out:
 	free(result);
