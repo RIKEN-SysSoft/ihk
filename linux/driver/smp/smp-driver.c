@@ -2817,9 +2817,12 @@ retry:
 
 		/*
 		 * Do not allow to grab more than 95% of available
-		 * memory on NUMA 0 to avoid Linux crashing...
+		 * when requested "all" or when allocating from NUMA 0
+		 * to avoid Linux crashing...
 		 */
-		if (numa_id == 0 && allocated > (available * 95 / 100)) {
+		if ((numa_id == 0 && allocated > (available * 95 / 100)) ||
+				(want == IHK_SMP_MEM_ALL &&
+				 allocated > (available * 98 / 100))) {
 			printk("%s: 95%% of NUMA %d taken, breaking allocation"
 					" loop (current order: %d)..\n",
 					__FUNCTION__, numa_id, order);
