@@ -21,6 +21,12 @@ struct mcctrl_ioctl_getrusage_desc {
 	size_t size_rusage;
 };
 
+struct namespace_file {
+	int nstype;
+	const char *name;
+	int fd;
+};
+
 int ihklib_device_open(int index);
 int ihklib_os_open(int index);
 

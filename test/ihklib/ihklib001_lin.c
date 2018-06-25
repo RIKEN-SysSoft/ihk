@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 
 	char *home, *retstr;
 
-	home = getenv("HOME");
+	home = getenv("MYHOME");
 	CHKANDJUMP(home == NULL, -1, "getenv");
 	sprintf(prefix, "%s/project/os/install", home);
 	printf("%s\n", prefix);
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 	}
 	printf("logname=%s\n", logname);
 
-	envstr = getenv("GROUPS");
+	envstr = getenv("MYGROUPS");
 	CHKANDJUMP(envstr == NULL, -1, "groups");
 	groups = strdup(envstr);
 	retstr = strrchr(groups, '\n');

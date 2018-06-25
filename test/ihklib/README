@@ -86,3 +86,6 @@ ihk_os_get_assigned_cpus() and ihk_os_query_cpu()
 
 ihklib021:
 ihk_get_reserved_cpus() and ihk_query_cpu()
+
+ihklib022:
+ihk_os_create_pseudofs() and ihk_os_destroy_pseudofs()
