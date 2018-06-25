@@ -1,13 +1,20 @@
-# Makefile.in COPYRIGHT FUJITSU LIMITED 2015-2016
+# Makefile.in COPYRIGHT FUJITSU LIMITED 2015-2018
 CC=@CC@
 ARCH=@ARCH@
 IHKBASE ?= @abs_srcdir@/../..
 CFLAGS=-g -Wall -O -I$(IHKBASE)/linux/include/ -I$(IHKBASE)/linux/include/ihk/arch/$(ARCH) -I@abs_builddir@ -I@abs_builddir@/../include/ -I@abs_builddir@/../../
-SBINDIR=@SBINDIR@
-LIBDIR=@LIBDIR@
-INCLUDEDIR=@INCLUDEDIR@
-MANDIR=@MANDIR@
-IHK_TMPDIR=@IHK_TMPDIR@
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+# SBINDIR=@SBINDIR@
+# LIBDIR=@LIBDIR@
+# INCLUDEDIR=@INCLUDEDIR@
+# MANDIR=@MANDIR@
+# IHK_TMPDIR=@IHK_TMPDIR@
+DESTDIR ?= @DESTDIR@
+SBINDIR=$(DESTDIR)/@SBINDIR@
+LIBDIR=$(DESTDIR)/@LIBDIR@
+INCLUDEDIR=$(DESTDIR)/@INCLUDEDIR@
+MANDIR=$(DESTDIR)/@MANDIR@
+IHK_TMPDIR=$(DESTDIR)/@IHK_TMPDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
 TARGET=libihk.so ihkconfig ihkosctl memdump pagetable maccess memdump-mic ihkmond
