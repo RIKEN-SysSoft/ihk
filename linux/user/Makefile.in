@@ -38,18 +38,26 @@ libihk.so:  ihklib.o
 	${CC} ${CFLAGS} -shared -o $@ $< -lbfd
 
 ihkconfig: ihkconfig.c
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=@DESTDIR@/@LIBDIR@
 
 ihkosctl: ihkosctl.c
 ## POSTK_DEBUG_ARCH_DEP_69 add -liberty to ihkosctl
 ifeq ($(ARCH), arm64)
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -liberty -Wl,-rpath=$(LIBDIR)
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -liberty -Wl,-rpath=$(LIBDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -liberty -Wl,-rpath=@DESTDIR@/@LIBDIR@
 else
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=@DESTDIR@/@LIBDIR@
 endif
 
 ihkmond: ihkmond.c
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=$(LIBDIR)
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=$(LIBDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=@DESTDIR@/@LIBDIR@
 
 %: %.c
 	${CC} ${CFLAGS} -o $@ $< ${LIBS}
