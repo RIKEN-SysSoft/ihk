@@ -1,4 +1,4 @@
-/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
+/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /**
  * \file smp-x86-driver.c
  * \brief
@@ -521,7 +521,11 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 				}
 
 				dump_page->start = os_mem_chunk->addr;
+#ifdef POSTK_DEBUG_TEMP_FIX_95 /* Use other than 4K-page for dump_page calculation. */
+				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> (PAGE_SHIFT + 6));
+#else /* POSTK_DEBUG_TEMP_FIX_95 */
 				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> 18);
+#endif /* POSTK_DEBUG_TEMP_FIX_95 */
 				map_end = (os_mem_chunk->size >> PAGE_SHIFT);
 
 				for (index = 0; index < map_end; index++) {
