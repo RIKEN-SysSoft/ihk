@@ -1,0 +1,8 @@
+===========
+How to test
+===========
+(1) Edit the following line in Makefile
+
+    MCKDIR=$(HOME)/project/os/install
+
+(2) make test
