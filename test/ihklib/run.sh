@@ -47,7 +47,7 @@ case ${testname} in
 esac
 
 case ${testname} in
-    ihklib001 | ihklib020 | ihklib021 | ihklib022 | ihklib023)
+    ihklib001 | ihklib020 | ihklib021 | ihklib022 | ihklib023 | ihklib024)
 	;;
     *)
 	read -p "*** Hit return when ready!" key
@@ -55,7 +55,7 @@ case ${testname} in
 esac
 
 case ${testname} in
-    ihklib001 | ihklib020 | ihklib021 | ihklib023)
+    ihklib001 | ihklib020 | ihklib021 | ihklib023 | ihklib024)
 	bn_lin="${testname}_lin"
 	make clean > /dev/null 2> /dev/null
 	make ${bn_lin}
@@ -102,7 +102,7 @@ case ${testname} in
     ihklib009 | ihklib010 | ihklib011 | ihklib012 | \
     ihklib013 | ihklib014 | ihklib015 | ihklib016 | \
     ihklib017 | ihklib019 | ihklib020 | ihklib021 | \
-	ihklib022 | ihklib023)
+	ihklib022 | ihklib023 | ihklib024)
 	;;
     *)
 	echo Unknown test case
@@ -114,7 +114,7 @@ if [ ${dryrun} == "y" ]; then
 fi
 
 case ${testname} in
-    ihklib001 | ihklib002 | ihklib020 | ihklib021 | ihklib023)
+    ihklib001 | ihklib002 | ihklib020 | ihklib021 | ihklib023 | ihklib024)
 	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
 	    exit 255
 	fi
@@ -185,7 +185,7 @@ else
 	ihklib001)
 	    sudo MYGROUPS=${groups} MYHOME=${home} ./${bn_lin} ${testopt}
 	;;
-	ihklib020 | ihklib021 | ihklib023)
+	ihklib020 | ihklib021 | ihklib023 | ihklib024)
 	    sudo MYGROUPS=${groups} MYHOME=${home} ./${bn_lin}
 	;;
 	ihklib022)
@@ -291,7 +291,7 @@ else
 fi
 
 case ${testname} in
-    ihklib001 | ihklib020 | ihklib021 | ihklib023)
+    ihklib001 | ihklib020 | ihklib021 | ihklib023 | ihklib024)
 	;;
     ihklib003)
 	;;
