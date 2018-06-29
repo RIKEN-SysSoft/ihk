@@ -27,16 +27,18 @@
 	}				\
 } while (0)
 
-#define OKNG(cond, ...) do {				\
-	if (cond) {					\
-		printf("[OK] ");			\
-		printf(__VA_ARGS__);			\
-	} else {					\
-		printf("[NG] ");			\
-		printf(__VA_ARGS__);			\
-		goto fn_fail;				\
-	}						\
+#define _OKNG(verb, cond, fmt, args...) do {                     \
+	if (cond) {                                              \
+		if (verb)                                        \
+			printf("[OK] " fmt, ##args);        \
+	} else {                                                 \
+		printf("[NG] " fmt ": %d", ##args, ret);       \
+		goto fn_fail;                                    \
+	}                                                        \
 } while (0)
+
+#define OKNG(args...) _OKNG(1, ##args)
+#define NG(args...) _OKNG(0, ##args)
 
 #endif
 

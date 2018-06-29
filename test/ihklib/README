@@ -89,3 +89,9 @@ ihk_get_reserved_cpus() and ihk_query_cpu()
 
 ihklib022:
 ihk_os_create_pseudofs() and ihk_os_destroy_pseudofs()
+
+ihklib023:
+Check if the following functions are thread-safe
+* ihk_[os_]query_cpu()
+* ihk_[os_]query_mem()
+* ihk_os_get_ikc_map()
