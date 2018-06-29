@@ -69,6 +69,15 @@ MODULE_PARM_DESC(ihk_cores, "IHK reserved CPU cores");
 
 //#define BUILTIN_COM_VECTOR	0xf1
 
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
+#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
+        bitmap_scnlistprintf(buf, buflen, maskp, nmaskbits)
+#else
+#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
+        scnprintf(buf, buflen, "%*pbl", nmaskbits, maskp)
+#endif
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
 #if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 #define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
         bitmap_scnlistprintf(buf, buflen, maskp, nmaskbits)
@@ -76,6 +85,7 @@ MODULE_PARM_DESC(ihk_cores, "IHK reserved CPU cores");
 #define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
         scnprintf(buf, buflen, "%*pbl", nmaskbits, maskp)
 #endif
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 
 #define BUILTIN_DEV_STATUS_READY	0
 #define BUILTIN_DEV_STATUS_BOOTING	1
@@ -566,7 +576,14 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	struct file *file;
 	loff_t pos = 0;
 	long r;
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 	mm_segment_t fs;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+	mm_segment_t fs;
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 	unsigned long phys;
 	unsigned long offset;
 	unsigned long maxoffset;
@@ -651,6 +668,18 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		return -EINVAL;
 	}
 
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n",
+		(unsigned long)ihk_os, os->bootstrap_mem_end - PAGE_SIZE);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+	r = kernel_read(file, (char *)elf64, PAGE_SIZE, &pos);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+	fs = get_fs();
+	set_fs(get_ds());
+	r = vfs_read(file, (char *)elf64, PAGE_SIZE, &pos);
+	set_fs(fs);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
 	fs = get_fs();
 	set_fs(get_ds());
 	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n",
@@ -658,8 +687,17 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 	r = vfs_read(file, (char *)elf64, PAGE_SIZE, &pos);
 	set_fs(fs);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 	if (r <= 0) {
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+		printk("kernel_read failed: %ld\n", r);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 		printk("vfs_read failed: %ld\n", r);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+		printk("vfs_read failed: %ld\n", r);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 		ihk_smp_unmap_virtual(elf64);
 		fput(file);
 		return (int)r;
@@ -711,16 +749,35 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 			}
 
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+			r = kernel_read(file, buf, l, &pos);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 			fs = get_fs();
 			set_fs(get_ds());
 			r = vfs_read(file, buf, l, &pos);
 			set_fs(fs);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+			fs = get_fs();
+			set_fs(get_ds());
+			r = vfs_read(file, buf, l, &pos);
+			set_fs(fs);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 			if(r != PAGE_SIZE){
 				memset(buf + r, '\0', PAGE_SIZE - r);
 			}
 			ihk_smp_unmap_virtual(buf);
 			if (r <= 0) {
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+				printk("kernel_read failed: %ld\n", r);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 				printk("vfs_read failed: %ld\n", r);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+				printk("vfs_read failed: %ld\n", r);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 				ihk_smp_unmap_virtual(elf64);
 				fput(file);
 				return (int)r;
@@ -2782,22 +2839,56 @@ retry:
 	while (max_size_mem_chunk(&tmp_chunks) < want) {
 		struct page *pg = NULL;
 
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+		pg = __alloc_pages_nodemask(
+				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
+				__GFP_NORETRY,
+				//| __GFP_REPEAT,
+				order, numa_id, &nodemask);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0) */
 		pg = __alloc_pages_nodemask(
 				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
 				__GFP_NORETRY,
 				//| __GFP_REPEAT,
 				order,
 				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+		pg = __alloc_pages_nodemask(
+				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
+				__GFP_NORETRY,
+				//| __GFP_REPEAT,
+				order,
+				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 
 #ifdef CONFIG_MOVABLE_NODE
 		/* Try movable pages if supported */
 		if (!pg && __movable_node_enabled && *__movable_node_enabled) {
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+			pg = __alloc_pages_nodemask(
+					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
+					__GFP_NORETRY,
+					//| __GFP_REPEAT,
+					order, numa_id, &nodemask);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0) */
 			pg = __alloc_pages_nodemask(
 					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
 					__GFP_NORETRY,
 					//| __GFP_REPEAT,
 					order,
 					node_zonelist(numa_id, __GFP_COMP), &nodemask);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+			pg = __alloc_pages_nodemask(
+					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
+					__GFP_NORETRY,
+					//| __GFP_REPEAT,
+					order,
+					node_zonelist(numa_id, __GFP_COMP), &nodemask);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 		}
 #endif
 
@@ -3056,6 +3147,11 @@ static int _smp_ihk_write_cpu_sys_file(int cpu_id, char *val)
 	mm_segment_t oldfs;
 	int ret, err = 0;
 	char path[256];
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+	loff_t pos = 0;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 
 	sprintf(path, "/sys/devices/system/cpu/cpu%d/online", cpu_id);
 
@@ -3070,7 +3166,15 @@ static int _smp_ihk_write_cpu_sys_file(int cpu_id, char *val)
 		 return -1;
 	}
 
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+	ret = kernel_write(filp, val, 1, &pos);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 	ret = kernel_write(filp, val, 1, 0);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+	ret = kernel_write(filp, val, 1, 0);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 	if (ret != 1) {
 		 filp_close(filp, NULL);
 		 set_fs(oldfs);
@@ -3591,7 +3695,14 @@ int read_file(void *buf, size_t size, char *fmt, va_list ap)
 	int n;
 	struct file *fp = NULL;
 	loff_t off;
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 	mm_segment_t ofs;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+	mm_segment_t ofs;
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 	ssize_t ss;
 
 	dprintk("read_file(%p,%ld,%s,%p)\n", buf, size, fmt, ap);
@@ -3617,13 +3728,32 @@ int read_file(void *buf, size_t size, char *fmt, va_list ap)
 	}
 
 	off = 0;
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+	ss = kernel_read(fp, buf, size, &off);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 	ofs = get_fs();
 	set_fs(KERNEL_DS);
 	ss = vfs_read(fp, buf, size, &off);
 	set_fs(ofs);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+	ofs = get_fs();
+	set_fs(KERNEL_DS);
+	ss = vfs_read(fp, buf, size, &off);
+	set_fs(ofs);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 	if (ss < 0) {
 		error = ss;
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+		eprintk("ihk:read_file:kernel_read failed. %d\n", error);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 		eprintk("ihk:read_file:vfs_read failed. %d\n", error);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+		eprintk("ihk:read_file:vfs_read failed. %d\n", error);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 		goto out;
 	}
 	if (ss >= size) {

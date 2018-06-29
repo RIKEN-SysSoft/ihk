@@ -31,6 +31,7 @@
 #include <linux/uaccess.h>
 #endif
 #include <linux/psci.h>
+#include <linux/fs.h>
 #include <uapi/linux/psci.h>
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
@@ -257,14 +258,34 @@ static void (*ihk___smp_cross_call)(const struct cpumask *, unsigned int);
 
 /**
  * @brief GICv2 chip data structs
- * @ref.impl drivers/irqchip/irq-gic.c
  */
+
+/**
+ * @ref.impl drivers/irqchip/irq-gic.c:union gic_base
+ */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0))
+#error "No defined struct gic_chip_data_v2 for less than linux3.9"
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0))
+/* for linux3.9 - linux3.14 */
+union gic_base {
+	void __iomem *common_base;
+	void __percpu __iomem **percpu_base;
+};
+#else
+/* for linux3.15 - */
 union gic_base {
 	void __iomem *common_base;
 	void __percpu * __iomem *percpu_base;
 };
+#endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
+/**
+ * @ref.impl drivers/irqchip/irq-gic.c:struct gic_chip_data
+ */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0))
+#error "No defined struct gic_chip_data_v2 for less than linux3.9"
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
+/* for linux3.9 - linux4.3 */
 struct gic_chip_data_v2 {
 	union gic_base dist_base;
 	union gic_base cpu_base;
@@ -281,8 +302,8 @@ struct gic_chip_data_v2 {
 	void __iomem *(*get_base)(union gic_base *);
 #endif
 };
-#elif ((LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)) && \
-	(LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)))
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
+/* for linux4.4 */
 struct gic_chip_data_v2 {
 	union gic_base dist_base;
 	union gic_base cpu_base;
@@ -301,7 +322,53 @@ struct gic_chip_data_v2 {
 	void __iomem *(*get_base)(union gic_base *);
 #endif
 };
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)) */
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0))
+/* for linux4.5 - linux4.6 */
+struct gic_chip_data_v2 {
+	struct irq_chip chip;
+	union gic_base dist_base;
+	union gic_base cpu_base;
+#ifdef CONFIG_CPU_PM
+	u32 saved_spi_enable[DIV_ROUND_UP(1020, 32)];
+	u32 saved_spi_active[DIV_ROUND_UP(1020, 32)];
+	u32 saved_spi_conf[DIV_ROUND_UP(1020, 16)];
+	u32 saved_spi_target[DIV_ROUND_UP(1020, 4)];
+	u32 __percpu *saved_ppi_enable;
+	u32 __percpu *saved_ppi_active;
+	u32 __percpu *saved_ppi_conf;
+#endif
+	struct irq_domain *domain;
+	unsigned int gic_irqs;
+#ifdef CONFIG_GIC_NON_BANKED
+	void __iomem *(*get_base)(union gic_base *);
+#endif
+};
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0))
+/* for linux 4.7 */
+struct gic_chip_data_v2 {
+	struct irq_chip chip;
+	union gic_base dist_base;
+	union gic_base cpu_base;
+	void __iomem *raw_dist_base;
+	void __iomem *raw_cpu_base;
+	u32 percpu_offset;
+#if CONFIG_CPU_PM
+	u32 saved_spi_enable[DIV_ROUND_UP(1020, 32)];
+	u32 saved_spi_active[DIV_ROUND_UP(1020, 32)];
+	u32 saved_spi_conf[DIV_ROUND_UP(1020, 16)];
+	u32 saved_spi_target[DIV_ROUND_UP(1020, 4)];
+	u32 __percpu *saved_ppi_enable;
+	u32 __percpu *saved_ppi_active;
+	u32 __percpu *saved_ppi_conf;
+#endif
+	struct irq_domain *domain;
+	unsigned int gic_irqs;
+#ifdef CONFIG_GIC_NON_BANKED
+	void __iomem *(*get_base)(union gic_base *);
+#endif
+};
+#else
+/* for linux 4.8 - */
 struct gic_chip_data_v2 {
 	struct irq_chip chip;
 	union gic_base dist_base;
@@ -326,15 +393,19 @@ struct gic_chip_data_v2 {
 };
 #endif
 
-/*
- * @ref.impl drivers/irqchip/irq-gic-v3.c
+/**
+ * @ref.impl drivers/irqchip/irq-gic-v3.c:struct redist_region
  */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0))
+#error "No defined struct redist_region for less than linux3.19"
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+/* for linux3.19 - linux4.5 */
 struct redist_region {
-	void __iomem *redist_base;
-	phys_addr_t phys_base;
+	void __iomem	*redist_base;
+	phys_addr_t	phys_base;
 };
 #else
+/* for linux4.6 - */
 struct redist_region {
 	void __iomem		*redist_base;
 	phys_addr_t		phys_base;
@@ -342,17 +413,24 @@ struct redist_region {
 };
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0))
+/**
+ * @ref.impl drivers/irqchip/irq-gic-v3.c:struct gic_chip_data
+ */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0))
+#error "No defined struct gic_chip_data_v3 for less than linux3.19"
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0))
+/* for linux3.19 - linux4.6 */
 struct gic_chip_data_v3 {
-	void __iomem *dist_base;
-	struct redist_region *redist_regions;
-	struct rdists rdists;
-	struct irq_domain *domain;
-	u64 redist_stride;
-	u32 nr_redist_regions;
-	unsigned int irq_nr;
+	void __iomem		*dist_base;
+	struct redist_region	*redist_regions;
+	struct rdists		rdists;
+	struct irq_domain	*domain;
+	u64			redist_stride;
+	u32			nr_redist_regions;
+	unsigned int		irq_nr;
 };
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
+/* for linux4.7 - linux4.14 */
 struct gic_chip_data_v3 {
 	struct fwnode_handle	*fwnode;
 	void __iomem		*dist_base;
@@ -364,20 +442,37 @@ struct gic_chip_data_v3 {
 	unsigned int		irq_nr;
 	struct partition_desc	*ppi_descs[16];
 };
+#else
+/* for linux4.15 - */
+struct gic_chip_data_v3 {
+	struct fwnode_handle	*fwnode;
+	void __iomem		*dist_base;
+	struct redist_region	*redist_regions;
+	struct rdists		rdists;
+	struct irq_domain	*domain;
+	u64			redist_stride;
+	u32			nr_redist_regions;
+	bool			has_rss;
+	unsigned int		irq_nr;
+	struct partition_desc	*ppi_descs[16];
+};
 #endif
 static unsigned long ihk_gic_version = ACPI_MADT_GIC_VERSION_NONE;
 static unsigned int ihk_gic_max_vector = 0;
 
-/*
- * @ref.impl arch/arm64/kernel/psci.c
+/**
+ * @ref.impl arch/arm64/kernel/psci.c:struct psci_operations
  */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0))
+#error "No defined struct psci_operations for less than linux3.9"
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0))
+/* for linux3.9 - linux4.1 */
 struct psci_power_state {
-	unsigned short id;
-	unsigned char type;
-	unsigned char affinity_level;
+	u16	id;
+	u8	type;
+	u8	affinity_level;
 };
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 struct psci_operations {
 	int (*cpu_suspend)(struct psci_power_state state,
 	                   unsigned long entry_point);
@@ -388,6 +483,18 @@ struct psci_operations {
 	                     unsigned long lowest_affinity_level);
 	int (*migrate_info_type)(void);
 };
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0))
+/* for linux4.2 */
+struct psci_operations {
+	int (*cpu_suspend)(u32 state, unsigned long entry_point);
+	int (*cpu_off)(u32 state);
+	int (*cpu_on)(unsigned long cpuid, unsigned long entry_point);
+	int (*migrate)(unsigned long cpuid);
+	int (*affinity_info)(unsigned long target_affinity,
+			unsigned long lowest_affinity_level);
+	int (*migrate_info_type)(void);
+};
+/* for linux4.3 - defined move to include/linux/psci.h */
 #endif
 
 struct ihk_smp_trampoline_header {
@@ -916,6 +1023,9 @@ unsigned long get_sve_default_vl(void)
 	int ret, vl = 0;
 	const char *path = "/proc/cpu/sve_default_vector_length";
 	char buf[16] = "";
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+	loff_t pos = 0;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 
 	oldfs = get_fs();
 	set_fs(get_ds());
@@ -926,7 +1036,11 @@ unsigned long get_sve_default_vl(void)
 		goto open_err;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+	ret = kernel_read(filp, buf, sizeof(buf), &pos);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 	ret = kernel_read(filp, 0, buf, sizeof(buf));
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 	if (ret < 0) {
 		printk("%s: ERROR reading %s\n", __FUNCTION__, path);
 		goto read_err;
@@ -2211,7 +2325,7 @@ int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	cpumask_t cpus_to_map;
 	unsigned long flags;
 	char *string = NULL;
-	long len = strlen_user((const char __user *)arg);
+	long len = strnlen_user((const char __user *)arg, LONG_MAX);
 	char *token;
 
 	dprintk("%s,set_ikc_map,arg=%s\n", __FUNCTION__, string);

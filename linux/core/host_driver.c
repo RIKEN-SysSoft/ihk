@@ -30,6 +30,10 @@
 #include <linux/file.h>
 #include <linux/string.h>
 #include <linux/eventfd.h>
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#include <linux/version.h>
+#include <linux/cred.h>
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
 #include <asm/spinlock.h>
@@ -197,7 +201,14 @@ static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
 	int ret = 0;
 	loff_t size, done, pos = 0;
 	long r;
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 	mm_segment_t fs;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+	mm_segment_t fs;
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 
 	if (data->ops->load_file) {
 		dprintf("IHK: os_load_file is defined. Use it.\n");
@@ -226,15 +237,36 @@ static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
 		}
 
 		for (done = 0; ret == 0 && done < size; ) {
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+			r = kernel_read(file, buf, PAGE_SIZE, &pos);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 			fs = get_fs();
 			set_fs(get_ds());
 
 			r = vfs_read(file, buf, PAGE_SIZE, &pos);
 
 			set_fs(fs);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+			fs = get_fs();
+			set_fs(get_ds());
+
+			r = vfs_read(file, buf, PAGE_SIZE, &pos);
+
+			set_fs(fs);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 			
 			if (r <= 0) {
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+				dprintf("kernel_read failed: %ld\n", r);
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
 				dprintf("vfs_read failed: %ld\n", r);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
+#else /* POSTK_DEBUG_ARCH_DEP_96 */
+				dprintf("vfs_read failed: %ld\n", r);
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 				ret = (int)r;
 				break;
 			}
