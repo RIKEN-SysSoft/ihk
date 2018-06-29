@@ -55,6 +55,13 @@ typedef struct ihk_perf_event_attr {
 	unsigned exclude_idle:1;
 } ihk_perf_event_attr;
 
+enum IHKLIB_LOGLEVEL {
+	IHKLIB_LOGLEVEL_EMERG = 0,
+	IHKLIB_LOGLEVEL_ERR
+};
+
+extern int loglevel;
+
 int ihk_reserve_cpu(int index, int* cpus, int num_cpus);
 int ihk_get_num_reserved_cpus(int index);
 int ihk_query_cpu(int index, int* cpus, int _num_cpus);
@@ -100,6 +107,7 @@ int ihk_os_getperfevent(int index, unsigned long *counter, int n);
 int ihk_os_freeze(unsigned long *os_set, int n);
 int ihk_os_thaw(unsigned long *os_set, int n);
 int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interactive);
+int ihk_set_loglevel(enum IHKLIB_LOGLEVEL level);
 
 #endif
 
