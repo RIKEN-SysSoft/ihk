@@ -3115,134 +3115,6 @@ esac
 KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
 
-IHK_LINUX_SYMTAB=""
-case "X$WITH_SYSTEM_MAP" in
-    Xyes | Xno | X)
-	IHK_LINUX_SYMTAB=""
-	;;
-    *)
-	IHK_LINUX_SYMTAB="$WITH_SYSTEM_MAP"
-	;;
-esac
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for System.map" >&5
-$as_echo_n "checking for System.map... " >&6; }
-if test -r "$IHK_LINUX_SYMTAB"; then
-	IHK_LINUX_SYMTAB="$IHK_LINUX_SYMTAB"
-elif test -r "/boot/System.map-`uname -r`"; then
-	IHK_LINUX_SYMTAB="/boot/System.map-`uname -r`"
-elif test -r "$KDIR/System.map"; then
-	IHK_LINUX_SYMTAB="$KDIR/System.map"
-fi
-
-if test "$IHK_LINUX_SYMTAB" == ""; then
-	as_fn_error $? "could not find" "$LINENO" 5
-fi
-
-if test -z "`eval cat $IHK_LINUX_SYMTAB`"; then
-	as_fn_error $? "could not read System.map file, no read permission?" "$LINENO" 5
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $IHK_LINUX_SYMTAB" >&5
-$as_echo "$IHK_LINUX_SYMTAB" >&6; }
-
-IHK_LINUX_SYMTAB_CMD="cat $IHK_LINUX_SYMTAB"
-
-# IHK_FIND_KSYM(SYMBOL)
-# ------------------------------------------------------
-# Search System.map for address of the given symbol and
-# do one of three things in config.h:
-# If not found, leave IHK_KSYM_foo undefined
-# If found to be exported, "#define IHK_KSYM_foo 0"
-# If found not to be exported, "#define IHK_KSYM_foo 0x<value>"
-
-# POSTK_DEBUG_ARCH_DEP_10, Enhance IHK_FIND_KSYM macro feature.
-
-# <older version>
-# AC_DEFUN([IHK_FIND_KSYM],[
-#   AC_MSG_CHECKING([[System.map for symbol $1]])
-#   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " $1\$" | cut -d\  -f1`
-#   if test -z $ihk_addr; then
-#     AC_MSG_RESULT([not found])
-#   else
-#     ihk_result=$ihk_addr
-#     ihk_addr="0x$ihk_addr"
-#     m4_ifval([$2],[],[
-#       if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_$1\$" >/dev/null`; then
-# 	ihk_result="exported"
-# 	ihk_addr="0"
-#       fi
-#     ])
-#     AC_MSG_RESULT([$ihk_result])
-#     AC_DEFINE_UNQUOTED(IHK_KSYM_[]$1,$ihk_addr,
-# 			[Define to address of kernel symbol $1, or 0 if exported])
-#   fi
-# ])
-
-if test "$TARGET" = "smp-arm64"; then
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol gic_data" >&5
-$as_echo_n "checking System.map for symbol gic_data... " >&6; }
-  symbol_src=irq-gic-v3.c
-  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " gic_data\$" | cut -d\  -f1`
-  ihk_addr_array=($ihk_addr)
-  if test ${#ihk_addr_array[*]} -gt 1 ; then
-    for addr in $ihk_addr ; do
-      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
-      if test $filename = $symbol_src  ; then
-        ihk_addr=$addr
-        break
-      fi
-    done
-  fi
-  if test -z $ihk_addr; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-  else
-    ihk_result=$ihk_addr
-    ihk_addr="0x$ihk_addr"
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
-$as_echo "$ihk_result" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define IHK_KSYM_gic_data_gicv3 $ihk_addr
-_ACEOF
-
-  fi
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking System.map for symbol gic_raise_softirq" >&5
-$as_echo_n "checking System.map for symbol gic_raise_softirq... " >&6; }
-  symbol_src=irq-gic-v3.c
-  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " gic_raise_softirq\$" | cut -d\  -f1`
-  ihk_addr_array=($ihk_addr)
-  if test ${#ihk_addr_array[*]} -gt 1 ; then
-    for addr in $ihk_addr ; do
-      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
-      if test $filename = $symbol_src  ; then
-        ihk_addr=$addr
-        break
-      fi
-    done
-  fi
-  if test -z $ihk_addr; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-  else
-    ihk_result=$ihk_addr
-    ihk_addr="0x$ihk_addr"
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ihk_result" >&5
-$as_echo "$ihk_result" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define IHK_KSYM_gic_raise_softirq_gicv3 $ihk_addr
-_ACEOF
-
-  fi
-
-fi
-
 if test "x$ENABLE_MEMDUMP" != "xno" ; then
 	enableval=yes
 # POSTK_DEBUG_ARCH_DEP_32, AC_CHECK_LIB for libiberty
@@ -3881,9 +3753,6 @@ fi
 case "$TARGET" in
 smp*)
 	ac_config_headers="$ac_config_headers config.h"
-
-	arch=`echo "$ARCH"`
-	ac_config_headers="$ac_config_headers linux/driver/smp/arch/$arch/config-$arch.h"
 
 	;;
 esac
@@ -4591,7 +4460,6 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
-    "linux/driver/smp/arch/$arch/config-$arch.h") CONFIG_HEADERS="$CONFIG_HEADERS linux/driver/smp/arch/$arch/config-$arch.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "linux/core/Makefile") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile" ;;
     "linux/core/Makefile.module") CONFIG_FILES="$CONFIG_FILES linux/core/Makefile.module" ;;

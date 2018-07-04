@@ -31,7 +31,6 @@
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include "config-arm64.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
@@ -66,8 +65,6 @@ static phys_addr_t ihk_smp_gic_cpu_base_pa = 0;
 static unsigned long ihk_smp_gic_cpu_size = 0;
 static unsigned int ihk_gic_percpu_offset = 0;
 static phys_addr_t ihk_smp_gic_rdist_pa[NR_CPUS];
-
-static void (*ihk___smp_cross_call)(const struct cpumask *, unsigned int);
 
 /*
  * If you edit IPI_XXX, you must edit following together.
@@ -190,7 +187,8 @@ static unsigned long ihk_smp_psci_method = PSCI_METHOD_INVALID;	/* psci_method v
  * IHK-SMP unexported kernel symbols
  */
 static struct gic_chip_data_v3 *ihk_gic_data_v3;
-static void (*ihk___smp_cross_call_gicv3)(const struct cpumask *, unsigned int);
+static void (*ihk___smp_cross_call)(const struct cpumask *, unsigned int);
+
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 static int (*ihk___irq_domain_alloc_irqs)(struct irq_domain *domain,
@@ -229,8 +227,43 @@ enum ppi_nr *ihk_arch_timer_uses_ppi;
 
 u32 *ihk_arch_timer_rate;
 
+/* There are two symbols with the same name, but thanksfully only one is
+ * actually used, and the other will contain 0s by definition.
+ * We can use that to figure which symbol to use
+ */
+int lookup_gic_data_v3(void *data, const char *name, struct module *mod,
+		       unsigned long address)
+{
+	unsigned long *gic_data;
+	int i;
+
+	if (strcmp(name, "gic_data") == 0) {
+		gic_data = (void *)address;
+		/* check the first (arbitrary) 8 words for data */
+		for (i = 0; i < 8; i++) {
+			if (gic_data[i]) {
+				ihk_gic_data_v3 = (void *) address;
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 int ihk_smp_arch_symbols_init(void)
 {
+	if (WARN_ON(!kallsyms_on_each_symbol(lookup_gic_data_v3, NULL)))
+		return -EFAULT;
+
+	void **ihk___smp_cross_call_p =
+		(void *) kallsyms_lookup_name("__smp_cross_call");
+	if (WARN_ON(!ihk___smp_cross_call_p))
+		return -EFAULT;
+	ihk___smp_cross_call = *ihk___smp_cross_call_p;
+	if (WARN_ON(!ihk___smp_cross_call))
+		return -EFAULT;
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	ihk___irq_domain_alloc_irqs =
 		(void *) kallsyms_lookup_name("__irq_domain_alloc_irqs");
@@ -651,8 +684,6 @@ static int ihk_smp_collect_gic_info(void)
 		printk("INFO: This is the Device Tree environment.\n");
 		result = ihk_smp_dt_get_gic_base();
 	}
-
-	ihk___smp_cross_call = ihk___smp_cross_call_gicv3;
 
 	ihk_gic_max_vector = ihk_gic_data_v3->irq_nr;
 
