@@ -27,18 +27,19 @@ ihklib.o:  ihklib.c
 	${CC} ${CFLAGS} -fPIC -o $@ -c $<
 
 libihk.so:  ihklib.o
+## POSTK_DEBUG_ARCH_DEP_69 add -liberty to ihkosctl
+ifeq ($(ARCH), arm64)
+	${CC} ${CFLAGS} -shared -o $@ $< -lbfd -liberty -ldl -lz
+else
 	${CC} ${CFLAGS} -shared -o $@ $< -lbfd
+endif
+
 
 ihkconfig: ihkconfig.c libihk.so
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
 
 ihkosctl: ihkosctl.c libihk.so
-## POSTK_DEBUG_ARCH_DEP_69 add -liberty to ihkosctl
-ifeq ($(ARCH), arm64)
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -liberty -Wl,-rpath=$(LIBDIR)
-else
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
-endif
 
 ihkmond: ihkmond.c libihk.so
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=$(LIBDIR)
