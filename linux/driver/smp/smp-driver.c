@@ -2981,15 +2981,16 @@ pre_out:
 			/* Not in front of compound page? */
 			leftover_page = virt_to_page(leftover);
 			if (PageCompound(leftover_page) && !PageHead(leftover_page)) {
+				struct page *head = compound_head(leftover_page);
 				leftover = (struct chunk *)
-					phys_to_virt(page_to_phys(leftover_page->first_page)) +
-					(PAGE_SIZE << compound_order(leftover_page->first_page));
+					phys_to_virt(page_to_phys(head)) +
+					(PAGE_SIZE << compound_order(head));
 
 				printk("%s: adjusted leftover chunk to compound "
 						"page border: 0x%llx:%lu\n",
 						__FUNCTION__,
-						page_to_phys(leftover_page->first_page),
-						(PAGE_SIZE << compound_order(leftover_page->first_page)));
+						page_to_phys(head),
+						(PAGE_SIZE << compound_order(head)));
 			}
 
 			/* Only if there is really something left.. */
