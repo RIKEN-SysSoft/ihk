@@ -995,8 +995,8 @@ int smp_wakeup_secondary_cpu(int hw_id, unsigned long start_eip)
 	if (ret) {
 		return ret;
 	}
-	D("ihk_psci_ops->cpu_on[%p] (0x%llx, 0x%lx)\n",
-	  ihk_psci_ops->cpu_on, affi, start_eip);
+	D("ihk_psci_ops->cpu_on[0x%lx] (0x%llx, 0x%lx)\n",
+	  (unsigned long)ihk_psci_ops->cpu_on, affi, start_eip);
 	return ihk_psci_ops->cpu_on(affi, start_eip);
 }
 
