@@ -15,7 +15,7 @@ ihk-y = host_driver.o mem_alloc.o mm.o mikc.o
 ihk-y += ../../ikc/linux.o ../../ikc/master.o ../../ikc/queue.o
 
 ifeq ($(ARCH), arm64)
-EXTRA_CFLAGS += $(foreach i, $(shell seq 6 106), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+EXTRA_CFLAGS += $(foreach i, $(shell seq 6 110), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
 EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
 endif
 
