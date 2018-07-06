@@ -32,6 +32,9 @@
 #endif
 #include <linux/psci.h>
 #include <linux/fs.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
+#include <linux/kallsyms.h>
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0) */
 #include <uapi/linux/psci.h>
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
@@ -525,76 +528,18 @@ struct ihk_smp_trampoline_header {
 	unsigned long cpu_logical_map[NR_CPUS];	/* array of the MPIDR and the core number */
 	unsigned long rdist_base_pa[NR_CPUS];	/* GIC re-distributor register base addresses */
 	unsigned long retention_state_flag_pa;
-	int nr_pmu_irq_affiniry;	/* number of pmu affinity list elements */
-	int pmu_irq_affiniry[SMP_MAX_CPUS];	/* array of the pmu affinity list */
+	int nr_pmu_irq_affi;		/* number of pmu affinity list elements */
+	int pmu_irq_affi[SMP_MAX_CPUS];	/* array of the pmu affinity list */
 };
 
 static unsigned long ihk_smp_psci_method = PSCI_METHOD_INVALID;	/* psci_method value */
 
 /* ----------------------------------------------- */
 
-/* @ref.impl arch/arm64/kernel/perf_event.c:armpmu_reserve_hardware */
-static int
-ihk_armpmu_get_irq_affinity(int irqs[], const struct arm_pmu *armpmu, const struct smp_os_data *os)
-{
-	struct platform_device* pmu_device;
-	int hwid, virtid, irq;
-
-	if (!armpmu) {
-		return -EINVAL;
-	}
-
-	pmu_device = armpmu->plat_device;
-	if (!pmu_device) {
-		pr_err("no PMU device registered\n");
-		return -ENODEV;
-	}
-
-	irq = platform_get_irq(pmu_device, 0);
-	if (irq <= 0) {
-		pr_err("failed to get valid irq for PMU device\n");
-		return -ENODEV;
-	}
-
-	if (irq_is_percpu(irq)) {
-		// TODO[PMU]: ここにくるときはPPIと予想。割込みコアは固定されているはず。
-		pr_info("PMU irq is percpu.\n");
-		return 0;
-	}
-
-	if (!pmu_device->num_resources) {
-		pr_err("no irqs for PMUs defined\n");
-		return -ENODEV;
-	}
-
-	// McKにおける論理CPU番号がインデックスになるように、
-	// 物理CPU番号の若い順からirqs変数に格納しておく
-	virtid = 0;
-	for (hwid = 0; hwid < SMP_MAX_CPUS; hwid++) {
-		int irq;
-
-		if (!(CORE_ISSET(hwid, os->cpu_hw_ids_map))) {
-			continue;
-		}
-
-		if (pmu_device->num_resources <= hwid) {
-			pr_err("failed to get core number.\n");
-			return -ENOENT;
-		}
-
-		irq = platform_get_irq(pmu_device, hwid);
-		if (irq <= 0) {
-			pr_warn("failed to get irq number.\n");
-		}
-		irqs[virtid++] = irq;
-	}
-	return virtid;
-}
-
 #if 0 // TODO[PMU]
 /* @ref.impl arch/arm64/kernel/perf_event.c:armpmu_reserve_hardware */
 static int
-ihk_armpmu_set_irq_affinity(const int irqs[], const struct smp_os_data *os)
+ihk_armpmu_set_irq_affi(const int irqs[], const struct smp_os_data *os)
 {
 	int hwid, virtid;
 
@@ -873,6 +818,61 @@ static int ihk_smp_acpi_get_gic_base(void)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
+#define GICC_FUNC_NAME	"acpi_cpu_get_madt_gicc"
+typedef struct acpi_madt_generic_interrupt *(*gicc_func_t)(int cpu);
+static int
+ihk_armpmu_get_irq_affi_acpi(int irqs[], const struct arm_pmu *armpmu,
+			     const struct smp_os_data *os)
+{
+	struct acpi_madt_generic_interrupt *gicc = NULL;
+	int irq = 0, virtid = 0, hwid = 0;
+	u32 gsi = 0;
+	gicc_func_t gicc_func = NULL;
+
+	gicc_func = (gicc_func_t)kallsyms_lookup_name(GICC_FUNC_NAME);
+	if (!gicc_func) {
+		pr_err("%s: %s() is not implemented.\n", GICC_FUNC_NAME, __FUNCTION__);
+		return -ENOSYS;
+	}
+
+	gicc = gicc_func(0);
+	if (!gicc) {
+		pr_err("%s: %s(0) return NULL.\n", GICC_FUNC_NAME, __FUNCTION__);
+		return -ENXIO;
+	}
+	gsi = gicc->performance_interrupt;
+
+	if (acpi_gsi_to_irq(gsi, &irq)) {
+		pr_err("%s: acpi_gsi_to_irq() failed.\n", __FUNCTION__);
+		return -ENODEV;
+	}
+
+	if (irq_is_percpu_devid(irq)) {
+		pr_info("PMU irq is percpu.\n");
+		return 0;
+	}
+
+	for (hwid = 0; hwid < SMP_MAX_CPUS; hwid++) {
+		if (!(CORE_ISSET(hwid, os->cpu_hw_ids_map))) {
+			continue;
+		}
+
+		gicc = gicc_func(hwid);
+		if (!gicc) {
+			continue;
+		}
+		gsi = gicc->performance_interrupt;
+
+		if (acpi_gsi_to_irq(gsi, &irq)) {
+			continue;
+		}
+		irqs[virtid++] = irq;
+	}
+	return virtid;
+}
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0) */
+
 #else /* CONFIG_ACPI */
 
 static int ihk_smp_acpi_get_gic_base(void)
@@ -881,7 +881,91 @@ static int ihk_smp_acpi_get_gic_base(void)
 	return -EINVAL;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
+static inline int
+ihk_armpmu_get_irq_affi_acpi(int irqs[], const struct arm_pmu *armpmu,
+			     const struct smp_os_data *os)
+{
+	return 0;
+}
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0) */
+
 #endif /* CONFIG_ACPI */
+
+static int
+ihk_armpmu_get_irq_affi_plat(int irqs[], const struct arm_pmu *armpmu,
+			     const struct smp_os_data *os)
+{
+	struct platform_device* pmu_device;
+	int hwid, virtid, irq;
+
+	pmu_device = armpmu->plat_device;
+	if (!pmu_device) {
+		pr_err("no PMU device registered\n");
+		return -ENODEV;
+	}
+
+	irq = platform_get_irq(pmu_device, 0);
+	if (irq <= 0) {
+		pr_err("failed to get valid irq for PMU device\n");
+		return -ENODEV;
+	}
+
+	if (irq_is_percpu(irq)) {
+		// TODO[PMU]: ここにくるときはPPIと予想。割込みコアは固定されているはず。
+		pr_info("PMU irq is percpu.\n");
+		return 0;
+	}
+
+	if (!pmu_device->num_resources) {
+		pr_err("no irqs for PMUs defined\n");
+		return -ENODEV;
+	}
+
+	// McKにおける論理CPU番号がインデックスになるように、
+	// 物理CPU番号の若い順からirqs変数に格納しておく
+	virtid = 0;
+	for (hwid = 0; hwid < SMP_MAX_CPUS; hwid++) {
+		int irq;
+
+		if (!(CORE_ISSET(hwid, os->cpu_hw_ids_map))) {
+			continue;
+		}
+
+		if (pmu_device->num_resources <= hwid) {
+			pr_err("failed to get core number.\n");
+			return -ENOENT;
+		}
+
+		irq = platform_get_irq(pmu_device, hwid);
+		if (irq <= 0) {
+			pr_warn("failed to get irq number.\n");
+		}
+		irqs[virtid++] = irq;
+	}
+	return virtid;
+}
+
+static int
+ihk_armpmu_get_irq_affi(int irqs[], const struct arm_pmu *armpmu,
+			const struct smp_os_data *os)
+{
+	if (!armpmu) {
+		return -EINVAL;
+	}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
+	/* When CONFIG_ACPI is not defined, the acpi_disabled is always 1 */
+	if (acpi_disabled) {
+		return ihk_armpmu_get_irq_affi_plat(irqs, armpmu, os);
+	}
+	else {
+		return ihk_armpmu_get_irq_affi_acpi(irqs, armpmu, os);
+	}
+#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0) */
+	return ihk_armpmu_get_irq_affi_plat(irqs, armpmu, os);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0) */
+}
 
 static int ihk_smp_dt_get_gic_base(void)
 {
@@ -1131,15 +1215,15 @@ void smp_ihk_setup_trampoline(void *priv)
 	}
 	raw_spin_unlock_irqrestore(&__retention_state_lock, flags);
 
-	nr_irqs = ihk_armpmu_get_irq_affinity(header->pmu_irq_affiniry, *ihk_cpu_pmu, os);
+	nr_irqs = ihk_armpmu_get_irq_affi(header->pmu_irq_affi, *ihk_cpu_pmu, os);
 	if (nr_irqs < 0) {
-		header->nr_pmu_irq_affiniry = 0;
+		header->nr_pmu_irq_affi = 0;
 		return;
 	}
-	header->nr_pmu_irq_affiniry = nr_irqs;
+	header->nr_pmu_irq_affi = nr_irqs;
 	// TODO[PMU]: McKernel側でコアが起きた後にaffinity設定しないと駄目なら、ここでの設定は止める。
 	// TODO[PMU]: A log that fails in __irq_set_affinity() in combination with CPUFW-0.8.0 or later is output.
-	//ihk_armpmu_set_irq_affinity(header->pmu_irq_affiniry, os);
+	//ihk_armpmu_set_irq_affi(header->pmu_irq_affi, os);
 }
 
 unsigned long smp_ihk_adjust_entry(unsigned long entry,
