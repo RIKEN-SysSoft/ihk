@@ -2756,6 +2756,13 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	bool *__movable_node_enabled = NULL;
 #endif
 
+	if (!node_online(numa_id)) {
+		pr_err("IHK-SMP: error: NUMA node %d isn't online\n",
+		       numa_id);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
 
