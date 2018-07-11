@@ -1230,37 +1230,42 @@ int ihk_os_create_pseudofs(int index, pid_t nspid, int namespaces)
 	}
 
 	if ((euid = geteuid())) {
-		fprintf(stderr,
-			"%s: only root is allowed to call this function\n",
+		eprintf("%s: only root is allowed to call this function\n",
 			__func__);
 		ret = -EPERM;
 		goto out;
 	}
 
-	/* Create /proc with restricted version of Linux /proc */
 	if (!(pid = fork())) {
 		if (nspid) {
 			if ((ret = open_namespace(nspid, namespaces))) {
-				fprintf(stderr,
-					"%s: error: open_namespace failed\n",
+				eprintf("%s: error: open_namespace failed\n",
 					__func__);
 				goto out_child;
 			}
 
 			if ((ret = enter_namespace(namespaces))) {
-				fprintf(stderr,
-					"%s: error: enter_namespace failed\n",
+				eprintf("%s: error: enter_namespace failed\n",
 					__func__);
 				goto out_child;
 			}
 		}
 
 		status = system("/bin/bash " SBINDIR "/mcoverlay-create.sh");
-		if (status == -1 || WEXITSTATUS(status) != 0) {
-			fprintf(stderr,
-				"%s: error: system returned %x\n",
-				__func__, status);
-			ret = -EINVAL;
+
+		if (status == -1) {
+			eprintf("%s: error: system: %s\n",
+				__func__, strerror(errno));
+			ret = -errno;
+			goto out_child;
+		}
+
+		if (WEXITSTATUS(status) != 0) {
+			signed char status_signed_char = WEXITSTATUS(status);
+
+			eprintf("%s: error: mcoverlay-create.sh: %s\n",
+				__func__, strerror(-status_signed_char));
+			ret = status_signed_char;
 			goto out_child;
 		}
 
@@ -1269,22 +1274,32 @@ out_child:
 		if (nspid) {
 			close_namespace();
 		}
+
 		exit(ret);
 	}
 
-	if ((ret = waitpid(pid, &status, 0)) == -1) {
-		fprintf(stderr,
-			"%s: error: waitpid failed: %s\n",
+	pid = waitpid(pid, &status, 0);
+
+	if (pid == -1) {
+		eprintf("%s: error: waitpid: %s\n",
 			__func__, strerror(errno));
 		ret = -errno;
 		goto out;
 	}
 
-	if (!WIFEXITED(status) || WEXITSTATUS(status)) {
-		fprintf(stderr,
-			"%s: error: invalid child status: %x\n",
-			__func__, status);
-		ret = WEXITSTATUS(status);
+	if (!WIFEXITED(status)) {
+		eprintf("%s: error: child didn't terminated normally\n",
+			__func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (WEXITSTATUS(status)) {
+		signed char status_signed_char = WEXITSTATUS(status);
+
+		eprintf("%s: error: child: %s\n",
+			__func__, strerror(-status_signed_char));
+		ret = status_signed_char;
 		goto out;
 	}
 
@@ -1293,6 +1308,7 @@ out_child:
 	if (fd != -1) {
 		close(fd);
 	}
+
 	return ret;
 }
 
@@ -1317,8 +1333,7 @@ int ihk_os_destroy_pseudofs(int index, pid_t nspid, int namespaces)
 	 */
 
 	if ((euid = geteuid())) {
-		fprintf(stderr,
-			"%s: only root is allowed to call this function\n",
+		eprintf("%s: only root is allowed to call this function\n",
 			__func__);
 		ret = -EPERM;
 		goto out;
@@ -1328,26 +1343,33 @@ int ihk_os_destroy_pseudofs(int index, pid_t nspid, int namespaces)
 	if (!(pid = fork())) {
 		if (nspid) {
 			if ((ret = open_namespace(nspid, namespaces))) {
-				fprintf(stderr,
-					"%s: error: open_namespace failed\n",
+				eprintf("%s: error: open_namespace failed\n",
 					__func__);
 				goto out_child;
 			}
 
 			if ((ret = enter_namespace(namespaces))) {
-				fprintf(stderr,
-					"%s: error: enter_namespace failed\n",
+				eprintf("%s: error: enter_namespace failed\n",
 					__func__);
 				goto out_child;
 			}
 		}
 
 		status = system("/bin/bash " SBINDIR "/mcoverlay-destroy.sh");
-		if (status == -1 || WEXITSTATUS(status) != 0) {
-			fprintf(stderr,
-				"%s: error: system returned %x\n",
-				__func__, status);
-			ret = -EINVAL;
+
+		if (status == -1) {
+			eprintf("%s: error: system: %s\n",
+				__func__, strerror(errno));
+			ret = -errno;
+			goto out_child;
+		}
+
+		if (WEXITSTATUS(status) != 0) {
+			signed char status_signed_char = WEXITSTATUS(status);
+
+			eprintf("%s: error: mcoverlay-destroy.sh: %s\n",
+				__func__, strerror(-status_signed_char));
+			ret = status_signed_char;
 			goto out_child;
 		}
 
@@ -1359,19 +1381,28 @@ out_child:
 		exit(ret);
 	}
 
-	if (waitpid(pid, &status, 0) == -1) {
-		fprintf(stderr,
-			"%s: error: waitpid failed: %s\n",
+	pid = waitpid(pid, &status, 0);
+
+	if (pid == -1) {
+		eprintf("%s: error: waitpid failed: %s\n",
 			__func__, strerror(errno));
 		ret = -errno;
 		goto out;
 	}
 
-	if (!WIFEXITED(status) || WEXITSTATUS(status)) {
-		fprintf(stderr,
-			"%s: error: invalid child status: %x\n",
-			__func__, status);
-		ret = WEXITSTATUS(status);
+	if (!WIFEXITED(status)) {
+		eprintf("%s: error: child didn't terminated normally\n",
+			__func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (WEXITSTATUS(status)) {
+		signed char status_signed_char = WEXITSTATUS(status);
+
+		eprintf("%s: error: child: %s\n",
+			__func__, strerror(-status_signed_char));
+		ret = status_signed_char;
 		goto out;
 	}
 
@@ -1380,6 +1411,7 @@ out_child:
 	if (fd != -1) {
 		close(fd);
 	}
+
 	return ret;
 }
 
