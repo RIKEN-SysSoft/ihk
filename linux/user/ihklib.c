@@ -25,7 +25,11 @@
 #include <sys/stat.h>
 #include <sys/eventfd.h>
 #include <sys/time.h>
-
+#include <sched.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
+#include <linux/sched.h>	/*  TODO: Temporary fix. */
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) */
 #include <config.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihklib.h>
@@ -65,6 +69,20 @@ char **__argv;
 			goto out;												\
 		}																\
 	} while(0)
+
+
+struct namespace_file namespace_files[] = {
+	{ .nstype = CLONE_NEWUSER,	.name = "ns/user", .fd = -1 },
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
+	{ .nstype = CLONE_NEWCGROUP,	.name = "ns/cgroup", .fd = -1 },
+#endif
+	{ .nstype = CLONE_NEWIPC,	.name = "ns/ipc", .fd = -1 },
+	{ .nstype = CLONE_NEWUTS,	.name = "ns/uts", .fd = -1 },
+	{ .nstype = CLONE_NEWNET,	.name = "ns/net", .fd = -1 },
+	{ .nstype = CLONE_NEWPID,	.name = "ns/pid", .fd = -1 },
+	{ .nstype = CLONE_NEWNS,	.name = "ns/mnt", .fd = -1 },
+	{ .nstype = 0, .name = NULL, .fd = -1 }
+};
 
 static void cpus_array2str(char* cpu_list, ssize_t sz_cpu_list, int num_cpus, int* cpus) {
 	int i;
@@ -1126,21 +1144,151 @@ int ihk_os_get_status(int index)
 	return ret;
 }
 
-int ihk_os_create_pseudofs(int index)
+static int open_namespace(pid_t pid, int namespaces)
 {
-	int ret = 0, status;
+	int ret = 0;
+	char nspath[PATH_MAX];
+	struct namespace_file *nsfile;
+
+	for (nsfile = namespace_files; nsfile->nstype; nsfile++) {
+		if (!(nsfile->nstype & namespaces)) {
+			continue;
+		}
+
+		if (nsfile->fd != -1) {
+			close(nsfile->fd);
+		}
+
+		sprintf(nspath, "/proc/%d/%s", pid, nsfile->name);
+		dprintf("%s: nspath=%s\n", __func__, nspath);
+
+		if ((nsfile->fd = open(nspath, O_RDONLY)) == -1) {
+			fprintf(stderr, "%s: open %s failed: %s\n",
+				__func__, nspath, strerror(errno));
+			ret = -errno;
+			goto out;
+		}
+	}
+ out:
+	return ret;
+}
+
+static void close_namespace(void)
+{
+	struct namespace_file *nsfile;
+
+	for (nsfile = namespace_files; nsfile->nstype; nsfile++) {
+		if (nsfile->fd != -1) {
+			close(nsfile->fd);
+			nsfile->fd = -1;
+		}
+	}
+}
+
+static int enter_namespace(int namespaces)
+{
+	int ret = 0;
+	struct namespace_file *nsfile;
+
+	for (nsfile = namespace_files; nsfile->nstype; nsfile++) {
+		if (!(nsfile->nstype & namespaces)) {
+			continue;
+		}
+
+		if ((ret = setns(nsfile->fd, nsfile->nstype))) {
+			fprintf(stderr, "%s: error: setns failed: %s\n",
+				__func__, strerror(errno));
+			ret = -errno;
+			goto out;
+		}
+	}
+ out:
+	return ret;
+}
+
+/*
+ *  Create /proc and /sys file system in the specified namespace
+ *  index:	OS index
+ *  nspid:	pid to refer namespace entries in /proc/[nspid]/ns.
+ *		Specifying 0 avoids namespace reassociation.
+ *  namespaces: Set of namespaces using the format of clone flag,
+ *		i.e. CLONE_NEWNS, CLONE_NEWPID etc.
+ */
+int ihk_os_create_pseudofs(int index, pid_t nspid, int namespaces)
+{
+	int ret, status;
 	uid_t euid;
 	int fd = -1;
+	pid_t pid;
 
-	fd = ihklib_os_open(index);
-	CHKANDJUMP(fd < 0, -errno, "ihklib_os_open failed\n");
+	/* Check if index is valid */
+	if ((fd = ihklib_os_open(index)) < 0) {
+		fprintf(stderr, "%s: invalid OS index: %d\n",
+			__func__, index);
+		ret = fd;
+		goto out;
+	}
 
-	euid = geteuid();
-	CHKANDJUMP(euid != 0, -EPERM, "only root is allowed to call this function\n");
-	
-	status = system("/bin/bash " SBINDIR "/mcoverlay-create.sh");
-	CHKANDJUMP(status == -1 || WEXITSTATUS(status) != 0, -EINVAL, "system failed\n");
+	if ((euid = geteuid())) {
+		fprintf(stderr,
+			"%s: only root is allowed to call this function\n",
+			__func__);
+		ret = -EPERM;
+		goto out;
+	}
 
+	/* Create /proc with restricted version of Linux /proc */
+	if (!(pid = fork())) {
+		if (nspid) {
+			if ((ret = open_namespace(nspid, namespaces))) {
+				fprintf(stderr,
+					"%s: error: open_namespace failed\n",
+					__func__);
+				goto out_child;
+			}
+
+			if ((ret = enter_namespace(namespaces))) {
+				fprintf(stderr,
+					"%s: error: enter_namespace failed\n",
+					__func__);
+				goto out_child;
+			}
+		}
+
+		status = system("/bin/bash " SBINDIR "/mcoverlay-create.sh");
+		if (status == -1 || WEXITSTATUS(status) != 0) {
+			fprintf(stderr,
+				"%s: error: system returned %x\n",
+				__func__, status);
+			ret = -EINVAL;
+			goto out_child;
+		}
+
+		ret = 0;
+out_child:
+		if (nspid) {
+			close_namespace();
+		}
+		exit(ret);
+	}
+
+	if ((ret = waitpid(pid, &status, 0)) == -1) {
+		fprintf(stderr,
+			"%s: error: waitpid failed: %s\n",
+			__func__, strerror(errno));
+		ret = -errno;
+		goto out;
+	}
+
+	if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+		fprintf(stderr,
+			"%s: error: invalid child status: %x\n",
+			__func__, status);
+		ret = WEXITSTATUS(status);
+		goto out;
+	}
+
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -1148,18 +1296,86 @@ int ihk_os_create_pseudofs(int index)
 	return ret;
 }
 
-int ihk_os_destroy_pseudofs(int index)
+/*
+ *  Destroy /proc and /sys file system in the specified namespace
+ *  index:	OS index
+ *  nspid:	pid to refer namespace entries in /proc/[nspid]/ns.
+ *		Specifying 0 avoids namespace reassociation.
+ *  namespaces: Set of namespaces using the format of clone flag,
+ *		i.e. CLONE_NEWNS, CLONE_NEWPID etc.
+ */
+int ihk_os_destroy_pseudofs(int index, pid_t nspid, int namespaces)
 {
-	int ret = 0, status;
+	int ret, status;
 	uid_t euid;
 	int fd = -1;
+	pid_t pid;
 
-	euid = geteuid();
-	CHKANDJUMP(euid != 0, -EPERM, "only root is allowed to call this function\n");
-	
-	status = system("/bin/bash " SBINDIR "/mcoverlay-destroy.sh");
-	CHKANDJUMP(status == -1 || WEXITSTATUS(status) != 0, -EINVAL, "system failed\n");
+	/*
+	 * Don't check the index because this function could be called
+	 * after OS instance has been destroyed
+	 */
 
+	if ((euid = geteuid())) {
+		fprintf(stderr,
+			"%s: only root is allowed to call this function\n",
+			__func__);
+		ret = -EPERM;
+		goto out;
+	}
+
+	/* Join the mount name space and mount */
+	if (!(pid = fork())) {
+		if (nspid) {
+			if ((ret = open_namespace(nspid, namespaces))) {
+				fprintf(stderr,
+					"%s: error: open_namespace failed\n",
+					__func__);
+				goto out_child;
+			}
+
+			if ((ret = enter_namespace(namespaces))) {
+				fprintf(stderr,
+					"%s: error: enter_namespace failed\n",
+					__func__);
+				goto out_child;
+			}
+		}
+
+		status = system("/bin/bash " SBINDIR "/mcoverlay-destroy.sh");
+		if (status == -1 || WEXITSTATUS(status) != 0) {
+			fprintf(stderr,
+				"%s: error: system returned %x\n",
+				__func__, status);
+			ret = -EINVAL;
+			goto out_child;
+		}
+
+		ret = 0;
+out_child:
+		if (nspid) {
+			close_namespace();
+		}
+		exit(ret);
+	}
+
+	if (waitpid(pid, &status, 0) == -1) {
+		fprintf(stderr,
+			"%s: error: waitpid failed: %s\n",
+			__func__, strerror(errno));
+		ret = -errno;
+		goto out;
+	}
+
+	if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+		fprintf(stderr,
+			"%s: error: invalid child status: %x\n",
+			__func__, status);
+		ret = WEXITSTATUS(status);
+		goto out;
+	}
+
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
