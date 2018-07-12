@@ -1105,7 +1105,11 @@ unsigned long get_sve_default_vl(void)
 	struct file* filp = NULL;
 	mm_segment_t oldfs;
 	int ret, vl = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0)
+	const char *path = "/proc/sys/abi/sve_default_vector_length";
+#else
 	const char *path = "/proc/cpu/sve_default_vector_length";
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0) */
 	char buf[16] = "";
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
 	loff_t pos = 0;
