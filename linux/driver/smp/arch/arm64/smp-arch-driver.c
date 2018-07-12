@@ -1315,11 +1315,52 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 	return 0;
 }
 
+static long get_dump_num_mem_areas(struct smp_os_data *os)
+{
+	struct ihk_dump_page *dump_page = NULL;
+	int i, j, k, mem_num;
+	unsigned long bit_count;
+
+	while (1) {
+		if (IHK_DUMP_PAGE_SET_COMPLETED == os->param->dump_page_set.completion_flag) {
+			break;
+		}
+		msleep(10); /* 10ms sleep */
+	}
+	dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
+
+	for (i = 0, mem_num = 0; i < os->param->dump_page_set.count; i++) {
+		if (i) {
+			dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+		}
+
+		for (j = 0, bit_count = 0; j < dump_page->map_count; j++) {
+			for (k = 0; k < 64; k++) {
+				if ((dump_page->map[j] >> k) & 0x1) {
+					bit_count++;
+				}
+				else {
+					if (bit_count) {
+						mem_num++;
+						bit_count = 0;
+					}
+				}
+			}
+		}
+
+		if (bit_count) {
+			mem_num++;
+		}
+	}
+	return (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));
+}
+
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 {
 	struct smp_os_data *os = priv;
 	struct ihk_dump_page *dump_page = NULL;
-	int i,j,k,mem_num,index;
+	int i,j,k,index;
+	long mem_size;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 	unsigned long map_start, bit_count;
 	dump_mem_chunks_t *mem_chunks;
@@ -1351,46 +1392,18 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 			break;
 
 		case DUMP_QUERY_NUM_MEM_AREAS:
-			while (1) {
-				if (IHK_DUMP_PAGE_SET_COMPLETED == os->param->dump_page_set.completion_flag)
-					break;
-
-				msleep(10); /* 10ms sleep */
-			}
-
-			dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
-
-			for (i = 0, mem_num = 0; i < os->param->dump_page_set.count; i++) {
-
-				if (i) {
-					dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
-				}
-
-				for (j = 0, bit_count = 0; j < dump_page->map_count; j++) {
-					for ( k = 0; k < 64; k++) {
-						if ((dump_page->map[j] >> k) & 0x1) {
-							bit_count++;
-						} else {
-							if (bit_count) {
-								mem_num++;
-								bit_count = 0;
-							}
-						}
-					}
-				}
-
-				if (bit_count) {
-					mem_num++;
-				}
-			}
-
-			args->size = (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));
-
+			args->size = get_dump_num_mem_areas(os);
 			break;
 
 		case DUMP_QUERY:
 			i = 0;
-			mem_chunks = args->buf;
+			mem_size = get_dump_num_mem_areas(os);
+			mem_chunks = kmalloc(mem_size, GFP_KERNEL);
+			if (!mem_chunks) {
+				printk("%s: memory allocation failed.\n", __FUNCTION__);
+				return -ENOMEM;
+			}
+			memset(mem_chunks, 0, mem_size);
 
 			/* Collect memory information */
 			list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
@@ -1406,11 +1419,24 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 			/* See load_file() for the calculation below */
 			mem_chunks->kernel_base =
 				(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+
+			if (copy_to_user(args->buf, mem_chunks, mem_size)) {
+				printk("%s: copy_to_user failed.\n", __FUNCTION__);
+				kfree(mem_chunks);
+				return -EFAULT;
+			}
+			kfree(mem_chunks);
 			break;
 
 		case DUMP_QUERY_MEM_AREAS:
+			mem_size = get_dump_num_mem_areas(os);
+			mem_chunks = kmalloc(mem_size, GFP_KERNEL);
+			if (!mem_chunks) {
+				printk("%s: memory allocation failed.\n", __FUNCTION__);
+				return -ENOMEM;
+			}
+			memset(mem_chunks, 0, mem_size);
 
-			mem_chunks = args->buf;
 			dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
 
 			for (i = 0, index = 0; i < os->param->dump_page_set.count; i++) {
@@ -1451,6 +1477,12 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 			mem_chunks->kernel_base =
 				(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
 
+			if (copy_to_user(args->buf, mem_chunks, mem_size)) {
+				printk("%s: copy_to_user failed.\n", __FUNCTION__);
+				kfree(mem_chunks);
+				return -EFAULT;
+			}
+			kfree(mem_chunks);
 			break;
 
 		case DUMP_READ:
