@@ -2031,7 +2031,6 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 				pg = virt_to_page(phys_to_virt(mem_chunk_max->addr + mem_size));
 				/* Do not split compound pages though */
 				if (PageTail(pg)) {
-#ifdef POSTK_DEBUG_ARCH_DEP_73 /* use compound_head() */
 					struct page *head = compound_head(pg);
 					size_t comp_size = PAGE_SIZE << compound_order(head);
 
@@ -2039,14 +2038,6 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 							mem_chunk_max->addr + mem_chunk_max->size) {
 						off_t comp_end_offset = comp_size -
 							(page_to_phys(pg) - page_to_phys(head));
-#else /* POSTK_DEBUG_ARCH_DEP_73 */
-					size_t comp_size = PAGE_SIZE << compound_order(pg->first_page);
-
-					if ((page_to_phys(pg->first_page) + comp_size) <
-							mem_chunk_max->addr + mem_chunk_max->size) {
-						off_t comp_end_offset = comp_size -
-							(page_to_phys(pg) - page_to_phys(pg->first_page));
-#endif /* POSTK_DEBUG_ARCH_DEP_73 */
 
 						mem_chunk_leftover = (struct chunk*)
 							phys_to_virt(mem_chunk_max->addr + mem_size +
