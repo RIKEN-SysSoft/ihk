@@ -54,7 +54,7 @@ else
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=@DESTDIR@/@LIBDIR@
 endif
 
-ihkmond: ihkmond.c
+ihkmond: ihkmond.c libihk.so
 # POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
 #	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=$(LIBDIR)
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=@DESTDIR@/@LIBDIR@
