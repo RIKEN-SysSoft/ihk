@@ -2066,23 +2066,9 @@ error_free_irq:
 /*
  * @ref.impl arch/arm64/kernel/psci.c
  */
-static int ihk_smp_cpu_kill(unsigned int hwid)
+static int ihk_smp_cpu_kill(unsigned int hwid, u64 affi)
 {
-	int ret, err, i;
-	u64 affi;
-
-	if (!ihk_psci_ops->affinity_info) {
-		pr_warn("IHK-SMP: Undefined reference to 'affinity_info'\n");
-	return -EFAULT;
-	}
-
-	/* cpu_kill could race with cpu_die and we can
-	 * potentially end up declaring this cpu undead
-	 * while it is dying. So, try again a few times. */
-	ret = ihk_smp_get_cpu_affinity(hwid, &affi);
-	if (ret) {
-		return ret;
-	}
+	int err, i;
 
 	for (i = 0; i < 10; i++) {
 		err = ihk_psci_ops->affinity_info(affi, 0);
@@ -2567,20 +2553,39 @@ int ihk_smp_reset_cpu(int hw_id)
 {
 	int ret = 0;
 	int i;
+	u64 affi;
 
 	dprintk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", hw_id);
+
+	if (!ihk_psci_ops->affinity_info) {
+		pr_warn("IHK-SMP: Undefined reference to 'affinity_info'\n");
+		return -EFAULT;
+	}
+
+	/* cpu_kill could race with cpu_die and we can
+	 * potentially end up declaring this cpu undead
+	 * while it is dying. So, try again a few times. */
+	ret = ihk_smp_get_cpu_affinity(hw_id, &affi);
+	if (ret) {
+		pr_warn("IHK-SMP: ihk_smp_get_cpu_affinity failed.(ret=%d)\n", ret);
+		return ret;
+	}
 
 	for (i = 0; i < SMP_MAX_CPUS; i++) {
 		if ((ihk_smp_cpus[i].hw_id != hw_id) ||
 		    (ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED))
 			continue;
 
+		ret = ihk_psci_ops->affinity_info(affi, 0);
+		if (ret == PSCI_0_2_AFFINITY_LEVEL_ON) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
-		ihk___smp_cross_call(cpumask_of(hw_id), INTRID_CPU_STOP);
+			ihk___smp_cross_call(cpumask_of(hw_id), INTRID_CPU_STOP);
 #else
-		ihk___smp_cross_call(&cpumask_of_cpu(hw_id), INTRID_CPU_STOP);
+			ihk___smp_cross_call(&cpumask_of_cpu(hw_id), INTRID_CPU_STOP);
 #endif
-		ret = ihk_smp_cpu_kill(hw_id);
+		}
+
+		ret = ihk_smp_cpu_kill(hw_id, affi);
 		break;
 	}
 
