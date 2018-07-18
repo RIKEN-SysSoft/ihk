@@ -2337,11 +2337,7 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	while (os->param->dump_page_set.completion_flag !=
 	       IHK_DUMP_PAGE_SET_COMPLETED) {
 
-#ifdef POSTK_DEBUG_ARCH_DEP_88 /* Change rep_nop() to cpu_relax() */
 		cpu_relax();
-#else /* POSTK_DEBUG_ARCH_DEP_88 */
-		rep_nop();
-#endif /* POSTK_DEBUG_ARCH_DEP_88 */
 
 	}
 
