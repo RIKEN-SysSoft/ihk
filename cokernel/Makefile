@@ -41,8 +41,8 @@ $(O)/ihk.o: $(DESTOBJS) $(O)/ikc/ikc.o
 $(O)/ikc/ikc.o: FORCE
 	$(call echo_cmd,BUILD IKC,$(TARGET))
 	@mkdir -p $(O)/ikc
-	@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc prepare
-	@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc
+	+@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc prepare
+	+@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc
 
 clean:
 	@$(submake) -C $(CURDIR)/../ikc $(SUBOPTS) O=$(O)/ikc clean

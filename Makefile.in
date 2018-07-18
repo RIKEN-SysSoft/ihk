@@ -1,59 +1,65 @@
 # Makefile.in COPYRIGHT FUJITSU LIMITED 2015
 TARGET = @TARGET@
 
-all::
-	@(cd linux/core; make modules)
-	@case "$(TARGET)" in \
-	    attached-mic) \
-		(cd linux/driver/attached/mic; make modules) \
-		;; \
-	    builtin*) \
-		(cd linux/driver/builtin; make modules) \
-		;; \
-	    smp*) \
-		(cd linux/driver/smp; make modules) \
-		;; \
-	    *) \
-		echo "unknown target $(TARGET)" >&2 \
-		exit 1 \
-		;; \
-	esac
-	@(cd linux/user; make)
+all: core-modules target-modules user
 
-install::
-	@(cd linux/core; make install)
-	@case "$(TARGET)" in \
-	    attached-mic) \
-		(cd linux/driver/attached/mic; make install) \
-		;; \
-	    builtin*) \
-		(cd linux/driver/builtin; make install) \
-		;; \
-	    smp*) \
-		(cd linux/driver/smp; make install) \
-		;; \
-	    *) \
-		echo "unknown target $(TARGET)" >&2 \
-		exit 1 \
-		;; \
-	esac
-	@(cd linux/user; make install)
+core-modules:
+	+@(cd linux/core; $(MAKE) modules)
 
-clean::
-	@(cd linux/core; make clean)
-	@case "$(TARGET)" in \
+target-modules:
+	+@case "$(TARGET)" in \
 	    attached-mic) \
-		(cd linux/driver/attached/mic; make clean) \
+		(cd linux/driver/attached/mic; $(MAKE) modules) \
 		;; \
 	    builtin*) \
-		(cd linux/driver/builtin; make clean) \
+		(cd linux/driver/builtin; $(MAKE) modules) \
 		;; \
 	    smp*) \
-		(cd linux/driver/smp; make clean) \
+		(cd linux/driver/smp; $(MAKE) modules) \
 		;; \
 	    *) \
 		echo "unknown target $(TARGET)" >&2 \
 		exit 1 \
 		;; \
 	esac
-	@(cd linux/user; make clean)
+
+user:
+	+@(cd linux/user; $(MAKE))
+
+install:
+	@(cd linux/core; $(MAKE) install)
+	@case "$(TARGET)" in \
+	    attached-mic) \
+		(cd linux/driver/attached/mic; $(MAKE) install) \
+		;; \
+	    builtin*) \
+		(cd linux/driver/builtin; $(MAKE) install) \
+		;; \
+	    smp*) \
+		(cd linux/driver/smp; $(MAKE) install) \
+		;; \
+	    *) \
+		echo "unknown target $(TARGET)" >&2 \
+		exit 1 \
+		;; \
+	esac
+	@(cd linux/user; $(MAKE) install)
+
+clean:
+	@(cd linux/core; $(MAKE) clean)
+	@case "$(TARGET)" in \
+	    attached-mic) \
+		(cd linux/driver/attached/mic; $(MAKE) clean) \
+		;; \
+	    builtin*) \
+		(cd linux/driver/builtin; $(MAKE) clean) \
+		;; \
+	    smp*) \
+		(cd linux/driver/smp; $(MAKE) clean) \
+		;; \
+	    *) \
+		echo "unknown target $(TARGET)" >&2 \
+		exit 1 \
+		;; \
+	esac
+	@(cd linux/user; $(MAKE) clean)

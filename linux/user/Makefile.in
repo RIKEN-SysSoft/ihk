@@ -37,12 +37,12 @@ ihklib.o:  ihklib.c
 libihk.so:  ihklib.o
 	${CC} ${CFLAGS} -shared -o $@ $< -lbfd
 
-ihkconfig: ihkconfig.c
+ihkconfig: ihkconfig.c libihk.so
 # POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
 #	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
 	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=@DESTDIR@/@LIBDIR@
 
-ihkosctl: ihkosctl.c
+ihkosctl: ihkosctl.c libihk.so
 ## POSTK_DEBUG_ARCH_DEP_69 add -liberty to ihkosctl
 ifeq ($(ARCH), arm64)
 # POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
