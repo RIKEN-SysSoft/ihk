@@ -14,8 +14,7 @@ arch_objs := $(arch_dir)/smp-$(ARCH)-startup.o \
 obj-m += ihk-smp-$(ARCH).o
 
 ccflags-y := -I$(src)/../../../cokernel/smp/$(ARCH) -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(src)/../../../ikc/include \
-             -I@abs_builddir@/$(arch_dir) -I@abs_builddir@ -I$(src) -I$(src)/$(arch_dir) \
-	-I$(src)/../../core
+             -I@abs_builddir@/$(arch_dir) -I@abs_builddir@ -I@abs_builddir@/../../../ -I$(src) -I$(src)/$(arch_dir) -I$(src)/../../core
 
 ihk-smp-$(ARCH)-y += smp-driver.o $(arch_dir)/smp-arch-driver.o $(arch_objs)
 

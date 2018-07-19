@@ -17,6 +17,7 @@ $(if $(O),,$(error IHK Output directory is not specified))
 $(if $(TARGET),,$(error Target is not specified))
 
 CFLAGS += -I$(SRC)/include -D__KERNEL__
+CFLAGS += -mcmodel=large -mno-red-zone
 
 # POSTK_DEBUG_ARCH_DEP_24
 ifeq ($(ARCH), arm64)
@@ -26,7 +27,7 @@ endif
 BUILD_IHK_COKERNEL ?= .
 include $(BUILD_IHK_COKERNEL)/Makefile.common
 
-IHK_SRCDIRS += $(SRC)/../lib $(TARGETDIR)
+IHK_SRCDIRS += $(SRC)/../lib $(SRC)/../arch/$(ARCH)/kernel $(IHKBASE)/smp/$(ARCH) 
 DEPSRCS = $(foreach d,$(IHK_SRCDIRS),$(wildcard $(d)/*.c $(d)/*.S))
 
 $(foreach d,$(IHK_SRCDIRS),$(eval $(call make_implicit_src,$(d))))
