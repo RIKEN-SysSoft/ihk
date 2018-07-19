@@ -7,26 +7,17 @@ src := @abs_srcdir@
 DESTDIR ?= @DESTDIR@
 KMODDIR := $(DESTDIR)/@KMODDIR@
 
-ifeq ($(ARCH), x86_64)
-	arch := x86
-	arch_dir := arch/$(arch)
-	arch_objs := $(arch_dir)/smp-x86-startup.o \
-                     $(arch_dir)/smp-x86-trampoline_64.o
-endif
-ifeq ($(ARCH), arm64)
-	arch := arm64
-	arch_dir := arch/$(arch)
-	arch_objs := $(arch_dir)/smp-arm64-startup.o \
-                     $(arch_dir)/smp-arm64-trampoline_64.o
-endif
+arch_dir := arch/$(ARCH)
+arch_objs := $(arch_dir)/smp-$(ARCH)-startup.o \
+             $(arch_dir)/smp-$(ARCH)-trampoline.o
 
-obj-m += ihk-smp-$(arch).o
+obj-m += ihk-smp-$(ARCH).o
 
-ccflags-y := -I$(src)/../../../cokernel/smp/$(arch) -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(src)/../../../ikc/include \
-             -I@abs_builddir@/$(arch_dir) -I@abs_builddir@ -I@abs_builddir@/../../../ -I$(src) -I$(src)/$(arch_dir) \
+ccflags-y := -I$(src)/../../../cokernel/smp/$(ARCH) -I$(src)/../../include -I$(src)/../../include/ihk/arch/$(ARCH) -I$(src)/../../../ikc/include \
+             -I@abs_builddir@/$(arch_dir) -I@abs_builddir@ -I$(src) -I$(src)/$(arch_dir) \
 	-I$(src)/../../core
 
-ihk-smp-$(arch)-y += smp-driver.o $(arch_dir)/smp-arch-driver.o $(arch_objs)
+ihk-smp-$(ARCH)-y += smp-driver.o $(arch_dir)/smp-arch-driver.o $(arch_objs)
 
 KBUILD_EXTRA_SYMBOLS=@abs_builddir@/../../core/Module.symvers
 
@@ -47,4 +38,4 @@ clean:
 
 install:
 	mkdir -p -m 755 $(KMODDIR)
-	install -m 644 ihk-smp-$(arch).ko $(KMODDIR)
+	install -m 644 ihk-smp-$(ARCH).ko $(KMODDIR)
