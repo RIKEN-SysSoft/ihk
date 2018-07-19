@@ -6,10 +6,12 @@ CFLAGS += @CFLAGS@
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O2 -g
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include -Wno-unused-function -I$(IHKBASE)/../ikc/include -I$(IHKBASE)/../linux/include
 CFLAGS += -DIHK_OS_MANYCORE
+ifneq ($(ARCH), arm64)
 CFLAGS += -mcmodel=large -mno-red-zone
+endif
 
 ifeq ($(ARCH), arm64)
-include @abs_builddir@/Makefile.predefines
+include @abs_builddir@/smp/arm64/Makefile.predefines
 CFLAGS += $(foreach i, $(shell seq 6 110), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
 CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
 CFLAGS += -mgeneral-regs-only
