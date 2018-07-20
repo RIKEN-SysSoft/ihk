@@ -60,5 +60,8 @@ int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg);
 #endif /* POSTK_DEBUG_ARCH_DEP_98 */
 int ihk_smp_reset_cpu(int hw_id);
 void smp_ihk_arch_exit(void);
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+int smp_ihk_arch_get_perf_event(struct smp_boot_param *param);
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 #endif /* HEADER_SMP_SMP_ARCH_DRIVER_H */

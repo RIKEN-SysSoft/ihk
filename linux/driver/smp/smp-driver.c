@@ -286,6 +286,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	int i, j;
 	unsigned long buffer_size, map_end, index;
 	struct ihk_dump_page *dump_page;
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+	int ret;
+#else /* POSTK_DEBUG_ARCH_DEP_108 */
 #ifdef ENABLE_PERF
 	struct x86_pmu *__pmu;
 	struct extra_reg *er;
@@ -294,6 +297,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	unsigned long *__intel_perfmon_event_map;
 	int er_cnt = 0;
 #endif
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
@@ -370,6 +374,12 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->nr_numa_nodes = nr_numa_nodes;
 
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+	ret = smp_ihk_arch_get_perf_event(os->param);
+	if (ret) {
+		return ret;
+	}
+#else /* POSTK_DEBUG_ARCH_DEP_108 */
 #ifdef ENABLE_PERF
 	__pmu = (struct x86_pmu *)kallsyms_lookup_name("x86_pmu");
 	__hw_cache_event_ids = (unsigned long *)kallsyms_lookup_name("hw_cache_event_ids");
@@ -397,6 +407,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	memcpy(os->param->hw_cache_event_ids, __hw_cache_event_ids, sizeof(os->param->hw_cache_event_ids));
 	memcpy(os->param->hw_cache_extra_regs, __hw_cache_extra_regs, sizeof(os->param->hw_cache_extra_regs));
 #endif // ENABLE_PERF 
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
 			sizeof(*os->param));
