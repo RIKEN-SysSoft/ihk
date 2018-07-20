@@ -3640,17 +3640,34 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 	mem_string = req_string;
 
-	/* Do the release */
-	mem_token = strsep(&mem_string, ",");
-	while (mem_token) {
-		ret_internal = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
-		ARCHDRV_CHKANDJUMP(ret_internal != 0, "smp_ihk_parse_mem failed", -EINVAL);
+	/* Special case for releasing all memory */
+	if (!strcmp(mem_string, "all")) {
+		for (;;) {
+			struct chunk *mem_chunk;
 
-		ret_internal = __ihk_smp_release_mem(mem_size, numa_id);
-		/* ret = __smp_ihk_free_mem_from_list(&ihk_mem_free_chunks); */
-		ARCHDRV_CHKANDJUMP(ret_internal != 0, "__ihk_smp_release_mem failed", -EINVAL);
+			if (list_empty(&ihk_mem_free_chunks)) {
+				break;
+			}
 
-        mem_token = strsep(&mem_string, ",");
+			mem_chunk = list_first_entry(&ihk_mem_free_chunks,
+					struct chunk, chain);
+
+			__ihk_smp_release_mem(mem_chunk->size, mem_chunk->numa_id);
+		}
+	}
+	/* Do the regular release */
+	else {
+		mem_token = strsep(&mem_string, ",");
+		while (mem_token) {
+			ret_internal = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+			ARCHDRV_CHKANDJUMP(ret_internal != 0, "smp_ihk_parse_mem failed", -EINVAL);
+
+			ret_internal = __ihk_smp_release_mem(mem_size, numa_id);
+			/* ret = __smp_ihk_free_mem_from_list(&ihk_mem_free_chunks); */
+			ARCHDRV_CHKANDJUMP(ret_internal != 0, "__ihk_smp_release_mem failed", -EINVAL);
+
+			mem_token = strsep(&mem_string, ",");
+		}
 	}
  fn_fail:
 	if (req_string) {
