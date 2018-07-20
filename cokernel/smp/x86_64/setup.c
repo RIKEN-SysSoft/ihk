@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <registers.h>
 #include "bootparam.h"
+#include <config.h>
 #include <kmsg.h>
 
 /* BUILTIN Setup.c */
@@ -443,3 +444,133 @@ struct ihk_dump_page *ihk_mc_get_dump_page(void)
 {
 	return (dump_page);
 }
+
+#ifdef ENABLE_PERF
+int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
+{
+	int ret = -1;
+	int i;
+
+	for (i = 0; i < boot_param->nr_extra_regs; i++) {
+		if (boot_param->ereg_event[i] != (hw_config & 0xffffULL)) {
+			continue;
+		}
+
+		if (hw_config_ext & ~boot_param->ereg_valid_mask[i]) {
+			return -EINVAL;
+		}
+
+		ret = i;
+		break;
+	}
+	return ret;
+}
+
+int ihk_mc_get_extra_reg_idx(int id)
+{
+	return boot_param->ereg_idx[id];
+}
+
+unsigned int ihk_mc_get_extra_reg_msr(int id)
+{
+	return boot_param->ereg_msr[id];
+}
+
+unsigned long ihk_mc_get_extra_reg_event(int id)
+{
+	return boot_param->ereg_event[id];
+}
+
+unsigned long ihk_mc_hw_event_map(unsigned long  hw_event)
+{
+	return boot_param->hw_event_map[hw_event];
+}
+
+unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
+{
+	unsigned int type, op, result;
+	unsigned long val;
+	type = (hw_cache_event >> 0) & 0xff;
+	if (type >= PERF_COUNT_HW_CACHE_MAX) {
+		return 0;
+	}
+	op = (hw_cache_event >> 8) & 0xff;
+	if (op >= PERF_COUNT_HW_CACHE_OP_MAX) {
+		return 0;
+	}
+	result = (hw_cache_event >> 16) & 0xff;
+	if (result >= PERF_COUNT_HW_CACHE_RESULT_MAX) {
+		return 0;
+	}
+
+	val = boot_param->hw_cache_event_ids[type][op][result];
+
+	if (val == -1) {
+		return 0;
+	}
+
+	return val;
+}
+
+unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
+{
+	unsigned int type, op, result;
+	unsigned long val;
+	type = (hw_cache_event >> 0) & 0xff;
+	if (type >= PERF_COUNT_HW_CACHE_MAX) {
+		return 0;
+	}
+	op = (hw_cache_event >> 8) & 0xff;
+	if (op >= PERF_COUNT_HW_CACHE_OP_MAX) {
+		return 0;
+	}
+	result = (hw_cache_event >> 16) & 0xff;
+	if (result >= PERF_COUNT_HW_CACHE_RESULT_MAX) {
+		return 0;
+	}
+
+	val = boot_param->hw_cache_extra_regs[type][op][result];
+
+	if (val == -1) {
+		return 0;
+	}
+
+	return val;
+}
+#else // ENABLE_PERF
+int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
+{
+	return 0;
+}
+
+int ihk_mc_get_extra_reg_idx(int id)
+{
+	return 0;
+}
+
+unsigned int ihk_mc_get_extra_reg_msr(int id)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_get_extra_reg_event(int id)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_event_map(unsigned long  hw_event)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
+{
+	return 0;
+}
+#endif // ENABLE_PERF
+

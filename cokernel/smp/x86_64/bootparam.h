@@ -12,6 +12,13 @@
 	(((p).set[(n)/__NCOREBITS] & ((long)1 << ((n) % __NCOREBITS)))?1:0)
 #define CORE_ZERO(p)      memset(&(p).set, 0, sizeof((p).set))
 
+#ifdef IHK_OS_MANYCORE
+#include <mc_perf_event.h>
+#else
+#include "perf_event.h"
+#endif
+#include <config.h>
+
 struct smp_coreset {
 	unsigned long set[SMP_MAX_CPUS / __NCOREBITS];
 };
@@ -118,6 +125,24 @@ struct smp_boot_param {
 	int osnum;
 	unsigned int dump_level;
 	struct ihk_dump_page_set dump_page_set;
+
+#ifdef ENABLE_PERF
+#define PERF_EXTRA_REG_MAX 10
+	unsigned long hw_event_map[PERF_COUNT_HW_MAX];
+	unsigned long hw_cache_event_ids
+                [PERF_COUNT_HW_CACHE_MAX]
+                [PERF_COUNT_HW_CACHE_OP_MAX]
+                [PERF_COUNT_HW_CACHE_RESULT_MAX];
+	unsigned long hw_cache_extra_regs
+                [PERF_COUNT_HW_CACHE_MAX]
+                [PERF_COUNT_HW_CACHE_OP_MAX]
+                [PERF_COUNT_HW_CACHE_RESULT_MAX];
+	unsigned int nr_extra_regs;
+	unsigned int ereg_event[PERF_EXTRA_REG_MAX];
+	unsigned int ereg_msr[PERF_EXTRA_REG_MAX];
+	unsigned long ereg_valid_mask[PERF_EXTRA_REG_MAX];
+	int	ereg_idx[PERF_EXTRA_REG_MAX];
+#endif // ENABLE_PERF
 };
 
 #endif

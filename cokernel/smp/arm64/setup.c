@@ -561,3 +561,75 @@ struct ihk_dump_page *ihk_mc_get_dump_page(void)
 {
 	return (dump_page);
 }
+
+#ifdef ENABLE_PERF
+int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
+{
+	return 0;
+}
+
+int ihk_mc_get_extra_reg_idx(int id)
+{
+	return 0;
+}
+
+unsigned int ihk_mc_get_extra_reg_msr(int id)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_get_extra_reg_event(int id)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_event_map(unsigned long  hw_event)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
+{
+	return 0;
+}
+#else /* ENABLE_PERF */
+int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
+{
+	return 0;
+}
+
+int ihk_mc_get_extra_reg_idx(int id)
+{
+	return 0;
+}
+
+unsigned int ihk_mc_get_extra_reg_msr(int id)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_get_extra_reg_event(int id)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_event_map(unsigned long  hw_event)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
+{
+	return 0;
+}
+#endif /* ENABLE_PERF */

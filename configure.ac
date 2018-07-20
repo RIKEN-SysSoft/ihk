@@ -41,6 +41,12 @@ AC_ARG_ENABLE([rusage],
 	[ENABLE_RUSAGE=$enableval],
 	[ENABLE_RUSAGE=yes])
 
+AC_ARG_ENABLE([perf],
+	AS_HELP_STRING([--enable-perf],
+		[enable perf_event_open implementation]),
+	[ENABLE_PERF=$enableval],
+	[ENABLE_PERF=yes])
+
 AC_ARG_WITH([system_map],
   AS_HELP_STRING(
     [--with-system_map=path],[Path to 'System.map file', default is /boot/System.map-uname_r]),
@@ -409,6 +415,13 @@ if test "x$IHK_TMPDIR" != "x" ; then
 # POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
 #   AC_DEFINE_UNQUOTED(IHK_TMPDIR,"$IHK_TMPDIR",[Temporary directory used by IHK])
    AC_DEFINE_UNQUOTED(IHK_TMPDIR,"$DESTDIR/$IHK_TMPDIR",[Temporary directory used by IHK])
+fi
+
+if test "x$ENABLE_PERF" = "xyes" ; then
+	AC_MSG_NOTICE([perf is enabled])
+	AC_DEFINE([ENABLE_PERF],[1],[whether perf is enabled])
+else
+	AC_MSG_NOTICE([perf is disabled])
 fi
 
 AC_SUBST(CC)
