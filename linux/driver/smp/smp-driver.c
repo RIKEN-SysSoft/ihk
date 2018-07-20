@@ -2353,6 +2353,7 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int q_len = 0;
 	int q_added;
+	int first = 1;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 
 	memset(query_res, 0, sizeof(query_res));
@@ -2364,7 +2365,7 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 		q_added = snprintf(query_res + q_len,
 				sizeof(query_res) - q_len,
-				",%lu@%d",
+				first ? "%lu@%d" : ",%lu@%d",
 				os_mem_chunk->size, os_mem_chunk->numa_id);
 
 		if (q_added >= sizeof(query_res) - q_len) {
@@ -2374,6 +2375,10 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		}
 
 		q_len += q_added;
+
+		if (first) {
+			first = 0;
+		}
 	}
 
 	if (strlen(query_res) > 0) {
@@ -3702,6 +3707,7 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int q_len = 0;
 	int q_added;
+	int first = 1;
 	struct chunk *mem_chunk;
 
 	memset(query_res, 0, sizeof(query_res));
@@ -3711,7 +3717,7 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 		q_added = snprintf(query_res + q_len,
 				sizeof(query_res) - q_len,
-				",%lu@%d",
+				first ? "%lu@%d" : ",%lu@%d",
 				mem_chunk->size, mem_chunk->numa_id);
 
 		if (q_added >= sizeof(query_res) - q_len) {
@@ -3721,6 +3727,10 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 		}
 
 		q_len += q_added;
+
+		if (first) {
+			first = 0;
+		}
 	}
 
 	if (strlen(query_res) > 0) {
