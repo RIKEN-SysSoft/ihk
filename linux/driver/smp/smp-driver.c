@@ -1684,6 +1684,8 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	int i, ret = 0;
 	struct smp_os_data *os = priv;
 	char cpu_str[64];
+	int q_len = 0;
+	int q_added;
 
 	memset(query_res, 0, sizeof(query_res));
 
@@ -1691,9 +1693,28 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	   e.g. 0,2,1,3 */
 	for(i = 0; i < os->nr_cpus; ++i) {
 		sprintf(cpu_str, "%d", os->cpu_mapping[i]);
-		strcat(query_res, cpu_str);
-		if(i != os->nr_cpus - 1) {
-			strcat(query_res, ",");
+		q_added = snprintf(query_res + q_len,
+				sizeof(query_res) - q_len, "%s", cpu_str);
+
+		if (q_added >= sizeof(query_res) - q_len) {
+			printk("IHK-SMP: %s(): error: query_res is not large enough\n",
+				__FUNCTION__);
+			return -EINVAL;
+		}
+
+		q_len += q_added;
+
+		if (i != os->nr_cpus - 1) {
+			q_added = snprintf(query_res + q_len,
+					sizeof(query_res) - q_len, ",");
+
+			if (q_added >= sizeof(query_res) - q_len) {
+				printk("IHK-SMP: %s(): error: query_res is not large enough\n",
+						__FUNCTION__);
+				return -EINVAL;
+			}
+
+			q_len += q_added;
 		}
 	}
 
