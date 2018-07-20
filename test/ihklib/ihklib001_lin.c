@@ -6,6 +6,8 @@
 #include <mckernel/ihklib_rusage.h>
 #include <sys/types.h>
 
+static char prefix[256];
+
 #define DEBUG
 
 #ifdef DEBUG
@@ -45,16 +47,15 @@
             printf("[NG] ");											\
 			printf(__VA_ARGS__);										\
 			char buf[65536];\
-			FILE* fp = popen(PREFIX "/sbin/ihkosctl 0 kmsg", "r");		\
+			char cmd[256];\
+			sprintf(cmd, "%s/sbin/ihkosctl 0 kmsg", prefix);\
+			FILE* fp = popen(cmd, "r");		\
 			size_t nread = fread(buf, 1, sizeof(buf), fp);				\
 			buf[nread] = 0;												\
 			printf("%s", buf);											\
 			goto fn_fail;												\
 		}																\
     } while(0)
-
-#define PREFIX "/home/takagi/project/os/install"
-
 
 int main(int argc, char** argv) {
     int ret = 0, status, ret_ihklib, ret_internal;
@@ -63,9 +64,9 @@ int main(int argc, char** argv) {
 	size_t nread;
 
 	char cmd[1024];
-	char token[256];
 	char fn[256];
 	char kargs[256];
+	char logname[256], *envstr, *dup, *line, *groups;
 
 	int cpus[4];
 	int num_cpus;
@@ -88,8 +89,33 @@ int main(int argc, char** argv) {
 	
 	struct mckernel_rusage rusage;
 
+	char *home, *retstr;
+
+	home = getenv("HOME");
+	CHKANDJUMP(home == NULL, -1, "getenv");
+	sprintf(prefix, "%s/project/os/install", home);
+	printf("%s\n", prefix);
+
+	fp = popen("logname", "r");
+    nread = fread(logname, 1, sizeof(logname), fp);
+	CHKANDJUMP(nread == 0, -1, "fread");
+	retstr = strrchr(logname, '\n');
+	if (retstr) {
+		*retstr = 0;
+	}
+	printf("logname=%s\n", logname);
+
+	envstr = getenv("GROUPS");
+	CHKANDJUMP(envstr == NULL, -1, "groups");
+	groups = strdup(envstr);
+	retstr = strrchr(groups, '\n');
+	if (retstr) {
+		*retstr = 0;
+	}
+	printf("groups=%s\n", groups);
+
 	if(geteuid() != 0) {
-		printf("Execute as a root like: sudo bash -c 'LD_LIBRARY_PATH=/home/takagi/project/os/install/lib/ %s'", argv[0]);
+		printf("Execute as a root like: sudo bash -c 'LD_LIBRARY_PATH=%s/lib/ %s'", argv[0], prefix);
 	}	
 
 	// ihk_os_destroy_pseudofs
@@ -113,7 +139,7 @@ int main(int argc, char** argv) {
 
 	// get # of reserved cpus
 	num_cpus = ihk_get_num_reserved_cpus(0);
-	printf("num_cpus=%d\n", num_cpus);
+	//printf("num_cpus=%d\n", num_cpus);
     OKNG(num_cpus < 0, "ihk_get_num_reserved_cpu (1)\n");
 
 	// get reserved cpus
@@ -156,7 +182,7 @@ int main(int argc, char** argv) {
 
 	// get # of OS instances
 	num_os_instances = ihk_get_num_os_instances(0);
-	printf("num_os_instances=%d\n", num_os_instances);
+	//printf("num_os_instances=%d\n", num_os_instances);
 	OKNG(num_os_instances < 0, "ihk_get_num_os_instances (1)\n");
 
 	// get OS instances
@@ -164,7 +190,8 @@ int main(int argc, char** argv) {
 	OKNG(ret_ihklib != 0, "ihk_get_os_instances (1)\n");
 	
     // get os_instances
-    fp = popen("/home/takagi/project/os/install/sbin/ihkconfig 0 get os_instances", "r");
+	sprintf(cmd, "%s/sbin/ihkconfig 0 get os_instances", prefix);
+    fp = popen(cmd, "r");
     nread = fread(buf, 1, sizeof(buf), fp);
     buf[nread] = 0;
     OKNG(strstr(buf, "0") == NULL, "ihkconfig 0 get os_instances (1) returned:\n%s\n", buf);
@@ -177,19 +204,20 @@ int main(int argc, char** argv) {
 	/* Expected to succeed
 	/*--------------------------------------------*/
 
-	sprintf(cmd, "insmod %s/kmod/ihk.ko", PREFIX);
+	sprintf(cmd, "insmod %s/kmod/ihk.ko", prefix);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86.ko ihk_start_irq=240 ihk_ikc_irq_core=0", PREFIX);
+	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86.ko ihk_start_irq=240 ihk_ikc_irq_core=0", prefix);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "chown takagi:takagi /dev/mcd*\n");
+	sprintf(cmd, "chown %s:%s /dev/mcd*\n", logname, groups);
+	printf("%s\n", cmd);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "insmod %s/kmod/mcctrl.ko", PREFIX);
+	sprintf(cmd, "insmod %s/kmod/mcctrl.ko", prefix);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -369,20 +397,22 @@ int main(int argc, char** argv) {
 		OKNG(ret_ihklib != 0, "ihk_os_get_ikc_map (1)\n");
 	} else {
 		// set ikc_map
-		fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 set ikc_map 3:0+1:2 2>&1", "r");
+		sprintf(cmd, "%s/sbin/ihkosctl 0 set ikc_map 3:0+1:2 2>&1", prefix);
+		fp = popen(cmd, "r");
 		nread = fread(buf, 1, sizeof(buf), fp);
 		buf[nread] = 0;
 		OKNG(strstr(buf, "rror") != NULL, "ihkconfig 0 set ikc_map (1)\n");
 
 		// get ikc_map
-		fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 get ikc_map 2>&1", "r");
+		sprintf(cmd, "%s/sbin/ihkosctl 0 get ikc_map 2>&1", prefix);
+		fp = popen(cmd, "r");
 		nread = fread(buf, 1, sizeof(buf), fp);
 		buf[nread] = 0;
 		OKNG(strstr(buf, "3:0+1:2") == NULL, "ihkconfig 0 get ikc_map (1) returned:\n%s\n", buf);
 	}
 
 	// load
-	sprintf(fn, "%s/smp-x86/kernel/mckernel.img", PREFIX);
+	sprintf(fn, "%s/smp-x86/kernel/mckernel.img", prefix);
     ret_ihklib = ihk_os_load(0, fn);
 	OKNG(ret_ihklib != 0, "ihk_os_load\n");
 
@@ -400,7 +430,8 @@ int main(int argc, char** argv) {
 	OKNG(ret_ihklib < 0, "ihk_os_get_status (1)\n");
 
 	// get status
-	fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 get status 2>&1", "r");
+	sprintf(cmd, "%s//sbin/ihkosctl 0 get status 2>&1", prefix);
+	fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "rror") != NULL, "ihkconfig 0 get status (1) returned:\n%s\n", buf);
@@ -415,7 +446,7 @@ int main(int argc, char** argv) {
 
 	// get kmsg
 	ret_ihklib = ihk_os_kmsg(0, buf, 256);
-	OKNG(ret_ihklib != 0, "ihk_os_kmsg\n");
+	OKNG(ret_ihklib != 0, "ihk_os_kmsg returns %d\n", ret_ihklib);
 	
 	// clear kmsg
 	ret_ihklib = ihk_os_clear_kmsg(0);
@@ -476,7 +507,8 @@ int main(int argc, char** argv) {
 		 indices[1] == 0, "ihk_get_os_instances (2)\n");
 
     // get os_instances
-    fp = popen("/home/takagi/project/os/install/sbin/ihkconfig 0 get os_instances", "r");
+	sprintf(cmd, "%s//sbin/ihkconfig 0 get os_instances", prefix);
+    fp = popen(cmd, "r");
     nread = fread(buf, 1, sizeof(buf), fp);
     buf[nread] = 0;
     OKNG(strstr(buf, "0") != NULL &&
@@ -497,7 +529,8 @@ int main(int argc, char** argv) {
 		 indices[0] == 0, "ihk_get_os_instances (2)\n");
 
     // get os_instances
-    fp = popen("/home/takagi/project/os/install/sbin/ihkconfig 0 get os_instances", "r");
+	sprintf(cmd, "%s//sbin/ihkconfig 0 get os_instances", prefix);
+    fp = popen(cmd, "r");
     nread = fread(buf, 1, sizeof(buf), fp);
     buf[nread] = 0;
     OKNG(strstr(buf, "0") != NULL, "ihkconfig 0 get os_instances (3) returned:\n%s\n", buf);
@@ -508,12 +541,13 @@ int main(int argc, char** argv) {
 	OKNG(ret_ihklib == IHK_STATUS_INACTIVE, "ihk_os_get_status (2)\n");
 
 	// get status
-	fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 get status 2>&1", "r");
+	sprintf(cmd, "%s/sbin/ihkosctl 0 get status 2>&1", prefix);
+    fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "INACTIVE") != NULL, "ihkconfig 0 get status (2) returned:\n%s\n", buf);
 
-	sprintf(cmd, "chown takagi:takagi /dev/mcos*\n");
+	sprintf(cmd, "chown %s:%s /dev/mcos*\n", logname, groups);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -580,13 +614,15 @@ int main(int argc, char** argv) {
 			 ikc_map[1].dst_cpu == 2, "ihk_os_get_ikc_map (2)\n");
 	} else {
 		// set ikc_map
-		fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 set ikc_map 3:0+1:2 2>&1", "r");
+		sprintf(cmd, "%s/sbin/ihkosctl 0 set ikc_map 3:0+1:2 2>&1", prefix);
+		fp = popen(cmd, "r");
 		nread = fread(buf, 1, sizeof(buf), fp);
 		buf[nread] = 0;
 		OKNG(strstr(buf, "rror") == NULL, "ihkconfig 0 set ikc_map (2)\n");
 
 		// get ikc_map
-		fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 get ikc_map 2>&1", "r");
+		sprintf(cmd, "%s/sbin/ihkosctl 0 get ikc_map 2>&1", prefix);
+		fp = popen(cmd, "r");
 		nread = fread(buf, 1, sizeof(buf), fp);
 		buf[nread] = 0;
 		OKNG(strstr(buf, "3:0+1:2") != NULL, "ihkconfig 0 get ikc_map (2) returned:\n%s\n", buf);
@@ -658,7 +694,7 @@ int main(int argc, char** argv) {
 		  mem_chunks[1].numa_node_number == 0), "ihk_os_query_mem (4)\n");
 
 	// load
-	sprintf(fn, "%s/smp-x86/kernel/mckernel.img", PREFIX);
+	sprintf(fn, "%s/smp-x86/kernel/mckernel.img", prefix);
     ret_ihklib = ihk_os_load(0, fn);
 	OKNG(ret_ihklib == 0, "ihk_os_load\n");
 
@@ -677,7 +713,8 @@ int main(int argc, char** argv) {
 		 ret_ihklib == IHK_STATUS_RUNNING, "ihk_os_get_status (3)\n");
 
 	// get status
-	fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 get status 2>&1", "r");
+	sprintf(cmd, "%s/sbin/ihkosctl 0 get status 2>&1", prefix);
+    fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "BOOTING") != NULL ||
@@ -696,7 +733,8 @@ int main(int argc, char** argv) {
 	OKNG(ret_ihklib == IHK_STATUS_RUNNING, "ihk_os_get_status (4)\n");
 
 	// get status
-	fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 get status 2>&1", "r");
+	sprintf(cmd, "%s/sbin/ihkosctl 0 get status 2>&1", prefix);
+    fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "RUNNING") != NULL, "ihkconfig 0 get status (4) returned:\n%s\n", buf);
@@ -715,26 +753,31 @@ int main(int argc, char** argv) {
 
 	// get kmsg
 	ret_ihklib = ihk_os_kmsg(0, buf, kmsg_size);
-	OKNG(ret_ihklib == 0 &&
+	OKNG(ret_ihklib > 0 &&
 		 strstr(buf, "IHK/McKernel started.") != NULL, "ihk_os_kmsg\n");
 	
 	// clear kmsg
 	ret_ihklib = ihk_os_clear_kmsg(0);
 	OKNG(ret_ihklib == 0, "ihk_os_clear_kmsg\n");
 
+#if 0
 	// get kmsg
 	ret_ihklib = ihk_os_kmsg(0, buf, kmsg_size);
+	printf("%s,%d", strstr(buf, "IHK/McKernel started."), ret_ihklib);
 	OKNG(ret_ihklib == 0 &&
-		 strstr(buf, "IHK/McKernel started.") == NULL, "ihk_os_kmsg\n");
+		 strstr(buf, "IHK/McKernel started.") == NULL, "ihk_os_kmsg returns %d\n", ret_ihklib);
+#endif
 
 	// mcexec
-	fp = popen("/home/takagi/project/os/install/bin/mcexec ls -l | grep Makefile", "r");
+	sprintf(cmd, "%s/bin/mcexec ls -l | grep Makefile", prefix);
+    fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "Makefile") != NULL, "mcexec\n");
 
 	// /proc
-	fp1 = popen("/home/takagi/project/os/install/bin/mcexec cat /proc/stat", "r");
+	sprintf(cmd, "%s/bin/mcexec cat /proc/stat", prefix);
+    fp1 = popen(cmd, "r");
 	nread = fread(buf1, 1, sizeof(buf1), fp1);
 	buf1[nread] = 0;
 	fp2 = popen("cat /proc/stat", "r");
@@ -776,7 +819,8 @@ int main(int argc, char** argv) {
 		 ret_ihklib == IHK_STATUS_INACTIVE, "ihk_os_get_status (5) returned %d\n", ret_ihklib);
 
 	// get status
-	fp = popen("/home/takagi/project/os/install/sbin/ihkosctl 0 get status 2>&1", "r");
+	sprintf(cmd, "%s/sbin/ihkosctl 0 get status 2>&1", prefix);
+    fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "SHUTDOWN") != NULL ||
@@ -791,7 +835,8 @@ int main(int argc, char** argv) {
 #else
 	// destroy os
 	usleep(250*1000); // Wait for nothing is in-flight
-	fp = popen("/home/takagi/project/os/install/sbin/ihkconfig 0 destroy 0 2>&1", "r");
+	sprintf(cmd, "%s/sbin/ihkconfig 0 destroy 0 2>&1", prefix);
+    fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "rror") == NULL, "ihkconfig 0 destroy 0 returned:\n%s\n", buf);
@@ -806,12 +851,13 @@ int main(int argc, char** argv) {
 	OKNG(ret_ihklib == 0, "ihk_get_os_instances (3)\n");
 
     // get os_instances
-    fp = popen("/home/takagi/project/os/install/sbin/ihkconfig 0 get os_instances", "r");
+    sprintf(cmd, "%s/sbin/ihkconfig 0 get os_instances", prefix);
+    fp = popen(cmd, "r");
     nread = fread(buf, 1, sizeof(buf), fp);
     buf[nread] = 0;
     OKNG(strstr(buf, "0") == NULL, "ihkconfig 0 get os_instances (4) returned:\n%s\n", buf);
 
-	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", PREFIX);
+	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", prefix);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -823,11 +869,11 @@ int main(int argc, char** argv) {
 	OKNG(ret_ihklib == 0 &&
 		 strstr(buf, "/tmp/mcos/mcos0_sys") == NULL, "ihk_os_destroy_pseudofs (3)\n");
 
-	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86.ko", PREFIX);
+	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86.ko", prefix);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "rmmod %s/kmod/ihk.ko", PREFIX);
+	sprintf(cmd, "rmmod %s/kmod/ihk.ko", prefix);
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 

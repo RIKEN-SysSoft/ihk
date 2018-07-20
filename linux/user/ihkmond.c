@@ -317,8 +317,13 @@ static ssize_t syslog_kmsg(FILE **fps, int prod) {
 				token = strsep(&cur, "\n");
 			}
 		}
-		CHKANDJUMP(ferror(fps[prod]), -1, "ferror()\n");
+		CHKANDJUMP(ferror(fps[cons]), -1, "ferror()\n");
+
+		/* Mark as consumed for duplicated call to this function */
+		fclose(fps[cons]);
+		fps[cons] = NULL;
 	}
+	dprintf("%d slot(s) transferred\n", i);
 
  out:
 	return ret;
@@ -326,7 +331,7 @@ static ssize_t syslog_kmsg(FILE **fps, int prod) {
 
 static void* redirect_kmsg(void* _arg) {
 	struct thr_args *arg = (struct thr_args *)_arg;
-	int devfd = -1, evfd_kmsg = -1, epfd = -1;
+	int devfd = -1, evfd_kmsg = -1, evfd_status = -1, epfd = -1;
 	struct epoll_event event;
 	struct epoll_event events[2];
 	int ret = 0, ret_lib;
@@ -377,7 +382,7 @@ static void* redirect_kmsg(void* _arg) {
 	close(devfd);
 	devfd = -1;
 	
-	/* Register kmsg event */
+	/* Get notification when the amount of kmsg exceeds a threshold */
 	evfd_kmsg = ihk_os_get_eventfd(arg->os_index, IHK_OS_EVENTFD_TYPE_KMSG);
 	CHKANDJUMP(evfd_kmsg < 0, -EINVAL, "ihk_os_get_eventfd\n");
 
@@ -387,6 +392,16 @@ static void* redirect_kmsg(void* _arg) {
 	ret_lib = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd_kmsg, &event);
 	CHKANDJUMP(ret_lib != 0, -EINVAL, "epoll_ctl failed\n");
 
+	/* Get notification when LWK panics or gets hungup */
+	evfd_status = ihk_os_get_eventfd(arg->os_index, IHK_OS_EVENTFD_TYPE_STATUS);
+	CHKANDJUMP(evfd_status < 0, -EINVAL, "ihk_os_get_eventfd\n");
+
+	memset(&event, 0, sizeof(struct epoll_event));
+	event.events = EPOLLIN;
+	event.data.fd = evfd_status;
+	ret_lib = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd_status, &event);
+	CHKANDJUMP(ret_lib != 0, -EINVAL, "epoll_ctl failed\n");
+
 	do {
 		int nfd = epoll_wait(epfd, events, 2, -1);
 		if (nfd < 0 && errno == EINTR)
@@ -394,16 +409,22 @@ static void* redirect_kmsg(void* _arg) {
 		CHKANDJUMP(nfd < 0, -EINVAL, "epoll_wait failed\n");
 		for (i = 0; i < nfd; i++) {
 			if (events[i].data.fd == evfd_kmsg) {
-				reap_event(evfd_kmsg);
+				reap_event(events[i].data.fd);
 				dprintf("kmsg event detected\n");
-				/* Empty buffer */
 				ret_lib = fwrite_kmsg(arg->dev_index, desc_get.handle, arg->os_index, fps, sizes, &prod, 1);
 				CHKANDJUMP(ret_lib < 0, -EINVAL, "fwrite_kmsg returned %d\n", ret_lib);
+			} else if (events[i].data.fd == evfd_status) {
+				reap_event(events[i].data.fd);
+				dprintf("LWK status event detected\n");
+				ret_lib = fwrite_kmsg(arg->dev_index, desc_get.handle, arg->os_index, fps, sizes, &prod, 1);
+				CHKANDJUMP(ret_lib < 0, -EINVAL, "fwrite_kmsg returned %d\n", ret_lib);
+
+				ret_lib = syslog_kmsg(fps, prod);
+				CHKANDJUMP(ret_lib < 0, -EINVAL, "syslog_kmsg returned %d\n", ret_lib);
 			} else if (events[i].data.fd == arg->evfd_mcos_removed) {
-				reap_event(arg->evfd_mcos_removed);
+				reap_event(events[i].data.fd);
 				dprintf("mcos remove event detected\n");
-				/* Don't empty buffer so as not to block shutdown of OS */
-				ret_lib = fwrite_kmsg(arg->dev_index, desc_get.handle, arg->os_index, fps, sizes, &prod, 0);
+				ret_lib = fwrite_kmsg(arg->dev_index, desc_get.handle, arg->os_index, fps, sizes, &prod, 1);
 				CHKANDJUMP(ret_lib < 0, -EINVAL, "fwrite_kmsg returned %d\n", ret_lib);
 
 				ret_lib = syslog_kmsg(fps, prod);
@@ -422,6 +443,11 @@ static void* redirect_kmsg(void* _arg) {
 				CHKANDJUMP(ret_lib != 0, -EINVAL, "epoll_ctl failed\n");
 				close(evfd_kmsg);
 				evfd_kmsg = -1;
+
+				ret_lib = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd_status, &event);
+				CHKANDJUMP(ret_lib != 0, -EINVAL, "epoll_ctl failed\n");
+				close(evfd_status);
+				evfd_status = -1;
 
 				for (i = 0; i < IHKMOND_NUM_FILEBUF_SLOTS; i++) {
 					if(fps[i] != NULL) {
@@ -446,6 +472,9 @@ out:
 	}
 	if (evfd_kmsg >= 0) {
 		close(evfd_kmsg);
+	}
+	if (evfd_status >= 0) {
+		close(evfd_status);
 	}
 	if (epfd >= 0) {
 		close(epfd);

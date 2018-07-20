@@ -72,8 +72,6 @@ int main(int argc, char** argv) {
 	int indices[2];
 	int num_os_instances;
 
-	ssize_t kmsg_size;
-
 	struct ihk_ikc_cpu_map ikc_map[2];
 
 	int num_numa_nodes;
@@ -84,6 +82,8 @@ int main(int argc, char** argv) {
 	
 	struct mckernel_rusage rusage;
 
+	int kmsg_size;
+
 	if(geteuid() != 0) {
 		printf("Execute as a root like: sudo bash -c 'LD_LIBRARY_PATH=/home/takagi/project/os/install/lib/ %s'", argv[0]);
 	}	
@@ -91,10 +91,11 @@ int main(int argc, char** argv) {
 	// kill ihkmond
 	status = system("pid=`pidof ihkmond`&&if [ \"${pid}\" != \"\" ]; then kill -9 ${pid}; fi");
 
+#if 1
 	// run ihkmond
-	status = system(PREFIX "/sbin/ihkmond -f LOG_LOCAL5 -k 1 -i 10");
+	status = system(PREFIX "/sbin/ihkmond -f LOG_LOCAL5 -k 1 -i -1");
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system /sbin/ihkmond");
-
+#endif
 	// ihk_os_destroy_pseudofs
 	ret_ihklib = ihk_os_destroy_pseudofs(0);
 	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
@@ -184,8 +185,11 @@ int main(int argc, char** argv) {
 
 		usleep(100*1000);
 
-		if(j == 0) {
-			// create pseudofs
+		// create pseudofs
+		fp = popen("grep mcoverlay /proc/modules", "r");
+		nread = fread(buf, 1, sizeof(buf), fp);
+		buf[nread] = 0;
+		if(strstr(buf, "mcoverlay") == NULL) {
 			ret_ihklib = ihk_os_create_pseudofs(0);
 			fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
 			nread = fread(buf, 1, sizeof(buf), fp);
@@ -194,44 +198,60 @@ int main(int argc, char** argv) {
 				 strstr(buf, "/tmp/mcos/mcos0_sys") != NULL, "ihk_os_create_pseudofs()\n");
 		}
 
-		// Check kmsg size
-		ret_ihklib = ihk_os_get_kmsg_size(0);
-		OKNG(ret_ihklib == 8192, "ihk_os_get_kmsg_size\n");
-
 		// mcexec
-		fp = popen(PREFIX "/bin/mcexec ./ihklib008_mck", "r");
-		nread = fread(buf, 1, sizeof(buf), fp);
-		buf[nread] = 0;
-		OKNG(strstr(buf, "ihklib008_mck exit OK") != NULL, "mcexec\n");
-	
-		// destroy os
-		for(i = 0; i < 4; i++) {
-			usleep(250 * 1000); // Wait for nothing is in-flight
-			ret_ihklib = ihk_destroy_os(0, 0);
-			if (ret_ihklib == 0) {
-				OKNG(1, "ihk_destroy_os (4), trial #%d succeeded\n", i + 1);
-				goto success;
+		fp = popen(PREFIX "/bin/mcexec ./ihklib017_mck", "r");
+
+		// wait for panic
+		for(i = 0; i  < 4; i++) {
+			usleep(1000*1000);
+			status = ihk_os_get_status(0);
+			if(status == IHK_STATUS_PANIC) {
+				printf("ihk_os_get_status, trial #%d succeeded\n", i + 1);
+				break;
 			}
 		}
-		OKNG(0, "ihk_destroy_os failed\n");
-	success:;
-	}
+
+		// kill mcexec
+		status = system("pid=`pidof mcexec`&&if [ \"${pid}\" != \"\" ]; then kill -9 ${pid}; fi");
+		printf("mcexec killed\n");
+
+		// destroy os
+		for(i = 0; i < 10; i++) {
+			ret_ihklib = ihk_destroy_os(0, 0);
+			if (ret_ihklib == 0) {
+				printf("ihk_destroy_os (4), trial #%d succeeded\n", i + 1);
+				goto destroyed;
+			} else {
+				printf("ihk_destroy_os (4), trial #%d returned %d\n", i + 1, ret_ihklib);
+			}
+			usleep(1000 * 1000); // Wait for nothing is in-flight
+		}
+		CHKANDJUMP(1, 255, "ihk_destroy_os failed %d times\n", i);
+	destroyed:;
+
+#define IHK_TMP "/home/takagi/project/os/install/tmp/mcos0"
 #if 1
-	// Check the size of kmsg
-	fp = popen("wc -l /var/log/local5", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(atol(buf) > j * 16384 / 80, "# of lines of local5 (%d) is greter than %d?\n", atol(buf), j * 16384 / 80);
+		// Check the first part of kmsg is transferred to /var/log/local5
+		usleep(1000 * 1000); // Wait for nothing is in-flight
+		fp = popen("cat  /var/log/local5", "r");
+		nread = fread(buf, 1, sizeof(buf), fp);
+		buf[nread] = 0;
+		OKNG(strstr(buf, "first line") != NULL, "first line is transferred?\n");
 #endif
-	// kill ihkmond
-	status = system("pid=`pidof ihkmond`&&if [ \"${pid}\" != \"\" ]; then kill -9 ${pid}; fi");
-	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
+#if 1
+		// Check the last part of kmsg is transferred to /var/log/local5
+		fp = popen("cat  /var/log/local5", "r");
+		nread = fread(buf, 1, sizeof(buf), fp);
+		buf[nread] = 0;
+		OKNG(strstr(buf, "panic in syscall") != NULL, "last line is transferred?\n");
+#endif
+	}
 
 	// rmmod mcctrl
 	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", PREFIX);
 	status = system(cmd);
-	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system rmmod");
-#if 1
+	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "rmmod mcctrl failed\n");
+
 	// destroy pseudofs
 	ret_ihklib = ihk_os_destroy_pseudofs(0);
 	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
@@ -239,16 +259,19 @@ int main(int argc, char** argv) {
 	buf[nread] = 0;
 	OKNG(ret_ihklib == 0 &&
 		 strstr(buf, "/tmp/mcos/mcos0_sys") == NULL, "ihk_os_destroy_pseudofs (3)\n");
-#endif
+
 	// rmmod ihk-smp-x86
 	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86.ko", PREFIX);
 	status = system(cmd);
-	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system rmmod");
+	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "rmmod ihk-smp-x86.ko failed\n");
 
 	// rmmod ihk
 	sprintf(cmd, "rmmod %s/kmod/ihk.ko", PREFIX);
 	status = system(cmd);
-	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system rmmod");
+	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "rmmod ihk.ko failed\n");
+
+	// kill ihkmond
+	status = system("pid=`pidof ihkmond`&&if [ \"${pid}\" != \"\" ]; then kill -9 ${pid}; fi");
 
 	printf("All tests finished\n");
 
