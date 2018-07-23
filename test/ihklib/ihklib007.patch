@@ -1,7 +1,7 @@
-diff --git a/arch/x86/kernel/include/syscall_list.h b/arch/x86/kernel/include/syscall_list.h
+diff --git a/arch/x86_64/kernel/include/syscall_list.h b/arch/x86_64/kernel/include/syscall_list.h
 index 7c6edcb..52c1ff3 100644
---- a/mckernel/arch/x86/kernel/include/syscall_list.h
-+++ b/mckernel/arch/x86/kernel/include/syscall_list.h
+--- a/mckernel/arch/x86_64/kernel/include/syscall_list.h
++++ b/mckernel/arch/x86_64/kernel/include/syscall_list.h
 @@ -161,6 +161,7 @@ SYSCALL_HANDLED(__NR_profile, profile)
  SYSCALL_HANDLED(730, util_migrate_inter_kernel)
  SYSCALL_HANDLED(731, util_indicate_clone)

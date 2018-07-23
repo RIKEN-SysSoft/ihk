@@ -76,4 +76,4 @@ install:
 	install -m 644 ihkconfig.1 $(MANDIR)/man1/ihkconfig.1
 	install -m 644 ihkosctl.1 $(MANDIR)/man1/ihkosctl.1
 	install -m 755 ihkmond $(SBINDIR)/ihkmond
-	mkdir -p -m 755 $(IHK_TMPDIR)
+	mkdir -p -m 757 $(IHK_TMPDIR)

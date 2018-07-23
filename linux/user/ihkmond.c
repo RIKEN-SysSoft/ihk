@@ -241,7 +241,7 @@ static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, in
 	CHKANDJUMP(devfd < 0, -errno, "ihkmond_device_open returned %d\n", -errno);
 
 	nread = ioctl(devfd, IHK_DEVICE_READ_KMSG_BUF, (unsigned long)&desc);
-	CHKANDJUMP(nread < 0 || nread > sizeof(buf), nread, "ioctl failed\n");
+	CHKANDJUMP(nread < 0 || nread > IHK_KMSG_SIZE, nread, "ioctl failed\n");
 	if (nread == 0) {
 		dprintf("nread is zero\n");
 		goto out;
@@ -283,11 +283,14 @@ static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, in
 
 static ssize_t syslog_kmsg(FILE **fps, int prod) {
 	int ret = 0;
-	char buf[IHKMOND_SIZE_FILEBUF_SLOT + 1];
+	char *buf = NULL;
 	char *cur;
 	char *token;
 	int cons;
 	int i;
+
+	buf = malloc(IHKMOND_SIZE_FILEBUF_SLOT + 1);
+	CHKANDJUMP(buf == NULL, -ENOMEM, "malloc failed");
 
 	for(i = IHKMOND_NUM_FILEBUF_SLOTS - 1; i >= 0; i--) {
 		if (fps[i] == NULL) {
@@ -302,30 +305,38 @@ static ssize_t syslog_kmsg(FILE **fps, int prod) {
 	for(i = 0; i < IHKMOND_NUM_FILEBUF_SLOTS && fps[cons] != NULL; i++, cons = (cons + 1) % IHKMOND_NUM_FILEBUF_SLOTS) {
 		dprintf("cons=%d\n", cons);
 		rewind(fps[cons]);
-		while((ret = fread(buf, 1, sizeof(buf) - 1, fps[cons])), ret > 0) {
-			buf[ret] = 0;
-			cur = buf;
-			token = strsep(&cur, "\n");
-			while (token != NULL) {
-				if(*token == 0) {
-					goto empty_token;
-				}
-				//dprintf("token=%s\n", token);
-				syslog(LOG_INFO, "%s", token);
-				usleep(200); /* Prevent syslog from dropping messages */
-			empty_token:
-				token = strsep(&cur, "\n");
-			}
+		cur = buf;
+		while((ret = fread(cur, 1, IHKMOND_SIZE_FILEBUF_SLOT - (cur - buf) - 1, fps[cons])), ret > 0) {
+			cur += ret;
 		}
-		CHKANDJUMP(ferror(fps[cons]), -1, "ferror()\n");
+		CHKANDJUMP(ferror(fps[cons]), -EINVAL, "ferror()\n");
+		*cur = 0;
+		dprintf("total=%ld\n", (unsigned long)(cur - buf));
 
 		/* Mark as consumed for duplicated call to this function */
 		fclose(fps[cons]);
 		fps[cons] = NULL;
+
+		cur = buf;
+		token = strsep(&cur, "\n");
+		while (token != NULL) {
+			if(*token == 0) {
+				goto empty_token;
+			}
+			dprintf("token=%s\n", token);
+			syslog(LOG_INFO, "%s", token);
+			usleep(200); /* Prevent syslog from dropping messages */
+		empty_token:
+			token = strsep(&cur, "\n");
+		}
+
 	}
 	dprintf("%d slot(s) transferred\n", i);
 
  out:
+	if (buf) {
+		free(buf);
+	}
 	return ret;
 }
 
@@ -341,8 +352,8 @@ static void* redirect_kmsg(void* _arg) {
 	int prod = 0; /* Producer pointer */
 	struct ihk_device_get_kmsg_buf_desc desc_get;
 
-	memset(fps, 0, sizeof(fps));
-	memset(sizes, 0, sizeof(sizes));
+	memset(fps, 0, IHKMOND_NUM_FILEBUF_SLOTS * sizeof(FILE *));
+	memset(sizes, 0, IHKMOND_NUM_FILEBUF_SLOTS * sizeof(int));
 
 	openlog(arg->logid, LOG_PID, arg->facility);
 
@@ -420,7 +431,7 @@ static void* redirect_kmsg(void* _arg) {
 				CHKANDJUMP(ret_lib < 0, -EINVAL, "fwrite_kmsg returned %d\n", ret_lib);
 
 				ret_lib = syslog_kmsg(fps, prod);
-				CHKANDJUMP(ret_lib < 0, -EINVAL, "syslog_kmsg returned %d\n", ret_lib);
+				CHKANDJUMP(ret_lib < 0, ret_lib, "syslog_kmsg returned %d\n", ret_lib);
 			} else if (events[i].data.fd == arg->evfd_mcos_removed) {
 				reap_event(events[i].data.fd);
 				dprintf("mcos remove event detected\n");
@@ -428,7 +439,7 @@ static void* redirect_kmsg(void* _arg) {
 				CHKANDJUMP(ret_lib < 0, -EINVAL, "fwrite_kmsg returned %d\n", ret_lib);
 
 				ret_lib = syslog_kmsg(fps, prod);
-				CHKANDJUMP(ret_lib < 0, -EINVAL, "syslog_kmsg returned %d\n", ret_lib);
+				CHKANDJUMP(ret_lib < 0, ret_lib, "syslog_kmsg returned %d\n", ret_lib);
 				dprintf("after syslog_kmsg for destroy\n");
 #if 1
 				/* Release (i.e. unref) kmsg_buf */
@@ -621,8 +632,9 @@ int main(int argc, char** argv) {
 		int nfd = epoll_wait(epfd, events, 1, -1);
 		for (i = 0; i < nfd; i++) {
 			if (events[i].data.fd == evfd_mcos) {
-				char action[256];
-				char node[256];
+#define SZ_LINE 256
+				char action[SZ_LINE];
+				char node[SZ_LINE];
 				struct udev_device *dev;
 				int os_index;
 
@@ -630,14 +642,14 @@ int main(int argc, char** argv) {
 				dev = udev_monitor_receive_device(mon_mcos);
 				CHKANDJUMP(dev == NULL, 255, "udev_monitor_receive_device failed\n");
 				
-				strncpy(node, udev_device_get_devnode(dev), sizeof(node));
-				node[sizeof(node) - 1] = 0;
+				strncpy(node, udev_device_get_devnode(dev), SZ_LINE);
+				node[SZ_LINE - 1] = 0;
 				dprintf("Node: %s\n", node);
 
 				os_index = atoi(node + 4);
 
-				strncpy(action, udev_device_get_action(dev), sizeof(action));
-				action[sizeof(action) - 1] = 0;
+				strncpy(action, udev_device_get_action(dev), SZ_LINE);
+				action[SZ_LINE - 1] = 0;
 				
 				if (strcmp(action, "add") == 0) {
 					dprintf("mcos add detected\n");
