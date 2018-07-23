@@ -1825,7 +1825,11 @@ void smp_ihk_arch_exit(void)
 
 #ifdef CONFIG_SPARSE_IRQ
 	desc = _irq_to_desc(ihk_smp_irq);
-	desc->handle_irq = orig_irq_flow_handler;
+	if (desc) {
+		desc->handle_irq = orig_irq_flow_handler;
+	} else {
+		printk("%s: Warning: _irq_to_desc(ihk_smp_irq) returns NULL\n", __FUNCTION__);
+	}
 #endif
 
 #if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
