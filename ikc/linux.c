@@ -37,9 +37,11 @@ static void __ihk_ikc_reception_handler(ihk_os_t os)
 
 	if (smp_processor_id() == 0) {
 		m_channel = ihk_ikc_get_master_channel(os);
-		while (ihk_ikc_channel_enabled(m_channel) &&
-		       !ihk_ikc_queue_is_empty(m_channel->recv.queue)) {
-			ihk_ikc_recv_handler(m_channel, m_channel->handler, os, 0);
+		if (m_channel) {
+			while (ihk_ikc_channel_enabled(m_channel) &&
+			       !ihk_ikc_queue_is_empty(m_channel->recv.queue)) {
+				ihk_ikc_recv_handler(m_channel, m_channel->handler, os, 0);
+			}
 		}
 	}
 
