@@ -1,7 +1,6 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Id of IHK.ko maching of which is checked at run-time by reboot script and
-   mcexec */
+/* IHK build-id to confirm IHK and McKernel built at the same time are used */
 #undef BUILDID
 
 /* whether memdump feature is enabled */
