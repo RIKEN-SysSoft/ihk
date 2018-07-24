@@ -181,6 +181,11 @@ IHK_OS_OPS_BEGIN(int, issue_interrupt, int cpu, int vector)
 	IHK_OPS_BODY(issue_interrupt, cpu, vector);
 }
 
+IHK_OS_OPS_BEGIN(int, send_nmi, int mode)
+{
+	IHK_OPS_BODY(send_nmi, mode);
+}
+
 IHK_OS_OPS_BEGIN_NOARG(struct ihk_mem_info *, get_memory_info)
 {
 	IHK_OPS_BODY_PTR_NOARG(get_memory_info);

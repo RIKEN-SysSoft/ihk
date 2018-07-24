@@ -1111,9 +1111,10 @@ int ihk_os_get_status(int index)
 		break;
 	case IHK_OS_STATUS_BOOTING:
 	case IHK_OS_STATUS_BOOTED:
+	case IHK_OS_STATUS_READY:
 		ret = IHK_STATUS_BOOTING;
 		break;
-	case IHK_OS_STATUS_READY:
+	case IHK_OS_STATUS_RUNNING:
 		ret = IHK_STATUS_RUNNING;
 		break;
 	case IHK_OS_STATUS_SHUTDOWN:

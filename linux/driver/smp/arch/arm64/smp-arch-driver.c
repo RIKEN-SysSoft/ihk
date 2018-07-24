@@ -1275,6 +1275,8 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 			return IHK_OS_STATUS_BOOTED;
 		} else if(os->param->status == 2) {
 			return IHK_OS_STATUS_READY;
+		} else if(os->param->status == 3) {
+			return IHK_OS_STATUS_RUNNING;
 		} else {
 			return IHK_OS_STATUS_BOOTING;
 		}

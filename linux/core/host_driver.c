@@ -702,10 +702,11 @@ static int detect_hungup(struct ihk_host_linux_os_data *data)
 	/* Guard objects referenced here
 	   (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
 	   (2) LWK initializes IHK_SPADDR_MONITOR
-	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready() */
+	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready()
+	   (4) LWK sets boot_param->status to 3 (__ihk_os_query_status returns IHK_OS_STATUS_RUNNING) in done_init() */
 	if (ret == IHK_OS_STATUS_HUNGUP) {
 		goto out;
-	} else if (ret != IHK_OS_STATUS_READY) {
+	} else if (ret != IHK_OS_STATUS_READY && ret != IHK_OS_STATUS_RUNNING) {
 		ret = -EAGAIN;
 		goto out;
 	}
@@ -755,8 +756,9 @@ static int __ihk_os_status(struct ihk_host_linux_os_data *data,
 
 	/* (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
 	   (2) LWK initializes IHK_SPADDR_MONITOR
-	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready() */
-	if (status != IHK_OS_STATUS_READY)
+	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready()
+	   (4) LWK sets boot_param->status to 3 (__ihk_os_query_status returns IHK_OS_STATUS_RUNNING) in done_init() */
+	if (status != IHK_OS_STATUS_READY && status != IHK_OS_STATUS_RUNNING)
 		return status;
 
 	setup_monitor(data);
@@ -2264,6 +2266,11 @@ int ihk_os_issue_interrupt(ihk_os_t os, int cpu, int vector)
 	return __ihk_os_issue_interrupt(os, cpu, vector);
 }
 
+int ihk_os_send_nmi(ihk_os_t os, int mode)
+{
+	return __ihk_os_send_nmi(os, mode);
+}
+
 unsigned long ihk_device_map_memory(ihk_device_t dev, unsigned long pa,
                                     unsigned long size)
 {
@@ -2629,6 +2636,7 @@ EXPORT_SYMBOL(ihk_device_unmap_virtual);
 EXPORT_SYMBOL(ihk_device_map_memory);
 EXPORT_SYMBOL(ihk_device_unmap_memory);
 EXPORT_SYMBOL(ihk_os_issue_interrupt);
+EXPORT_SYMBOL(ihk_os_send_nmi);
 EXPORT_SYMBOL(ihk_os_register_user_call_handlers);
 EXPORT_SYMBOL(ihk_os_unregister_user_call_handlers);
 EXPORT_SYMBOL(ihk_os_set_kernel_call_handlers);
