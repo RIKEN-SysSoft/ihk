@@ -1,0 +1,10 @@
+==========
+How to run
+==========
+Please edit config.sh
+
+and
+
+./go_test_ihkconfig.sh
+./go_test_ihkosctl.sh
+
