@@ -9,7 +9,7 @@ KMODDIR=$(DESTDIR)/@KMODDIR@
 
 obj-m += ihk.o
 
-ccflags-y := -I$(src)/../include -I$(src)/../include/ihk/arch/$(ARCH) -I$(src)/../../ikc/include
+ccflags-y := -I$(src)/../include -I$(src)/../include/ihk/arch/$(ARCH) -I$(src)/../../ikc/include -I@abs_builddir@/../../
 
 ihk-y = host_driver.o mem_alloc.o mm.o mikc.o
 ihk-y += ../../ikc/linux.o ../../ikc/master.o ../../ikc/queue.o

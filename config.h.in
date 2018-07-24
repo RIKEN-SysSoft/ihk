@@ -1,13 +1,17 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Id of IHK.ko maching of which is checked at run-time by reboot script and
+   mcexec */
+#undef BUILDID
+
 /* whether memdump feature is enabled */
 #undef ENABLE_MEMDUMP
 
-/* whether rusage is enabled */
-#undef ENABLE_RUSAGE
-
 /* whether perf is enabled */
 #undef ENABLE_PERF
+
+/* whether rusage is enabled */
+#undef ENABLE_RUSAGE
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H

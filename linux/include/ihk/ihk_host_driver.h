@@ -281,6 +281,13 @@ struct ihk_os_ops {
 	**/
 	int (*get_ikc_map)(ihk_os_t, void *, unsigned long arg);
 
+	/** \brief Get build-id.
+	*
+	* \return Success or failure.
+	* \param pointer to build-id string.
+	**/
+	int (*get_buildid)(ihk_os_t, void *, unsigned long arg);
+
 	/** \brief Query CPU cores of an OS instance
 	 *
 	 *  \return Success or failure.
