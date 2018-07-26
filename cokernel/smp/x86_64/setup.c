@@ -4,6 +4,7 @@
 #include <ihk/perfctr.h>
 #include <errno.h>
 #include <registers.h>
+#include <string.h>
 #include "bootparam.h"
 #include <config.h>
 #include <kmsg.h>
@@ -397,13 +398,17 @@ void arch_delay(int us)
 
 void x86_set_warm_reset(unsigned long ip, char *first_page_va)
 {
+	unsigned short vect;
+
 	/* Write CMOS */
 	asm volatile("outb %0, $0x70" : : "a"((char)0xf));
 	asm volatile("outb %0, $0x71" : : "a"((char)0xa));
 
 	/* Set vector */
-	*(unsigned short *)(first_page_va + 0x469) = (ip >> 4);
-	*(unsigned short *)(first_page_va + 0x467) = ip & 0xf;
+	vect = (ip >> 4);
+	memcpy(first_page_va + 0x469, &vect, sizeof(vect));
+	vect = ip & 0xf;
+	memcpy(first_page_va + 0x467, &vect, sizeof(vect));
 }
 
 void builtin_mc_dma_init(unsigned long cfg_addr);
