@@ -69,3 +69,14 @@ host_driver.c deletes stray kmsg_buf when too many  [OK]
 
 ihklib017:
 perform syslog() when detecting panic/hungup [OK]
+
+ihklib018:
+* Hang detection in mcexec using ihk_os_get_eventfd()
+* Non-MPI program
+
+ihklib019:
+* Hang detection in mcexec using ihk_os_get_eventfd()
+* MPI program
+* Two execution styles are covered:
+  1) Run by executing mpiexec directly
+  2) Run through job submission system
