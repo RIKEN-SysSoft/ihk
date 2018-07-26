@@ -65,7 +65,7 @@ int ihk_ikc_init_queue(struct ihk_ikc_queue_head *q,
 	q->write_cpu = 0;
 	q->queue_size = q->pktsize * q->pktcount;
 	dkprintf("%s: queue %p pktcount: %lu\n",
-		__FUNCTION__, virt_to_phys(q), q->pktcount);
+		__FUNCTION__, (void *)virt_to_phys(q), q->pktcount);
 
 	return 0;
 }
@@ -118,8 +118,8 @@ retry:
 	if (!__sync_bool_compare_and_swap(&q->read_off, r, r + 1)) {
 		goto retry;
 	}
-	dkprintf("%s: queue %p r: %lu, m: %lu\n",
-			__FUNCTION__, virt_to_phys(q), r, m);
+	dkprintf("%s: queue %p r: %llu, m: %llu\n",
+			__FUNCTION__, (void *)virt_to_phys(q), r, m);
 
 	memcpyl(packet, (char *)q + sizeof(*q) + ((r % q->pktcount) * q->pktsize),
 			q->pktsize);
@@ -148,8 +148,8 @@ retry:
 	if (!__sync_bool_compare_and_swap(&q->read_off, r, r + 1)) {
 		goto retry;
 	}
-	dkprintf("%s: queue %p r: %lu, m: %lu\n",
-			__FUNCTION__, virt_to_phys(q), r, m);
+	dkprintf("%s: queue %p r: %llu, m: %llu\n",
+			__FUNCTION__, (void *)virt_to_phys(q), r, m);
 
 	h(c, (char *)q + sizeof(*q) + ((r % q->pktcount) * q->pktsize), harg);
 
@@ -174,13 +174,13 @@ retry:
 	if ((w - r) == q->pktcount) {
 		/* Did we run out of attempts? */
 		if (++attempt > IHK_IKC_WRITE_QUEUE_RETRY) {
-			kprintf("%s: queue %p r: %lu, w: %lu is full\n",
-					__FUNCTION__, virt_to_phys(q), r, w);
+			kprintf("%s: queue %p r: %llu, w: %llu is full\n",
+					__FUNCTION__, (void *)virt_to_phys(q), r, w);
 			return -EBUSY;
 		}
 
-		dkprintf("%s: queue %p r: %lu, w: %lu full, retrying\n",
-			__FUNCTION__, virt_to_phys(q), r, w);
+		dkprintf("%s: queue %p r: %llu, w: %llu full, retrying\n",
+			__FUNCTION__, (void *)virt_to_phys(q), r, w);
 		goto retry;
 	}
 
@@ -188,8 +188,8 @@ retry:
 	if (!__sync_bool_compare_and_swap(&q->write_off, w, w + 1)) {
 		goto retry;
 	}
-	dkprintf("%s: queue %p r: %lu, w: %lu\n",
-			__FUNCTION__, virt_to_phys(q), r, w);
+	dkprintf("%s: queue %p r: %llu, w: %llu\n",
+			__FUNCTION__, (void *)virt_to_phys(q), r, w);
 
 	memcpyl((char *)q + sizeof(*q) + ((w % q->pktcount) * q->pktsize),
 			packet, q->pktsize);
