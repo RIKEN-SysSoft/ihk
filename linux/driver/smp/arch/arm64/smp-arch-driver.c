@@ -30,7 +30,7 @@
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include "config-arm64.h"
+#include "config.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
