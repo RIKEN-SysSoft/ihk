@@ -68,6 +68,7 @@
 
 #define IHKMOND_SIZE_FILEBUF_SLOT (1 * (1ULL << 20))
 #define IHKMOND_NUM_FILEBUF_SLOTS 64
+#define IHKMOND_TMP "/tmp/ihkmond"
 
 struct thr_args {
 	pthread_t thread;
@@ -256,7 +257,11 @@ static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, in
 
 	if (next_slot || fps[*prod] == NULL) {
 		if (fps[*prod] == NULL) {
-			sprintf(fn, IHK_TMPDIR "/mcos%d", os_index);
+			sprintf(fn, IHKMOND_TMP);
+			ret_lib = mkdir(fn, 0755);
+			CHKANDJUMP(ret_lib != 0 && errno != EEXIST, -errno, "mkdir failed\n");
+
+			sprintf(fn, IHKMOND_TMP "/mcos%d", os_index);
 			ret_lib = mkdir(fn, 0755);
 			CHKANDJUMP(ret_lib != 0 && errno != EEXIST, -errno, "mkdir failed\n");
 		} else {
@@ -264,7 +269,7 @@ static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, in
 			fps[*prod] = NULL;
 		}
 
-		sprintf(fn, IHK_TMPDIR "/mcos%d/kmsg%d", os_index, *prod);
+		sprintf(fn, IHKMOND_TMP "/mcos%d/kmsg%d", os_index, *prod);
 		fps[*prod] = fopen(fn, "w+");
 		CHKANDJUMP(fps[*prod] == NULL, -EINVAL, "fopen failed\n"); 
 		sizes[*prod] = 0;
@@ -466,9 +471,15 @@ static void* redirect_kmsg(void* _arg) {
 						fps[i] = NULL;
 #if 0
 						char fn[256];
-						sprintf(fn, IHK_TMPDIR "/mcos%d/kmsg%d", arg->os_index, i);
+						sprintf(fn, IHKMOND_TMP "/mcos%d/kmsg%d", arg->os_index, i);
 						ret_lib = unlink(fn);
 						CHKANDJUMP(ret_lib != 0, -EINVAL, "unlink failed\n");
+						sprintf(fn, IHKMOND_TMP "/mcos%d", arg->os_index);
+						ret_lib = rmdir(fn);
+						CHKANDJUMP(ret_lib != 0, -EINVAL, "rmdir failed\n");
+						sprintf(fn, IHKMOND_TMP);
+						ret_lib = rmdir(fn);
+						CHKANDJUMP(ret_lib != 0, -EINVAL, "rmdir failed\n");
 #endif
 					}
 				}

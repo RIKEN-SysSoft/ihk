@@ -151,9 +151,6 @@
 /* Define to address of kernel symbol x86_trampoline_base, or 0 if exported */
 #undef IHK_KSYM_x86_trampoline_base
 
-/* Temporary directory used by IHK */
-#undef IHK_TMPDIR
-
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
