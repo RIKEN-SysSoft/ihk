@@ -18,7 +18,7 @@
 #define ihk_ikc_unmap_memory     ihk_mc_unmap_memory
 
 #define ihk_ikc_map_virtual(dev, p, n, a)  ihk_mc_map_virtual(p, n, a)
-#define ihk_ikc_unmap_virtual(dev, v, n)   ihk_mc_unmap_virtual(v, n, 1)
+#define ihk_ikc_unmap_virtual(dev, v, n)   ihk_mc_unmap_virtual(v, n)
 
 #define ihk_ikc_get_processor_id ihk_mc_get_processor_id
 #define ihk_ikc_mb               ihk_mc_mb
