@@ -429,7 +429,28 @@ static unsigned int perf_map_nehalem[] =
 	[PERFCTR_MAX_TYPE] = -1,
 };
 
-unsigned int *x86_march_perfmap = perf_map_nehalem;
+static unsigned int perf_map_xeon_phi[] = 
+{
+	[APT_TYPE_INSTRUCTIONS]  = CVAL(0xc0, 0x00),
+	//[APT_TYPE_L1D_REQUEST]   = CVAL(0x43, 0x01),
+	//[APT_TYPE_L1I_REQUEST]   = CVAL(0x80, 0x03),
+	//[APT_TYPE_L1D_MISS]      = CVAL(0x51, 0x01),
+	//[APT_TYPE_L1I_MISS]      = CVAL(0x80, 0x02),
+	//[APT_TYPE_L2_MISS]       = CVAL(0x24, 0xaa),
+	//[APT_TYPE_LLC_MISS]      = CVAL(0x2e, 0x41),
+	//[APT_TYPE_DTLB_MISS]     = CVAL(0x49, 0x01),
+	//[APT_TYPE_ITLB_MISS]     = CVAL(0x85, 0x01),
+	//[APT_TYPE_STALL]         = CVAL2(0x0e, 0x01, 1, 1),
+	//[APT_TYPE_CYCLE]         = CVAL(0x3c, 0x00),
+	[APT_TYPE_L2_HIT_LOADS]  = CVAL(0x04, 0x02),
+	[APT_TYPE_L2_MISS_LOADS]  = CVAL(0x04, 0x04),
+	[PERFCTR_MAX_TYPE] = -1,
+};
+
+//TODO add logic to select event structure based on currently running
+//architecture
+//unsigned int *x86_march_perfmap = perf_map_nehalem;
+unsigned int *x86_march_perfmap = perf_map_xeon_phi;
 
 void ihk_mc_set_dump_level(unsigned int level)
 {
