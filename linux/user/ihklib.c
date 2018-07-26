@@ -173,6 +173,7 @@ static void mem_array2str(char* mem_list, ssize_t sz_mem_list, int num_mem_chunk
 	char mem_str[128];
 
 	memset(mem_list, 0, sz_mem_list);
+	mem_str[0] = '\0';
 	for (i = 0; i < num_mem_chunks; i++) {
 		snprintf(mem_str, sizeof(mem_str) - strlen(mem_str) - 1, "%lu@%d",
 				 mem_chunks[i].size, mem_chunks[i].numa_node_number);
@@ -1855,7 +1856,8 @@ int ihk_os_perfctl(int index, int comm)
 		ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_DESTROY, 0);
 		break;
 	default:
-		return(-EINVAL);
+		ret = -EINVAL;
+		goto out;
 	}
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
