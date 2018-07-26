@@ -12,6 +12,7 @@
 #include <asm/smp.h>
 #include <linux/interrupt.h>
 
+#define IHK_IKC_SEND_RETRY	1000
 #ifdef POSTK_DEBUG_TEMP_FIX_49 /* IHK_IKC_RECV_HANDLER_IN_WORKQ enabled */
 #define IHK_IKC_RECV_HANDLER_IN_WORKQ
 #else /* POSTK_DEBUG_TEMP_FIX_49 */
@@ -167,9 +168,11 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 {
 	int r;
 	unsigned long flags;
+	int attempts = 0;
 
-	if(!channel || !p)
+	if (!channel || !p) {
 		return -EINVAL;
+	}
 
 	local_irq_save(flags);
 retry:
@@ -178,6 +181,12 @@ retry:
 		r = ihk_ikc_write_queue(channel->send.queue, p, opt);
 
 		if (r != 0) {
+			if (++attempts > IHK_IKC_SEND_RETRY) {
+				kprintf("%s: couldn't append packet\n", __FUNCTION__);
+				r = -EBUSY;
+				goto out;
+			}
+
 			kprintf("%s: couldn't append packet -> retrying\n", __FUNCTION__);
 			goto retry;
 		}
@@ -189,6 +198,7 @@ retry:
 		r = -EINVAL;
 	}
 
+out:
 	local_irq_restore(flags);
 	return r;
 }

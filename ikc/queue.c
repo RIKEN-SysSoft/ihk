@@ -19,6 +19,7 @@
 #define	ekprintf(...)	kprintf(__VA_ARGS__)
 #endif
 
+#define IHK_IKC_WRITE_QUEUE_RETRY	128
 
 void ihk_ikc_notify_remote_read(struct ihk_ikc_channel_desc *c);
 void ihk_ikc_notify_remote_write(struct ihk_ikc_channel_desc *c);
@@ -158,10 +159,12 @@ retry:
 int ihk_ikc_write_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
 {
 	uint64_t r, w;
+	int attempt = 0;
 
-	if(!q || !packet) {
+	if (!q || !packet) {
 		return -EINVAL;
 	}
+
 retry:
 	r = q->read_off;
 	w = q->write_off;
@@ -169,6 +172,13 @@ retry:
 
 	/* Is the queue full? */
 	if ((w - r) == q->pktcount) {
+		/* Did we run out of attempts? */
+		if (++attempt > IHK_IKC_WRITE_QUEUE_RETRY) {
+			kprintf("%s: queue %p r: %lu, w: %lu is full\n",
+					__FUNCTION__, virt_to_phys(q), r, w);
+			return -EBUSY;
+		}
+
 		dkprintf("%s: queue %p r: %lu, w: %lu full, retrying\n",
 			__FUNCTION__, virt_to_phys(q), r, w);
 		goto retry;
