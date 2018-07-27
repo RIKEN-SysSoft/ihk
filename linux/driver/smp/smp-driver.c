@@ -2823,7 +2823,7 @@ static void sort_pagelists(struct zone *zone)
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
 	int order = get_order(IHK_SMP_CHUNK_BASE_SIZE);
-	size_t want;
+	size_t want = ihk_mem;
 	size_t allocated;
 	size_t available;
 	struct chunk *p;
@@ -2832,6 +2832,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	struct rb_root tmp_chunks = RB_ROOT;
 	nodemask_t nodemask;
 	int i;
+	int order_limit = (want == IHK_SMP_MEM_ALL) ? 8 : 3;
 #ifdef USE_TRY_TO_FREE_PAGES
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
@@ -2927,7 +2928,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 		}
 	}
 
-	want = ihk_mem;
 	if (want != IHK_SMP_MEM_ALL) {
 		want = (ihk_mem + ((PAGE_SIZE << order) - 1))
 			& ~((PAGE_SIZE << order) - 1);
@@ -3051,7 +3051,7 @@ retry:
 			 * We ran out of memory using the current order of compound
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
-			if (order > 2) {
+			if (order > order_limit) {
 				--order;
 				failed_free_attempts = 0;
 				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
