@@ -80,3 +80,9 @@ ihklib019:
 * Two execution styles are covered:
   1) Run by executing mpiexec directly
   2) Run through job submission system
+
+ihklib020:
+ihk_os_get_assigned_cpus() and ihk_os_query_cpu()
+
+ihklib021:
+ihk_get_reserved_cpus() and ihk_query_cpu()
