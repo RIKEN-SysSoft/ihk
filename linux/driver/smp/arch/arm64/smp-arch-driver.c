@@ -25,7 +25,7 @@
 #else
 # include <linux/perf/arm_pmu.h>
 #endif
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <uapi/linux/psci.h>
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
