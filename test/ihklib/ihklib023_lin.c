@@ -208,6 +208,10 @@ int main(int argc, char **argv)
 		       argv[0], prefix);
 	}
 
+	// turn off error messages
+	ret = ihk_set_loglevel(IHKLIB_LOGLEVEL_EMERG);
+	CHKANDJUMP(ret == -1, -1, "ihk_set_loglevel");
+
 	// ihk_os_destroy_pseudofs
 	ret = ihk_os_destroy_pseudofs(0, 0, 0);
 	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
