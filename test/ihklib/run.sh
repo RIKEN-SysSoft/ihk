@@ -12,6 +12,7 @@ dryrun="n"
 sleepopt="0.4"
 home=$(eval echo \$\{HOME\})
 groups=`groups | cut -d' ' -f 1`
+cwd=`pwd`
 
 echo Executing ${testname}
 
@@ -41,10 +42,12 @@ case ${testname} in
 	printf "*** Apply ${testname}.patch with -p 1 to enable syscall #900 and recompile IHK/McKernel.\n"
 	printf "*** Modify values of mck_dir, lastnode, nnodes, ssh, pjsub in ${testname}.sh.\n"
 	;;
+    *)
+	;;
 esac
 
 case ${testname} in
-    ihklib001 | ihklib020 | ihklib021)
+    ihklib001 | ihklib020 | ihklib021 | ihklib022)
 	;;
     *)
 	read -p "*** Hit return when ready!" key
@@ -56,6 +59,14 @@ case ${testname} in
 	bn_lin="${testname}_lin"
 	make clean > /dev/null 2> /dev/null
 	make ${bn_lin}
+	;;
+    ihklib022)
+	rm -f ${testname}-pro_lin
+	make ${testname}-pro_lin
+	if [ $? -ne 0 ]; then echo "make failed"; exit 1; fi
+	rm -f ${testname}-epi_lin
+	make ${testname}-epi_lin
+	if [ $? -ne 0 ]; then echo "make failed"; exit 1; fi
 	;;
      ihklib002 | ihklib003 | ihklib004 | ihklib005 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
 	bn_lin="${testname}_lin"
@@ -90,10 +101,11 @@ case ${testname} in
     ihklib002 | ihklib006 | ihklib007 | ihklib008 | \
     ihklib009 | ihklib010 | ihklib011 | ihklib012 | \
     ihklib013 | ihklib014 | ihklib015 | ihklib016 | \
-    ihklib017 | ihklib019 | ihklib020 | ihklib021)
+    ihklib017 | ihklib019 | ihklib020 | ihklib021 | \
+	ihklib022)
 	;;
     *)
-	echo Unknown test case 
+	echo Unknown test case
 	exit 255
 esac
 
@@ -149,6 +161,8 @@ case ${testname} in
 	;;
     ihklib019)
 	;;
+    ihklib022)
+	;;
     *)
 	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
 	    echo "mcstop+release.sh failed"
@@ -169,10 +183,42 @@ if [ ${kill} == "y" ]; then
 else
     case ${testname} in
 	ihklib001)
-	    sudo GROUPS=${groups} HOME=${home} ./${bn_lin} ${testopt}
+	    sudo MYGROUPS=${groups} MYHOME=${home} ./${bn_lin} ${testopt}
 	;;
 	ihklib020 | ihklib021)
-	    sudo GROUPS=${groups} HOME=${home} ./${bn_lin}
+	    sudo MYGROUPS=${groups} MYHOME=${home} ./${bn_lin}
+	;;
+	ihklib022)
+
+	    # Show what is the issue
+	    sudo ${install}/sbin/mcstop+release.sh
+	    sudo ${install}/sbin/mcreboot.sh ${bootopt}
+	    ${install}/bin/mcexec cat /proc/1/cmdline > cmdline.mcexec
+	    cat /proc/1/cmdline > cmdline.jobsched
+	    if [ "`diff cmdline.mcexec cmdline.jobsched | wc -l`" == "0" ]; then
+		printf "[OK] "
+	    else
+		printf "[NG] "
+	    fi
+	    printf "job sees the same /proc/1/cmdline as "
+	    echo "job-scheduler when not using ihk_os_create_pseudofs()"
+	    sudo ${install}/sbin/mcstop+release.sh
+
+	    # Replace /proc
+	    sudo setsid unshare --fork --pid --mount-proc ./newns.sh \
+		&> /dev/null &
+
+	    while ! pgrep -n newns.sh &> /dev/null; do :; done
+	    pid=$(pgrep -n newns.sh)
+	    sid=$(ps -ho sid:1 --pid $pid)
+
+	    # ihk_os_create_pseudofs with /proc/$pid/ns/{mnt,pid}
+	    sudo MYGROUPS=${groups} MYHOME=${home} ./${testname}-pro_lin $pid
+
+	    # ihk_os_destroy_pseudofs with /proc/$pid/ns/{mnt,pid}
+	    sudo MYHOME=${home} ./${testname}-epi_lin $pid
+
+	    sudo kill -9 -$sid;
 	;;
 	ihklib003)
 	    sudo ./${bn_lin} ${testopt}
@@ -238,10 +284,6 @@ else
 	ihklib019)
 	    ./${testname}.sh
 	    ;;
-	ihklib020 | ihklib021)
-	    sudo ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt}
-	    ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
-	    ;;
 	*)
 	    ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt}
 	    ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
@@ -254,6 +296,8 @@ case ${testname} in
     ihklib003)
 	;;
     ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017 | ihklib019)
+	;;
+    ihklib022)
 	;;
     *)
 	sudo ${install}/sbin/mcstop+release.sh
