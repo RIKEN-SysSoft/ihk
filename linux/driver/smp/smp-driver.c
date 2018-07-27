@@ -2589,7 +2589,8 @@ static void *smp_ihk_map_virtual(ihk_device_t ihk_dev, void *priv,
 
 		ret = ihk_smp_map_virtual(phys, size);
 		if (!ret) {
-			printk("WARNING: ihk_smp_map_virtual() returned NULL!\n");
+			pr_warn("WARNING: ihk_smp_map_virtual(%lx, %lx) returned NULL!\n",
+				phys, size);
 			dump_stack();
 		}
 
