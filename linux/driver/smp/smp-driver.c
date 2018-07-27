@@ -74,14 +74,6 @@ MODULE_PARM_DESC(ihk_cores, "IHK reserved CPU cores");
 
 //#define BUILTIN_COM_VECTOR	0xf1
 
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
-        bitmap_scnlistprintf(buf, buflen, maskp, nmaskbits)
-#else
-#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
-        scnprintf(buf, buflen, "%*pbl", nmaskbits, maskp)
-#endif
-
 #define BUILTIN_DEV_STATUS_READY	0
 #define BUILTIN_DEV_STATUS_BOOTING	1
 
@@ -3488,8 +3480,8 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		cpumask_set_cpu(cpu, &cpus_reserved);
 	}
 
-	BITMAP_SCNLISTPRINTF(query_res, MAX_QUERY_RESULT,
-		cpumask_bits(&cpus_reserved), nr_cpumask_bits);
+	scnprintf(query_res, MAX_QUERY_RESULT, "%*pbl",
+		  nr_cpumask_bits, cpumask_bits(&cpus_reserved));
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
