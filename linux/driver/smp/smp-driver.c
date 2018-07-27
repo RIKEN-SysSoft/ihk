@@ -1679,41 +1679,49 @@ out:
 	return ret;
 }
 
-char query_res[8192];
+#define MAX_QUERY_RESULT 8192
 
 static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
-	int i, ret = 0;
+	int i, ret;
+	char *query_res = NULL;
 	struct smp_os_data *os = priv;
 	char cpu_str[64];
 	int q_len = 0;
 	int q_added;
 
-	memset(query_res, 0, sizeof(query_res));
+	if (!(query_res = kmalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+		pr_err("%s: error: allocating query_res\n",
+		       __func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	/* Respect the order of cpus specified when assigining them
 	   e.g. 0,2,1,3 */
 	for(i = 0; i < os->nr_cpus; ++i) {
 		sprintf(cpu_str, "%d", os->cpu_mapping[i]);
 		q_added = snprintf(query_res + q_len,
-				sizeof(query_res) - q_len, "%s", cpu_str);
+				MAX_QUERY_RESULT - q_len, "%s", cpu_str);
 
-		if (q_added >= sizeof(query_res) - q_len) {
-			printk("IHK-SMP: %s(): error: query_res is not large enough\n",
-				__FUNCTION__);
-			return -EINVAL;
+		if (q_added >= MAX_QUERY_RESULT - q_len) {
+			pr_err("%s: error: query_res is not large enough\n",
+				__func__);
+			ret = -EINVAL;
+			goto out;
 		}
 
 		q_len += q_added;
 
 		if (i != os->nr_cpus - 1) {
 			q_added = snprintf(query_res + q_len,
-					sizeof(query_res) - q_len, ",");
+					MAX_QUERY_RESULT - q_len, ",");
 
-			if (q_added >= sizeof(query_res) - q_len) {
-				printk("IHK-SMP: %s(): error: query_res is not large enough\n",
-						__FUNCTION__);
-				return -EINVAL;
+			if (q_added >= MAX_QUERY_RESULT - q_len) {
+				pr_err("%s: error: query_res is not large enough\n",
+						__func__);
+				ret = -EINVAL;
+				goto out;
 			}
 
 			q_len += q_added;
@@ -1724,17 +1732,17 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
-			printk("IHK-SMP: error: copying CPU string to user-space\n");
-			ret = -EINVAL;
-			goto fn_fail;
+			pr_err("%s: error: copying CPU string to user-space\n",
+			       __func__);
+			ret = -EFAULT;
+			goto out;
 		}
 	}
 
-
- fn_exit:
-	return 0;
- fn_fail:
-	goto fn_exit;
+	ret = 0;
+out:
+	kfree(query_res);
+	return ret;
 }
 
 static int smp_ihk_os_get_num_cpus(ihk_os_t ihk_os, void *priv)
@@ -1884,7 +1892,8 @@ out:
 
 static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
-	int ret = 0;
+	int ret;
+	char *query_res = NULL;
 	int i, src, dst, max_dst = -1;
 	char cpu_str[4];
 
@@ -1895,23 +1904,25 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 
 	rank = kzalloc(sizeof(int) * SMP_MAX_CPUS, GFP_KERNEL);
 	if (!rank) {
-		printk(KERN_ERR "IHK-SMP: error: allocating rank\n");
+		pr_err("%s: error: allocating rank\n", __func__);
 		ret = -ENOMEM;
-		goto fn_fail;
+		goto out;
 	}
 
 	ikc_sset_sizes = kzalloc(sizeof(int) * SMP_MAX_CPUS, GFP_KERNEL);
 	if (!ikc_sset_sizes) {
-		printk(KERN_ERR "IHK-SMP: error: allocating num_ikc_ssets\n");
+		pr_err("%s: error: allocating num_ikc_ssets\n",
+		       __func__);
 		ret = -ENOMEM;
-		goto fn_fail;
+		goto out;
 	}
 
 	ikc_sset_members = kzalloc(sizeof(int*) * SMP_MAX_CPUS, GFP_KERNEL);
 	if (!ikc_sset_members) {
-		printk(KERN_ERR "IHK-SMP: error: allocating ikc_sset_members\n");
+		pr_err("%s: error: allocating ikc_sset_members\n",
+		       __func__);
 		ret = -ENOMEM;
-		goto fn_fail;
+		goto out;
 	}
 
 	for (src = 0; src < SMP_MAX_CPUS; ++src) {
@@ -1921,13 +1932,10 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 			continue;
 
 		rank[src] = ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu];
-		//dprintk("get_ikc_map,src=%d,dst=%d,rank[src]=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, rank[src]);
 		ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]++;
-		//dprintk("get_ikc_map,sset_sizes=%d\n", ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
-		if(max_dst < ihk_smp_cpus[src].ikc_map_cpu) {
+		if (max_dst < ihk_smp_cpus[src].ikc_map_cpu) {
 			max_dst = ihk_smp_cpus[src].ikc_map_cpu;
 		}
-		//dprintk("get_ikc_map,max_dst=%d\n", max_dst);
 	}
 
 	for (src = 0; src < SMP_MAX_CPUS; ++src) {
@@ -1940,34 +1948,38 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 			ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] = 
 				kmalloc(sizeof(int) * ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu], GFP_KERNEL);
 			if (!ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu]) {
-				printk(KERN_ERR "IHK-SMP: error: allocating ikc_sset_members\n");
+				pr_err("%s: error: allocating ikc_sset_members\n",
+				       __func__);
 				ret = -ENOMEM;
-				goto fn_fail;
+				goto out;
 			}
-			//dprintk("get_ikc_map,kmalloc,dst=%d,sset_sizes=%d\n", ihk_smp_cpus[src].ikc_map_cpu, ikc_sset_sizes[ihk_smp_cpus[src].ikc_map_cpu]);
 		}
 		*(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]) = src;
-		//dprintk("get_ikc_map,src=%d,dst=%d,*(members[dst]+rank[src])=%d\n", src, ihk_smp_cpus[src].ikc_map_cpu, *(ikc_sset_members[ihk_smp_cpus[src].ikc_map_cpu] + rank[src]));
 	}
 
-	memset(query_res, 0, sizeof(query_res));
+	if (!(query_res = kzalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+		pr_err("%s: error: allocating query_res\n",
+		       __func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	for (dst = 0; dst < SMP_MAX_CPUS; ++dst) {
-		if(ikc_sset_sizes[dst] == 0) {
+		if (ikc_sset_sizes[dst] == 0) {
 			continue;
 		}
 
 		for (i = 0; i < ikc_sset_sizes[dst]; ++i) {
 			sprintf(cpu_str, "%d", *(ikc_sset_members[dst] + i));
 			strcat(query_res, cpu_str);
-			if(i != ikc_sset_sizes[dst] - 1) {
+			if (i != ikc_sset_sizes[dst] - 1) {
 				strcat(query_res, ",");
 			}
 		}
 		strcat(query_res, ":");
 		sprintf(cpu_str, "%d", dst);
 		strcat(query_res, cpu_str);
-		if(dst != max_dst) {
+		if (dst != max_dst) {
 			strcat(query_res, "+");
 		}
 	}
@@ -1975,29 +1987,27 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	dprintk("get_ikc_map,query_res=%s\n", query_res);
 
 	if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
-		printk("IHK-SMP: error: copying CPU string to user-space\n");
-		ret = -EINVAL;
-		goto fn_fail;
+		pr_err("%s: error: copying CPU string to user-space\n",
+		       __func__);
+		ret = -EFAULT;
+		goto out;
 	}
 
- fn_fail:
-	if(ikc_sset_members) {
+	ret = 0;
+out:
+	if (ikc_sset_members) {
 		for (dst = 0; dst < SMP_MAX_CPUS; ++dst) {
-			if(ikc_sset_members[dst]) {
+			if (ikc_sset_members[dst]) {
 				kfree(ikc_sset_members[dst]);
 			}
 		}
 	}
-	if(ikc_sset_members) {
-		kfree(ikc_sset_members);
-	}
-	if(ikc_sset_sizes) {
-		kfree(ikc_sset_sizes);
-	}
-	if(rank) {
-		kfree(rank);
-	}
-	// fn_exit:
+
+	kfree(ikc_sset_members);
+	kfree(ikc_sset_sizes);
+	kfree(query_res);
+	kfree(rank);
+
 	return ret;
 }
 
@@ -2386,12 +2396,19 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 
 static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
+	int ret;
+	char *query_res = NULL;
 	int q_len = 0;
 	int q_added;
 	int first = 1;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 
-	memset(query_res, 0, sizeof(query_res));
+	if (!(query_res = kmalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+		pr_err("%s: error: allocating query_res\n",
+		       __func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	/* Collect memory information */
 	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
@@ -2399,14 +2416,15 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 			continue;
 
 		q_added = snprintf(query_res + q_len,
-				sizeof(query_res) - q_len,
+				MAX_QUERY_RESULT - q_len,
 				first ? "%lu@%d" : ",%lu@%d",
 				os_mem_chunk->size, os_mem_chunk->numa_id);
 
-		if (q_added >= sizeof(query_res) - q_len) {
-			printk("IHK-SMP: %s(): error: query_res is not large enough\n",
-				__FUNCTION__);
-			return -EINVAL;
+		if (q_added >= MAX_QUERY_RESULT - q_len) {
+			pr_err("%s: error: query_res is not large enough\n",
+				__func__);
+			ret = -EINVAL;
+			goto out;
 		}
 
 		q_len += q_added;
@@ -2418,12 +2436,17 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
-			printk("IHK-SMP: error: copying mem string to user-space\n");
-			return -EINVAL;
+			pr_err("%s: error: copying mem string to user-space\n",
+			       __func__);
+			ret = -EFAULT;
+			goto out;
 		}
 	}
 
-	return 0;
+	ret = 0;
+out:
+	kfree(query_res);
+	return ret;
 }
 
 static int smp_ihk_os_freeze(ihk_os_t ihk_os, void *priv)
@@ -3621,11 +3644,19 @@ static int smp_ihk_get_num_cpus(ihk_device_t ihk_dev)
 
 static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
+	int ret;
+	char *query_res;
 	int cpu;
 	cpumask_t cpus_reserved;
 
 	memset(&cpus_reserved, 0, sizeof(cpus_reserved));
-	memset(query_res, 0, sizeof(query_res));
+
+	if (!(query_res = kzalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+		pr_err("%s: error: allocating query_res\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
@@ -3634,16 +3665,21 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		cpumask_set_cpu(cpu, &cpus_reserved);
 	}
 
-	BITMAP_SCNLISTPRINTF(query_res, sizeof(query_res),
+	BITMAP_SCNLISTPRINTF(query_res, MAX_QUERY_RESULT,
 		cpumask_bits(&cpus_reserved), nr_cpumask_bits);
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
-			printk("IHK-SMP: error: copying CPU string to user-space\n");
-			return -EINVAL;
+			pr_err("%s: error: copying CPU string to user-space\n",
+			       __func__);
+			ret = -EFAULT;
+			goto out;
 		}
 	}
 
+	ret = 0;
+out:
+	kfree(query_res);
 	return 0;
 }
 
@@ -3794,25 +3830,33 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
+	int ret;
+	char *query_res;
 	int q_len = 0;
 	int q_added;
 	int first = 1;
 	struct chunk *mem_chunk;
 
-	memset(query_res, 0, sizeof(query_res));
+	if (!(query_res = kmalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+		pr_err("%s: error: allocating query_res\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	/* Collect memory information */
 	list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
 
 		q_added = snprintf(query_res + q_len,
-				sizeof(query_res) - q_len,
+				MAX_QUERY_RESULT - q_len,
 				first ? "%lu@%d" : ",%lu@%d",
 				mem_chunk->size, mem_chunk->numa_id);
 
-		if (q_added >= sizeof(query_res) - q_len) {
-			printk("IHK-SMP: %s(): error: query_res is not large enough\n",
-				__FUNCTION__);
-			return -EINVAL;
+		if (q_added >= MAX_QUERY_RESULT - q_len) {
+			pr_err("%s: error: query_res is not large enough\n",
+				__func__);
+			ret = -EINVAL;
+			goto out;
 		}
 
 		q_len += q_added;
@@ -3824,11 +3868,16 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
-			printk("IHK-SMP: error: copying mem string to user-space\n");
-			return -EINVAL;
+			pr_err("%s: error: copying mem string to user-space\n",
+				__func__);
+			ret = -EFAULT;
+			goto out;
 		}
 	}
 
+	ret = 0;
+out:
+	kfree(query_res);
 	return 0;
 }
 

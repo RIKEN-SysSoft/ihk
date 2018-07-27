@@ -5,7 +5,7 @@ CC = gcc
 
 CPPFLAGS = -I$(HOME)/project/os/install/include
 CCFLAGS = -g
-LDFLAGS = -L$(HOME)/project/os/install/lib -lihk -Wl,-rpath -Wl,$(HOME)/project/os/install/lib -lbfd
+LDFLAGS = -L$(HOME)/project/os/install/lib -lihk -Wl,-rpath -Wl,$(HOME)/project/os/install/lib -lbfd -lpthread
 SRCS = $(shell ls ihklib*lin.c) udev.c
 EXES = $(SRCS:.c=)
 OBJS = $(SRCS:.c=.o)
