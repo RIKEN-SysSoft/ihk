@@ -19,6 +19,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <linux/limits.h>
 #include <ihk/ihklib.h>
 #include <ihk/ihklib_private.h>
 
