@@ -1,10 +1,14 @@
 ==========
 How to run
 ==========
-./run.sh <ihklibxxx>
+(1) Edit the following line in run.sh
 
-Example:
-./run.sh ihklib001
+    install=${HOME}/project/os/install
+
+(2) ./run.sh <ihklibxxx>
+
+    Example:
+        ./run.sh ihklib001
 
 ===================================
 How to judge it behaves as expected
@@ -95,3 +99,8 @@ Check if the following functions are thread-safe
 * ihk_[os_]query_cpu()
 * ihk_[os_]query_mem()
 * ihk_os_get_ikc_map()
+
+ihklib024:
+Check if ihk_os_{create,destroy}_pseudofs() returns -ECHILD when the
+children of the internal fork()s (including those called by system()s)
+are stolen by waitpid(-1, ...) of another thread
