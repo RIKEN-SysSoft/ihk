@@ -1148,8 +1148,10 @@ int ihk_os_kargs(int index, char* kargs)
 
 int ihk_os_boot(int index)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	int fd = -1;
+	int i;
+	char query_result[1024];
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -1158,9 +1160,43 @@ int ihk_os_boot(int index)
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_BOOT, 0);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	if ((ret = ioctl(fd, IHK_OS_BOOT, 0)) == -1) {
+		dprintf("error: ioctl failed\n");
+		ret = -errno;
+		goto out;
+	}
 
+	for (i = 0; i < 100; i++) { /* 10 second */
+		ret = ioctl(fd, IHK_OS_STATUS, query_result);
+
+		switch (ret) {
+		case IHK_OS_STATUS_BOOTING:
+		case IHK_OS_STATUS_BOOTED:
+		case IHK_OS_STATUS_READY:
+			usleep(100000);
+			continue;
+		default:
+			goto booted_or_error;
+		}
+	}
+
+booted_or_error:
+
+	if (ret == -1) {
+		eprintf("%s: error: IHK_OS_STATUS\n",
+			__func__);
+		ret = -errno;
+		goto out;
+	}
+
+	if (ret != IHK_OS_STATUS_RUNNING) {
+		eprintf("%s: error: Invalid status: %d\n",
+			__func__, ret);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
