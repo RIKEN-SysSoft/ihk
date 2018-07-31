@@ -39,7 +39,9 @@
 //#include "builtin_dma.h"
 #include <host_linux.h>
 #include <bootparam.h>
+#ifdef ENABLE_PERF
 #include <perf_event.h>
+#endif
 #include "config.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
