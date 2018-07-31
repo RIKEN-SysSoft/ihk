@@ -3175,7 +3175,6 @@ pre_out:
 			/* Not in front of compound page? */
 			leftover_page = virt_to_page(leftover);
 			if (PageCompound(leftover_page) && !PageHead(leftover_page)) {
-#ifdef POSTK_DEBUG_ARCH_DEP_73 /* use compound_head() */
 				struct page *head = compound_head(leftover_page);
 				leftover = (struct chunk *)
 					phys_to_virt(page_to_phys(head)) +
@@ -3186,17 +3185,6 @@ pre_out:
 						__FUNCTION__,
 						page_to_phys(head),
 						(PAGE_SIZE << compound_order(head)));
-#else /* POSTK_DEBUG_ARCH_DEP_73 */
-				leftover = (struct chunk *)
-					phys_to_virt(page_to_phys(leftover_page->first_page)) +
-					(PAGE_SIZE << compound_order(leftover_page->first_page));
-
-				printk("%s: adjusted leftover chunk to compound "
-						"page border: 0x%llx:%lu\n",
-						__FUNCTION__,
-						page_to_phys(leftover_page->first_page),
-						(PAGE_SIZE << compound_order(leftover_page->first_page)));
-#endif /* POSTK_DEBUG_ARCH_DEP_73 */
 			}
 
 			/* Only if there is really something left.. */
