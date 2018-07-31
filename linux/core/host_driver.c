@@ -2161,8 +2161,8 @@ int ihk_unregister_device(ihk_device_t ihkdev)
 	while (!list_empty(&ihk_kmsg_bufs)) {
 		struct ihk_kmsg_buf_container *cont;
 		cont = list_first_entry(&ihk_kmsg_bufs, struct ihk_kmsg_buf_container, list);
-		delete_kmsg_buf(cont);
 		ekprintf("%s: Warning: stray kmsg_buf %p freed\n", __FUNCTION__, cont);
+		delete_kmsg_buf(cont);
 	}
 	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
 

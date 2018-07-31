@@ -3414,7 +3414,8 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 #endif
 			printk("%s: invalid CPU requested: %d\n",
 					__FUNCTION__, cpu);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto out;
 		}
 	}
 
@@ -3760,7 +3761,11 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 	/* Do the reservation */
 	mem_token = strsep(&mem_string, ",");
 	while (mem_token) {
-		smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		if (ret != 0) {
+			printk("IHK-SMP: reserve_mem: error: parsing memory string\n");
+			break;
+		}
 		ret = __ihk_smp_reserve_mem(mem_size, numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: reserve_mem: error: reserving memory\n");

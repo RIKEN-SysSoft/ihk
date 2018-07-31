@@ -362,6 +362,7 @@ struct ihk_ikc_channel_desc *ihk_ikc_create_channel(ihk_os_t os,
 	if (!*rq) {
 		recvq = ihk_ikc_alloc_queue(qpages);
 		if (!recvq) {
+			ihk_ikc_free(desc);
 			return NULL;
 		}
 
