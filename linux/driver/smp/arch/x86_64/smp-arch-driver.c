@@ -1635,7 +1635,7 @@ int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	unsigned long flags;
 #ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	char *string = NULL;
-	long len = strlen_user((const char __user *)arg);
+	long len = strnlen_user((const char __user *)arg, 32767);
 #else /* POSTK_DEBUG_ARCH_DEP_46 */
 	char *string = (char *)arg;
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
