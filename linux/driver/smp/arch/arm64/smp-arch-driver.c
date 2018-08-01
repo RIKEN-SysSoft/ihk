@@ -1454,19 +1454,11 @@ retry_trampoline:
 			continue;
 		}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 		if (desc->status_use_accessors & IRQ_NOREQUEST) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
 
 			desc->status_use_accessors &= ~IRQ_NOREQUEST;
 		}
-#else
-		if (desc->status & IRQ_NOREQUEST) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
-
-			desc->status &= ~IRQ_NOREQUEST;
-		}
-#endif
 #endif /* CONFIG_SPARSE_IRQ */
 
 		if (request_irq(vector, smp_ihk_irq_handler, 
@@ -1501,8 +1493,7 @@ retry_trampoline:
 	return error;
 
 error_free_irq:
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
 		try_module_get(THIS_MODULE);
 	}
@@ -1876,8 +1867,7 @@ int ihk_smp_reset_cpu(int hw_id)
 
 void smp_ihk_arch_exit(void)
 {
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
 		try_module_get(THIS_MODULE);
 	}
