@@ -53,6 +53,9 @@ typedef void * ihk_wait_t;
 #include <linux/module.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#ifndef POSTK_DEBUG_ARCH_DEP_6 /* cpu_physical_id is arch dep */
+#include <linux/acpi.h>
+#endif /* !POSTK_DEBUG_ARCH_DEP_6 */
 #include <asm/atomic.h>
 #include <asm/errno.h>
 #include <asm/io.h>
