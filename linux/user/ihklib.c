@@ -24,9 +24,11 @@
 #include <linux/limits.h>
 #include <sched.h>
 #include <linux/version.h>
+#ifdef POSTK_DEBUG_TEMP_FIX_97 /* build fix for CLONE_NEWCGROUP error */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
-#include <linux/sched.h>	/*  TODO: Temporary fix. */
+#include <linux/sched.h>
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) */
+#endif /* POSTK_DEBUG_TEMP_FIX_97 */
 #include <config.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihklib.h>
