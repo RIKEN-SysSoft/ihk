@@ -18,6 +18,7 @@
 #include <linux/irq.h>
 #include <asm/hw_irq.h>
 #include <linux/version.h>
+#include <linux/kallsyms.h>
 #include <asm/mc146818rtc.h>
 #include <asm/tlbflush.h>
 #if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
@@ -36,121 +37,6 @@
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
-
-/*
- * IHK-SMP unexported kernel symbols
- */
-
-#ifdef IHK_KSYM_real_mode_header
-#if IHK_KSYM_real_mode_header
-struct real_mode_header *real_mode_header =
-	(void *)
-	IHK_KSYM_real_mode_header;
-#endif
-#endif
-
-#ifdef IHK_KSYM_per_cpu__vector_irq
-#if IHK_KSYM_per_cpu__vector_irq
-void *_per_cpu__vector_irq =
-	(void *)
-	IHK_KSYM_per_cpu__vector_irq;
-#endif
-#endif
-
-#ifdef IHK_KSYM_vector_irq
-#if IHK_KSYM_vector_irq
-void *_vector_irq =
-	(void *)
-	IHK_KSYM_vector_irq;
-#endif
-#endif
-
-#ifdef IHK_KSYM_lapic_get_maxlvt
-#if IHK_KSYM_lapic_get_maxlvt
-typedef int (*int_star_fn_void_t)(void);
-int (*_lapic_get_maxlvt)(void) =
-	(int_star_fn_void_t)
-	IHK_KSYM_lapic_get_maxlvt;
-#endif
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
-#ifdef IHK_KSYM_init_deasserted
-#if IHK_KSYM_init_deasserted
-atomic_t *_init_deasserted =
-	(atomic_t *)
-	IHK_KSYM_init_deasserted;
-#endif
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_to_desc_alloc_node
-#if IHK_KSYM_irq_to_desc_alloc_node
-typedef struct irq_desc *(*irq_desc_star_fn_int_int_t)(unsigned int, int);
-struct irq_desc *(*_irq_to_desc_alloc_node)(unsigned int irq, int node) =
-	(irq_desc_star_fn_int_int_t)
-	IHK_KSYM_irq_to_desc_alloc_node;
-#endif
-#endif
-
-#ifdef IHK_KSYM_alloc_desc
-#if IHK_KSYM_alloc_desc
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) || \
-	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
-typedef struct irq_desc *(*irq_desc_star_fn_int_int_int_cpumask_star_module_star_t)
-	(int, int, unsigned int, const struct cpumask *, struct module*);
-struct irq_desc *(*_alloc_desc)(int irq, int node, unsigned int flags,
-		                const struct cpumask *affinity,
-				struct module *owner) =
-	(irq_desc_star_fn_int_int_int_cpumask_star_module_star_t)
-	IHK_KSYM_alloc_desc;
-#else
-typedef struct irq_desc *(*irq_desc_star_fn_int_int_module_star_t)
-	(int, int, struct module*);
-struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
-	(irq_desc_star_fn_int_int_module_star_t) IHK_KSYM_alloc_desc;
-#endif
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_desc_tree
-#if IHK_KSYM_irq_desc_tree
-struct radix_tree_root *_irq_desc_tree =
-	(struct radix_tree_root *)
-	IHK_KSYM_irq_desc_tree;
-#endif
-#endif
-
-#ifdef IHK_KSYM_get_uv_system_type
-#if IHK_KSYM_get_uv_system_type
-typedef enum uv_system_type (*uv_system_type_star_fn_void_t)(void);
-enum uv_system_type (*_get_uv_system_type)(void) =
-	(uv_system_type_star_fn_void_t)
-	IHK_KSYM_get_uv_system_type;
-#endif
-#else /* static */
-#define _get_uv_system_type get_uv_system_type
-#endif
-
-#ifdef IHK_KSYM_wakeup_secondary_cpu_via_init
-#if IHK_KSYM_wakeup_secondary_cpu_via_init
-int (*_wakeup_secondary_cpu_via_init)(int phys_apicid,
-	unsigned long start_eip) =
-	IHK_KSYM_wakeup_secondary_cpu_via_init;
-#endif
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
-#ifdef IHK_KSYM___default_send_IPI_dest_field
-#if IHK_KSYM___default_send_IPI_dest_field
-typedef void (*void_fn_unsigned_int_int_unsigned_int_t)(void);
-void (*___default_send_IPI_dest_field)(unsigned int mask, 
-	int vector, unsigned int dest)
-	= (void_fn_unsigned_int_int_unsigned_int_t)
-	IHK_KSYM___default_send_IPI_dest_field;
-#endif
-#endif
-#endif
 
 /* ----------------------------------------------- */
 
@@ -198,6 +84,79 @@ struct ihk_smp_trampoline_header {
 };
 
 /* ----------------------------------------------- */
+
+
+/*
+ * IHK-SMP unexported kernel symbols
+ */
+
+static struct real_mode_header *_real_mode_header;
+static void *_vector_irq;
+static int (*_lapic_get_maxlvt)(void);
+static struct radix_tree_root *_irq_desc_tree;
+static enum uv_system_type (*_get_uv_system_type)(void);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
+static atomic_t *_init_deasserted;
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) || \
+	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
+static struct irq_desc *(*_alloc_desc)(int irq, int node, unsigned int flags,
+				       const struct cpumask *affinity,
+				       struct module *owner);
+#else
+static struct irq_desc *(*_alloc_desc)(int irq, int node,
+				       struct module *owner);
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+static void (*___default_send_IPI_dest_field)(unsigned int mask, int vector,
+					      unsigned int dest);
+#endif
+
+int ihk_smp_arch_symbols_init(void)
+{
+	_real_mode_header = (void *) kallsyms_lookup_name("real_mode_header");
+	if (WARN_ON(!_real_mode_header))
+		return -EFAULT;
+
+	_vector_irq = (void *) kallsyms_lookup_name("vector_irq");
+	if (WARN_ON(!_vector_irq))
+		return -EFAULT;
+
+	_lapic_get_maxlvt = (void *) kallsyms_lookup_name("lapic_get_maxlvt");
+	if (WARN_ON(!_lapic_get_maxlvt))
+		return -EFAULT;
+
+	_irq_desc_tree = (void *) kallsyms_lookup_name("irq_desc_tree");
+	if (WARN_ON(!_irq_desc_tree))
+		return -EFAULT;
+
+	_get_uv_system_type =
+		(void *) kallsyms_lookup_name("get_uv_system_type");
+	if (WARN_ON(!_get_uv_system_type))
+		return -EFAULT;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
+	_init_deasserted = (void *) kallsyms_lookup_name("init_deasserted");
+	if (WARN_ON(!_init_deasserted))
+		return -EFAULT;
+#endif
+
+	_alloc_desc = (void *) kallsyms_lookup_name("alloc_desc");
+	if (WARN_ON(!_alloc_desc))
+		return -EFAULT;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+	___default_send_IPI_dest_field =
+		(void *) kallsyms_lookup_name("__default_send_IPI_dest_field");
+	if (WARN_ON(!___default_send_IPI_dest_field))
+		return -EFAULT;
+#endif
+
+	return 0;
+}
 
 int ihk_smp_get_hw_id(int cpu)
 {
@@ -896,12 +855,9 @@ vector_is_used(int vector, int core) {
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 					per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+#else
 /* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(core)));
-#else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
 				per_cpu_offset(core)));
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
 
@@ -927,12 +883,9 @@ set_vector(int vector, int core) {
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 						per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+#else
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
-#else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
-		per_cpu_offset(core)));
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
@@ -1022,11 +975,7 @@ retry_trampoline:
 		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
 			using_linux_trampoline = 1;
 			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
-#ifdef IHK_KSYM_real_mode_header
-#if IHK_KSYM_real_mode_header
-			trampoline_phys = real_mode_header->trampoline_start;
-#endif
-#endif
+			trampoline_phys = _real_mode_header->trampoline_start;
 			trampoline_va = __va(trampoline_phys);
 		}
 		else {
