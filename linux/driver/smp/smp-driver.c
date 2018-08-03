@@ -4196,8 +4196,13 @@ static struct ihk_register_device_data builtin_dev_reg_data = {
 static int __init smp_module_init(void)
 {
 	ihk_device_t ihkd;
+	int ret;
 
 	printk(KERN_INFO "IHK-SMP: initializing...\n");
+
+	if ((ret = ihk_smp_arch_symbols_init())) {
+		return ret;
+	}
 
 	spin_lock_init(&builtin_data.lock);
 

@@ -45,123 +45,12 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to address of kernel symbol __cpu_logical_map, or 0 if exported */
-#undef IHK_KSYM___cpu_logical_map
-
-/* Define to address of kernel symbol __default_send_IPI_dest_field, or 0 if
-   exported */
-#undef IHK_KSYM___default_send_IPI_dest_field
-
-/* Define to address of kernel symbol __free_vmap_area, or 0 if exported */
-#undef IHK_KSYM___free_vmap_area
-
-/* Define to address of kernel symbol __insert_vmap_area, or 0 if exported */
-#undef IHK_KSYM___insert_vmap_area
-
-/* Define to address of kernel symbol __invoke_psci_fn_hvc, or 0 if exported
-   */
-#undef IHK_KSYM___invoke_psci_fn_hvc
-
-/* Define to address of kernel symbol __invoke_psci_fn_smc, or 0 if exported
-   */
-#undef IHK_KSYM___invoke_psci_fn_smc
-
-/* Define to address of kernel symbol __irq_domain_alloc_irqs, or 0 if
-   exported */
-#undef IHK_KSYM___irq_domain_alloc_irqs
-
-/* Define to address of kernel symbol __irq_set_affinity, or 0 if exported */
-#undef IHK_KSYM___irq_set_affinity
-
-/* Define to address of kernel symbol __oprofile_cpu_pmu, or 0 if exported */
-#undef IHK_KSYM___oprofile_cpu_pmu
-
-/* Define to address of kernel symbol acpi_gic_ver, or 0 if exported */
-#undef IHK_KSYM_acpi_gic_ver
-
-/* Define to address of kernel symbol alloc_desc, or 0 if exported */
-#undef IHK_KSYM_alloc_desc
-
-/* Define to address of kernel symbol arch_timer_rate, or 0 if exported */
-#undef IHK_KSYM_arch_timer_rate
-
-/* Define to address of kernel symbol arch_timer_use_virtual, or 0 if exported
-   */
-#undef IHK_KSYM_arch_timer_use_virtual
-
-/* Define to address of kernel symbol arch_timer_uses_ppi, or 0 if exported */
-#undef IHK_KSYM_arch_timer_uses_ppi
-
-/* Define to address of kernel symbol cpu_pmu, or 0 if exported */
-#undef IHK_KSYM_cpu_pmu
-
-/* Define to address of kernel symbol dummy_irq_chip, or 0 if exported */
-#undef IHK_KSYM_dummy_irq_chip
-
-/* Define to address of kernel symbol get_uv_system_type, or 0 if exported */
-#undef IHK_KSYM_get_uv_system_type
-
-/* Define to address of kernel symbol gic_data_gicv2, or 0 if exported */
-#undef IHK_KSYM_gic_data_gicv2
-
 /* Define to address of kernel symbol gic_data_gicv3, or 0 if exported */
 #undef IHK_KSYM_gic_data_gicv3
-
-/* Define to address of kernel symbol gic_raise_softirq_gicv2, or 0 if
-   exported */
-#undef IHK_KSYM_gic_raise_softirq_gicv2
 
 /* Define to address of kernel symbol gic_raise_softirq_gicv3, or 0 if
    exported */
 #undef IHK_KSYM_gic_raise_softirq_gicv3
-
-/* Define to address of kernel symbol init_deasserted, or 0 if exported */
-#undef IHK_KSYM_init_deasserted
-
-/* Define to address of kernel symbol invoke_psci_fn, or 0 if exported */
-#undef IHK_KSYM_invoke_psci_fn
-
-/* Define to address of kernel symbol irq_desc_tree, or 0 if exported */
-#undef IHK_KSYM_irq_desc_tree
-
-/* Define to address of kernel symbol irq_domain_free_irqs, or 0 if exported
-   */
-#undef IHK_KSYM_irq_domain_free_irqs
-
-/* Define to address of kernel symbol irq_to_desc, or 0 if exported */
-#undef IHK_KSYM_irq_to_desc
-
-/* Define to address of kernel symbol irq_to_desc_alloc_node, or 0 if exported
-   */
-#undef IHK_KSYM_irq_to_desc_alloc_node
-
-/* Define to address of kernel symbol lapic_get_maxlvt, or 0 if exported */
-#undef IHK_KSYM_lapic_get_maxlvt
-
-/* Define to address of kernel symbol per_cpu__vector_irq, or 0 if exported */
-#undef IHK_KSYM_per_cpu__vector_irq
-
-/* Define to address of kernel symbol psci_ops, or 0 if exported */
-#undef IHK_KSYM_psci_ops
-
-/* Define to address of kernel symbol real_mode_header, or 0 if exported */
-#undef IHK_KSYM_real_mode_header
-
-/* Define to address of kernel symbol vector_irq, or 0 if exported */
-#undef IHK_KSYM_vector_irq
-
-/* Define to address of kernel symbol vmap_area_lock, or 0 if exported */
-#undef IHK_KSYM_vmap_area_lock
-
-/* Define to address of kernel symbol vmap_area_root, or 0 if exported */
-#undef IHK_KSYM_vmap_area_root
-
-/* Define to address of kernel symbol wakeup_secondary_cpu_via_init, or 0 if
-   exported */
-#undef IHK_KSYM_wakeup_secondary_cpu_via_init
-
-/* Define to address of kernel symbol x86_trampoline_base, or 0 if exported */
-#undef IHK_KSYM_x86_trampoline_base
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
