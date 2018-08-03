@@ -5,12 +5,12 @@
 #define LAPIC_ICR_ID_SHIFT 24
 
 extern int perf_counters_discovered;
-extern int X86_IA32_NUM_PERF_COUNTERS;
-extern unsigned long X86_IA32_PERF_COUNTERS_MASK;
+extern int NUM_PERF_COUNTERS;
+extern unsigned long PERF_COUNTERS_MASK;
 
-#define X86_IA32_BASE_FIXED_PERF_COUNTERS 32
-extern int X86_IA32_NUM_FIXED_PERF_COUNTERS;
-extern unsigned long X86_IA32_FIXED_PERF_COUNTERS_MASK;
+#define BASE_FIXED_PERF_COUNTERS 32
+extern int NUM_FIXED_PERF_COUNTERS;
+extern unsigned long FIXED_PERF_COUNTERS_MASK;
 
 #define	MSR_IA32_TIME_STAMP_COUNTER	0x00000010 /* TSC */
 #define MSR_IA32_PMC0        0x000000c1
