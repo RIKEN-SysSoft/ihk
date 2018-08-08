@@ -131,11 +131,21 @@ struct irq_desc *(*_irq_to_desc_alloc_node)(unsigned int irq, int node) =
 
 #ifdef IHK_KSYM_alloc_desc
 #if IHK_KSYM_alloc_desc
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) || \
+	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
+typedef struct irq_desc *(*irq_desc_star_fn_int_int_int_cpumask_star_module_star_t)
+	(int, int, unsigned int, const struct cpumask *, struct module*);
+struct irq_desc *(*_alloc_desc)(int irq, int node, unsigned int flags,
+		                const struct cpumask *affinity,
+				struct module *owner) =
+	(irq_desc_star_fn_int_int_int_cpumask_star_module_star_t)
+	IHK_KSYM_alloc_desc;
+#else
 typedef struct irq_desc *(*irq_desc_star_fn_int_int_module_star_t)
 	(int, int, struct module*);
 struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
-	(irq_desc_star_fn_int_int_module_star_t)
-	IHK_KSYM_alloc_desc;
+	(irq_desc_star_fn_int_int_module_star_t) IHK_KSYM_alloc_desc;
+#endif
 #endif
 #endif
 
@@ -1127,9 +1137,16 @@ retry_trampoline:
 		/* If no descriptor, create one */
 		desc = _irq_to_desc(vector);
 		if (!desc) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) || \
+	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
+			desc = _alloc_desc(vector, first_online_node,
+					   0 /* flags */, NULL /* affinity */,
+					   THIS_MODULE);
+#else
 			desc = _alloc_desc(vector, first_online_node,
 			                   THIS_MODULE);
+#endif
 			desc->irq_data.chip = _dummy_irq_chip;
 			radix_tree_insert(_irq_desc_tree, vector, desc);
 #else
