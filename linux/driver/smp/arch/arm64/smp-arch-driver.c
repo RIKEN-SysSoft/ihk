@@ -473,14 +473,14 @@ static void ihk_smp_gic_collect_rdist(void)
 
 	/* Collect redistributor base addresses for all possible cpus */
 	for_each_cpu(cpu, cpu_possible_mask) {
-		ihk_smp_gic_rdist_pa[cpu] = 
+		ihk_smp_gic_rdist_pa[cpu] =
 			(per_cpu_ptr(ihk_gic_data_v3->rdists.rdist, cpu))->phys_base;
 	}
 
 	if(ihk_gic_data_v3->redist_stride) {
 		ihk_smp_gic_cpu_size = ihk_gic_data_v3->redist_stride;
 	} else {
-		unsigned long typer = 
+		unsigned long typer =
 			readq_relaxed(((this_cpu_ptr(ihk_gic_data_v3->rdists.rdist))->rd_base) + GICR_TYPER);
 		if (typer & GICR_TYPER_VLPIS) {
 			ihk_smp_gic_cpu_size = ACPI_GICV3_CPU_IF_MEM_SIZE * 4; /* RD + SGI + VLPI + reserved */
@@ -579,7 +579,7 @@ static int ihk_smp_acpi_get_gic_base(void)
 
 	// for GICv3 or later
 	/*
-	 * Collect re-distributor base PA infomation
+	 * Collect re-distributor base PA information
 	 * that the host-linux was constructed.
 	 */
 	ihk_smp_gic_collect_rdist();
@@ -629,8 +629,8 @@ static int ihk_smp_dt_get_gic_base(void)
 		return result;
 	}
 
-	/* 
-	 * Collect re-distributor base PA infomation 
+	/*
+	 * Collect re-distributor base PA information
 	 * that the host-linux was constructed.
 	 */
 	ihk_smp_gic_collect_rdist();
@@ -1088,13 +1088,13 @@ static int ihk_smp_reserve_irq(void)
 
 	if (request_irq(virq, smp_ihk_irq_handler,
 		IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", virq);
+		pr_info("IHK-SMP: IRQ vector %d: request_irq failed\n", virq);
 		return -EFAULT;
 	}
 
 	ihk_smp_irq.irq = virq;
 	ihk_smp_irq.hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);
-	printk("IHK-SMP: IKC irq vector: %d, hwirq#: %d\n", 
+	pr_info("IHK-SMP: IKC irq vector: %d, hwirq#: %d\n",
 		ihk_smp_irq.irq, ihk_smp_irq.hwirq);
 
 	return virq;
@@ -1239,7 +1239,7 @@ retry_trampoline:
 		}
 #endif /* CONFIG_SPARSE_IRQ */
 
-		if (request_irq(vector, smp_ihk_irq_handler, 
+		if (request_irq(vector, smp_ihk_irq_handler,
 			IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
 
@@ -1340,7 +1340,7 @@ static int ensure_continue(const char *errmsg, int result)
 			// no problem.
 			break;
 		case -ENOENT:
-			// When target file does not exist, 
+			// When target file does not exist,
 			// processes may be continued.
 			break;
 		default:
