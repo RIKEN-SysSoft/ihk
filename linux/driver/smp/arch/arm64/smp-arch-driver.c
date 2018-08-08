@@ -92,18 +92,6 @@ static int (*ihk_irq_domain_free_irqs)(unsigned int virq, unsigned int nr_irqs) 
 #endif
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) */
 
-#ifdef IHK_KSYM_irq_to_desc
-#if IHK_KSYM_irq_to_desc
-typedef struct irq_desc *(*irq_desc_star_fn_int_t)(unsigned int);
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) =
-	(irq_desc_star_fn_int_t)
-	IHK_KSYM_irq_to_desc;
-#else /* exported */
-#include <linux/irqnr.h>
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = irq_to_desc;
-#endif
-#endif
-
 #ifdef IHK_KSYM_psci_ops
 #if IHK_KSYM_psci_ops
 struct psci_operations *ihk_psci_ops =
@@ -1294,7 +1282,7 @@ static int ihk_smp_reserve_irq(void)
 	}
 	virq = irq_create_fwspec_mapping(&fw_args);
 
-	desc = _irq_to_desc(virq);
+	desc = irq_to_desc(virq);
 	if (!desc) {
 		printk("IRQ vector %d: still no descriptor??\n", virq);
 		return -EINVAL;
@@ -1424,7 +1412,7 @@ retry_trampoline:
 		struct irq_desc *desc;
 
 #ifdef CONFIG_SPARSE_IRQ
-		desc = _irq_to_desc(vector);
+		desc = irq_to_desc(vector);
 		if (!desc) {
 			int result;
 			struct irq_domain *domain;
@@ -1460,7 +1448,7 @@ retry_trampoline:
 			continue;
 		}
 
-		desc = _irq_to_desc(vector);
+		desc = irq_to_desc(vector);
 		if (!desc) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
 			continue;
