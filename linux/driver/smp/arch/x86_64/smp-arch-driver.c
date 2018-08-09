@@ -108,18 +108,6 @@ atomic_t *_init_deasserted =
 #endif
 #endif
 
-#ifdef IHK_KSYM_irq_to_desc
-#if IHK_KSYM_irq_to_desc
-typedef struct irq_desc *(*irq_desc_star_fn_int_t)(unsigned int);
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) =
-	(irq_desc_star_fn_int_t)
-	IHK_KSYM_irq_to_desc;
-#else /* exported */
-#include <linux/irqnr.h>
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = irq_to_desc;
-#endif
-#endif
-
 #ifdef IHK_KSYM_irq_to_desc_alloc_node
 #if IHK_KSYM_irq_to_desc_alloc_node
 typedef struct irq_desc *(*irq_desc_star_fn_int_int_t)(unsigned int, int);
@@ -154,16 +142,6 @@ struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
 struct radix_tree_root *_irq_desc_tree =
 	(struct radix_tree_root *)
 	IHK_KSYM_irq_desc_tree;
-#endif
-#endif
-
-#ifdef IHK_KSYM_dummy_irq_chip
-#if IHK_KSYM_dummy_irq_chip
-struct irq_chip *_dummy_irq_chip =
-	(struct irq_chip *)
-	IHK_KSYM_dummy_irq_chip;
-#else /* exported */
-struct irq_chip *_dummy_irq_chip = &dummy_irq_chip;
 #endif
 #endif
 
@@ -1228,7 +1206,7 @@ retry_trampoline:
 
 #ifdef CONFIG_SPARSE_IRQ
 		/* If no descriptor, create one */
-		desc = _irq_to_desc(vector);
+		desc = irq_to_desc(vector);
 		if (!desc) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) || \
@@ -1240,7 +1218,7 @@ retry_trampoline:
 			desc = _alloc_desc(vector, first_online_node,
 			                   THIS_MODULE);
 #endif
-			desc->irq_data.chip = _dummy_irq_chip;
+			desc->irq_data.chip = &dummy_irq_chip;
 			radix_tree_insert(_irq_desc_tree, vector, desc);
 #else
 			desc = _irq_to_desc_alloc_node(vector,
@@ -1249,11 +1227,11 @@ retry_trampoline:
 				printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
 				continue;
 			}
-			desc->chip = _dummy_irq_chip;
+			desc->chip = dummy_irq_chip;
 #endif
 		}
 
-		desc = _irq_to_desc(vector);
+		desc = irq_to_desc(vector);
 		if (!desc) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: no descriptor\n", vector);
 			continue;
@@ -1843,11 +1821,11 @@ void smp_ihk_arch_exit(void)
 	irq_set_chip(ihk_smp_irq, NULL);
 
 #ifdef CONFIG_SPARSE_IRQ
-	desc = _irq_to_desc(ihk_smp_irq);
+	desc = irq_to_desc(ihk_smp_irq);
 	if (desc) {
 		desc->handle_irq = orig_irq_flow_handler;
 	} else {
-		printk("%s: Warning: _irq_to_desc(ihk_smp_irq) returns NULL\n", __FUNCTION__);
+		printk("%s: Warning: irq_to_desc(ihk_smp_irq) returns NULL\n", __FUNCTION__);
 	}
 #endif
 
