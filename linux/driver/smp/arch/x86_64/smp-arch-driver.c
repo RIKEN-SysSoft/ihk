@@ -18,23 +18,13 @@
 #include <linux/irq.h>
 #include <asm/hw_irq.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
-#include <linux/autoconf.h>
-#endif
 #include <asm/mc146818rtc.h>
 #include <asm/tlbflush.h>
 #if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 #include <asm/smpboot_hooks.h>
 #endif
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
-#include <asm/trampoline.h>
-#elif (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
-#include <asm/trampoline.h>
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 #include <asm/realmode.h>
-#endif
-
 #include <asm/apic.h>
 #include <asm/ipi.h>
 #include <asm/uv/uv.h>
@@ -51,25 +41,11 @@
  * IHK-SMP unexported kernel symbols
  */
 
-/* x86_trampoline_base has been introduced in 2.6.38 */
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
-#ifdef IHK_KSYM_x86_trampoline_base
-#if IHK_KSYM_x86_trampoline_base
-unsigned char *x86_trampoline_base = 
-	(void *)
-	IHK_KSYM_x86_trampoline_base;
-#endif
-#endif
-#endif
-
-/* real_mode_header has been introduced in 3.10 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 #ifdef IHK_KSYM_real_mode_header
 #if IHK_KSYM_real_mode_header
 struct real_mode_header *real_mode_header =
 	(void *)
 	IHK_KSYM_real_mode_header;
-#endif
 #endif
 #endif
 
@@ -921,21 +897,13 @@ static void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 		return;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	raw_spin_lock(&desc->lock);
-#else
-	spin_lock(&desc->lock);
-#endif
 
 //	printk("IHK-SMP: calling handler for IRQ %d\n", irq);
 	desc->action->handler(irq, NULL);
 //	ack_APIC_irq();
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	raw_spin_unlock(&desc->lock);
-#else
-	spin_unlock(&desc->lock);
-#endif
 }
 #endif
 
@@ -1079,11 +1047,8 @@ release_vector(int vector, int core) {
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(core)));
 #else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
 #endif
 
@@ -1150,21 +1115,11 @@ retry_trampoline:
 		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
 			using_linux_trampoline = 1;
 			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38))
-			trampoline_phys = TRAMPOLINE_BASE;
-#elif ((LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)))
-#ifdef IHK_KSYM_x86_trampoline_base
-#if IHK_KSYM_x86_trampoline_base
-			trampoline_phys = __pa(x86_trampoline_base);
-#endif
-#endif
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0))
 #ifdef IHK_KSYM_real_mode_header
 #if IHK_KSYM_real_mode_header
 			trampoline_phys = real_mode_header->trampoline_start;
 #endif
 #endif
-#endif /* LINUX_VERSION_CODE check */
 			trampoline_va = __va(trampoline_phys);
 		}
 		else {
@@ -1208,7 +1163,6 @@ retry_trampoline:
 		/* If no descriptor, create one */
 		desc = irq_to_desc(vector);
 		if (!desc) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) || \
 	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
 			desc = _alloc_desc(vector, first_online_node,
@@ -1220,15 +1174,6 @@ retry_trampoline:
 #endif
 			desc->irq_data.chip = &dummy_irq_chip;
 			radix_tree_insert(_irq_desc_tree, vector, desc);
-#else
-			desc = _irq_to_desc_alloc_node(vector,
-			                               first_online_node);
-			if (!desc) {
-				printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
-				continue;
-			}
-			desc->chip = dummy_irq_chip;
-#endif
 		}
 
 		desc = irq_to_desc(vector);
@@ -1242,21 +1187,12 @@ retry_trampoline:
 			continue;
 		}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 		if (desc->status_use_accessors & IRQ_NOREQUEST) {
 			
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
 			
 			desc->status_use_accessors &= ~IRQ_NOREQUEST;
 		}
-#else
-		if (desc->status & IRQ_NOREQUEST) {
-			
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
-			
-			desc->status &= ~IRQ_NOREQUEST;
-		}
-#endif
 		orig_irq_flow_handler = desc->handle_irq;
 		desc->handle_irq = ihk_smp_irq_flow_handler;
 #endif // CONFIG_SPARSE_IRQ
@@ -1308,8 +1244,7 @@ retry_trampoline:
 	return error;
 
 error_free_irq:
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
 		try_module_get(THIS_MODULE);
 	}
@@ -1829,8 +1764,7 @@ void smp_ihk_arch_exit(void)
 	}
 #endif
 
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
 		try_module_get(THIS_MODULE);
 	}
@@ -1838,9 +1772,7 @@ void smp_ihk_arch_exit(void)
 	free_irq(ihk_smp_irq, NULL);
 
 #ifdef CONFIG_SPARSE_IRQ
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
 	irq_free_descs(ihk_smp_irq, 1);
-#endif
 #endif
 	if (trampoline_page) {
 		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)),
