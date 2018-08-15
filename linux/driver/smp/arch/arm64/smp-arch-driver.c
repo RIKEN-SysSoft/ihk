@@ -239,8 +239,27 @@ static unsigned long ihk_smp_psci_method = PSCI_METHOD_INVALID;	/* psci_method v
 /*
  * IHK-SMP unexported kernel symbols
  */
-static struct gic_chip_data_v3 *ihk_gic_data_v3;
-static void (*ihk___smp_cross_call_gicv3)(const struct cpumask *, unsigned int);
+#ifdef IHK_KSYM_gic_data_gicv3
+#if IHK_KSYM_gic_data_gicv3
+static struct gic_chip_data_v3 *ihk_gic_data_v3 =
+	(struct gic_chip_data_v3 *)IHK_KSYM_gic_data_gicv3;
+#else
+#error "IHK_KSYM_gic_data_gicv3 is NULL."
+#endif
+#else
+#error "IHK_KSYM_gic_data_gicv3 undefined."
+#endif
+
+#ifdef IHK_KSYM_gic_raise_softirq_gicv3
+#if IHK_KSYM_gic_raise_softirq_gicv3
+static void (*ihk___smp_cross_call_gicv3)(const struct cpumask *, unsigned int) =
+	(void *)IHK_KSYM_gic_raise_softirq_gicv3;
+#else
+#error "IHK_KSYM_gic_raise_softirq_gicv3 is NULL."
+#endif
+#else
+#error "IHK_KSYM_gic_raise_softirq_gicv3 undefined."
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 static int (*ihk___irq_domain_alloc_irqs)(struct irq_domain *domain,
