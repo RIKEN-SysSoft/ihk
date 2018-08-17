@@ -736,13 +736,9 @@ unsigned long calc_ns_per_tsc(void)
 unsigned long get_sve_default_vl(void)
 {
 	struct file* filp = NULL;
-	mm_segment_t oldfs;
 	int ret, vl = 0;
 	const char *path = "/proc/cpu/sve_default_vector_length";
 	char buf[16] = "";
-
-	oldfs = get_fs();
-	set_fs(get_ds());
 
 	filp = filp_open(path, O_RDONLY, 0);
 	if (IS_ERR(filp)) {
@@ -750,7 +746,11 @@ unsigned long get_sve_default_vl(void)
 		goto open_err;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 	ret = kernel_read(filp, 0, buf, sizeof(buf));
+#else
+	ret = kernel_read(filp, sizeof(buf), 0, buf);
+#endif
 	if (ret < 0) {
 		printk("%s: ERROR reading %s\n", __FUNCTION__, path);
 		goto read_err;
@@ -760,7 +760,6 @@ unsigned long get_sve_default_vl(void)
 read_err:
 	filp_close(filp, NULL);
 open_err:
-	set_fs(oldfs);
 	return vl;
 
 }
