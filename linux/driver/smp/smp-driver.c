@@ -2868,7 +2868,12 @@ retry:
 				__GFP_NORETRY,
 				//| __GFP_REPEAT,
 				order,
-				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+				numa_id,
+#else
+				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP),
+#endif
+				&nodemask);
 
 #ifdef CONFIG_MOVABLE_NODE
 		/* Try movable pages if supported */
@@ -2878,7 +2883,12 @@ retry:
 					__GFP_NORETRY,
 					//| __GFP_REPEAT,
 					order,
-					node_zonelist(numa_id, __GFP_COMP), &nodemask);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+					numa_id,
+#else
+					node_zonelist(numa_id, __GFP_COMP),
+#endif
+					&nodemask);
 		}
 #endif
 
