@@ -113,7 +113,8 @@ struct gic_chip_data_v3 {
 	struct irq_domain	*domain;
 	u64			redist_stride;
 	u32			nr_redist_regions;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0) || \
+    (defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
 	bool			has_rss;
 #endif
 	unsigned int		irq_nr;
