@@ -142,6 +142,9 @@ struct gic_chip_data_v3 {
 	struct irq_domain	*domain;
 	u64			redist_stride;
 	u32			nr_redist_regions;
+#if defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5)
+	bool			has_rss;
+#endif
 	unsigned int		irq_nr;
 	struct partition_desc	*ppi_descs[16];
 };
