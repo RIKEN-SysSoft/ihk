@@ -305,13 +305,15 @@ int lookup_gic_data_v3(void *data, const char *name, struct module *mod,
 
 int ihk_smp_arch_symbols_init(void)
 {
+	void **ihk___smp_cross_call_p = NULL;
+
 	if (WARN_ON(!kallsyms_on_each_symbol(lookup_gic_data_v3, NULL)))
 		return -EFAULT;
 
-	void **ihk___smp_cross_call_p =
-		(void *) kallsyms_lookup_name("__smp_cross_call");
+	ihk___smp_cross_call_p = (void *) kallsyms_lookup_name("__smp_cross_call");
 	if (WARN_ON(!ihk___smp_cross_call_p))
 		return -EFAULT;
+
 	ihk___smp_cross_call = *ihk___smp_cross_call_p;
 	if (WARN_ON(!ihk___smp_cross_call))
 		return -EFAULT;
