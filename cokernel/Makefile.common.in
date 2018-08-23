@@ -23,7 +23,7 @@ IHK_OBJS += setup.o
 IHK_OBJS += dma.o
 include @abs_top_builddir@/../mckernel/arch/$(ARCH)/kernel/Makefile.arch
 
-CFLAGS += -I@abs_builddir@/../../mckernel -I$(SRC)/../lib/include -I$(SRC)/../arch/$(ARCH)/kernel/include
+CFLAGS += -I@abs_builddir@/../../mckernel -I$(SRC)/../kernel/include -I$(SRC)/../lib/include -I$(SRC)/../arch/$(ARCH)/kernel/include
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include
 ifeq ($(ARCH), arm64)
 CFLAGS += -I@abs_builddir@/../../mckernel/arch/arm64/kernel/include
