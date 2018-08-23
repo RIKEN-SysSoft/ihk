@@ -3007,56 +3007,32 @@ retry:
 			goto pre_out;
 		}
 
-#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-		pg = __alloc_pages_nodemask(
-				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
-				__GFP_NORETRY,
-				//| __GFP_REPEAT,
-				order, numa_id, &nodemask);
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0) */
 		pg = __alloc_pages_nodemask(
 				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
 				__GFP_NORETRY,
 				//| __GFP_REPEAT,
 				order,
-				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_96 */
-		pg = __alloc_pages_nodemask(
-				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
-				__GFP_NORETRY,
-				//| __GFP_REPEAT,
-				order,
-				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
-#endif /* POSTK_DEBUG_ARCH_DEP_96 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+				numa_id,
+#else
+				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP),
+#endif
+				&nodemask);
 
 #ifdef CONFIG_MOVABLE_NODE
 		/* Try movable pages if supported */
 		if (!pg && __movable_node_enabled && *__movable_node_enabled) {
-#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-			pg = __alloc_pages_nodemask(
-					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
-					__GFP_NORETRY,
-					//| __GFP_REPEAT,
-					order, numa_id, &nodemask);
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0) */
 			pg = __alloc_pages_nodemask(
 					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
 					__GFP_NORETRY,
 					//| __GFP_REPEAT,
 					order,
-					node_zonelist(numa_id, __GFP_COMP), &nodemask);
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_96 */
-			pg = __alloc_pages_nodemask(
-					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
-					__GFP_NORETRY,
-					//| __GFP_REPEAT,
-					order,
-					node_zonelist(numa_id, __GFP_COMP), &nodemask);
-#endif /* POSTK_DEBUG_ARCH_DEP_96 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+					numa_id,
+#else
+					node_zonelist(numa_id, __GFP_COMP),
+#endif
+					&nodemask);
 		}
 #endif
 
