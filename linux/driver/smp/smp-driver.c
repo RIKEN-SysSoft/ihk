@@ -2837,23 +2837,6 @@ static void sort_pagelists(struct zone *zone)
 #define RESERVE_MEM_TIMEOUT 30
 //#define USE_TRY_TO_FREE_PAGES
 
-#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-static unsigned long __ihk_sum_zone_node_page_state(int node,
-				enum numa_stat_item item)
-{
-	struct zone *zones = NODE_DATA(node)->node_zones;
-	int i;
-	unsigned long count = 0;
-
-	for (i = 0; i < MAX_NR_ZONES; i++)
-		count += zone_page_state(zones + i, item);
-
-	return count;
-}
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
-#endif /* POSTK_DEBUG_ARCH_DEP_96 */
-
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
 	int order = get_order(IHK_SMP_CHUNK_BASE_SIZE);
@@ -2880,6 +2863,12 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 #else /* POSTK_DEBUG_ARCH_DEP_79 */
 	void (*__drain_all_pages)(void) = NULL;
 #endif /* POSTK_DEBUG_ARCH_DEP_79 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+	size_t (*__sum_zone_node_page_state)(int node,
+					     enum zone_stat_item item);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	size_t (*__node_page_state)(int node, enum zone_stat_item item);
+#endif
 	int failed_free_attempts = 0;
 	unsigned long res_start = get_seconds();
 #ifdef CONFIG_MOVABLE_NODE
@@ -2915,6 +2904,12 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	__drain_all_pages = (void (*)(void))
 			kallsyms_lookup_name("drain_all_pages");
 #endif /* POSTK_DEBUG_ARCH_DEP_79 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+	__sum_zone_node_page_state = (void *)
+			kallsyms_lookup_name("sum_zone_node_page_state");
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	__node_page_state = (void *)kallsyms_lookup_name("node_page_state");
+#endif
 
 #ifdef CONFIG_MOVABLE_NODE
 	__movable_node_enabled =
@@ -2975,15 +2970,14 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	}
 	dprintk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
 	allocated = 0;
-#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-	available = (size_t)__ihk_sum_zone_node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+	available = __sum_zone_node_page_state(numa_id, NR_FREE_PAGES)
+				<< PAGE_SHIFT;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	available = __node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
+#else
 	available = (size_t)node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_96 */
-	available = (size_t)node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
-#endif /* POSTK_DEBUG_ARCH_DEP_96 */
+#endif
 	printk("%s: NUMA %d (online nodes: %d), free mem: %lu bytes\n",
 		__FUNCTION__, numa_id, num_online_nodes(), available);
 
