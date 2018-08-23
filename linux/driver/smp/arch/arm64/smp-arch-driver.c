@@ -871,7 +871,6 @@ unsigned long calc_ns_per_tsc(void)
 unsigned long get_sve_default_vl(void)
 {
 	struct file* filp = NULL;
-	mm_segment_t oldfs;
 	int ret, vl = 0;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0)
 	const char *path = "/proc/sys/abi/sve_default_vector_length";
@@ -882,9 +881,6 @@ unsigned long get_sve_default_vl(void)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
 	loff_t pos = 0;
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0) */
-
-	oldfs = get_fs();
-	set_fs(get_ds());
 
 	filp = filp_open(path, O_RDONLY, 0);
 	if (IS_ERR(filp)) {
@@ -906,7 +902,6 @@ unsigned long get_sve_default_vl(void)
 read_err:
 	filp_close(filp, NULL);
 open_err:
-	set_fs(oldfs);
 	return vl;
 
 }
