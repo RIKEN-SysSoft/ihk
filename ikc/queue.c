@@ -91,7 +91,7 @@ int ihk_ikc_queue_is_full(struct ihk_ikc_queue_head *q)
 
 	barrier();
 
-	if ((w - r) == q->pktcount)
+	if ((w - r) == (q->pktcount - 1))
 		return 1;
 
 	return 0;
@@ -171,7 +171,7 @@ retry:
 	barrier();
 
 	/* Is the queue full? */
-	if ((w - r) == q->pktcount) {
+	if ((w - r) == (q->pktcount - 1)) {
 		/* Did we run out of attempts? */
 		if (++attempt > IHK_IKC_WRITE_QUEUE_RETRY) {
 			kprintf("%s: queue %p r: %llu, w: %llu is full\n",
