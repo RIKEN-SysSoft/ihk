@@ -2382,3 +2382,23 @@ int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
 }
 #endif /* ENABLE_PERF */
 #endif /* POSTK_DEBUG_ARCH_DEP_108 */
+
+#ifdef POSTK_DEBUG_ARCH_DEP_113 /* Separation of architecture dependent code. */
+void ihk_smp_free_page_tables(pgd_t *pt)
+{
+	printk(KERN_WARNING "%s: function not implemented.\n", __FUNCTION__);
+}
+
+int ihk_smp_map_kernel(pgd_t *pt, unsigned long vaddr, phys_addr_t paddr)
+{
+	printk(KERN_WARNING "%s: function not implemented.\n", __FUNCTION__);
+	return 0;
+}
+
+int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
+{
+	printk(KERN_WARNING "%s: function not implemented.\n", __FUNCTION__);
+	return 0;
+}
+#endif /* !POSTK_DEBUG_ARCH_DEP_113 */
+

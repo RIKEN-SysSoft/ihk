@@ -96,6 +96,7 @@ struct smp_os_data {
 	int boot_cpu;
 	/** \brief Entry point address of this OS instance */
 	unsigned long boot_rip;
+	pgd_t *boot_pt;
 
 	/** \brief IHK Memory information */
 	struct ihk_mem_info mem_info;

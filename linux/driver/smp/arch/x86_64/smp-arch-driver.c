@@ -382,59 +382,57 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
 	struct smp_os_data *os = priv;
-	unsigned long pml4_p;
-	unsigned long pdp_p;
-	unsigned long pde_p;
+	unsigned long _virt, _phys, _len;
+	int i;
 	unsigned long stack_p;
-	unsigned long *pml4;
-	unsigned long *pdp;
-	unsigned long *pde;
-	unsigned long *cr3;
-	int n, i;
 	extern char startup_data[];
 	extern char startup_data_end[];
 	unsigned long startup_p;
 	unsigned long *startup;
 
-	pml4_p = os->bootstrap_mem_end - PAGE_SIZE;
-	pdp_p = pml4_p - PAGE_SIZE;
-	pde_p = pdp_p - PAGE_SIZE;
-	stack_p = pde_p; /* Grows down.. */
-
-	cr3 = ident_page_table_virt;
-	pml4 = ihk_smp_map_virtual(pml4_p, PAGE_SIZE);
-	pdp = ihk_smp_map_virtual(pdp_p, PAGE_SIZE);
-	pde = ihk_smp_map_virtual(pde_p, PAGE_SIZE);
-
-	memset(pml4, '\0', PAGE_SIZE);
-	memset(pdp, '\0', PAGE_SIZE);
-	memset(pde, '\0', PAGE_SIZE);
-
-	/*
-	 * TODO: do this mapping so that holes between memory chunks
-	 * are emitted
-	 */
-	pml4[0] = cr3[0];
-	pml4[(IHK_SMP_MAP_ST_START >> PTL4_SHIFT) & 511] = cr3[0];
-	pml4[(IHK_SMP_MAP_KERNEL_START >> PTL4_SHIFT) & 511] = pdp_p | 3;
-	pdp[(IHK_SMP_MAP_KERNEL_START >> PTL3_SHIFT) & 511] = pde_p | 3;
-	n = (os->bootstrap_mem_end - os->bootstrap_mem_start) >> PTL2_SHIFT;
-	if(n > 511)
-	n = 511;
-
-	for (i = 0; i < n; i++) {
-		pde[i] = (phys + (i << PTL2_SHIFT)) | 0x83;
+	os->boot_pt = (pgd_t *)get_zeroed_page(GFP_KERNEL);
+	if (!os->boot_pt) {
+		printk("%s: error: allocating boot PT\n", __FUNCTION__);
+		return -ENOMEM;
 	}
-	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
-	pde[511] = startup_p | 0x83;
 
-	ihk_smp_unmap_virtual(pde);
-	ihk_smp_unmap_virtual(pdp);
-	ihk_smp_unmap_virtual(pml4);
+	/* Map identity (256GB) */
+	_len = 0x4000000000UL;
+	for (_virt = 0, _phys = 0; _virt < _len;
+			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping identity\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+
+	/* Map ST */
+	for (_virt = MAP_ST_START, _phys = 0; _virt < (MAP_ST_START + _len);
+			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping straight area\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+
+	/* Map kernel image */
+	_len = (4 * LARGE_PAGE_SIZE);
+	for (_virt = MAP_KERNEL_START, _phys = phys; 
+			_virt < (MAP_KERNEL_START + _len);
+			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping kernel image\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+
+	/* Stack grows down.. */
+	stack_p = os->bootstrap_mem_end - PAGE_SIZE; 
+	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
 
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
-	startup[2] = pml4_p;
+	startup[2] = __pa(os->boot_pt);
 	startup[3] = stack_p;
 	startup[4] = phys;
 	startup[5] = trampoline_phys;
@@ -1786,3 +1784,159 @@ int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
 }
 #endif /* ENABLE_PERF */
 #endif /* POSTK_DEBUG_ARCH_DEP_108 */
+
+#ifdef POSTK_DEBUG_ARCH_DEP_113 /* Separation of architecture dependent code. */
+void ihk_smp_free_page_tables(pgd_t *pt)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	int pgd_i, pud_i, pmd_i;
+
+	if (!pt)
+		return;
+
+	for (pgd_i = 0; pgd_i < PTRS_PER_PGD; ++pgd_i) {
+		pgd = ((pgd_t *)pt) + pgd_i;
+		if (pgd_none(*pgd) || !pgd_present(*pgd))
+			continue;
+
+		for (pud_i = 0; pud_i < PTRS_PER_PUD; ++pud_i) {
+			pud = ((pud_t *)pgd_page_vaddr(*pgd)) + pud_i;
+
+			if (pud_none(*pud) || !pud_present(*pud))
+				continue;
+
+			for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
+				pmd = ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;
+
+				if (pmd_none(*pmd) || !pmd_present(*pmd))
+					continue;
+
+				if (pmd_large(*pmd))
+					continue;
+
+				dprintk("%s: freeing PGD %d: PUD %d: PMD %d\n",
+					__FUNCTION__, pgd_i, pud_i, pmd_i);
+				free_page(pmd_page_vaddr(*pmd));
+			}
+
+			dprintk("%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\n",
+					__FUNCTION__, pgd_i, pud_i, pud_page_vaddr(*pud));
+			free_page(pud_page_vaddr(*pud));
+		}
+
+		dprintk("%s: freeing PGD %d\n",
+				__FUNCTION__, pgd_i);
+		free_page(pgd_page_vaddr(*pgd));
+	}
+
+	free_page((unsigned long)pt);
+}
+
+int ihk_smp_map_kernel(pgd_t *pt, unsigned long vaddr, phys_addr_t paddr)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	int result = -ENOMEM;
+
+	pgd = pt + pgd_index(vaddr);
+	if (!pgd_present(*pgd)) {
+		pud = (pud_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pud)
+			goto err;
+		dprintk("%s: PGD: %d: PUD allocated: 0x%lx\n",
+				__FUNCTION__,
+				(int)pgd_index(vaddr),
+				(unsigned long)pgd);
+		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
+	}
+	
+	pud = pud_offset(pgd, vaddr);
+	if (!pud_present(*pud)) {
+		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pmd)
+			goto err;
+		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
+		dprintk("%s: PGD: %d: PUD: %d: PMD allocated: 0x%lx\n",
+				__FUNCTION__,
+				(int)pgd_index(vaddr), (int)pud_index(vaddr),
+				(unsigned long)pmd);
+	}
+	pmd = pmd_offset(pud, vaddr);
+
+	if (pmd_present(*pmd) && pmd_large(*pmd)) {
+		printk("%s: ERROR: mapping 0x%lx: PMD is busy\n",
+			__FUNCTION__, vaddr);
+		return -EBUSY;
+	}
+
+	/* Large page aligned and no mapping yet? Map it large then */
+	if (!pmd_present(*pmd) &&
+			!(vaddr & (LARGE_PAGE_SIZE - 1)) &&
+			!(paddr & (LARGE_PAGE_SIZE - 1))) {
+		set_pmd(pmd, pfn_pmd(paddr >> PAGE_SHIFT, PAGE_KERNEL_LARGE_EXEC));
+	}
+	else {
+		if (!pmd_present(*pmd)) {
+			pte = (pte_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+			if (!pte)
+				goto err;
+			set_pmd(pmd, __pmd(__pa(pte) | _KERNPG_TABLE));
+		}
+		pte = pte_offset_kernel(pmd, vaddr);
+		set_pte(pte, pfn_pte(paddr >> PAGE_SHIFT, PAGE_KERNEL_EXEC));
+	}
+	return 0;
+err:
+	return result;
+}
+
+int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	pte_t entry;
+
+	pgd = pgd_offset(mm, address);
+	if (!pgd) {
+		printk("%s: no PGD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PGD: 0x%lx\n", __FUNCTION__, (unsigned long)pgd);
+	pud = pud_offset(pgd, address);
+	if (!pud) {
+		printk("%s: no PUD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PUD: 0x%lx\n", __FUNCTION__, (unsigned long)pud);
+	pmd = pmd_offset(pud, address);
+	if (!pmd) {
+		printk("%s: no PMD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PMD: 0x%lx\n", __FUNCTION__, (unsigned long)pmd);
+	pte = pte_offset_map(pmd, address);
+	if (!pte) {
+		printk("%s: no PTE for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	entry = *pte;
+
+	if (!pte_present(entry)) {
+		printk("%s: non-present PTE for 0x%lx\n", __FUNCTION__, address);
+		return -1;
+	}
+
+	printk("%s: 0x%lx -> 0x%lx\n",
+		__FUNCTION__,
+		address,
+		(unsigned long)(pte_val(entry) & PTE_PFN_MASK));
+	return 0;
+}
+#endif /* !POSTK_DEBUG_ARCH_DEP_113 */
+
