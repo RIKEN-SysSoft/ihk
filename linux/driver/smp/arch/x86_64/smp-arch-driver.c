@@ -385,6 +385,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	unsigned long pml4_p;
 	unsigned long pdp_p;
 	unsigned long pde_p;
+	unsigned long stack_p;
 	unsigned long *pml4;
 	unsigned long *pdp;
 	unsigned long *pde;
@@ -398,6 +399,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	pml4_p = os->bootstrap_mem_end - PAGE_SIZE;
 	pdp_p = pml4_p - PAGE_SIZE;
 	pde_p = pdp_p - PAGE_SIZE;
+	stack_p = pde_p; /* Grows down.. */
 
 	cr3 = ident_page_table_virt;
 	pml4 = ihk_smp_map_virtual(pml4_p, PAGE_SIZE);
@@ -433,7 +435,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
 	startup[2] = pml4_p;
-	startup[3] = 0xffffffffc0000000;
+	startup[3] = stack_p;
 	startup[4] = phys;
 	startup[5] = trampoline_phys;
 	startup[6] = entry;
