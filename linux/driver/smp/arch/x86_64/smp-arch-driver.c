@@ -16,6 +16,7 @@
 #include <linux/module.h>
 #include <linux/radix-tree.h>
 #include <linux/irq.h>
+#include <linux/vmalloc.h>
 #include <asm/hw_irq.h>
 #include <linux/version.h>
 #include <linux/kallsyms.h>
@@ -115,6 +116,11 @@ static void (*___default_send_IPI_dest_field)(unsigned int mask, int vector,
 					      unsigned int dest);
 #endif
 
+struct rb_root *_vmap_area_root;
+spinlock_t *_vmap_area_lock;
+static void (*___insert_vmap_area)(struct vmap_area *va);
+
+
 int ihk_smp_arch_symbols_init(void)
 {
 	_real_mode_header = (void *) kallsyms_lookup_name("real_mode_header");
@@ -154,6 +160,17 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!___default_send_IPI_dest_field))
 		return -EFAULT;
 #endif
+	_vmap_area_root = (void *)kallsyms_lookup_name("vmap_area_root");
+	if (WARN_ON(!_vmap_area_root))
+		return -EFAULT;
+
+	_vmap_area_lock = (void *)kallsyms_lookup_name("vmap_area_lock");
+	if (WARN_ON(!_vmap_area_lock))
+		return -EFAULT;
+
+	___insert_vmap_area = (void *)kallsyms_lookup_name("__insert_vmap_area");
+	if (WARN_ON(!___insert_vmap_area))
+		return -EFAULT;
 
 	return 0;
 }
@@ -378,6 +395,8 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 	return entry;
 }
 
+static struct vmap_area *lwk_va = NULL;
+
 void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
@@ -389,6 +408,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	extern char startup_data_end[];
 	unsigned long startup_p;
 	unsigned long *startup;
+	int vmap_area_taken = 0;
 
 	os->boot_pt = (pgd_t *)get_zeroed_page(GFP_KERNEL);
 	if (!os->boot_pt) {
@@ -405,6 +425,17 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 			return -ENOMEM;
 		}
 	}
+
+#if 0
+	/* Map PAGE_OFFSET */
+	for (_virt = PAGE_OFFSET, _phys = 0; _virt < (PAGE_OFFSET + _len);
+			_virt += LARGE_PAGE_SIZE, _phys += LARGE_PAGE_SIZE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping Linux area\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+#endif
 
 	/* Map ST */
 	for (_virt = MAP_ST_START, _phys = 0; _virt < (MAP_ST_START + _len);
@@ -429,6 +460,50 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	/* Stack grows down.. */
 	stack_p = os->bootstrap_mem_end - PAGE_SIZE; 
 	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
+
+	/*
+	 * Map in LWK image to Linux kernel space
+	 */
+	lwk_va = kmalloc(sizeof(*lwk_va), GFP_KERNEL);
+	if (!lwk_va) {
+		printk("%s: ERROR: allocating LWK va\n", __FUNCTION__);
+		return -1;
+	}
+
+	spin_lock_irqsave(_vmap_area_lock, flags);
+	{
+		struct vmap_area *tmp_va;
+		struct rb_node *p = rb_last(_vmap_area_root);
+
+		if (p) {
+			tmp_va = rb_entry(p, struct vmap_area, rb_node);
+			if (tmp_va->va_start >= MAP_KERNEL_START)
+				vmap_area_taken = 1;
+		}
+	}
+
+	if (vmap_area_taken) {
+		kfree(lwk_va);
+		lwk_va = NULL;
+		printk("%s: ERROR: reserving LWK kernel memory virtual range\n",
+				__FUNCTION__);
+	}
+	else {
+		lwk_va->va_start = MAP_KERNEL_START;
+		lwk_va->va_end = MODULES_END;
+		lwk_va->flags = 0;
+		___insert_vmap_area(lwk_va);
+	}
+	spin_unlock_irqrestore(_vmap_area_lock, flags);
+
+	if (vmap_area_taken)
+		return -1;
+
+	if (ioremap_page_range(MAP_KERNEL_START, MODULES_END,
+				phys, PAGE_KERNEL_EXEC) < 0) {
+		printk("%s: error: mapping LWK to Linux kernel space\n",
+				__FUNCTION__);
+	}
 
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
