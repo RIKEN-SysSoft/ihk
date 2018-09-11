@@ -372,6 +372,12 @@ int ihk_set_nmi_mode_addr(unsigned long addr)
 	return 0;
 }
 
+int ihk_set_mckernel_do_futex(unsigned long addr)
+{
+	boot_param->mckernel_do_futex = addr; /* Pass virtual address */
+	return 0;
+}
+
 unsigned long ihk_mc_map_memory(void *os, unsigned long phys,
                                 unsigned long size)
 {

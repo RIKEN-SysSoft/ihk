@@ -1450,6 +1450,12 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 			return 0;
 		}
 		break;
+	case IHK_SPADDR_MCKERNEL_DO_FUTEX:
+		if (os->param->mckernel_do_futex) {
+			*addr = os->param->mckernel_do_futex;
+			return 0;
+		}
+		break;
 	}
 
 	return -EINVAL;
@@ -1489,12 +1495,18 @@ static int smp_ihk_os_unregister_handler(ihk_os_t os, void *os_priv, int itype,
 irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data)
 {
 	struct ihk_host_interrupt_handler *h;
+	int found = 0;
 
 	/* XXX: Linear search? */
 	list_for_each_entry(h, &builtin_interrupt_handlers, list) {
 		if (h->func) {
 			h->func(h->os, h->os_priv, h->priv);
+			found = 1;
 		}
+	}
+	
+	if(!found) {
+		kprintf("%s: ERROR: no handler registered\n", __FUNCTION__);
 	}
 
 	return IRQ_HANDLED;

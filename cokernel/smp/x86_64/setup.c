@@ -195,6 +195,7 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 extern void (*x86_issue_ipi)(int, int);
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
+	//kprintf("%s: cpu=%d(%d),irq#=%d,vector=%d\n", __FUNCTION__, cpu, ihk_mc_get_apicid(cpu), ihk_ikc_irq, vector);
 	x86_issue_ipi(ihk_mc_get_apicid(cpu), ihk_ikc_irq);
 	return 0;
 }
@@ -256,6 +257,12 @@ int ihk_set_nmi_mode_addr(unsigned long addr)
 {
 	boot_param->nmi_mode_addr = addr;
 	
+	return 0;
+}
+
+int ihk_set_mckernel_do_futex(unsigned long addr)
+{
+	boot_param->mckernel_do_futex = addr; /* Pass virtual address */
 	return 0;
 }
 

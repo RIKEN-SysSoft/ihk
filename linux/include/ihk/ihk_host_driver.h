@@ -31,6 +31,7 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_MONITOR = 4,
 	IHK_SPADDR_RUSAGE = 5,
 	IHK_SPADDR_NMI_MODE = 6,
+	IHK_SPADDR_MCKERNEL_DO_FUTEX = 7,
 };
 
 /** \brief Type of an IHK device */
