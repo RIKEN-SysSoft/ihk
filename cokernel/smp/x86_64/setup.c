@@ -385,6 +385,11 @@ int ihk_mc_get_apicid(int linux_core_id) {
 	return boot_param->ihk_ikc_irq_apicids[linux_core_id];
 }
 
+void *ihk_mc_get_linux_kernel_pgt(void)
+{
+	return phys_to_virt(boot_param->linux_kernel_pgt_phys);
+}
+
 void arch_delay(int us)
 {
 	unsigned long tsc;
