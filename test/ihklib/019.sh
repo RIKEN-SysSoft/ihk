@@ -99,8 +99,10 @@ if [ $ssh -eq 1 ]; then
 	cat ./log.txt
 	if grep -E 'hang' ./log.txt > /dev/null; then
 	    echo "[OK] hang detection"
+	    ret=0
 	else
 	    echo "[NG] hang detection"
+	    ret=1
 	fi
 
 	PDSH_SSH_ARGS_APPEND="-tt -q" pdsh -S -t 2 -w $nodes /usr/sbin/pidof mcexec \| xargs -r sudo kill -9
@@ -109,7 +111,7 @@ if [ $ssh -eq 1 ]; then
 	rm -rf $TESTDIR
 	echo end $count $(date)
     done
-    echo "All tests finished"
+    exit ret
 fi
 
 if [ $pjsub -eq 1 ]; then
@@ -176,8 +178,10 @@ EOF
 	cat ./job.sh.o$jobid
 	if grep -E 'hang' ./job.sh.o$jobid > /dev/null; then
 	    echo "[OK] hang detection"
+	    ret=0
 	else
 	    echo "[NG] hang detection"
+	    ret=1
 	fi
 
         echo Trial No. $count jobid=$jobid ended at $(date)
@@ -185,5 +189,5 @@ EOF
 	cd ..
 	rm -rf $TESTDIR
     done
-    echo "All tests finished"
+    exit ret
 fi

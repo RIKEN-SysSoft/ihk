@@ -23,20 +23,17 @@
 #include <sched.h>
 #include "util.h"
 
-static char prefix[256];
-
 int main(int argc, char **argv)
 {
-	int ret = 0;
-	int status;
-	FILE *fp, *fp1, *fp2;
+	int ret, status;
+	FILE *fp;
 	char buf[65536], buf2[65536];
 	size_t nread;
 
 	char cmd[1024];
 	char fn[256];
 	char kargs[256];
-	char logname[256], *envstr, *dup, *line, *groups;
+	char logname[256], *envstr, *groups;
 
 	int cpus[4];
 	int num_cpus;
@@ -47,12 +44,8 @@ int main(int argc, char **argv)
 	int indices[2];
 	int num_os_instances;
 
-	char *home, *retstr;
+	char *retstr;
 	pid_t nspid;
-
-	home = getenv("MYHOME");
-	CHKANDJUMP(home == NULL, -1, "getenv");
-	sprintf(prefix, "%s/project/os/install", home);
 
 	fp = popen("logname", "r");
 	nread = fread(logname, 1, sizeof(logname), fp);
@@ -75,12 +68,12 @@ int main(int argc, char **argv)
 	}
 
 	/* insmod */
-	sprintf(cmd, "insmod %s/kmod/ihk.ko", prefix);
+	sprintf(cmd, "insmod %s/kmod/ihk.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86_64.ko "
-			"ihk_start_irq=240 ihk_ikc_irq_core=0", prefix);
+	sprintf(cmd, "insmod %s/kmod/ihk-smp-%s.ko "
+		"ihk_start_irq=240 ihk_ikc_irq_core=0", QUOTE(MCK_DIR), QUOTE(ARCH));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -88,7 +81,7 @@ int main(int argc, char **argv)
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "insmod %s/kmod/mcctrl.ko", prefix);
+	sprintf(cmd, "insmod %s/kmod/mcctrl.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -168,7 +161,7 @@ int main(int argc, char **argv)
 	OKNG(ret == 0, "ihk_os_assign_mem 512M@0 succeeded\n");
 
 	// load
-	sprintf(fn, "%s/smp-x86/kernel/mckernel.img", prefix);
+	sprintf(fn, "%s/%s/kernel/mckernel.img", QUOTE(MCK_DIR), QUOTE(TARGET));
 	ret = ihk_os_load(0, fn);
 	OKNG(ret == 0, "ihk_os_load succeeded\n");
 
@@ -209,7 +202,7 @@ int main(int argc, char **argv)
 	// containerized process can't see the unrestricted Linux /proc
 	sprintf(cmd, "nsenter -t %d -m -p "
 		"%s/bin/mcexec cat /proc/1/cmdline > ./cmdline.local",
-		nspid, prefix);
+		nspid, QUOTE(MCK_DIR));
 	status = system(cmd);
 
 	fp = fopen("./cmdline.local", "r");
@@ -222,6 +215,7 @@ int main(int argc, char **argv)
 		"job sees different /proc than job-scheduler\n");
 
 	ret = 0;
+
  fn_fail:
 	return ret;
 }

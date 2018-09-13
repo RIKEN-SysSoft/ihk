@@ -4,11 +4,10 @@
 #include <string.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <pthread.h>
 #include <ihklib.h>
 #include <mckernel/ihklib_rusage.h>
 #include "util.h"
-
-static char prefix[256];
 
 #define NTHR 4
 
@@ -50,7 +49,7 @@ void *ihk_query_device(void *_arg)
 		   cpus[1] == 2 &&
 		   cpus[2] == 3,
 		   "thread #%d: ihk_query_cpu returned %d,%d,%d\n",
-		   cpus[0], cpus[1], cpus[2]);
+		   arg->id, cpus[0], cpus[1], cpus[2]);
 
 		// get # of reserved mem chunks
 		while ((num_mem_chunks = ihk_get_num_reserved_mem_chunks(0)) ==
@@ -65,14 +64,14 @@ void *ihk_query_device(void *_arg)
 		       -EBUSY) {
 		}
 		NG(ret == 0 &&
-		     (mem_chunks[0].size == 128*1024*1024ULL &&
-		      mem_chunks[0].numa_node_number == 0 &&
-		      mem_chunks[1].size == 64*1024*1024ULL &&
-		      mem_chunks[1].numa_node_number == 0) ||
-		     (mem_chunks[0].size == 64*1024*1024ULL &&
-		      mem_chunks[0].numa_node_number == 0 &&
+		   ((mem_chunks[0].size == 128*1024*1024ULL &&
+		     mem_chunks[0].numa_node_number == 0 &&
+		     mem_chunks[1].size == 64*1024*1024ULL &&
+		     mem_chunks[1].numa_node_number == 0) ||
+		    (mem_chunks[0].size == 64*1024*1024ULL &&
+		     mem_chunks[0].numa_node_number == 0 &&
 		      mem_chunks[1].size == 128*1024*1024ULL &&
-		      mem_chunks[1].numa_node_number == 0),
+		     mem_chunks[1].numa_node_number == 0)),
 		   "ihk_query_mem returned %ld@%d,%ld@%d\n",
 		   mem_chunks[0].size, mem_chunks[0].numa_node_number,
 		   mem_chunks[1].size, mem_chunks[1].numa_node_number);
@@ -138,14 +137,14 @@ void *ihk_query_os(void *_arg)
 		// get assigned mem chunks
 		ret = ihk_os_query_mem(0, mem_chunks, num_mem_chunks);
 		NG(ret == 0 &&
-		     (mem_chunks[0].size == 128*1024*1024ULL &&
-		      mem_chunks[0].numa_node_number == 0 &&
-		      mem_chunks[1].size == 64*1024*1024ULL &&
-		      mem_chunks[1].numa_node_number == 0) ||
-		     (mem_chunks[0].size == 64*1024*1024ULL &&
-		      mem_chunks[0].numa_node_number == 0 &&
-		      mem_chunks[1].size == 128*1024*1024ULL &&
-		      mem_chunks[1].numa_node_number == 0),
+		   ((mem_chunks[0].size == 128*1024*1024ULL &&
+		     mem_chunks[0].numa_node_number == 0 &&
+		     mem_chunks[1].size == 64*1024*1024ULL &&
+		     mem_chunks[1].numa_node_number == 0) ||
+		    (mem_chunks[0].size == 64*1024*1024ULL &&
+		     mem_chunks[0].numa_node_number == 0 &&
+		     mem_chunks[1].size == 128*1024*1024ULL &&
+		     mem_chunks[1].numa_node_number == 0)),
 		   "ihk_os_query_mem returned %ld@%d,%ld@%d\n",
 		   mem_chunks[0].size, mem_chunks[0].numa_node_number,
 		   mem_chunks[1].size, mem_chunks[1].numa_node_number);
@@ -176,16 +175,9 @@ int main(int argc, char **argv)
 	struct ihk_mem_chunk mem_chunks[4];
 	int num_mem_chunks;
 
-	int indices[2];
-	int num_os_instances;
-
 	struct ihk_ikc_cpu_map ikc_map[2];
 
-	char *home, *retstr;
-
-	home = getenv("MYHOME");
-	CHKANDJUMP(home == NULL, -1, "getenv");
-	sprintf(prefix, "%s/project/os/install", home);
+	char *retstr;
 
 	fp = popen("logname", "r");
 	nread = fread(logname, 1, sizeof(logname), fp);
@@ -204,8 +196,7 @@ int main(int argc, char **argv)
 	}
 
 	if (geteuid() != 0) {
-		printf("Execute as a root like: sudo bash -c 'LD_LIBRARY_PATH=%s/lib/ %s'",
-		       argv[0], prefix);
+		printf("Execute as a root\n");
 	}
 
 	// turn off error messages
@@ -220,12 +211,12 @@ int main(int argc, char **argv)
 	OKNG(ret == 0 && strstr(buf, "/tmp/mcos/mcos0_sys") == NULL,
 	     "ihk_os_destroy_pseudofs (1)\n");
 
-	sprintf(cmd, "insmod %s/kmod/ihk.ko", prefix);
+	sprintf(cmd, "insmod %s/kmod/ihk.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86_64.ko ihk_start_irq=240 ihk_ikc_irq_core=0",
-		prefix);
+	sprintf(cmd, "insmod %s/kmod/ihk-smp-%s.ko ihk_start_irq=240 ihk_ikc_irq_core=0",
+		QUOTE(MCK_DIR), QUOTE(ARCH));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -233,7 +224,7 @@ int main(int argc, char **argv)
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "insmod %s/kmod/mcctrl.ko", prefix);
+	sprintf(cmd, "insmod %s/kmod/mcctrl.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -312,7 +303,7 @@ int main(int argc, char **argv)
 	OKNG(ret == 0, "ihk_os_assign_mem\n");
 
 	// load
-	sprintf(fn, "%s/smp-x86/kernel/mckernel.img", prefix);
+	sprintf(fn, "%s/%s/kernel/mckernel.img", QUOTE(MCK_DIR), QUOTE(TARGET));
 	ret = ihk_os_load(0, fn);
 	OKNG(ret == 0, "ihk_os_load\n");
 
@@ -356,7 +347,7 @@ int main(int argc, char **argv)
 	}
 
 	// mcexec
-	sprintf(cmd, "%s/bin/mcexec ls -l | grep Makefile", prefix);
+	sprintf(cmd, "%s/bin/mcexec ls -l | grep Makefile", QUOTE(MCK_DIR));
 	fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
@@ -375,7 +366,7 @@ int main(int argc, char **argv)
 	OKNG(ret == 0, "ihk_destroy_os (4)\n");
 
 	// rmmod mcctrl
-	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", prefix);
+	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
@@ -387,18 +378,19 @@ int main(int argc, char **argv)
 	OKNG(ret == 0 && strstr(buf, "/tmp/mcos/mcos0_sys") == NULL,
 	     "ihk_os_destroy_pseudofs\n");
 
-	// rmmod ihk[-smp-x86_64].ko
-	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86_64.ko", prefix);
+	// rmmod ihk-smp-<QUOTE(ARCH)>.ko
+	sprintf(cmd, "rmmod %s/kmod/ihk-smp-%s.ko", QUOTE(MCK_DIR), QUOTE(ARCH));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	sprintf(cmd, "rmmod %s/kmod/ihk.ko", prefix);
+	sprintf(cmd, "rmmod %s/kmod/ihk.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
-	printf("All tests finished\n");
+	printf("[INFO] All tests finished\n");
 
 	ret = 0;
+
 fn_fail:
 	return ret;
 }

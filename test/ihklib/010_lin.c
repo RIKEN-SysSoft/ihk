@@ -5,61 +5,18 @@
 #include <ihklib.h>
 #include <mckernel/ihklib_rusage.h>
 #include <sys/types.h>
+#include "util.h"
 
 #define DEBUG
 
-#ifdef DEBUG
-#define dprintf(...)                                            \
-    do {                                                        \
-	char msg[1024];                                         \
-	sprintf(msg, __VA_ARGS__);                              \
-	fprintf(stdout, "%s,%s", __FUNCTION__, msg);            \
-    } while (0);
-#define eprintf(...)                                            \
-    do {                                                        \
-	char msg[1024];                                         \
-	sprintf(msg, __VA_ARGS__);                              \
-	fprintf(stdout, "%s,%s", __FUNCTION__, msg);            \
-    } while (0);
-#else
-#define dprintf(...) do {  } while (0)
-#define eprintf(...) do {  } while (0)
-#endif
-
-#define CHKANDJUMP(cond, err, ...)                                      \
-    do {                                                                \
-		if(cond) {                                                      \
-			eprintf(__VA_ARGS__);                                       \
-			ret = err;                                                  \
-			goto fn_fail;                                               \
-		}                                                               \
-    } while(0)
-
-
-#define OKNG(cond, ...)													\
-    do {                                                                \
-		if(cond) {                                                      \
-			printf("[OK] ");											\
-			printf(__VA_ARGS__);										\
-		} else {														\
-            printf("[NG] ");											\
-			printf(__VA_ARGS__);										\
-			goto fn_fail;												\
-		}																\
-    } while(0)
-
-#define PREFIX "/home/takagi/project/os/install"
-
-
 int main(int argc, char** argv) {
-    int ret = 0, status, ret_ihklib, ret_internal;
+	int ret, status;
 	int i;
-	FILE *fp, *fp1, *fp2;
-	char buf[65536], buf1[65536], buf2[65536];
+	FILE *fp;
+	char buf[65536];
 	size_t nread;
 
 	char cmd[1024];
-	char token[256];
 	char fn[256];
 	char kargs[256];
 
@@ -69,49 +26,31 @@ int main(int argc, char** argv) {
 	struct ihk_mem_chunk mem_chunks[4];
 	int num_mem_chunks;
 
-	int indices[2];
-	int num_os_instances;
-
-	ssize_t kmsg_size;
-
-	struct ihk_ikc_cpu_map ikc_map[2];
-
-	int num_numa_nodes;
-	long memfree[4];
-	
-	int num_pgsizes;
-	long pgsizes[3];
-	
-	struct mckernel_rusage rusage;
-
 	if(geteuid() != 0) {
-		printf("Execute as a root like: sudo bash -c 'LD_LIBRARY_PATH=/home/takagi/project/os/install/lib/ %s'", argv[0]);
+		printf("Execute as a root\n");
 	}	
 
 	// kill ihkmond
 	status = system("pid=`pidof ihkmond`&&if [ \"${pid}\" != \"\" ]; then kill -9 ${pid}; fi");
 
 	// run ihkmond
-	status = system(PREFIX "/sbin/ihkmond -f LOG_LOCAL5 -k 1 -i 3600");
+	sprintf(cmd, "%s/sbin/ihkmond -f LOG_LOCAL5 -k 1 -i 3600", QUOTE(MCK_DIR));
+	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system /sbin/ihkmond");
 
 	// ihk_os_destroy_pseudofs
-	ret_ihklib = ihk_os_destroy_pseudofs(0);
+	ret = ihk_os_destroy_pseudofs(0, 0, 0);
 	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
-	OKNG(ret_ihklib == 0 &&
+	OKNG(ret == 0 &&
 		 strstr(buf, "/tmp/mcos/mcos0_sys") == NULL, "ihk_os_destroy_pseudofs (1)\n");
 
-	/*--------------------------------------------*/
-	/* Expected to succeed
-	/*--------------------------------------------*/
-
-	sprintf(cmd, "insmod %s/kmod/ihk.ko", PREFIX);
+	sprintf(cmd, "insmod %s/kmod/ihk.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system insmod");
 
-	sprintf(cmd, "insmod %s/kmod/ihk-smp-x86.ko ihk_start_irq=240 ihk_ikc_irq_core=0", PREFIX);
+	sprintf(cmd, "insmod %s/kmod/ihk-smp-%s.ko ihk_start_irq=240 ihk_ikc_irq_core=0", QUOTE(MCK_DIR), QUOTE(ARCH));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system insmod");
 
@@ -119,7 +58,7 @@ int main(int argc, char** argv) {
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system chown");
 
-	sprintf(cmd, "insmod %s/kmod/mcctrl.ko", PREFIX);
+	sprintf(cmd, "insmod %s/kmod/mcctrl.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system insmod");
 
@@ -127,8 +66,8 @@ int main(int argc, char** argv) {
 	cpus[0] = 3;
 	cpus[1] = 1;
 	num_cpus = 2;
-    ret_ihklib = ihk_reserve_cpu(0, cpus, num_cpus);
-    OKNG(ret_ihklib == 0, "ihk_reserve_cpu\n");
+    ret = ihk_reserve_cpu(0, cpus, num_cpus);
+    OKNG(ret == 0, "ihk_reserve_cpu\n");
 
 	// reserve mem 128m@0,64m@0
 	num_mem_chunks = 2;
@@ -136,16 +75,12 @@ int main(int argc, char** argv) {
 	mem_chunks[0].numa_node_number = 0;
 	mem_chunks[1].size = 64*1024*1024ULL;
 	mem_chunks[1].numa_node_number = 0;
-    ret_ihklib = ihk_reserve_mem(0, mem_chunks, num_mem_chunks);
-    OKNG(ret_ihklib == 0, "ihk_reserve_mem\n");
-
-	/*--------------------------------------------*/
-	/* Expected to succeed                        */
-	/*--------------------------------------------*/
+    ret = ihk_reserve_mem(0, mem_chunks, num_mem_chunks);
+    OKNG(ret == 0, "ihk_reserve_mem\n");
 
 	// create 0
-    ret_ihklib = ihk_create_os(0);
-	OKNG(ret_ihklib == 0, "ihk_create_os (2)\n");
+    ret = ihk_create_os(0);
+	OKNG(ret == 0, "ihk_create_os (2)\n");
 
 	sprintf(cmd, "chown takagi:takagi /dev/mcos*\n");
 	status = system(cmd);
@@ -155,8 +90,8 @@ int main(int argc, char** argv) {
 	num_cpus = 2;
 	cpus[0] = 3;
 	cpus[1] = 1;
-    ret_ihklib = ihk_os_assign_cpu(0, cpus, num_cpus);
-    OKNG(ret_ihklib == 0, "ihk_os_assign_cpu\n");
+    ret = ihk_os_assign_cpu(0, cpus, num_cpus);
+    OKNG(ret == 0, "ihk_os_assign_cpu\n");
 
 	// assign mem 128m@0,64m@0
 	num_mem_chunks = 2;
@@ -164,37 +99,38 @@ int main(int argc, char** argv) {
 	mem_chunks[0].numa_node_number = 0;
 	mem_chunks[1].size = 64*1024*1024ULL;
 	mem_chunks[1].numa_node_number = 0;
-    ret_ihklib = ihk_os_assign_mem(0, mem_chunks, num_mem_chunks);
-    OKNG(ret_ihklib == 0, "ihk_os_assign_mem (2)\n");
+    ret = ihk_os_assign_mem(0, mem_chunks, num_mem_chunks);
+    OKNG(ret == 0, "ihk_os_assign_mem (2)\n");
 
 	// load
-	sprintf(fn, "%s/smp-x86/kernel/mckernel.img", PREFIX);
-    ret_ihklib = ihk_os_load(0, fn);
-	OKNG(ret_ihklib == 0, "ihk_os_load\n");
+	sprintf(fn, "%s/%s/kernel/mckernel.img", QUOTE(MCK_DIR), QUOTE(TARGET));
+    ret = ihk_os_load(0, fn);
+	OKNG(ret == 0, "ihk_os_load\n");
 
 	// kargs
 	sprintf(kargs, "hidos ksyslogd=0");
-    ret_ihklib = ihk_os_kargs(0, kargs);
-	OKNG(ret_ihklib == 0, "ihk_os_kargs\n");
+    ret = ihk_os_kargs(0, kargs);
+	OKNG(ret == 0, "ihk_os_kargs\n");
 
 	// boot
-    ret_ihklib = ihk_os_boot(0);
-	OKNG(ret_ihklib == 0, "ihk_os_boot\n");
+    ret = ihk_os_boot(0);
+	OKNG(ret == 0, "ihk_os_boot\n");
 
 	usleep(100*1000);
 
 #if 1
 	// create pseudofs
-	ret_ihklib = ihk_os_create_pseudofs(0);
+	ret = ihk_os_create_pseudofs(0, 0, 0);
 	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
-	OKNG(ret_ihklib == 0 &&
+	OKNG(ret == 0 &&
 		 strstr(buf, "/tmp/mcos/mcos0_sys") != NULL, "ihk_os_create_pseudofs()\n");
 #else
 	_exit(255);
     // kmsg
-    fp = popen("sudo bash -x " PREFIX "/sbin/mcoverlay-create.sh", "r");
+	sprintf(cmd, "sudo bash -x %s/sbin/mcoverlay-create.sh", QUOTE(MCK_DIR));
+    fp = popen(cmd, "r");
     while ((nread = fread(buf, 1, sizeof(buf), fp)), nread > 0) {
 		buf[nread] = 0;
         printf("%s", buf);
@@ -202,14 +138,16 @@ int main(int argc, char** argv) {
 #endif
 
 	// mcexec
-	fp = popen(PREFIX "/bin/mcexec ./ihklib010_mck", "r");
+	sprintf(cmd, "%s/bin/mcexec ./ihklib010_mck", QUOTE(MCK_DIR));
+	fp = popen(cmd, "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
 	OKNG(strstr(buf, "ihklib010_mck exit OK") != NULL, "mcexec\n");
 	
 #if 0
 	// kmsg
-	fp = popen(PREFIX "/sbin/ihkosctl 0 kmsg", "r");
+	sprintf(cmd, "%s/sbin/ihkosctl 0 kmsg", QUOTE(MCK_DIR));
+	fp = popen(cmd, "r");
 	while ((nread = fread(buf, 1, sizeof(buf), fp)), nread > 0) {
 		buf[nread] = 0;
 		printf("%s", buf);
@@ -228,8 +166,8 @@ int main(int argc, char** argv) {
 	// destroy os
 	for(i = 0; i < 4; i++) {
 		usleep(2000 * 1000); // Wait until ihkmond sends kmsg to syslogd
-		ret_ihklib = ihk_destroy_os(0, 0);
-		if (ret_ihklib == 0) {
+		ret = ihk_destroy_os(0, 0);
+		if (ret == 0) {
 			OKNG(1, "ihk_destroy_os (4), trial #%d succeeded\n", i + 1);
 			break;
 		}
@@ -256,14 +194,14 @@ int main(int argc, char** argv) {
 	fp = popen("ls -l " IHK_TMP "/kmsg0 | cut -d\" \" -f 5", "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
-	OKNG(atol(buf) > 16384, "size of kmsg (%d) is greter than %d?\n", atol(buf), 16384);
+	OKNG(atoi(buf) > 16384, "size of kmsg (%d) is greter than %d?\n", atoi(buf), 16384);
 #endif
 #if 1
 	// size of local5
 	fp = popen("ls -l /var/log/local5 | cut -d\" \" -f 5", "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
-	OKNG(atol(buf) > 16384, "size of local5 (%d) is greter than %d?\n", atol(buf), 16384);
+	OKNG(atoi(buf) > 16384, "size of local5 (%d) is greter than %d?\n", atoi(buf), 16384);
 #endif
 #if 1
 	// diff local5 kmsg
@@ -290,38 +228,39 @@ int main(int argc, char** argv) {
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
 
 	// rmmod mcctrl
-	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", PREFIX);
+	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system rmmod");
 
 	// destroy pseudofs
-	ret_ihklib = ihk_os_destroy_pseudofs(0);
+	ret = ihk_os_destroy_pseudofs(0, 0, 0);
 	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
 	nread = fread(buf, 1, sizeof(buf), fp);
 	buf[nread] = 0;
-	CHKANDJUMP(ret_ihklib != 0 ||
+	CHKANDJUMP(ret != 0 ||
 			   strstr(buf, "/tmp/mcos/mcos0_sys") != NULL, -1, "ihk_os_destroy_pseudofs (3)\n");
 
-	// rmmod ihk-smp-x86
-	sprintf(cmd, "rmmod %s/kmod/ihk-smp-x86.ko", PREFIX);
+	// rmmod ihk-smp-<QUOTE(ARCH)>
+	sprintf(cmd, "rmmod %s/kmod/ihk-smp-%s.ko", QUOTE(MCK_DIR), QUOTE(ARCH));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system rmmod");
 
 	// rmmod ihk
-	sprintf(cmd, "rmmod %s/kmod/ihk.ko", PREFIX);
+	sprintf(cmd, "rmmod %s/kmod/ihk.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system rmmod");
 
-	printf("All tests finished\n");
-
+	printf("[INFO] All tests finished\n");
+	ret = 0;
+	
  fn_exit:
-    return ret;
+	return ret;
  fn_fail:
 	// destroy os
 	for(i = 0; i < 4; i++) {
 		usleep(250 * 1000); // Wait for nothing is in-flight
-		ret_ihklib = ihk_destroy_os(0, 0);
-		if (ret_ihklib == 0) {
+		ret = ihk_destroy_os(0, 0);
+		if (ret == 0) {
 			break;
 		}
 	}
@@ -334,7 +273,8 @@ int main(int argc, char** argv) {
 	// kill mcexec
 	status = system("pid=`pidof mcexec`&&if [ \"${pid}\" != \"\" ]; then kill -9 ${pid}; fi");
 	// mcreboot
-	status = system(PREFIX "/sbin/mcstop+release.sh");
+	sprintf(cmd, "%s/sbin/mcstop+release.sh", QUOTE(MCK_DIR));
+	status = system(cmd);
 
     goto fn_exit;
 }

@@ -30,9 +30,9 @@
 #define _OKNG(verb, jump, cond, fmt, args...) do {	\
 	if (cond) {					\
 		if (verb)				\
-			printf("[OK] " fmt, ##args);	\
+			printf("[ OK ] " fmt, ##args);	\
 	} else {					\
-		printf("[NG] " fmt, ##args);		\
+		printf("[ NG ] " fmt, ##args);		\
 		if (jump)				\
 			goto fn_fail;			\
 	}						\
@@ -41,6 +41,16 @@
 #define OKNG(args...) _OKNG(1, 1, ##args)
 #define NG(args...) _OKNG(0, 1, ##args)
 #define OKNGNOJUMP(args...) _OKNG(1, 0, ##args)
+
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
+extern char *mck_dir;
+extern char *arch;
+extern char *target;
+
+int get_config(void);
+void destroy_config(void);
 
 #endif
 
