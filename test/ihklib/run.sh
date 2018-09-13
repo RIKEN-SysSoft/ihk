@@ -1,9 +1,7 @@
 #!/usr/bin/bash
 
-# Modify this line
-install=${HOME}/project/os/install
+. ${HOME}/.mck_test_config
 
-testname=$1
 bootopt="-m 256M"
 mcexecopt=""
 testopt=""
@@ -13,33 +11,59 @@ sleepopt="0.4"
 home=$(eval echo \$\{HOME\})
 groups=`groups | cut -d' ' -f 1`
 cwd=`pwd`
+boot_shutdown=0
+mcexec_shutdown=0
+ikc_map_by_func=0
 
+#!/bin/sh
+BOOTPARAM="-c 1-7,17-23,9-15,25-31 -m 10G@0,10G@1"
+USELTP=1
+USEOSTEST=
+
+
+
+while getopts :bxm OPT
+do
+	case ${OPT} in
+	    b) boot_shutdown=1 # Test shutdown just after boot in 001
+		;;
+	    x) mcexec_shutdown=1 # Test shutdown just after mcexec in 001
+		;;
+	    m) ikc_map_by_func=1 # 001
+		;;
+	    *)  echo "invalid option -${OPT}" >&2
+		exit 1
+	esac
+done
+
+shift $((OPTIND-1))
+testname=$1
 echo Executing ${testname}
 
 case ${testname} in
-    ihklib004 | ihklib005 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib012 | ihklib014 | ihklib018)
-	printf "*** Apply ${testname}.patch with -p 1 to enable syscall #900 and recompile IHK/McKernel.\n"
+    002 | 004 | 005 | 006 | 007 | 008 | 009 | 010 | 012 | 014 | 018)
+	printf "*** Apply ${testname}.patch to enable syscall #900 and recompile IHK/McKernel.\n"
 	;;
-    ihklib011)
-	printf "*** Apply ${testname}.patch with -p 1 to set kmsg buffer size to 256 and enable syscall #900 and recompile IHK/McKernel.\n"
+    011)
+	printf "*** Apply ${testname}.patch to set kmsg buffer size to 256 and enable syscall #900 and recompile IHK/McKernel.\n"
 	;;
-    ihklib013)
-	printf "*** Apply ${testname}.patch with -p 1 to set the size of the kmsg memory-buffer o 256 and enable syscall #900 and set the width of the kmsg file-buffer to 64 and its depth to 4 and then recompile IHK/McKernel.\n"
+    013)
+	printf "*** Apply ${testname}.patch to set the size of the kmsg memory-buffer o 256 and enable syscall #900 and set the width of the kmsg file-buffer to 64 and its depth to 4 and then recompile IHK/McKernel.\n"
 	;;
-    ihklib014 | ihklib015)
-	printf "*** Apply ${testname}.patch with -p 1 to enable syscall #900 and recompile IHK/McKernel.\n"
+    014 | 015)
+	printf "*** Apply ${testname}.patch to enable syscall #900 and recompile IHK/McKernel.\n"
 	printf "*** Let host_driver.c outputs debug messages by defining DEBUG_IKC.\n"
 	;;
-    ihklib016)
-	printf "*** Apply ${testname}.patch with -p 1 to enable syscall #900 and make ihkmond not release kmsg_buf and the number of stray kmsg_buf allowed in host_driver.c to 2 and then recompile IHK/McKernel.\n"
+    016)
+	printf "*** Apply ${testname}.patch to enable syscall #900 and make ihkmond not release kmsg_buf and the number of stray kmsg_buf allowed in host_driver.c to 2 and then recompile IHK/McKernel.\n"
 	printf "*** Let host_driver.c outputs debug messages by defining DEBUG_IKC.\n"
 	;;
-    ihklib017)
-	printf "*** Apply ${testname}.patch with -p 1 to enable syscall #900 and then recompile IHK/McKernel.\n"
+    017)
+	printf "*** Apply ${testname}.patch to enable syscall #900 and then recompile IHK/McKernel.\n"
 	printf "*** Let host_driver.c outputs debug messages by defining DEBUG_IKC.\n"
 	;;
-    ihklib019)
-	printf "*** Apply ${testname}.patch with -p 1 to enable syscall #900 and recompile IHK/McKernel.\n"
+    019)
+	printf "*** Apply ${testname}.patch to enable syscall #900 and recompile IHK/McKernel.\n"
 	printf "*** Modify values of mck_dir, lastnode, nnodes, ssh, pjsub in ${testname}.sh.\n"
 	;;
     *)
@@ -47,7 +71,7 @@ case ${testname} in
 esac
 
 case ${testname} in
-    ihklib001 | ihklib020 | ihklib021 | ihklib022 | ihklib023 | ihklib024)
+    001 | 020 | 021 | 022 | 023 | 024)
 	;;
     *)
 	read -p "*** Hit return when ready!" key
@@ -55,12 +79,12 @@ case ${testname} in
 esac
 
 case ${testname} in
-    ihklib001 | ihklib020 | ihklib021 | ihklib023 | ihklib024)
+    001 | 020 | 021 | 023 | 024)
 	bn_lin="${testname}_lin"
 	make clean > /dev/null 2> /dev/null
 	make ${bn_lin}
 	;;
-    ihklib022)
+    022)
 	rm -f ${testname}-pro_lin
 	make ${testname}-pro_lin
 	if [ $? -ne 0 ]; then echo "make failed"; exit 1; fi
@@ -68,13 +92,14 @@ case ${testname} in
 	make ${testname}-epi_lin
 	if [ $? -ne 0 ]; then echo "make failed"; exit 1; fi
 	;;
-     ihklib002 | ihklib003 | ihklib004 | ihklib005 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
+    002 | 003 | 004 | 005 | 006 | 007 | 008 | 009 | 010 | 011 | 012 | \
+	013 | 014 | 015 | 016 | 017)
 	bn_lin="${testname}_lin"
 	bn_mck="${testname}_mck"
 	make clean > /dev/null 2> /dev/null
 	make ${bn_lin} ${bn_mck};
 	;;
-    ihklib019)
+    019)
 	bn_mck="${testname}_mck"
 	make clean > /dev/null 2> /dev/null
 	make CC=mpiicc ${bn_mck}
@@ -89,20 +114,28 @@ pidof mcexec | xargs -r sudo kill -9 > /dev/null 2> /dev/null
 pidof $bn_lin | xargs -r sudo kill -9 > /dev/null 2> /dev/null 
 
 case ${testname} in
-    ihklib001)
-	testopt="0"
+    001)
+	if [ $boot_shutdown -eq 1 ]; then
+	    testopt="-b ${testopt}"
+	fi
+	if [ $mcexec_shutdown -eq 1 ]; then
+	    testopt="-x ${testopt}"
+	fi
+	if [ $ikc_map_by_func -eq 1 ]; then
+	    testopt="-m ${testopt}"
+	fi
 	;;
-    ihklib003)
+    003)
 	bootopt="-m 256M -k 0 -i -1"
 	;;
-    ihklib004 | ihklib005 | ihklib018)
+    004 | 005 | 018)
 	bootopt="-k 1 -m 256M -i 2"
 	;;
-    ihklib002 | ihklib006 | ihklib007 | ihklib008 | \
-    ihklib009 | ihklib010 | ihklib011 | ihklib012 | \
-    ihklib013 | ihklib014 | ihklib015 | ihklib016 | \
-    ihklib017 | ihklib019 | ihklib020 | ihklib021 | \
-	ihklib022 | ihklib023 | ihklib024)
+    002 | 006 | 007 | 008 | \
+    009 | 010 | 011 | 012 | \
+    013 | 014 | 015 | 016 | \
+    017 | 019 | 020 | 021 | \
+	022 | 023 | 024)
 	;;
     *)
 	echo Unknown test case
@@ -114,13 +147,13 @@ if [ ${dryrun} == "y" ]; then
 fi
 
 case ${testname} in
-    ihklib001 | ihklib002 | ihklib020 | ihklib021 | ihklib023 | ihklib024)
-	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
+    001 | 002 | 020 | 021 | 023 | 024)
+	if ! sudo ${SBIN}/mcstop+release.sh 2>&1; then
 	    exit 255
 	fi
 	;;
-    ihklib003 | ihklib004 | ihklib005)
-	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
+    003 | 004 | 005)
+	if ! sudo ${SBIN}/mcstop+release.sh 2>&1; then
 	    echo "mcstop+release.sh failed"
 	    exit 255
 	fi
@@ -132,13 +165,13 @@ case ${testname} in
 	sudo touch /var/log/local6
 	sudo chmod 600 /var/log/local6
 	sudo systemctl restart rsyslog
-	if ! sudo ${install}/sbin/mcreboot.sh ${bootopt} 2>&1; then 
+	if ! sudo ${SBIN}/mcreboot.sh ${bootopt} 2>&1; then
 	    echo "mcreboot.sh failed"
 	    exit 255
 	fi
 	;;
-     ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
-	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
+     006 | 007 | 008 | 009 | 010 | 011 | 013 | 014 | 015 | 016 | 017)
+	if ! sudo ${SBIN}/mcstop+release.sh 2>&1; then
 	    exit 255
 	fi
 	if ! grep /var/log/local5 /etc/rsyslog.conf &>/dev/null; then
@@ -154,21 +187,21 @@ case ${testname} in
 	sudo chmod 600 /var/log/local5 /var/log/local6
 	sudo systemctl restart rsyslog
 	;;
-    ihklib012)
-	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
+    012)
+	if ! sudo ${SBIN}/mcstop+release.sh 2>&1; then
 	    exit 255
 	fi
 	;;
-    ihklib019)
+    019)
 	;;
-    ihklib022)
+    022)
 	;;
     *)
-	if ! sudo ${install}/sbin/mcstop+release.sh 2>&1; then 
+	if ! sudo ${SBIN}/mcstop+release.sh 2>&1; then
 	    echo "mcstop+release.sh failed"
 	    exit 255
 	fi
-	if ! sudo ${install}/sbin/mcreboot.sh ${bootopt} 2>&1; then 
+	if ! sudo ${SBIN}/mcreboot.sh ${bootopt} 2>&1; then
 	    echo "mcreboot.sh failed"
 	    exit 255
 	fi
@@ -176,24 +209,25 @@ case ${testname} in
 esac
 
 if [ ${kill} == "y" ]; then
-    ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt} &
+    ${BIN}/mcexec ${mcexecopt} ./${bn_mck} ${testopt} &
     sleep ${sleepopt}
-    ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
+    ${SBIN}/ihkosctl 0 kmsg > ./${testname}.log
     pidof mcexec | xargs -r sudo kill -9 > /dev/null 2> /dev/null
 else
     case ${testname} in
-	ihklib001)
-	    sudo MYGROUPS=${groups} MYHOME=${home} ./${bn_lin} ${testopt}
+	001)
+	    sudo MYGROUPS=${groups} ./${bn_lin} ${testopt}
+	    ret=$?
 	;;
-	ihklib020 | ihklib021 | ihklib023 | ihklib024)
-	    sudo MYGROUPS=${groups} MYHOME=${home} ./${bn_lin}
+	020 | 021 | 023 | 024)
+	    sudo MYGROUPS=${groups} ./${bn_lin}
+	    ret=$?
 	;;
-	ihklib022)
-
+	022)
 	    # Show what is the issue
-	    sudo ${install}/sbin/mcstop+release.sh
-	    sudo ${install}/sbin/mcreboot.sh ${bootopt}
-	    ${install}/bin/mcexec cat /proc/1/cmdline > cmdline.mcexec
+	    sudo ${SBIN}/mcstop+release.sh
+	    sudo ${SBIN}/mcreboot.sh ${bootopt}
+	    ${BIN}/mcexec cat /proc/1/cmdline > cmdline.mcexec
 	    cat /proc/1/cmdline > cmdline.jobsched
 	    if [ "`diff cmdline.mcexec cmdline.jobsched | wc -l`" == "0" ]; then
 		printf "[OK] "
@@ -201,8 +235,8 @@ else
 		printf "[NG] "
 	    fi
 	    printf "job sees the same /proc/1/cmdline as "
-	    echo "job-scheduler when not using ihk_os_create_pseudofs()"
-	    sudo ${install}/sbin/mcstop+release.sh
+	    printf "job-scheduler when not using ihk_os_create_pseudofs()\n"
+	    sudo ${SBIN}/mcstop+release.sh
 
 	    # Replace /proc
 	    sudo setsid unshare --fork --pid --mount-proc ./newns.sh \
@@ -213,16 +247,16 @@ else
 	    sid=$(ps -ho sid:1 --pid $pid)
 
 	    # ihk_os_create_pseudofs with /proc/$pid/ns/{mnt,pid}
-	    sudo MYGROUPS=${groups} MYHOME=${home} ./${testname}-pro_lin $pid
+	    sudo MYGROUPS=${groups} ./${testname}-pro_lin $pid
 
 	    # ihk_os_destroy_pseudofs with /proc/$pid/ns/{mnt,pid}
-	    sudo MYHOME=${home} ./${testname}-epi_lin $pid
+	    sudo ./${testname}-epi_lin $pid
 
 	    sudo kill -9 -$sid;
 	;;
-	ihklib003)
+	003)
 	    sudo ./${bn_lin} ${testopt}
-	    ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt}
+	    ${BIN}/mcexec ${mcexecopt} ./${bn_mck} ${testopt}
 	    sleep 4
 	    pid=`pidof ${bn_lin}`
 	    if [ "${pid}" != "" ]; then
@@ -230,14 +264,16 @@ else
 	    fi
 	    if grep OK ./${testname}.tmp > /dev/null; then
 		echo "[OK] ihk_os_get_eventfd,OOM"
+		ret=0
 	    else
 		echo "[NG] ihk_os_get_eventfd,OOM"
+		ret=1
 	    fi
 	    sudo cat /var/log/local6 > ./${testname}.log
 	;;
-	ihklib004)
+	004)
 	    sudo ./${bn_lin} ${testopt}
-	    ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt} &
+	    ${BIN}/mcexec ${mcexecopt} ./${bn_mck} ${testopt} &
 	    sleep 4
 	    pid=`pidof mcexec`
 	    if [ "${pid}" != "" ]; then
@@ -249,75 +285,88 @@ else
 	    fi
 	    if grep OK ./${testname}.tmp > /dev/null; then
 		echo "[OK] ihk_os_get_eventfd,PANIC"
+		ret=0
 	    else
 		echo "[NG] ihk_os_get_eventfd,PANIC"
+		ret=1
 	    fi
 	    sudo cat /var/log/local6 > ./${testname}.log
 	;;
-	ihklib005)
+	005)
 	    sudo ./${bn_lin} ${testopt}
-	    ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt} &
+	    ${BIN}/mcexec ${mcexecopt} ./${bn_mck} ${testopt} &
 	    sleep 6
 	    pidof mcexec | xargs -r sudo kill -9 > /dev/null 2> /dev/null
 	    pidof $bn_lin | xargs -r sudo kill -9 > /dev/null 2> /dev/null 
 	    if grep OK ./${testname}.tmp > /dev/null; then
 		echo "[OK] ihk_os_get_eventfd,HUNGUP"
+		ret=0
 	    else
 		echo "[NG] ihk_os_get_eventfd,HUNGUP"
+		ret=1
 	    fi
 	    sudo cat /var/log/local6 > ./${testname}.log
 	;;
-	ihklib018)
-	    ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt} 2> ./${testname}.tmp &
+	018)
+	    ${BIN}/mcexec ${mcexecopt} ./${bn_mck} ${testopt} 2> ./${testname}.tmp &
 	    sleep 6
 	    pidof mcexec | xargs -r sudo kill -9  > /dev/null 2> /dev/null
 	    if grep -E 'hang' ./${testname}.tmp > /dev/null; then
 		echo "[OK] hang detection"
+		ret=0
 	    else
 		echo "[NG] hang detection"
+		ret=1
 	    fi
-	    echo "All tests finished"
 	;;
-	ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017)
+	002 | 006 | 007 | 008 | 009 | 010 | 011 | 012 | 013 | 014 | 015 | \
+	    016 | 017)
 	    sudo ./${bn_lin} ${testopt}
 	;;
-	ihklib019)
+	019)
 	    ./${testname}.sh
+	    ret=$?
 	    ;;
 	*)
-	    ${install}/bin/mcexec ${mcexecopt} ./${bn_mck} ${testopt}
-	    ${install}/sbin/ihkosctl 0 kmsg > ./${testname}.log
+	    ${BIN}/mcexec ${mcexecopt} ./${bn_mck} ${testopt}
+	    ret=$?
+	    ${SBIN}/ihkosctl 0 kmsg > ./${testname}.log
     esac
 fi
 
 case ${testname} in
-    ihklib001 | ihklib020 | ihklib021 | ihklib023 | ihklib024)
+    001 | 020 | 021 | 023 | 024)
 	;;
-    ihklib003)
+    003)
 	;;
-    ihklib002 | ihklib006 | ihklib007 | ihklib008 | ihklib009 | ihklib010 | ihklib011 | ihklib012 | ihklib013 | ihklib014 | ihklib015 | ihklib016 | ihklib017 | ihklib019)
+    002 | 006 | 007 | 008 | 009 | 010 | 011 | 012 | 013 | 014 | 015 | 016 | \
+	017 | 019)
 	;;
-    ihklib022)
+    022)
 	;;
     *)
-	sudo ${install}/sbin/mcstop+release.sh
+	sudo ${SBIN}/mcstop+release.sh
 	;;
 esac
 
 case ${testname} in
-    ihklib002)
-	printf "*** Check the dumpfile is correct by objdump -x and eclair\n"
+    002)
+	printf "*** Check if the correct dumpfile is created by objdump -x and eclair\n"
 	;;
-    ihklib014 | ihklib015)
-	printf "*** See Linux kmsg to the kmsg buffer is acquired/released correctly.\n"
+    014 | 015)
+	printf "*** See Linux kmsg to check if the kmsg buffer is acquired/released correctly.\n"
 	;;
-    ihklib016)
-	printf "*** See Linux kmsg to the first kmsg buffer is deleted when the third one is created and the remaining two kmsg buffers are deleted when /dev/mcd0 is destroyed.\n"
+    016)
+	printf "*** See Linux kmsg to check if the first kmsg buffer is deleted when the third one is created and the remaining two kmsg buffers are deleted when /dev/mcd0 is destroyed.\n"
 	;;
-    ihklib017)
-	printf "*** See Linux stdout to confirm panic is detected and ihkmond successfully relay kmsg of the next OS instance.\n"
+    017)
+	printf "*** See Linux stdout to check if panic is detected and ihkmond successfully relays kmsg of the next OS instance.\n"
 	;;
     *)
-	printf "*** It behaves as expected when there's no [NG] and \"All tests finished\" is shown\n"
+	if [ "$ret" == "0" ]; then
+	    printf "*** Summary: All tests are OK\n"
+	else
+	    printf "*** Summary: Some tests are NG\n"
+	fi
 	;;
 esac
