@@ -325,6 +325,12 @@ AC_CONFIG_FILES([
 	cokernel/Makefile.common
 ])
 
+if test -e "${ABS_SRCDIR}/test"; then
+AC_CONFIG_FILES([
+	mck_test_config.mk.sample:test/mck_test_config.mk.sample.in
+])
+fi
+
 if test "$TARGET" = "smp-x86"; then
 AC_CONFIG_FILES([
 	cokernel/smp/x86_64/Makefile.config
