@@ -1,4 +1,4 @@
-/* setup.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
+/* setup.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 #include <ihk/debug.h>
 #include <ihk/mm.h>
 #include <ihk/cpu.h>

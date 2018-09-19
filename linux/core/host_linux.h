@@ -1,3 +1,4 @@
+/* host_linux.h COPYRIGHT FUJITSU LIMITED 2012-2018 */
 /**
  * \file host_linux.h
  * 

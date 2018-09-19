@@ -1,4 +1,4 @@
-/* mikc.c COPYRIGHT FUJITSU LIMITED 2015-2016 */
+/* mikc.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /** 
  * \file host/linux/mikc.c
  *
