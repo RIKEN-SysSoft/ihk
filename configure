@@ -3769,6 +3769,11 @@ esac
 ac_config_files="$ac_config_files Makefile linux/core/Makefile linux/core/Makefile.module linux/core/Makefile.builtin ikc/Makefile linux/user/Makefile linux/driver/builtin/Makefile linux/driver/smp/Makefile linux/driver/attached/mic/Makefile linux/user/ihkconfig.1:linux/user/ihkconfig.1in linux/user/ihkosctl.1:linux/user/ihkosctl.1in linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in cokernel/Makefile.common"
 
 
+if test -e "${ABS_SRCDIR}/test"; then
+ac_config_files="$ac_config_files mck_test_config.mk.sample:test/mck_test_config.mk.sample.in"
+
+fi
+
 if test "$TARGET" = "smp-x86"; then
 ac_config_files="$ac_config_files cokernel/smp/x86_64/Makefile.config"
 
@@ -4482,6 +4487,7 @@ do
     "linux/user/ihkosctl.1") CONFIG_FILES="$CONFIG_FILES linux/user/ihkosctl.1:linux/user/ihkosctl.1in" ;;
     "linux/include/ihk/ihklib.h") CONFIG_FILES="$CONFIG_FILES linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in" ;;
     "cokernel/Makefile.common") CONFIG_FILES="$CONFIG_FILES cokernel/Makefile.common" ;;
+    "mck_test_config.mk.sample") CONFIG_FILES="$CONFIG_FILES mck_test_config.mk.sample:test/mck_test_config.mk.sample.in" ;;
     "cokernel/smp/x86_64/Makefile.config") CONFIG_FILES="$CONFIG_FILES cokernel/smp/x86_64/Makefile.config" ;;
     "cokernel/smp/arm64/Makefile.predefines") CONFIG_FILES="$CONFIG_FILES cokernel/smp/arm64/Makefile.predefines" ;;
     "cokernel/smp/arm64/Makefile.config") CONFIG_FILES="$CONFIG_FILES cokernel/smp/arm64/Makefile.config" ;;
