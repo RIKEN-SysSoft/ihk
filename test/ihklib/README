@@ -1,14 +1,12 @@
 ==========
 How to run
 ==========
-(1) Edit the following line in run.sh
-
-    install=${HOME}/project/os/install
-
-(2) ./run.sh <ihklibxxx>
-
-    Example:
-        ./run.sh ihklib001
+(1) cp <build>/mckernel/mck_test_config.sample \
+    ~/.mck_test_config
+(2) cp <build>/ihk/mck_test_config.mk.sample \
+    ~/.mck_test_config.mk
+(3) ./run.sh <ihklibxxx>
+    Example: ./run.sh ihklib001
 
 ===================================
 How to judge it behaves as expected
@@ -19,60 +17,57 @@ Follow the instruction given by run.sh.
 Descripation of tests
 =====================
 ihklib001:
-boot sequence, use ihklib function for ikc_map [OK]
-
-ihklib001:
-boot sequence, use ihkosctl for ikc_map [OK]
+boot sequence, use ihklib function for ikc_map
 
 ihklib002:
-makedumpfile [OK]
+makedumpfile
 
 ihklib003:
-eventfd oom [OK]
+eventfd oom
 
 ihklib004:
-eventfd panic [OK]
+eventfd panic
 
 ihklib005:
-eventfd hungup using ihkmond [OK]
-passing "-k 0" to mcreboot.sh [OK]
+eventfd hungup using ihkmond
+passing "-k 0" to mcreboot.sh
 
 ihklib006:
-redirect kmsg when destroying /dev/mcos0 [OK]
+redirect kmsg when destroying /dev/mcos0
 
 ihklib007:
-redirect kmsg when the amount of kmsg exceeds the threshold [OK]
--k 0 option [OK]
+redirect kmsg when the amount of kmsg exceeds the threshold
+-k 0 option
 
 ihklib008:
-redirect kmsg stops the redirection when /dev/mcos0 is deleted and resume redirection when /dev/mcos0 is created again [OK]
+redirect kmsg stops the redirection when /dev/mcos0 is deleted and resume redirection when /dev/mcos0 is created again
 
 ihklib009:
-detect_hungup stops the detection when /dev/mcos0 is deleted and resume detection when /dev/mcos0 is created again [OK]
+detect_hungup stops the detection when /dev/mcos0 is deleted and resume detection when /dev/mcos0 is created again
 
 ihklib010:
-McKernel sends event when the amount of kmsg exceeds the threshold [OK]
+McKernel sends event when the amount of kmsg exceeds the threshold
 
 ihklib011:
-overwrap test for -k 0 [OK]
+overwrap test for -k 0
 
 ihklib012:
-dead-lock check of struct ihk_kmsg_buf::lock [OK]
+dead-lock check of struct ihk_kmsg_buf::lock
 
 ihklib013:
-overwrap test for ihkmond file slots [OK]
+overwrap test for ihkmond file slots
 
 ihklib014:
-host_driver.c acquires/releases kmsg_buf by using reference counter with passing "-k 0" to ihkmond [OK]
+host_driver.c acquires/releases kmsg_buf by using reference counter with passing "-k 0" to ihkmond
 
 ihklib015:
-ihkmond acquires/releases kmsg_buf with passing "-k 1" to ihkmond [OK]
+ihkmond acquires/releases kmsg_buf with passing "-k 1" to ihkmond
 
 ihklib016:
-host_driver.c deletes stray kmsg_buf when too many  [OK]
+host_driver.c deletes stray kmsg_buf when too many of them are created
 
 ihklib017:
-perform syslog() when detecting panic/hungup [OK]
+perform syslog() when detecting panic/hungup
 
 ihklib018:
 * Hang detection in mcexec using ihk_os_get_eventfd()

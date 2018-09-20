@@ -1,26 +1,25 @@
-.SUFFIXES:	# Clear suffixes
-.SUFFIXES:	.c 
+include $(HOME)/.mck_test_config.mk
 
 CC = gcc
 
-CPPFLAGS = -I$(HOME)/project/os/install/include
+CPPFLAGS = -I$(MCK_DIR)/include -DMCK_DIR=$(MCK_DIR) -DTARGET=$(TARGET) -DARCH=$(ARCH)
 CCFLAGS = -Wall -Werror -g
-LDFLAGS = -L$(HOME)/project/os/install/lib -lihk -Wl,-rpath -Wl,$(HOME)/project/os/install/lib -lbfd -lpthread
-SRCS = $(shell ls ihklib*lin.c) udev.c
+LDFLAGS = -L$(MCK_DIR)/lib -lihk -Wl,-rpath -Wl,$(MCK_DIR)/lib -lbfd -lpthread
+SRCS = $(shell ls *_lin.c)
 EXES = $(SRCS:.c=)
 OBJS = $(SRCS:.c=.o)
 
 CPPFLAGSMCK = 
-CCFLAGSMCK = -g
+CCFLAGSMCK = -Wall -Werror -g
 LDFLAGSMCK = 
-SRCSMCK = $(shell ls ihklib*mck.c)
+SRCSMCK = $(shell ls *_mck.c  | grep -v 019)
 EXESMCK = $(SRCSMCK:.c=) 
 OBJSMCK = $(SRCSMCK:.c=.o)
 
 all: $(EXES) $(EXESMCK)
 
-udev: udev.c
-	gcc -g -O0 -o udev udev.c -ludev
+test::
+	for i in {1..24}; do ./run.sh `printf %03d $i`; done
 
 %_lin: %_lin.o
 	$(CC) -o $@ $^ $(LDFLAGS)
