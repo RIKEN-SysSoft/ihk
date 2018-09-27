@@ -1056,6 +1056,11 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 	}
 }
 
+int smp_ihk_os_unmap_lwk(void)
+{
+	return 0;
+}
+
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 {
 	struct smp_os_data *os = priv;
