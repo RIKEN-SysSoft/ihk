@@ -3,6 +3,7 @@
 #define HEADER_BUILTIN_BOOTPARAM_H
 
 #define SMP_MAX_CPUS 512
+#define SMP_MAX_IRQS 32
 
 #define __NCOREBITS  (sizeof(long) * 8)   /* bits per mask */
 #define CORE_SET(n, p) \
@@ -93,7 +94,7 @@ struct smp_boot_param {
 	   are loaded, used for boundary check in early_alloc_pages(). */
 	unsigned long bootstrap_mem_end;
 
-	unsigned long msg_buffer;
+	unsigned long msg_buffer; /* Physical address */
 	unsigned long msg_buffer_size;
 	unsigned long mikc_queue_recv, mikc_queue_send;
 
@@ -104,6 +105,7 @@ struct smp_boot_param {
 	unsigned long rusage_size;
 
 	unsigned long nmi_mode_addr;
+	unsigned long mckernel_do_futex;
 	unsigned long linux_kernel_pgt_phys;
 
 	unsigned long dma_address;
@@ -111,8 +113,8 @@ struct smp_boot_param {
 	unsigned long ns_per_tsc;
 	unsigned long boot_sec;
 	unsigned long boot_nsec;
-	unsigned int ihk_ikc_irq;
-	unsigned int ihk_ikc_irq_apicids[SMP_MAX_CPUS];
+	unsigned int ihk_ikc_irqs[SMP_MAX_IRQS];
+	unsigned int ihk_ikc_cpu_hwids[SMP_MAX_CPUS];
 	char kernel_args[256];
 	int nr_linux_cpus;
 	int nr_cpus;

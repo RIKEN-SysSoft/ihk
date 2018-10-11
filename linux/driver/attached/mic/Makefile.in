@@ -1,7 +1,10 @@
 KDIR ?= @KDIR@
 ARCH ?= @ARCH@
 src = @abs_srcdir@
-KMODDIR=@KMODDIR@
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+# KMODDIR=@KMODDIR@
+DESTDIR ?= @DESTDIR@
+KMODDIR=$(DESTDIR)/@KMODDIR@
 
 obj-m += ihk_mic.o
 

@@ -31,6 +31,9 @@
 #include <linux/string.h>
 #include <linux/eventfd.h>
 #include <linux/version.h>
+#ifdef POSTK_DEBUG_ARCH_DEP_96 /* build for linux4.16 */
+#include <linux/cred.h>
+#endif /* POSTK_DEBUG_ARCH_DEP_96 */
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
 #include <asm/spinlock.h>
@@ -2454,6 +2457,12 @@ int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
 int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
 {
 	struct ihk_host_linux_os_data *os;
+
+#ifdef POSTK_DEBUG_TEMP_FIX_79 /* return -EFAULT if ihk_get_request_os_cpu arg1 is NULL. */
+	if (ihk_os == NULL) {
+		return -EFAULT;
+	}
+#endif /* POSTK_DEBUG_TEMP_FIX_79 */
 
 	/*
 	 * Look up IHK OS structure

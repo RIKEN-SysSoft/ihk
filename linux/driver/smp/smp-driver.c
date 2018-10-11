@@ -1,4 +1,4 @@
-/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
+/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /**
  * \file smp-x86-driver.c
  * \brief
@@ -25,6 +25,7 @@
 #include <linux/slub_def.h>
 #include <linux/time.h>
 #include <asm/hw_irq.h>
+#include <asm/pgtable.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
@@ -132,8 +133,13 @@ struct chunk {
 };
 
 /* ----------------------------------------------- */
+#ifdef POSTK_DEBUG_ARCH_DEP_101 /* Fixed to symbols are not lost by optimization */
+unsigned long dump_page_set_addr;
+unsigned long dump_bootstrap_mem_start;
+#else /* POSTK_DEBUG_ARCH_DEP_101 */
 static unsigned long dump_page_set_addr;
 static unsigned long dump_bootstrap_mem_start;
+#endif /* POSTK_DEBUG_ARCH_DEP_101 */
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
@@ -267,6 +273,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	int i, j;
 	unsigned long buffer_size, map_end, index;
 	struct ihk_dump_page *dump_page;
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+	int ret;
+#else /* POSTK_DEBUG_ARCH_DEP_108 */
 #ifdef ENABLE_PERF
 	struct x86_pmu *__pmu;
 	struct extra_reg *er;
@@ -275,6 +284,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	unsigned long *__intel_perfmon_event_map;
 	int er_cnt = 0;
 #endif
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
@@ -351,6 +361,12 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->nr_numa_nodes = nr_numa_nodes;
 
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+	ret = smp_ihk_arch_get_perf_event(os->param);
+	if (ret) {
+		return ret;
+	}
+#else /* POSTK_DEBUG_ARCH_DEP_108 */
 #ifdef ENABLE_PERF
 	__pmu = (struct x86_pmu *)kallsyms_lookup_name("x86_pmu");
 	__hw_cache_event_ids = (unsigned long *)kallsyms_lookup_name("hw_cache_event_ids");
@@ -378,6 +394,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	memcpy(os->param->hw_cache_event_ids, __hw_cache_event_ids, sizeof(os->param->hw_cache_event_ids));
 	memcpy(os->param->hw_cache_extra_regs, __hw_cache_extra_regs, sizeof(os->param->hw_cache_extra_regs));
 #endif // ENABLE_PERF 
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
 			sizeof(*os->param));
@@ -549,7 +566,11 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 				}
 
 				dump_page->start = os_mem_chunk->addr;
+#ifdef POSTK_DEBUG_TEMP_FIX_95 /* Use other than 4K-page for dump_page calculation. */
+				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> (PAGE_SHIFT + 6));
+#else /* POSTK_DEBUG_TEMP_FIX_95 */
 				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> 18);
+#endif /* POSTK_DEBUG_TEMP_FIX_95 */
 				map_end = (os_mem_chunk->size >> PAGE_SHIFT);
 
 				for (index = 0; index < map_end; index++) {
@@ -584,6 +605,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	lwk_cpu_2_linux_cpu(os, 0);
 }
 
+#ifndef POSTK_DEBUG_ARCH_DEP_113 /* Separation of architecture dependent code. */
 static void ihk_smp_free_page_tables(pgd_t *pt)
 {
 	pgd_t *pgd;
@@ -738,6 +760,7 @@ int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 		(unsigned long)(pte_val(entry) & PTE_PFN_MASK));
 	return 0;
 }
+#endif /* !POSTK_DEBUG_ARCH_DEP_113 */
 
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
@@ -1089,6 +1112,9 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		eprintk("%s,already down\n", __FUNCTION__);
 		return 0;
 	}
+#ifdef POSTK_DEBUG_TEMP_FIX_82 /* ihk_os_get_status() SHUTDOWN detect fix */
+	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
+#endif /* POSTK_DEBUG_TEMP_FIX_82 */
 
 	/* Reset CPU cores used by this OS */
 	for (i = 0; i < SMP_MAX_CPUS; ++i) {
@@ -1138,7 +1164,9 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		kfree(os_mem_chunk);
 	}
 
+#ifndef POSTK_DEBUG_TEMP_FIX_82 /* ihk_os_get_status() SHUTDOWN detect fix */
 	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
+#endif /* !POSTK_DEBUG_TEMP_FIX_82 */
 	if (os->numa_mapping) {
 		kfree(os->numa_mapping);
 		os->numa_mapping = NULL;
@@ -1850,6 +1878,7 @@ static int smp_ihk_os_get_num_cpus(ihk_os_t ihk_os, void *priv)
 }
 
 
+#ifndef POSTK_DEBUG_ARCH_DEP_98 /* smp_ihk_os_set_ikc_map() move arch depend. */
 static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret = 0;
@@ -1921,11 +1950,44 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 #else
 		for_each_cpu_mask(cpu, cpus_to_map) {
 #endif
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+			int int_ikc_cpu = 0;
+			int st = 0;
+
+			if (kstrtoint(ikc_cpu, 10, &int_ikc_cpu)) {
+				printk("kstrtoint() failed\n");
+				ret = -EINVAL;
+				goto out;
+			}
+
+			if (SMP_MAX_CPUS < int_ikc_cpu) {
+				printk("ikc_map included over SMP_MAX_CPUS(%d) number(%d).\n",
+					SMP_MAX_CPUS, int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			}
+			st = ihk_smp_cpus[int_ikc_cpu].status;
+
+			if (st == IHK_SMP_CPU_ASSIGNED) {
+				printk("ikc_map included McKernel-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else if (st != IHK_SMP_CPU_ONLINE) {
+				printk("ikc_map included Blank-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else {
+				ihk_smp_cpus[cpu].ikc_map_cpu = int_ikc_cpu;
+			}
+#else /* POSTK_DEBUG_TEMP_FIX_90 */
 			/* TODO: check if CPU belongs to OS */
 			if (kstrtoint(ikc_cpu, 10, &ihk_smp_cpus[cpu].ikc_map_cpu)) {
 				ret = -EINVAL;
 				goto out;
 			}
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 		}
 
 		token = strsep(&string, "+");
@@ -1934,11 +1996,24 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	os->cpu_ikc_mapped = 1;
 
 out:
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+	/* In case of no mapped, restore default setting */
+	if (os->cpu_ikc_mapped != 1) {
+		for (i = 0; i < SMP_MAX_CPUS; i++) {
+			if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+			    (ihk_smp_cpus[i].os != ihk_os)) {
+				continue;
+			}
+			ihk_smp_cpus[i].ikc_map_cpu = 0;
+		}
+	}
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 #ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	if (string) kfree(string);
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	return ret;
 }
+#endif /* !POSTK_DEBUG_ARCH_DEP_98 */
 
 static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
@@ -4230,6 +4305,9 @@ out:
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 	int ret;
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+	int cpu = 0;
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 
 	INIT_LIST_HEAD(&ihk_mem_free_chunks);
 	INIT_LIST_HEAD(&ihk_mem_used_chunks);
@@ -4244,6 +4322,16 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	for_each_cpu(cpu, cpu_online_mask) {
+#else
+	for_each_cpu_mask(cpu, *cpu_online_mask) {
+#endif
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
+	}
+
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 	ret = smp_ihk_arch_init();
 
 	return ret;
@@ -4257,8 +4345,15 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 	/* Re-enable CPU cores */
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+		if ((ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE) ||
+		    (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_NONE)) {
+			continue;
+		}
+#else /* POSTK_DEBUG_TEMP_FIX_90 */
 		if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE)
 			continue;
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
 
 		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
 

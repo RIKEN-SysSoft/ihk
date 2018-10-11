@@ -8,10 +8,7 @@ static unsigned long rdtsc(void)
 {
 	unsigned int low, high;
 
-/* POSTK_DEBUG_ARCH_DEP_7 */
-#ifdef __x86_64
 	asm volatile("rdtsc" : "=a"(low), "=d"(high));
-#endif /* __x86_64 */ 
  
 	return (low | ((unsigned long)high << 32));
 }
