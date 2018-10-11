@@ -5,7 +5,9 @@
 #include <bfd.h>
 #define PATH_SYS_NODE "/sys/devices/system/node"
 #define PATH_DEV "/dev"
-#define SBINDIR "@SBINDIR@"
+/* POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable. */
+//#define SBINDIR "@SBINDIR@"
+#define SBINDIR "@DESTDIR@/@SBINDIR@"
 
 #include <ihk/affinity.h> 
 

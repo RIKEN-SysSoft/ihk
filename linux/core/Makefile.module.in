@@ -1,8 +1,11 @@
-# Makefile.module.in COPYRIGHT FUJITSU LIMITED 2015-2016
+# Makefile.module.in COPYRIGHT FUJITSU LIMITED 2015-2018
 KDIR ?= @KDIR@
 ARCH ?= @ARCH@
 src = @abs_srcdir@
-KMODDIR=@KMODDIR@
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+# KMODDIR=@KMODDIR@
+DESTDIR ?= @DESTDIR@
+KMODDIR=$(DESTDIR)/@KMODDIR@
 
 obj-m += ihk.o
 
@@ -12,8 +15,8 @@ ihk-y = host_driver.o mem_alloc.o mm.o mikc.o
 ihk-y += ../../ikc/linux.o ../../ikc/master.o ../../ikc/queue.o
 
 ifeq ($(ARCH), arm64)
-EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
-EXTRA_CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
+EXTRA_CFLAGS += $(foreach i, $(shell seq 6 120), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+EXTRA_CFLAGS += $(foreach i, $(shell seq 6 110), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
 endif
 
 .PHONY: clean install modules

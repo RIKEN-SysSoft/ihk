@@ -1,4 +1,4 @@
-/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
+/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /**
  * \file smp-x86-driver.c
  * \brief
@@ -25,6 +25,7 @@
 #include <linux/slub_def.h>
 #include <linux/time.h>
 #include <asm/hw_irq.h>
+#include <asm/pgtable.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
@@ -130,8 +131,13 @@ struct chunk {
 };
 
 /* ----------------------------------------------- */
+#ifdef POSTK_DEBUG_ARCH_DEP_101 /* Fixed to symbols are not lost by optimization */
+unsigned long dump_page_set_addr;
+unsigned long dump_bootstrap_mem_start;
+#else /* POSTK_DEBUG_ARCH_DEP_101 */
 static unsigned long dump_page_set_addr;
 static unsigned long dump_bootstrap_mem_start;
+#endif /* POSTK_DEBUG_ARCH_DEP_101 */
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
@@ -265,6 +271,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	int i, j;
 	unsigned long buffer_size, map_end, index;
 	struct ihk_dump_page *dump_page;
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+	int ret;
+#else /* POSTK_DEBUG_ARCH_DEP_108 */
 #ifdef ENABLE_PERF
 	struct x86_pmu *__pmu;
 	struct extra_reg *er;
@@ -273,6 +282,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	unsigned long *__intel_perfmon_event_map;
 	int er_cnt = 0;
 #endif
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
@@ -349,6 +359,12 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->nr_numa_nodes = nr_numa_nodes;
 
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+	ret = smp_ihk_arch_get_perf_event(os->param);
+	if (ret) {
+		return ret;
+	}
+#else /* POSTK_DEBUG_ARCH_DEP_108 */
 #ifdef ENABLE_PERF
 	__pmu = (struct x86_pmu *)kallsyms_lookup_name("x86_pmu");
 	__hw_cache_event_ids = (unsigned long *)kallsyms_lookup_name("hw_cache_event_ids");
@@ -376,6 +392,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	memcpy(os->param->hw_cache_event_ids, __hw_cache_event_ids, sizeof(os->param->hw_cache_event_ids));
 	memcpy(os->param->hw_cache_extra_regs, __hw_cache_extra_regs, sizeof(os->param->hw_cache_extra_regs));
 #endif // ENABLE_PERF 
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
 			sizeof(*os->param));
@@ -585,6 +602,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	lwk_cpu_2_linux_cpu(os, 0);
 }
 
+#ifndef POSTK_DEBUG_ARCH_DEP_113 /* Separation of architecture dependent code. */
 static void ihk_smp_free_page_tables(pgd_t *pt)
 {
 	pgd_t *pgd;
@@ -626,9 +644,11 @@ static void ihk_smp_free_page_tables(pgd_t *pt)
 					continue;
 
 				for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
-					pmd = ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;
+					pmd = ((pmd_t *)pud_page_vaddr(*pud)) +
+						pmd_i;
 
-					if (pmd_none(*pmd) || !pmd_present(*pmd))
+					if (pmd_none(*pmd) ||
+					    !pmd_present(*pmd))
 						continue;
 
 					if (pmd_large(*pmd))
@@ -798,6 +818,7 @@ int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 		(unsigned long)(pte_val(entry) & PTE_PFN_MASK));
 	return 0;
 }
+#endif /* !POSTK_DEBUG_ARCH_DEP_113 */
 
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
@@ -1911,6 +1932,7 @@ static int smp_ihk_os_get_num_cpus(ihk_os_t ihk_os, void *priv)
 }
 
 
+#ifndef POSTK_DEBUG_ARCH_DEP_98 /* smp_ihk_os_set_ikc_map() move arch depend. */
 static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret = 0;
@@ -2000,6 +2022,11 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 					int_ikc_cpu);
 				ret = -EINVAL;
 				goto out;
+			} else if (st != IHK_SMP_CPU_ONLINE) {
+				pr_err("ikc_map included Blank-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
 			} else {
 				ihk_smp_cpus[cpu].ikc_map_cpu = int_ikc_cpu;
 			}
@@ -2025,6 +2052,7 @@ out:
 	if (string) kfree(string);
 	return ret;
 }
+#endif /* !POSTK_DEBUG_ARCH_DEP_98 */
 
 static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {

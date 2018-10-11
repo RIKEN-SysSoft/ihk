@@ -1,4 +1,4 @@
-# Makefile.predefines.in COPYRIGHT FUJITSU LIMITED 2016-2017
+# Makefile.predefines.in COPYRIGHT FUJITSU LIMITED 2016-2018
 
 #  ARM64_MEMORY_LAYOUT
 #  ----+-----------+-----------------------
@@ -70,10 +70,10 @@ ifeq ($(HOST_KERNEL_CONFIG_ARM_GIC_V3), y)
 endif
 
 CONFIG_HAS_NMI=n
-#ifeq ($(HOST_KERNEL_CONFIG_ARM_GIC_V3), y)
-# CONFIG_HAS_NMI=y
-# CFLAGS += -DCONFIG_HAS_NMI=y
-#endif
+ifeq ($(HOST_KERNEL_CONFIG_ARM_GIC_V3), y)
+ CONFIG_HAS_NMI=y
+ CFLAGS += -DCONFIG_HAS_NMI=y
+endif
 $(info GICv3:$(HOST_KERNEL_CONFIG_ARM_GIC_V3) NMI:$(CONFIG_HAS_NMI))
 
 ifeq ($(HOST_KERNEL_CONFIG_ARM64_VHE), y)

@@ -1,4 +1,4 @@
-# configure.ac COPYRIGHT FUJITSU LIMITED 2015-2016
+# configure.ac COPYRIGHT FUJITSU LIMITED 2015-2018
 AC_PREREQ(2.63)
 m4_define([IHK_VERSION_m4],[1.5.0])dnl
 m4_define([MCKERNEL_VERSION_m4],[1.5.0])dnl
@@ -64,23 +64,27 @@ if test "X$WITH_TARGET" = Xyes -o "X$WITH_TARGET" = Xno; then
 	WITH_TARGET=attached-mic
 fi
 
-if test "X$bindir" = X; then
-	BINDIR="$bindir"
-fi
-
-if test "X$sbindir" = X; then
-	SBINDIR="$sbindir"
-fi
-
-if test "X$libdir" = X; then
-	LIBDIR="$libdir"
-fi
-
-if test "X$includedir" = X; then
-	INCLUDEDIR="$includedir"
-fi
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.[begin]
+#if test "X$bindir" = X; then
+#	BINDIR="$bindir"
+#fi
+#
+#if test "X$sbindir" = X; then
+#	SBINDIR="$sbindir"
+#fi
+#
+#if test "X$libdir" = X; then
+#	LIBDIR="$libdir"
+#fi
+#
+#if test "X$includedir" = X; then
+#	INCLUDEDIR="$includedir"
+#fi
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.[end]
 
 test "x$prefix" = xNONE && prefix="$ac_default_prefix"
+
+DESTDIR=$prefix	# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
 
 case $WITH_TARGET in
 # POSTK_DEBUG_ARCH_DEP_30, Expansion of the branch.
@@ -110,94 +114,96 @@ case $WITH_TARGET in
 	;;
 esac
 
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.[begin]
+# xxxDIR=$prefix/xxx => xxxDIR=xxx change
 case $WITH_TARGET in
     attached-mic)
 	if test "X$BINDIR" = X; then
-		BINDIR="$prefix/bin"
+		BINDIR="bin"
 	fi
 	if test "X$SBINDIR" = X; then
-		SBINDIR="$prefix/sbin"
+		SBINDIR="sbin"
 	fi
 	if test "X$KMODDIR" = X; then
-		KMODDIR="$prefix/kmod"
+		KMODDIR="kmod"
 	fi
 	if test "X$MANDIR" = X; then
-		MANDIR="$prefix/share/man"
+		MANDIR="share/man"
 	fi
 	;;
     builtin-mic)
 	if test "X$BINDIR" = X; then
-		BINDIR="$prefix/attached/bin"
+		BINDIR="attached/bin"
 	fi
 	if test "X$SBINDIR" = X; then
-		SBINDIR="$prefix/attached/sbin"
+		SBINDIR="attached/sbin"
 	fi
 	if test "X$KMODDIR" = X; then
-		KMODDIR="$prefix/attached/kmod"
+		KMODDIR="attached/kmod"
 	fi
 	if test "X$MANDIR" = X; then
-		MANDIR="$prefix/share/man"
+		MANDIR="share/man"
 	fi
 	;;
     builtin-x86)
 	if test "X$BINDIR" = X; then
-		BINDIR="$prefix/bin"
+		BINDIR="bin"
 	fi
 	if test "X$SBINDIR" = X; then
-		SBINDIR="$prefix/sbin"
+		SBINDIR="sbin"
 	fi
 	if test "X$KMODDIR" = X; then
-		KMODDIR="$prefix/kmod"
+		KMODDIR="kmod"
 	fi
 	if test "X$MANDIR" = X; then
-		MANDIR="$prefix/share/man"
+		MANDIR="share/man"
 	fi
 	;;
     smp-x86)
 	if test "X$BINDIR" = X; then
-		BINDIR="$prefix/bin"
+		BINDIR="bin"
 	fi
 	if test "X$SBINDIR" = X; then
-		SBINDIR="$prefix/sbin"
+		SBINDIR="sbin"
 	fi
 	if test "X$KMODDIR" = X; then
-		KMODDIR="$prefix/kmod"
+		KMODDIR="kmod"
 	fi
 	if test "X$MANDIR" = X; then
-		MANDIR="$prefix/share/man"
+		MANDIR="share/man"
 	fi
 	if test "X$LIBDIR" = X; then
-		LIBDIR="$prefix/lib"
+		LIBDIR="lib"
 	fi
 	if test "X$INCLUDEDIR" = X; then
-		INCLUDEDIR="$prefix/include"
+		INCLUDEDIR="include"
 	fi
 	;;
     smp-arm64)
 	if test "X$BINDIR" = X; then
-		BINDIR="$prefix/bin"
+		BINDIR="bin"
 	fi
 	if test "X$SBINDIR" = X; then
-		SBINDIR="$prefix/sbin"
+		SBINDIR="sbin"
 	fi
 	if test "X$KMODDIR" = X; then
-		KMODDIR="$prefix/kmod"
+		KMODDIR="kmod"
 	fi
 	if test "X$MANDIR" = X; then
-		MANDIR="$prefix/share/man"
+		MANDIR="share/man"
 	fi
 	if test "X$LIBDIR" = X; then
-		LIBDIR="$prefix/lib"
+		LIBDIR="lib"
 	fi
 	if test "X$INCLUDEDIR" = X; then
-		INCLUDEDIR="$prefix/include"
+		INCLUDEDIR="include"
 	fi
-
 	;;
     *)
 	AC_MSG_ERROR([target $WITH_TARGET is unknwon])
 	;;
 esac
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.[end]
 
 case $ENABLE_MEMDUMP in
 	yes|no|auto)
@@ -287,6 +293,7 @@ AC_SUBST(XCC)
 AC_SUBST(ARCH)
 AC_SUBST(KDIR)
 AC_SUBST(TARGET)
+AC_SUBST(DESTDIR)	# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
 AC_SUBST(BINDIR)
 AC_SUBST(SBINDIR)
 AC_SUBST(INCLUDEDIR)
