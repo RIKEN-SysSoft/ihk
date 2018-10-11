@@ -116,6 +116,26 @@ static ssize_t reap_event(int evfd) {
 	return ret;
 }
 
+#ifdef POSTK_DEBUG_TEMP_FIX_83 /* FIX: ihklib_os_open() is a possibility of failure. */
+static int ihkmond_os_open(int os_index) {
+	int i, osfd;
+	const int limit = 4;
+
+	for (i = 0; i < limit; i++) {
+		osfd = ihklib_os_open(os_index);
+		if (osfd >= 0) {
+			break;
+		}
+		usleep(200);
+	}
+
+	if (i == limit) {
+		eprintf("Warning: %s failed %d times\n", __FUNCTION__, i);
+	}
+	return osfd;
+}
+#endif /* POSTK_DEBUG_TEMP_FIX_83 */
+
 static void* detect_hungup(void* _arg) {
 	struct thr_args *arg = (struct thr_args *)_arg;
 	int osfd = -1, epfd = -1;
@@ -123,6 +143,8 @@ static void* detect_hungup(void* _arg) {
 	struct epoll_event events[1];
 	int ret = 0, ret_lib;
 	int i;
+	char fn[32];
+	struct stat st;
 
 	epfd = epoll_create(1);
 	CHKANDJUMP(epfd == -1, 255, "epoll_create failed\n");
@@ -144,10 +166,27 @@ static void* detect_hungup(void* _arg) {
 	arg->mcos_added = 0;
 	pthread_mutex_unlock(&arg->lock);
 
+	i = 0;
+	snprintf(fn, sizeof(fn), "/dev/mcos%d", arg->os_index);
+	while (stat(fn, &st) == -1) {
+		CHKANDJUMP(errno != ENOENT, -errno,
+			"/dev/mcosX access failed\n");
+		usleep(200);
+		i++;
+
+		/* about 10s timeout check */
+		CHKANDJUMP(50 * 1000 < i, -ETIMEDOUT,
+			"/dev/mcosX create timeout\n");
+	}
+
  next:
 	dprintf("next\n");
 
+#ifdef POSTK_DEBUG_TEMP_FIX_83 /* FIX: ihklib_os_open() is a possibility of failure. */
+	osfd = ihkmond_os_open(arg->os_index);
+#else /* POSTK_DEBUG_TEMP_FIX_83 */
 	osfd = ihklib_os_open(arg->os_index);
+#endif /* POSTK_DEBUG_TEMP_FIX_83 */
 	CHKANDJUMP(osfd < 0, -errno, "ihklib_os_open failed\n");
 
 	ret_lib = ioctl(osfd, IHK_OS_DETECT_HUNGUP);

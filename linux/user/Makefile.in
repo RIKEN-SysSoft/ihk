@@ -1,19 +1,25 @@
-# Makefile.in COPYRIGHT FUJITSU LIMITED 2015-2016
+# Makefile.in COPYRIGHT FUJITSU LIMITED 2015-2018
 CC=@CC@
 ARCH=@ARCH@
 IHKBASE ?= @abs_srcdir@/../..
 CFLAGS=-g -Wall -O -I$(IHKBASE)/linux/include/ -I$(IHKBASE)/linux/include/ihk/arch/$(ARCH) -I@abs_builddir@ -I@abs_builddir@/../include/ -I@abs_builddir@/../../
-SBINDIR=@SBINDIR@
-LIBDIR=@LIBDIR@
-INCLUDEDIR=@INCLUDEDIR@
-MANDIR=@MANDIR@
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+# SBINDIR=@SBINDIR@
+# LIBDIR=@LIBDIR@
+# INCLUDEDIR=@INCLUDEDIR@
+# MANDIR=@MANDIR@
+DESTDIR ?= @DESTDIR@
+SBINDIR=$(DESTDIR)/@SBINDIR@
+LIBDIR=$(DESTDIR)/@LIBDIR@
+INCLUDEDIR=$(DESTDIR)/@INCLUDEDIR@
+MANDIR=$(DESTDIR)/@MANDIR@
 VPATH=@abs_srcdir@
 LIBS=@LIBS@
 TARGET=libihk.so ihkconfig ihkosctl memdump pagetable maccess memdump-mic ihkmond
 
 ifeq ($(ARCH), arm64)
-CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
-CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
+CFLAGS += $(foreach i, $(shell seq 6 120), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+CFLAGS += $(foreach i, $(shell seq 6 110), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
 endif
 
 .PHONY: all clean install
@@ -36,13 +42,19 @@ endif
 
 
 ihkconfig: ihkconfig.c libihk.so
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=@DESTDIR@/@LIBDIR@
 
 ihkosctl: ihkosctl.c libihk.so
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=$(LIBDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -lbfd -Wl,-rpath=@DESTDIR@/@LIBDIR@
 
 ihkmond: ihkmond.c libihk.so
-	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=$(LIBDIR)
+# POSTK_DEBUG_ARCH_DEP_105 make install DESTDIR enable.
+#	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=$(LIBDIR)
+	${CC} ${CFLAGS} -o $@ $< -L. -lihk -ludev -lpthread -Wl,-rpath=@DESTDIR@/@LIBDIR@
 
 %: %.c
 	${CC} ${CFLAGS} -o $@ $< ${LIBS}

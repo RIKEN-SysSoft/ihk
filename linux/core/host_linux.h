@@ -93,7 +93,11 @@ struct ihk_host_linux_os_data {
 	/** \brief Interrupt handler */
 	struct ihk_host_interrupt_handler ikc_handler;
 	/** \brief Worker thread for the IKC interrupt handler */
+#ifdef POSTK_DEBUG_ARCH_DEP_97 /* Make schedule_work() execute core designable */
+	void (*work_function)(struct work_struct *);
+#else /* POSTK_DEBUG_ARCH_DEP_97 */
 	struct work_struct ikc_work;
+#endif /* POSTK_DEBUG_ARCH_DEP_97 */
 
 	/** \brief IKC master channel between the host and this kernel */
 	struct ihk_ikc_channel_desc *mchannel;

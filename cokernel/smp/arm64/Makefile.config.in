@@ -1,8 +1,8 @@
 # Makefile.config COPYRIGHT FUJITSU LIMITED 2015-2016
 include @abs_builddir@/Makefile.predefines
 
-CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
-CFLAGS += $(foreach i, $(shell seq 1 100), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
+CFLAGS += $(foreach i, $(shell seq 6 120), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
+CFLAGS += $(foreach i, $(shell seq 6 110), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))
 CFLAGS += -mgeneral-regs-only
 
 IHK_SRCDIRS += $(SRC)/../arch/$(IHKARCH)/kernel

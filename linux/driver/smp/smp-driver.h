@@ -45,12 +45,13 @@
 #define BUILTIN_OS_STATUS_SHUTDOWN	4 /* After shutdown */
 #define BUILTIN_OS_STATUS_HUNGUP	5
 
-#define IHK_SMP_CPU_ONLINE	0
-#define IHK_SMP_CPU_AVAILABLE	1
-#define IHK_SMP_CPU_ASSIGNED	2
-#define IHK_SMP_CPU_TO_OFFLINE	3
-#define IHK_SMP_CPU_OFFLINED	4
-#define IHK_SMP_CPU_TO_ONLINE	5
+#define IHK_SMP_CPU_NONE	0
+#define IHK_SMP_CPU_ONLINE	1
+#define IHK_SMP_CPU_AVAILABLE	2
+#define IHK_SMP_CPU_ASSIGNED	3
+#define IHK_SMP_CPU_TO_OFFLINE	4
+#define IHK_SMP_CPU_OFFLINED	5
+#define IHK_SMP_CPU_TO_ONLINE	6
 
 struct ihk_smp_cpu {
 	int id;
@@ -141,13 +142,13 @@ extern unsigned long trampoline_phys;
 
 extern unsigned long ident_page_table;
 
-extern int this_module_put;
-
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size);
 void ihk_smp_unmap_virtual(void *virt);
 int ihk_smp_set_nmi_mode(ihk_os_t ihk_os, void *priv, int mode);
 irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data);
+#ifndef POSTK_DEBUG_ARCH_DEP_113 /* Separation of architecture dependent code. */
 int ihk_smp_map_kernel(pgd_t *pt, unsigned long vaddr, phys_addr_t paddr);
+#endif /* !POSTK_DEBUG_ARCH_DEP_113 */
 
 int read_file(void *buf, size_t size, char *fmt, va_list ap);
 int file_readable(char *fmt, ...);

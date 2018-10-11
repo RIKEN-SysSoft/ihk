@@ -1,4 +1,4 @@
-/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
+/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /**
  * \file smp-x86-driver.c
  * \brief
@@ -25,6 +25,7 @@
 #include <linux/slub_def.h>
 #include <linux/time.h>
 #include <asm/hw_irq.h>
+#include <asm/pgtable.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
@@ -82,8 +83,6 @@ unsigned long trampoline_phys;
 
 unsigned long ident_page_table;
 
-int this_module_put = 0;
-
 static struct list_head ihk_mem_free_chunks;
 struct list_head ihk_mem_used_chunks;
 
@@ -132,8 +131,13 @@ struct chunk {
 };
 
 /* ----------------------------------------------- */
+#ifdef POSTK_DEBUG_ARCH_DEP_101 /* Fixed to symbols are not lost by optimization */
+unsigned long dump_page_set_addr;
+unsigned long dump_bootstrap_mem_start;
+#else /* POSTK_DEBUG_ARCH_DEP_101 */
 static unsigned long dump_page_set_addr;
 static unsigned long dump_bootstrap_mem_start;
+#endif /* POSTK_DEBUG_ARCH_DEP_101 */
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 {
@@ -267,6 +271,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	int i, j;
 	unsigned long buffer_size, map_end, index;
 	struct ihk_dump_page *dump_page;
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+	int ret;
+#else /* POSTK_DEBUG_ARCH_DEP_108 */
 #ifdef ENABLE_PERF
 	struct x86_pmu *__pmu;
 	struct extra_reg *er;
@@ -275,6 +282,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	unsigned long *__intel_perfmon_event_map;
 	int er_cnt = 0;
 #endif
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
@@ -351,6 +359,12 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->nr_numa_nodes = nr_numa_nodes;
 
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+	ret = smp_ihk_arch_get_perf_event(os->param);
+	if (ret) {
+		return ret;
+	}
+#else /* POSTK_DEBUG_ARCH_DEP_108 */
 #ifdef ENABLE_PERF
 	__pmu = (struct x86_pmu *)kallsyms_lookup_name("x86_pmu");
 	__hw_cache_event_ids = (unsigned long *)kallsyms_lookup_name("hw_cache_event_ids");
@@ -378,6 +392,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	memcpy(os->param->hw_cache_event_ids, __hw_cache_event_ids, sizeof(os->param->hw_cache_event_ids));
 	memcpy(os->param->hw_cache_extra_regs, __hw_cache_extra_regs, sizeof(os->param->hw_cache_extra_regs));
 #endif // ENABLE_PERF 
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
 			sizeof(*os->param));
@@ -543,14 +558,17 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 			i = 0;
 			list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+				const size_t csize = os_mem_chunk->size;
 
 				if (i) {
 					dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
 				}
 
 				dump_page->start = os_mem_chunk->addr;
-				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> 18);
-				map_end = (os_mem_chunk->size >> PAGE_SHIFT);
+				dump_page->map_count =
+					((csize + ((PAGE_SIZE * 64) - 1))
+							>> (PAGE_SHIFT + 6));
+				map_end = (csize >> PAGE_SHIFT);
 
 				for (index = 0; index < map_end; index++) {
 					if(MAP_INDEX(index) >= dump_page->map_count) {
@@ -584,9 +602,14 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	lwk_cpu_2_linux_cpu(os, 0);
 }
 
+#ifndef POSTK_DEBUG_ARCH_DEP_113 /* Separation of architecture dependent code. */
 static void ihk_smp_free_page_tables(pgd_t *pt)
 {
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d_t *p4d, _p4d;
+	int p4d_i;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	int pgd_i, pud_i, pmd_i;
@@ -598,35 +621,63 @@ static void ihk_smp_free_page_tables(pgd_t *pt)
 		pgd = ((pgd_t *)pt) + pgd_i;
 		if (pgd_none(*pgd) || !pgd_present(*pgd))
 			continue;
-
-		for (pud_i = 0; pud_i < PTRS_PER_PUD; ++pud_i) {
-			pud = ((pud_t *)pgd_page_vaddr(*pgd)) + pud_i;
-
-			if (pud_none(*pud) || !pud_present(*pud))
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+		for (p4d_i = 0; p4d_i < PTRS_PER_P4D; ++p4d_i) {
+			if (PTRS_PER_P4D == 1) {
+				_p4d = __p4d(pgd_val(*pgd));
+				p4d = &_p4d;
+			} else {
+				p4d = ((p4d_t *)pgd_page_vaddr(*pgd)) + p4d_i;
+			}
+			if (p4d_none(*p4d) || !p4d_present(*p4d))
 				continue;
 
-			for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
-				pmd = ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;
+#endif
+			for (pud_i = 0; pud_i < PTRS_PER_PUD; ++pud_i) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+				pud = ((pud_t *)p4d_page_vaddr(*p4d)) + pud_i;
+#else
+				pud = ((pud_t *)pgd_page_vaddr(*pgd)) + pud_i;
+#endif
 
-				if (pmd_none(*pmd) || !pmd_present(*pmd))
+				if (pud_none(*pud) || !pud_present(*pud))
 					continue;
 
-				if (pmd_large(*pmd))
-					continue;
+				for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
+					pmd = ((pmd_t *)pud_page_vaddr(*pud)) +
+						pmd_i;
 
-				dprintk("%s: freeing PGD %d: PUD %d: PMD %d\n",
-					__FUNCTION__, pgd_i, pud_i, pmd_i);
-				free_page(pmd_page_vaddr(*pmd));
+					if (pmd_none(*pmd) ||
+					    !pmd_present(*pmd))
+						continue;
+
+					if (pmd_large(*pmd))
+						continue;
+
+					dprintk("%s: freeing PGD %d: PUD %d: PMD %d\n",
+						__func__, pgd_i, pud_i, pmd_i);
+					free_page(pmd_page_vaddr(*pmd));
+				}
+
+				dprintk("%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\n",
+						__func__, pgd_i, pud_i,
+						pud_page_vaddr(*pud));
+				free_page(pud_page_vaddr(*pud));
 			}
-
-			dprintk("%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\n",
-					__FUNCTION__, pgd_i, pud_i, pud_page_vaddr(*pud));
-			free_page(pud_page_vaddr(*pud));
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+			dprintk("%s: freeing PGD %d: P4D %d: PUD %d: PMD @ 0x%lx\n",
+				__func__, pgd_i, p4d_i, pud_i,
+				pud_page_vaddr(*pud));
+			free_page(p4d_page_vaddr(*p4d));
 		}
-
-		dprintk("%s: freeing PGD %d\n",
-				__FUNCTION__, pgd_i);
+		if (PTRS_PER_P4D != 1) {
+			dprintk("%s: freeing PGD %d\n", __func__, pgd_i);
+			free_page(pgd_page_vaddr(*pgd));
+		}
+#else
+		dprintk("%s: freeing PGD %d\n", __func__, pgd_i);
 		free_page(pgd_page_vaddr(*pgd));
+#endif
 	}
 
 	free_page((unsigned long)pt);
@@ -637,6 +688,9 @@ int ihk_smp_map_kernel(pgd_t *pt,
 		phys_addr_t paddr)
 {
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d_t *p4d;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
@@ -653,8 +707,22 @@ int ihk_smp_map_kernel(pgd_t *pt,
 				(unsigned long)pgd);
 		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
 	}
-	
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d = p4d_offset(pgd, vaddr);
+	if (!p4d_present(*p4d)) {
+		pud = (pud_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pud)
+			goto err;
+		dprintk("%s: P4D: %d: PUD allocated: 0x%lx\n",
+				__func__,
+				(int)pgd_index(vaddr),
+				(unsigned long)pgd);
+		set_p4d(p4d, __p4d(__pa(pud) | _KERNPG_TABLE));
+	}
+	pud = pud_offset(p4d, vaddr);
+#else
 	pud = pud_offset(pgd, vaddr);
+#endif
 	if (!pud_present(*pud)) {
 		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
 		if (!pmd)
@@ -697,6 +765,9 @@ err:
 int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 {
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d_t *p4d;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
@@ -708,7 +779,16 @@ int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 		return VM_FAULT_OOM;
 	}
 	printk("%s: PGD: 0x%lx\n", __FUNCTION__, (unsigned long)pgd);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d = p4d_offset(pgd, address);
+	if (p4d_none(*p4d)) {
+		pr_warn("%s: no P4D for 0x%lx\n", __func__, address);
+		return VM_FAULT_OOM;
+	}
+	pud = pud_offset(p4d, address);
+#else
 	pud = pud_offset(pgd, address);
+#endif
 	if (!pud) {
 		printk("%s: no PUD for 0x%lx\n", __FUNCTION__, address);
 		return VM_FAULT_OOM;
@@ -738,6 +818,7 @@ int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 		(unsigned long)(pte_val(entry) & PTE_PFN_MASK));
 	return 0;
 }
+#endif /* !POSTK_DEBUG_ARCH_DEP_113 */
 
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
@@ -1089,6 +1170,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		eprintk("%s,already down\n", __FUNCTION__);
 		return 0;
 	}
+	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
 
 	/* Reset CPU cores used by this OS */
 	for (i = 0; i < SMP_MAX_CPUS; ++i) {
@@ -1138,7 +1220,6 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		kfree(os_mem_chunk);
 	}
 
-	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
 	if (os->numa_mapping) {
 		kfree(os->numa_mapping);
 		os->numa_mapping = NULL;
@@ -1313,7 +1394,8 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	os->status = BUILTIN_OS_STATUS_LOADING;
 	spin_unlock_irqrestore(&os->lock, flags);
 
-	strncpy(os->kernel_args, buf, sizeof(os->kernel_args));
+	strncpy(os->kernel_args, buf, sizeof(os->kernel_args) - 1);
+	os->kernel_args[sizeof(os->kernel_args) - 1] = '\0';
 	dprintk("%s,kernel_args=%s\n", __FUNCTION__, os->kernel_args);
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
@@ -1850,23 +1932,20 @@ static int smp_ihk_os_get_num_cpus(ihk_os_t ihk_os, void *priv)
 }
 
 
+#ifndef POSTK_DEBUG_ARCH_DEP_98 /* smp_ihk_os_set_ikc_map() move arch depend. */
 static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int ret = 0;
+	int i;
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_map;
 	unsigned long flags;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	char *string = NULL;
 	long len = strnlen_user((const char __user *)arg, 32767);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	char *string = (char *)arg;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	char *token;
 
 	dprintk("%s,set_ikc_map,arg=%s\n", __FUNCTION__, string);
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	if (len == 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
@@ -1883,7 +1962,6 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		ret = -EFAULT;
 		goto out;
 	}
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -1921,10 +1999,36 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 #else
 		for_each_cpu_mask(cpu, cpus_to_map) {
 #endif
-			/* TODO: check if CPU belongs to OS */
-			if (kstrtoint(ikc_cpu, 10, &ihk_smp_cpus[cpu].ikc_map_cpu)) {
+			unsigned int int_ikc_cpu = 0;
+			int st = 0;
+
+			if (kstrtoint(ikc_cpu, 10, &int_ikc_cpu)) {
+				pr_err("kstrtoint() failed. ikc_cpu=%s\n",
+					ikc_cpu);
 				ret = -EINVAL;
 				goto out;
+			}
+
+			if (int_ikc_cpu >= SMP_MAX_CPUS) {
+				pr_err("ikc_map included over SMP_MAX_CPUS(%d) number(%d).\n",
+					SMP_MAX_CPUS, int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			}
+			st = ihk_smp_cpus[int_ikc_cpu].status;
+
+			if (st == IHK_SMP_CPU_ASSIGNED) {
+				pr_err("ikc_map included McKernel-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else if (st != IHK_SMP_CPU_ONLINE) {
+				pr_err("ikc_map included Blank-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else {
+				ihk_smp_cpus[cpu].ikc_map_cpu = int_ikc_cpu;
 			}
 		}
 
@@ -1934,11 +2038,21 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	os->cpu_ikc_mapped = 1;
 
 out:
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	/* In case of no mapped, restore default setting */
+	if (os->cpu_ikc_mapped != 1) {
+		for (i = 0; i < SMP_MAX_CPUS; i++) {
+			if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+			    (ihk_smp_cpus[i].os != ihk_os)) {
+				continue;
+			}
+			ihk_smp_cpus[i].ikc_map_cpu = 0;
+		}
+	}
+
 	if (string) kfree(string);
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	return ret;
 }
+#endif /* !POSTK_DEBUG_ARCH_DEP_98 */
 
 static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
@@ -2921,15 +3035,11 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
 #endif // USE_TRY_TO_FREE_PAGES
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	void (*__drain_all_pages)(struct zone *) = NULL;
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 	void (*__drain_all_pages)(void) = NULL;
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-	void (*__drain_all_pages)(void) = NULL;
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 	size_t (*__sum_zone_node_page_state)(int node,
 					     enum zone_stat_item item);
@@ -2959,7 +3069,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 			(struct zonelist *, int, gfp_t, nodemask_t *))
 			kallsyms_lookup_name("try_to_free_pages");
 #endif // USE_TRY_TO_FREE_PAGES
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	__drain_all_pages = (void (*)(struct zone *))
 			kallsyms_lookup_name("drain_all_pages");
@@ -2967,10 +3076,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	__drain_all_pages = (void (*)(void))
 			kallsyms_lookup_name("drain_all_pages");
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-	__drain_all_pages = (void (*)(void))
-			kallsyms_lookup_name("drain_all_pages");
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 	__sum_zone_node_page_state = (void *)
 			kallsyms_lookup_name("sum_zone_node_page_state");
@@ -2984,15 +3089,11 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 #endif
 
 	if (__drain_all_pages) {
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 		__drain_all_pages(NULL);
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 		__drain_all_pages();
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-		__drain_all_pages();
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 	}
 
 	/* Shrink slab/slub caches */
@@ -3103,15 +3204,11 @@ retry:
 #endif // USE_TRY_TO_FREE_PAGES
 
 			if (__drain_all_pages) {
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 				__drain_all_pages(NULL);
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 				__drain_all_pages();
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-				__drain_all_pages();
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 			}
 
 #ifdef USE_TRY_TO_FREE_PAGES
@@ -4230,6 +4327,7 @@ out:
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 	int ret;
+	int cpu = 0;
 
 	INIT_LIST_HEAD(&ihk_mem_free_chunks);
 	INIT_LIST_HEAD(&ihk_mem_used_chunks);
@@ -4244,6 +4342,14 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 	memset(ihk_smp_cpus, 0, sizeof(ihk_smp_cpus));
 
+#if KERNEL_VERSION(4, 0, 0) <= LINUX_VERSION_CODE
+	for_each_cpu(cpu, cpu_online_mask) {
+#else
+	for_each_cpu_mask(cpu, *cpu_online_mask) {
+#endif
+		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
+	}
+
 	ret = smp_ihk_arch_init();
 
 	return ret;
@@ -4257,8 +4363,10 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 
 	/* Re-enable CPU cores */
 	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-		if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE)
+		if ((ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ONLINE) ||
+		    (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_NONE)) {
 			continue;
+		}
 
 		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
 
@@ -4333,19 +4441,6 @@ static int __init smp_module_init(void)
 	}
 
 	builtin_data.ihk_dev = ihkd;
-
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-		(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,5)))
-	/* NOTE: this is nasty, but we need to decrease the refcount because
-	 * after Linux 3.0 request_irq holds an extra reference to the module. 
-	 * This causes rmmod to fail and report the module is in use when one
-	 * tries to unload it. To overcome this, we drop one ref here and get
-	 * an extra one before free_irq in the module's exit code */
-	if (module_refcount(THIS_MODULE) == 2) {
-		module_put(THIS_MODULE);
-		this_module_put = 1;
-	}
-#endif
 
 	return 0;
 }

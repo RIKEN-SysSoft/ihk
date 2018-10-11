@@ -27,7 +27,19 @@ struct namespace_file {
 	int fd;
 };
 
+enum ihklib_os_query_mem_type {
+	IHKLIB_OS_QUERY_MEM_TOTAL,
+	IHKLIB_OS_QUERY_MEM_FREE
+};
+
+const char *ihklib_os_query_mem_type_str[] = {
+	[IHKLIB_OS_QUERY_MEM_TOTAL] = "MemTotal",
+	[IHKLIB_OS_QUERY_MEM_FREE] = "MemFree"
+};
+
 int ihklib_device_open(int index);
 int ihklib_os_open(int index);
+int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,
+			      const char *kind);
 
 #endif /* !defined(IHKLIB_PRIVATE_H_INCLUDED) */
