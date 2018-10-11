@@ -57,9 +57,11 @@ cpu_logical_map:
 	.skip	NR_CPUS * 8	/* array of the MPIDR and the core number */
 rdist_base_pa:
 	.skip	NR_CPUS * 8	/* GIC re-distributor register base addresses */
-nr_pmu_irq_affiniry:
+retention_state_flag_pa:
+	.quad	0		/* retention state flag address */
+nr_pmu_irq_affi:
 	.word	0		/* number of pmu affinity list elements. */
-pmu_irq_affiniry:
+pmu_irq_affi:
 	.skip	SMP_MAX_CPUS * 4	/* array of the pmu affinity list */
 cpu_start_body:
 	adr	x4, ihk_smp_trampoline_data	/* get ihk_smp_trampoline_data PA into x4 */

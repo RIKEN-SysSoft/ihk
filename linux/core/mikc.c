@@ -298,19 +298,48 @@ void ihk_ikc_linux_init_work_data(ihk_os_t ihk_os,
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
 
+#ifdef POSTK_DEBUG_ARCH_DEP_97 /* Make schedule_work() execute core designable */
+	os->work_function = f;
+#else /* POSTK_DEBUG_ARCH_DEP_97 */
 	INIT_WORK(&os->ikc_work, f);
+#endif /* POSTK_DEBUG_ARCH_DEP_97 */
 }
+
+#ifdef POSTK_DEBUG_ARCH_DEP_97 /* Make schedule_work() execute core designable */
+struct ikc_work_struct {
+	struct work_struct work;
+	ihk_os_t os;
+};
+#endif /* POSTK_DEBUG_ARCH_DEP_97 */
 
 /** \brief Schedule the work thread (Called from IHK-IKC) */
 void ihk_ikc_linux_schedule_work(ihk_os_t ihk_os)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
+#ifdef POSTK_DEBUG_ARCH_DEP_97 /* Make schedule_work() execute core designable */
+	struct ikc_work_struct *work;
+
+	work = kmalloc(sizeof(struct ikc_work_struct), GFP_KERNEL);
+	if (work == NULL) {
+		printk("%s: work_struct allocation failed.\n", __FUNCTION__);
+		return;
+	}
+	INIT_WORK(&work->work, os->work_function);
+	work->os = ihk_os;
+	schedule_work_on(smp_processor_id(), (struct work_struct *)work);
+#else /* POSTK_DEBUG_ARCH_DEP_97 */
 
 	schedule_work(&os->ikc_work);
+#endif /* POSTK_DEBUG_ARCH_DEP_97 */
 }
 
 /** \brief Get ihk_os_t from the work struct */
 ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work)
 {
+#ifdef POSTK_DEBUG_ARCH_DEP_97 /* Make schedule_work() execute core designable */
+	struct ikc_work_struct *ikc_work = (struct ikc_work_struct *)work;
+	return ikc_work->os;
+#else /* POSTK_DEBUG_ARCH_DEP_97 */
 	return container_of(work, struct ihk_host_linux_os_data, ikc_work);
+#endif /* POSTK_DEBUG_ARCH_DEP_97 */
 }

@@ -127,6 +127,10 @@ struct cpu_hw_events {
 
 /*
  * struct x86_pmu - generic x86 pmu
+ * TODO: add test with dwarf-extract-struct, comparing e.g.
+ * kernel/arch/x86/events/intel/intel-rapl-perf.ko.debug
+ * kmod/ihk-smp-x86_64.ko
+ * x86_pmu extra_regs
  */
 struct x86_pmu {
 	/*
@@ -139,9 +143,13 @@ struct x86_pmu {
 	void		(*enable_all)(int added);
 	void		(*enable)(struct perf_event *);
 	void		(*disable)(struct perf_event *);
-#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,4)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0) || \
+    (defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 4))
 	void		(*add)(struct perf_event *);
 	void		(*del)(struct perf_event *);
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
+	void		(*read)(struct perf_event *event);
 #endif
 	int		(*hw_config)(struct perf_event *event);
 	int		(*schedule_events)(struct cpu_hw_events *cpuc, int n, int *assign);
@@ -189,9 +197,17 @@ struct x86_pmu {
 	int		attr_rdpmc;
 	struct attribute **format_attrs;
 	struct attribute **event_attrs;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	struct attribute **caps_attrs;
+#endif
 
 	ssize_t		(*events_sysfs_show)(char *page, u64 config);
 	struct attribute **cpu_events;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+	unsigned long attr_freeze_on_smi;
+	struct attribute *attrs;
+#endif
 
 	/*
 	 * CPU Hotplug hooks
@@ -218,21 +234,30 @@ struct x86_pmu {
 			bts_active	:1,
 			pebs		:1,
 			pebs_active	:1,
-#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			pebs_broken	:1,
+			pebs_prec_dist	:1,
+			pebs_no_tlb     :1;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0) || \
+	defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 3)
 			pebs_broken	:1,
 			pebs_prec_dist	:1;
 #else
 			pebs_broken	:1;
 #endif
 	int		pebs_record_size;
-#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0) || \
+	defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 3)
 	int		pebs_buffer_size;
 #endif
 	void		(*drain_pebs)(struct pt_regs *regs);
 	struct event_constraint *pebs_constraints;
 	void		(*pebs_aliases)(struct perf_event *event);
 	int 		max_pebs_events;
-#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
+	unsigned long	large_pebs_flags;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0) || \
+	defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 3)
 	unsigned long	free_running_flags;
 #endif
 
@@ -244,21 +269,24 @@ struct x86_pmu {
 	u64		lbr_sel_mask;		   /* LBR_SELECT valid bits */
 	const int	*lbr_sel_map;		   /* lbr_select mappings */
 	bool		lbr_double_abort;	   /* duplicated lbr aborts */
-#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,4)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0) || \
+	defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 4)
 	bool		lbr_pt_coexist;		   /* (LBR|BTS) may coexist with PT */
 #endif
 
 	/*
 	 * Intel PT/LBR/BTS are exclusive
 	 */
-#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0) || \
+	defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 3)
 	atomic_t	lbr_exclusive[x86_lbr_exclusive_max];
 #endif
 
 	/*
 	 * AMD bits
 	 */
-#if RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0) || \
+	defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 3)
 	unsigned int	amd_nb_constraints : 1;
 #endif
 

@@ -21,9 +21,9 @@
 #include <asm/hw_irq.h>
 #include <linux/version.h>
 #include <linux/kallsyms.h>
-#include <asm/mc146818rtc.h>
+#include <linux/mc146818rtc.h>
 #include <asm/tlbflush.h>
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
 #include <asm/smpboot_hooks.h>
 #endif
 
@@ -122,6 +122,12 @@ spinlock_t *_vmap_area_lock;
 static void (*___insert_vmap_area)(struct vmap_area *va);
 static void (*___free_vmap_area)(struct vmap_area *va);
 
+static pgd_t *_init_level4_pgt;
+
+static unsigned long *_used_vectors;
+
+static int (*_ioremap_page_range)(unsigned long addr, unsigned long end,
+				  phys_addr_t phys_addr, pgprot_t prot);
 
 int ihk_smp_arch_symbols_init(void)
 {
@@ -178,6 +184,24 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!___free_vmap_area))
 		return -EFAULT;
 
+	_init_level4_pgt = (void *) kallsyms_lookup_name("init_top_pgt");
+	if (!_init_level4_pgt)
+		_init_level4_pgt =
+			(void *) kallsyms_lookup_name("init_level4_pgt");
+	if (WARN_ON(!_init_level4_pgt))
+		return -EFAULT;
+
+	_used_vectors = (void *) kallsyms_lookup_name("system_vectors");
+	if (!_used_vectors)
+		_used_vectors = (void *) kallsyms_lookup_name("used_vectors");
+	if (WARN_ON(!_used_vectors))
+		return -EFAULT;
+
+	_ioremap_page_range =
+		(void *)kallsyms_lookup_name("ioremap_page_range");
+	if (WARN_ON(!_ioremap_page_range))
+		return -EFAULT;
+
 	return 0;
 }
 
@@ -186,8 +210,7 @@ int ihk_smp_get_hw_id(int cpu)
 	return per_cpu(x86_cpu_to_apicid, cpu);
 }
 
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
 /* origin: arch/x86/kernel/smpboot.c */
 static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 {
@@ -197,17 +220,11 @@ static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 	CMOS_WRITE(0xa, 0xf);
 	spin_unlock_irqrestore(&rtc_lock, flags);
 	local_flush_tlb();
-	pr_debug("1.\n");
 	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_HIGH)) =
 		start_eip >> 4;
-	pr_debug("2.\n");
 	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_LOW)) =
 		start_eip & 0xf;
-	pr_debug("3.\n");
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,5)
-#warning smpboot_setup_warm_reset_vector() has been only tested up to 4.3.0 kernels
-#endif
 #endif
 
 static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
@@ -381,9 +398,9 @@ void smp_ihk_setup_trampoline(void *priv)
 		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
 	}
 
-	os->param->linux_kernel_pgt_phys = __pa(&init_level4_pgt[0]);
-	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n",
-		__FUNCTION__, &init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
+	os->param->linux_kernel_pgt_phys = __pa(&_init_level4_pgt[0]);
+	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n", __func__,
+		&_init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
 
 	/* Make a temporary copy of the Linux trampoline */
 	if (using_linux_trampoline) {
@@ -509,7 +526,7 @@ int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	if (vmap_area_taken)
 		return -1;
 
-	if (ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
+	if (_ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
 				phys, PAGE_KERNEL_EXEC) < 0) {
 		printk("%s: error: mapping LWK to Linux kernel space\n",
 				__FUNCTION__);
@@ -578,11 +595,58 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 	return 0;
 }
 
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+static long get_dump_num_mem_areas(struct smp_os_data *os)
+{
+	struct ihk_dump_page *dump_page = NULL;
+	int i, j, k, mem_num;
+	unsigned long bit_count;
+
+	while (1) {
+		if (IHK_DUMP_PAGE_SET_COMPLETED == os->param->dump_page_set.completion_flag) {
+			break;
+		}
+		msleep(10); /* 10ms sleep */
+	}
+	dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
+
+	for (i = 0, mem_num = 0; i < os->param->dump_page_set.count; i++) {
+		if (i) {
+			dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+		}
+
+		for (j = 0, bit_count = 0; j < dump_page->map_count; j++) {
+			for (k = 0; k < 64; k++) {
+				if ((dump_page->map[j] >> k) & 0x1) {
+					bit_count++;
+				}
+				else {
+					if (bit_count) {
+						mem_num++;
+						bit_count = 0;
+					}
+				}
+			}
+		}
+
+		if (bit_count) {
+			mem_num++;
+		}
+	}
+	return (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));
+}
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 {
 	struct smp_os_data *os = priv;
 	struct ihk_dump_page *dump_page = NULL;
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	int i,j,k,index;
+	long mem_size;
+#else
 	int i,j,k,mem_num,index;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	struct ihk_os_mem_chunk *os_mem_chunk;
 	unsigned long map_start, bit_count;
 	dump_mem_chunks_t *mem_chunks;
@@ -614,6 +678,9 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 			break;
 
 		case DUMP_QUERY_NUM_MEM_AREAS:
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+			args->size = get_dump_num_mem_areas(os);
+#else
 			while (1) {
 				if (IHK_DUMP_PAGE_SET_COMPLETED == os->param->dump_page_set.completion_flag)
 					break;
@@ -649,11 +716,22 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 
 			args->size = (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));
 
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 			break;
 
 		case DUMP_QUERY:
 			i = 0;
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+			mem_size = get_dump_num_mem_areas(os);
+			mem_chunks = kmalloc(mem_size, GFP_KERNEL);
+			if (!mem_chunks) {
+				printk("%s: memory allocation failed.\n", __FUNCTION__);
+				return -ENOMEM;
+			}
+			memset(mem_chunks, 0, mem_size);
+#else
 			mem_chunks = args->buf;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 			/* Collect memory information */
 			list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
@@ -669,11 +747,31 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 			/* See load_file() for the calculation below */
 			mem_chunks->kernel_base =
 				(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+
+			if (copy_to_user(args->buf, mem_chunks, mem_size)) {
+				printk("%s: copy_to_user failed.\n", __FUNCTION__);
+				kfree(mem_chunks);
+				return -EFAULT;
+			}
+			kfree(mem_chunks);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 			break;
 
 		case DUMP_QUERY_MEM_AREAS:
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+			mem_size = get_dump_num_mem_areas(os);
+			mem_chunks = kmalloc(mem_size, GFP_KERNEL);
+			if (!mem_chunks) {
+				printk("%s: memory allocation failed.\n", __FUNCTION__);
+				return -ENOMEM;
+			}
+			memset(mem_chunks, 0, mem_size);
+
+#else
 
 			mem_chunks = args->buf;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 			dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
 
 			for (i = 0, index = 0; i < os->param->dump_page_set.count; i++) {
@@ -714,6 +812,14 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 			mem_chunks->kernel_base =
 				(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
 
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+			if (copy_to_user(args->buf, mem_chunks, mem_size)) {
+				printk("%s: copy_to_user failed.\n", __FUNCTION__);
+				kfree(mem_chunks);
+				return -EFAULT;
+			}
+			kfree(mem_chunks);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 			break;
 
 		case DUMP_READ:
@@ -769,6 +875,8 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		break;
 	case BUILTIN_OS_STATUS_HUNGUP:
 		return IHK_OS_STATUS_HUNGUP;
+	case BUILTIN_OS_STATUS_SHUTDOWN:
+		return IHK_OS_STATUS_SHUTDOWN;
 	default:
 		return IHK_OS_STATUS_NOT_BOOTED;
 	}
@@ -954,7 +1062,7 @@ static struct irq_chip ihk_irq_chip = {
 static int
 vector_is_used(int vector, int core) {
 	int rtn = 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 					per_cpu_offset(core)));
@@ -962,27 +1070,31 @@ vector_is_used(int vector, int core) {
 /* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0) */
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	if (vectors[vector] != VECTOR_UNUSED) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+		pr_info("IHK-SMP: IRQ vector %d in core %d: used %p\n",
 				vector, core, vectors[vector]);
 		rtn = 1;
 	}
 #else
 	if (vectors[vector] != -1) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+		pr_info("IHK-SMP: IRQ vector %d in core %d: used %d\n",
 				vector, core, vectors[vector]);
 		rtn = 1;
 	}
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0) */
 	return rtn;
 }
 
 static void
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+set_vector(int vector, int core, struct irq_desc *desc) {
+#else
 set_vector(int vector, int core) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 						per_cpu_offset(core)));
@@ -991,7 +1103,7 @@ set_vector(int vector, int core) {
 				per_cpu_offset(core)));
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	if (vectors[vector] == VECTOR_UNUSED) {
 		dprintk(KERN_INFO "IHK-SMP: fixed vector_irq for %d in core %d\n", vector, core);
 		vectors[vector] = desc;
@@ -1006,7 +1118,7 @@ set_vector(int vector, int core) {
 
 static void
 release_vector(int vector, int core) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
@@ -1016,7 +1128,7 @@ release_vector(int vector, int core) {
 #endif
 
 	/* Release IRQ vector */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	vectors[vector] = VECTOR_UNUSED;
 #else
 	vectors[vector] = -1;
@@ -1101,7 +1213,7 @@ retry_trampoline:
 		struct irq_desc *desc;
 #endif
 
-		if (test_bit(vector, used_vectors)) {
+		if (test_bit(vector, _used_vectors)) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: used\n", vector);
 			continue;
 		}
@@ -1164,10 +1276,25 @@ retry_trampoline:
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
 			continue;
 		}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+		/* drop the module ref from request_irq, and pretend we do not
+		 * own the irq anymore so free_irq will not bug the refcount
+		 * Only do this if we own the vector, this apparently is not
+		 * always true ?!
+		 */
+		if (desc->owner == THIS_MODULE) {
+			module_put(THIS_MODULE);
+			desc->owner = NULL;
+		}
+#endif
 
 		/* Pretend a real external interrupt */
 		for (i = 0; i < nr_cpu_ids; i++) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+			set_vector(vector, i, desc);
+#else
 			set_vector(vector, i);
+#endif
 		}
 		break;
 	}
@@ -1196,18 +1323,12 @@ retry_trampoline:
 	error = collect_topology();
 	if (error) {
 		printk(KERN_ERR "IHK-SMP: error: collecting topology information failed\n");
-		free_irq(ihk_smp_irq, NULL);
 		goto error_free_irq;
 	}
 
 	return error;
 
 error_free_irq:
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
 
 	free_irq(ihk_smp_irq, NULL);
 
@@ -1515,6 +1636,143 @@ out:
 	return error;
 } /* collect_topology() */
 
+#ifdef POSTK_DEBUG_ARCH_DEP_98 /* smp_ihk_os_set_ikc_map() move arch depend. */
+int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+	int ret = 0;
+	struct smp_os_data *os = priv;
+	cpumask_t cpus_to_map;
+	unsigned long flags;
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	char *string = NULL;
+	long len = strnlen_user((const char __user *)arg, 32767);
+#else /* POSTK_DEBUG_ARCH_DEP_46 */
+	char *string = (char *)arg;
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	char *token;
+
+	dprintk("%s,set_ikc_map,arg=%s\n", __FUNCTION__, string);
+
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	if (len == 0) {
+		printk("%s: invalid request length\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	string = kmalloc(len + 1, GFP_KERNEL);
+	if (!string) {
+		printk("%s: error: allocating request string\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(string, (char *)arg, len + 1)) {
+		printk("%s: error: copying request string\n", __FUNCTION__);
+		ret = -EFAULT;
+		goto out;
+	}
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+
+	spin_lock_irqsave(&os->lock, flags);
+	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+		spin_unlock_irqrestore(&os->lock, flags);
+		ret = -EBUSY;
+		goto out;
+	}
+	spin_unlock_irqrestore(&os->lock, flags);
+
+	token = strsep(&string, "+");
+	while (token) {
+		char *cpu_list;
+		char *ikc_cpu;
+		int cpu;
+
+		cpu_list = strsep(&token, ":");
+		if (!cpu_list) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		memset(&cpus_to_map, 0, sizeof(cpus_to_map));
+		cpulist_parse(cpu_list, &cpus_to_map);
+
+		ikc_cpu = strsep(&token, ":");
+		if (!ikc_cpu) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		printk("%s: %s -> %s\n", __FUNCTION__, cpu_list, ikc_cpu);
+		/* Store IKC target CPU */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+		for_each_cpu(cpu, &cpus_to_map) {
+#else
+		for_each_cpu_mask(cpu, cpus_to_map) {
+#endif
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+			unsigned int int_ikc_cpu = 0;
+			int st = 0;
+
+			if (kstrtoint(ikc_cpu, 10, &int_ikc_cpu)) {
+				printk("kstrtoint() failed\n");
+				ret = -EINVAL;
+				goto out;
+			}
+
+			if (SMP_MAX_CPUS <= int_ikc_cpu) {
+				printk("ikc_map included over SMP_MAX_CPUS(%d) number(%d).\n",
+					SMP_MAX_CPUS, int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			}
+			st = ihk_smp_cpus[int_ikc_cpu].status;
+
+			if (st == IHK_SMP_CPU_ASSIGNED) {
+				printk("ikc_map included McKernel-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else if (st != IHK_SMP_CPU_ONLINE) {
+				printk("ikc_map included Blank-core number(%d).\n",
+					int_ikc_cpu);
+				ret = -EINVAL;
+				goto out;
+			} else {
+				ihk_smp_cpus[cpu].ikc_map_cpu = int_ikc_cpu;
+			}
+#else /* POSTK_DEBUG_TEMP_FIX_90 */
+			/* TODO: check if CPU belongs to OS */
+			if (kstrtoint(ikc_cpu, 10, &ihk_smp_cpus[cpu].ikc_map_cpu)) {
+				ret = -EINVAL;
+				goto out;
+			}
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
+		}
+
+		token = strsep(&string, "+");
+	}
+	/* Mapping has been requested */
+	os->cpu_ikc_mapped = 1;
+
+out:
+#ifdef POSTK_DEBUG_TEMP_FIX_90 /* Add correspondence when illegal value is specified for ikc_map */
+	/* In case of no mapped, restore default setting */
+	if (os->cpu_ikc_mapped != 1) {
+		for (i = 0; i < SMP_MAX_CPUS; i++) {
+			if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+			    (ihk_smp_cpus[i].os != ihk_os)) {
+				continue;
+			}
+			ihk_smp_cpus[i].ikc_map_cpu = 0;
+		}
+	}
+#endif /* POSTK_DEBUG_TEMP_FIX_90 */
+#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
+	if (string) kfree(string);
+#endif /* POSTK_DEBUG_ARCH_DEP_46 */
+	return ret;
+}
+#endif /* POSTK_DEBUG_ARCH_DEP_98 */
+
 int ihk_smp_reset_cpu(int phys_apicid)
 {
 	unsigned long send_status;
@@ -1586,11 +1844,6 @@ void smp_ihk_arch_exit(void)
 	}
 #endif
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
 	free_irq(ihk_smp_irq, NULL);
 
 #ifdef CONFIG_SPARSE_IRQ
@@ -1610,3 +1863,206 @@ void smp_ihk_arch_exit(void)
 		           ident_npages_order);
 	}
 }
+
+#ifdef POSTK_DEBUG_ARCH_DEP_108 /* move arch-depends code. */
+#ifdef ENABLE_PERF
+int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
+{
+	struct x86_pmu *__pmu;
+	struct extra_reg *er;
+	unsigned long *__hw_cache_event_ids;
+	unsigned long *__hw_cache_extra_regs;
+	unsigned long *__intel_perfmon_event_map;
+	int i, er_cnt = 0;
+
+	__pmu = (struct x86_pmu *)kallsyms_lookup_name("x86_pmu");
+	__hw_cache_event_ids = (unsigned long *)kallsyms_lookup_name("hw_cache_event_ids");
+	__hw_cache_extra_regs = (unsigned long *)kallsyms_lookup_name("hw_cache_extra_regs");
+	__intel_perfmon_event_map = (unsigned long *)kallsyms_lookup_name("intel_perfmon_event_map");
+
+	if (__pmu->extra_regs) {
+		er = __pmu->extra_regs;
+		for (i = 0; er->msr; er++) {
+			param->ereg_event[i] = er->event;
+			param->ereg_msr[i] = er->msr;
+			param->ereg_valid_mask[i] = er->valid_mask;
+			param->ereg_idx[i] = er->idx;
+			er_cnt++;
+			i++;
+		}
+	}
+
+	if (er_cnt > PERF_EXTRA_REG_MAX) {
+		printk("IHK: number os extra_reg is too many .\n");
+		return -EINVAL;
+	}
+	param->nr_extra_regs = er_cnt;
+	memcpy(param->hw_event_map, __intel_perfmon_event_map, sizeof(param->hw_event_map));
+	memcpy(param->hw_cache_event_ids, __hw_cache_event_ids, sizeof(param->hw_cache_event_ids));
+	memcpy(param->hw_cache_extra_regs, __hw_cache_extra_regs, sizeof(param->hw_cache_extra_regs));
+
+	return 0;
+}
+#else /* ENABLE_PERF */
+int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
+{
+	return 0;
+}
+#endif /* ENABLE_PERF */
+#endif /* POSTK_DEBUG_ARCH_DEP_108 */
+
+#ifdef POSTK_DEBUG_ARCH_DEP_113 /* Separation of architecture dependent code. */
+void ihk_smp_free_page_tables(pgd_t *pt)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	int pgd_i, pud_i, pmd_i;
+
+	if (!pt)
+		return;
+
+	for (pgd_i = 0; pgd_i < PTRS_PER_PGD; ++pgd_i) {
+		pgd = ((pgd_t *)pt) + pgd_i;
+		if (pgd_none(*pgd) || !pgd_present(*pgd))
+			continue;
+
+		for (pud_i = 0; pud_i < PTRS_PER_PUD; ++pud_i) {
+			pud = ((pud_t *)pgd_page_vaddr(*pgd)) + pud_i;
+
+			if (pud_none(*pud) || !pud_present(*pud))
+				continue;
+
+			for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
+				pmd = ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;
+
+				if (pmd_none(*pmd) || !pmd_present(*pmd))
+					continue;
+
+				if (pmd_large(*pmd))
+					continue;
+
+				dprintk("%s: freeing PGD %d: PUD %d: PMD %d\n",
+					__FUNCTION__, pgd_i, pud_i, pmd_i);
+				free_page(pmd_page_vaddr(*pmd));
+			}
+
+			dprintk("%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\n",
+					__FUNCTION__, pgd_i, pud_i, pud_page_vaddr(*pud));
+			free_page(pud_page_vaddr(*pud));
+		}
+
+		dprintk("%s: freeing PGD %d\n",
+				__FUNCTION__, pgd_i);
+		free_page(pgd_page_vaddr(*pgd));
+	}
+
+	free_page((unsigned long)pt);
+}
+
+int ihk_smp_map_kernel(pgd_t *pt, unsigned long vaddr, phys_addr_t paddr)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	int result = -ENOMEM;
+
+	pgd = pt + pgd_index(vaddr);
+	if (!pgd_present(*pgd)) {
+		pud = (pud_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pud)
+			goto err;
+		dprintk("%s: PGD: %d: PUD allocated: 0x%lx\n",
+				__FUNCTION__,
+				(int)pgd_index(vaddr),
+				(unsigned long)pgd);
+		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
+	}
+	
+	pud = pud_offset(pgd, vaddr);
+	if (!pud_present(*pud)) {
+		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pmd)
+			goto err;
+		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
+		dprintk("%s: PGD: %d: PUD: %d: PMD allocated: 0x%lx\n",
+				__FUNCTION__,
+				(int)pgd_index(vaddr), (int)pud_index(vaddr),
+				(unsigned long)pmd);
+	}
+	pmd = pmd_offset(pud, vaddr);
+
+	if (pmd_present(*pmd) && pmd_large(*pmd)) {
+		printk("%s: ERROR: mapping 0x%lx: PMD is busy\n",
+			__FUNCTION__, vaddr);
+		return -EBUSY;
+	}
+
+	/* Large page aligned and no mapping yet? Map it large then */
+	if (!pmd_present(*pmd) &&
+			!(vaddr & (IHK_SMP_LARGE_PAGE - 1)) &&
+			!(paddr & (IHK_SMP_LARGE_PAGE - 1))) {
+		set_pmd(pmd, pfn_pmd(paddr >> PAGE_SHIFT, PAGE_KERNEL_LARGE_EXEC));
+	}
+	else {
+		if (!pmd_present(*pmd)) {
+			pte = (pte_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+			if (!pte)
+				goto err;
+			set_pmd(pmd, __pmd(__pa(pte) | _KERNPG_TABLE));
+		}
+		pte = pte_offset_kernel(pmd, vaddr);
+		set_pte(pte, pfn_pte(paddr >> PAGE_SHIFT, PAGE_KERNEL_EXEC));
+	}
+	return 0;
+err:
+	return result;
+}
+
+int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	pte_t entry;
+
+	pgd = pgd_offset(mm, address);
+	if (!pgd) {
+		printk("%s: no PGD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PGD: 0x%lx\n", __FUNCTION__, (unsigned long)pgd);
+	pud = pud_offset(pgd, address);
+	if (!pud) {
+		printk("%s: no PUD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PUD: 0x%lx\n", __FUNCTION__, (unsigned long)pud);
+	pmd = pmd_offset(pud, address);
+	if (!pmd) {
+		printk("%s: no PMD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PMD: 0x%lx\n", __FUNCTION__, (unsigned long)pmd);
+	pte = pte_offset_map(pmd, address);
+	if (!pte) {
+		printk("%s: no PTE for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	entry = *pte;
+
+	if (!pte_present(entry)) {
+		printk("%s: non-present PTE for 0x%lx\n", __FUNCTION__, address);
+		return -1;
+	}
+
+	printk("%s: 0x%lx -> 0x%lx\n",
+		__FUNCTION__,
+		address,
+		(unsigned long)(pte_val(entry) & PTE_PFN_MASK));
+	return 0;
+}
+#endif /* !POSTK_DEBUG_ARCH_DEP_113 */
+

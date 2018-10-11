@@ -91,7 +91,7 @@ int ihk_ikc_queue_is_full(struct ihk_ikc_queue_head *q)
 
 	barrier();
 
-	if ((w - r) == q->pktcount)
+	if ((w - r) == (q->pktcount - 1))
 		return 1;
 
 	return 0;
@@ -121,8 +121,8 @@ retry:
 	dkprintf("%s: queue %p r: %llu, m: %llu\n",
 			__FUNCTION__, (void *)virt_to_phys(q), r, m);
 
-	memcpyl(packet, (char *)q + sizeof(*q) + ((r % q->pktcount) * q->pktsize),
-			q->pktsize);
+	memcpyl(packet,	(char *)q + sizeof(*q) +
+		((r % q->pktcount) * q->pktsize), q->pktsize);
 
 	return 0;
 }
@@ -171,7 +171,7 @@ retry:
 	barrier();
 
 	/* Is the queue full? */
-	if ((w - r) == q->pktcount) {
+	if ((w - r) == (q->pktcount - 1)) {
 		/* Did we run out of attempts? */
 		if (++attempt > IHK_IKC_WRITE_QUEUE_RETRY) {
 			kprintf("%s: queue %p r: %llu, w: %llu is full\n",
@@ -286,17 +286,20 @@ retry_alloc:
 	return p;
 }
 
-void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channel_desc *c)
+void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p)
 {
 	unsigned long flags;
+	struct ihk_ikc_channel_desc *c;
 
 	if (!p) {
 		return;
 	}
 
+	c = p->header.channel;
+
 	if (!c) {
-		kprintf("%s: WARNING: can't release on NULL channel\n",
-				__FUNCTION__);
+		kprintf("%s: WARNING: channel of packet (%p) is NULL\n",
+			__func__, p);
 		ihk_ikc_free(p);
 		return;
 	}
@@ -307,7 +310,6 @@ void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channe
 	dkprintf("%s: packet %p released to pool on channel %p %s\n",
 			__FUNCTION__, p, c, c == c->master ? "(master)" : "");
 }
-
 
 void ihk_ikc_channel_set_cpu(struct ihk_ikc_channel_desc *c, int cpu)
 {
@@ -465,6 +467,16 @@ int ihk_ikc_recv(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 #endif
 	if (ihk_ikc_channel_enabled(channel)) {
 		r = ihk_ikc_read_queue(channel->recv.queue, p, opt);
+
+		/* We set channel here instead of setting it on
+		 * allocation and skipping those bytes when receiving
+		 * because we can ignore the overhead of 8-byte redundant
+		 * copy
+		 */
+		if (!r) {
+			((struct ihk_ikc_packet_header *)p)->channel = channel;
+		}
+
 		/* XXX: Optimal interrupt */
 		if (!(opt & IKC_NO_NOTIFY)) {
 			ihk_ikc_notify_remote_read(channel);
@@ -527,8 +539,9 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 	}
 
 	if ((r = ihk_ikc_recv(channel, p, opt | IKC_NO_NOTIFY)) != 0) {
-		kprintf("%s: ERROR: ihk_ikc_recv returned %d\n", __FUNCTION__, r);
-		ihk_ikc_free(p);
+		kprintf("%s: WARNING: ihk_ikc_recv returned %d%s\n",
+			__func__, r, r == -1 ? " (empty queue)" : "");
+		ihk_ikc_release_packet((struct ihk_ikc_free_packet *)p);
 		goto out;
 	}
 

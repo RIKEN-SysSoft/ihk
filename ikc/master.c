@@ -252,7 +252,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
 		break;
 	}
 
-	ihk_ikc_release_packet(__packet, c);
+	ihk_ikc_release_packet((struct ihk_ikc_free_packet *)__packet);
 
 	return ret;
 }

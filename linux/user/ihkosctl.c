@@ -485,11 +485,17 @@ static int do_query(int fd)
 #define RESULT_LEN	16384
 static int do_query_free_mem(int fd)
 {
-	int ret = 0, ret_internal;
+	int ret;
 	char result[RESULT_LEN];
-	ret_internal = _ihklib_os_query_free_mem(atol(__argv[1]), result, sizeof(result));
-	IHKOSCTL_CHKANDJUMP(ret_internal != 0, "_ihklib_os_query_free_mem", -1);
+
+	ret = ihklib_os_query_mem_sysfs(atol(__argv[1]), result,
+					sizeof(result),
+					ihklib_os_query_mem_type_str[IHKLIB_OS_QUERY_MEM_FREE]);
+	IHKOSCTL_CHKANDJUMP(ret != 0,
+			    "ihklib_os_query_mem_sysfs", -1);
 	printf("%s\n", result);
+
+	ret = 0;
  fn_exit:
 	return ret;
  fn_fail:

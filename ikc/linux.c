@@ -73,6 +73,9 @@ static void ikc_work_func(struct work_struct *work)
 {
 	ihk_os_t os = ihk_ikc_linux_get_os_from_work(work);
 	__ihk_ikc_reception_handler(os);
+#ifdef POSTK_DEBUG_ARCH_DEP_97 /* Make schedule_work() execute core designable */
+	kfree(work);
+#endif /* POSTK_DEBUG_ARCH_DEP_97 */
 }
 
 /** \brief IKC interrupt handler (interrupt context) */
