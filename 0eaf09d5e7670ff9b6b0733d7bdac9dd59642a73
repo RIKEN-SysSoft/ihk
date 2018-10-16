@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d7f40702_3e8bc439",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1929,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-16T14:06:36Z",
+      "side": 1,
+      "message": "print ikc_cpu here, or user will have no idea what to fix",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2a10a52e_708c7d0f",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1946,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-16T14:06:36Z",
+      "side": 1,
+      "message": "(for all three gotos) it might help to just remember the error and keep going, to print all errors at once; should be trivial since ret is never reset and you do revert the ikc map on error",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
