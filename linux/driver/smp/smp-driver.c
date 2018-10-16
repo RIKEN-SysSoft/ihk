@@ -1856,17 +1856,12 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	struct smp_os_data *os = priv;
 	cpumask_t cpus_to_map;
 	unsigned long flags;
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	char *string = NULL;
 	long len = strnlen_user((const char __user *)arg, 32767);
-#else /* POSTK_DEBUG_ARCH_DEP_46 */
-	char *string = (char *)arg;
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 	char *token;
 
 	dprintk("%s,set_ikc_map,arg=%s\n", __FUNCTION__, string);
 
-#ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	if (len == 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
@@ -1883,7 +1878,6 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		ret = -EFAULT;
 		goto out;
 	}
-#endif /* POSTK_DEBUG_ARCH_DEP_46 */
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
