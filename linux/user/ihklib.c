@@ -1809,7 +1809,7 @@ int ihk_os_getrusage(int index, void *rusage, size_t size_rusage)
 
 int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 {
-	int ret = 0, ret_ioctl;
+	int ret;
 	int fd = -1;
 
 	if ((fd = ihklib_os_open(index)) < 0) {
@@ -1819,13 +1819,15 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
+	CHKANDJUMP(ret != 0, -errno, "ioctl failed\n");
 
-	ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
-	CHKANDJUMP(ret_ioctl < 0, -errno, "ioctl failed\n");
+	/* Note that IHK_OS_AUX_PERF_SET updates
+	 * usrdata->perf_event_num with # of registered events
+	 */
+	ret = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
+	CHKANDJUMP(ret < 0, -errno, "ioctl failed\n");
 
-	ret = ret_ioctl;
  out:
 	if (fd != -1) {
 		close(fd);
