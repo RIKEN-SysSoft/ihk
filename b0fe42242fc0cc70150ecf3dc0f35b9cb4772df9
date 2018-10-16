@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "511a9d8a_ad84eb50",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-16T11:35:03Z",
+      "side": 1,
+      "message": "same group tags nitpick",
+      "revId": "b0fe42242fc0cc70150ecf3dc0f35b9cb4772df9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
