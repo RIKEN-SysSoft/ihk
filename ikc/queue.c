@@ -295,8 +295,6 @@ void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channe
 	}
 
 	if (!c) {
-		kprintf("%s: WARNING: can't release on NULL channel\n",
-				__FUNCTION__);
 		ihk_ikc_free(p);
 		return;
 	}
