@@ -2455,6 +2455,10 @@ int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
 {
 	struct ihk_host_linux_os_data *os;
 
+	if (ihk_os == NULL) {
+		return -EFAULT;
+	}
+
 	/*
 	 * Look up IHK OS structure
 	 * TODO: iterate all possible indeces, currently only for OS 0
