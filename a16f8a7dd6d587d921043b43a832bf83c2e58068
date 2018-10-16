@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "8a8b592a_c2a1a841",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-16T13:39:42Z",
+      "side": 1,
+      "message": "I had to look at the spreadsheet to understand this sentence. \"... when ikc_map is specified without host core #0\" or \"not including core #0\" would be better",
+      "revId": "a16f8a7dd6d587d921043b43a832bf83c2e58068",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
