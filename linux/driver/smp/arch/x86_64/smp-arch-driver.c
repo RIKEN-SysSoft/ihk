@@ -768,6 +768,8 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		break;
 	case BUILTIN_OS_STATUS_HUNGUP:
 		return IHK_OS_STATUS_HUNGUP;
+	case BUILTIN_OS_STATUS_SHUTDOWN:
+		return IHK_OS_STATUS_SHUTDOWN;
 	default:
 		return IHK_OS_STATUS_NOT_BOOTED;
 	}
