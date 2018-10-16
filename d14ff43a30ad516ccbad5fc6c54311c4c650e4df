@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2c1fbdb6_23406ae6",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-16T10:23:42Z",
+      "side": 1,
+      "message": "Oh, good idea. If you\u0027re going to add these please do not put an empty line between the tags; some tool expect all tags to be grouped together at the end of the commit message, in a single paragraph.\nthanks!",
+      "revId": "d14ff43a30ad516ccbad5fc6c54311c4c650e4df",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
