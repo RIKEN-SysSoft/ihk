@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "de015abf_d26edf94",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-16T11:59:23Z",
+      "side": 1,
+      "message": "ERROR: open brace \u0027{\u0027 following function definitions go on the next line\n+static int ihkmond_os_open(int os_index) {",
+      "revId": "38c0ca89b1e9759db99a019792ab43dfae0ec527",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4aa8d224_a0978f4a",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 132,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-16T11:59:23Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\teprintf(\"Warning: %s failed %d times\\n\", __FUNCTION__, i);",
+      "revId": "38c0ca89b1e9759db99a019792ab43dfae0ec527",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
