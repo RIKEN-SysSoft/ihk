@@ -549,7 +549,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 				}
 
 				dump_page->start = os_mem_chunk->addr;
-				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> 18);
+				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> (PAGE_SHIFT + 6));
 				map_end = (os_mem_chunk->size >> PAGE_SHIFT);
 
 				for (index = 0; index < map_end; index++) {
