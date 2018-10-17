@@ -24,6 +24,7 @@
 #include <linux/limits.h>
 #include <sched.h>
 #include <linux/version.h>
+#include <linux/sched.h>
 #include <config.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihklib.h>
