@@ -19,6 +19,74 @@
     },
     {
       "key": {
+        "uuid": "9e86041b_a04a6043",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1929,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-17T05:47:16Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"kstrtoint() failed\\n\");",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6a0426b7_d4a8ba33",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1934,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-17T05:47:16Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+\t\t\tif (SMP_MAX_CPUS \u003c\u003d int_ikc_cpu) {",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ecf53ed8_6b8a24a9",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1935,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-17T05:47:16Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"ikc_map included over SMP_MAX_CPUS(%d) number(%d).\\n\",",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3d559cf2_31dba001",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1943,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-17T05:47:16Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"ikc_map included McKernel-core number(%d).\\n\",",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "2a10a52e_708c7d0f",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 1
@@ -30,6 +98,57 @@
       "writtenOn": "2018-10-16T14:06:36Z",
       "side": 1,
       "message": "(for all three gotos) it might help to just remember the error and keep going, to print all errors at once; should be trivial since ret is never reset and you do revert the ikc map on error",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e74bf629_8ddb2e77",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4280,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-17T05:47:16Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,0,0)",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c741d33c_038763c0",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4280,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-17T05:47:16Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,0,0)\n                                           ^",
+      "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "94ae8878_8ee67513",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 4280,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-17T05:47:16Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,0,0)\n                                             ^",
       "revId": "0eaf09d5e7670ff9b6b0733d7bdac9dd59642a73",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
