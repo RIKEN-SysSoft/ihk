@@ -24,6 +24,9 @@
 #include <linux/limits.h>
 #include <sched.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
+#include <linux/sched.h>
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) */
 #include <config.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihklib.h>
