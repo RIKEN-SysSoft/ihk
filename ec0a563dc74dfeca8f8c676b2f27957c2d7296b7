@@ -2,6 +2,57 @@
   "comments": [
     {
       "key": {
+        "uuid": "9acbdc35_8b7769f7",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-18T04:05:36Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,6,0)\n                                           ^",
+      "revId": "ec0a563dc74dfeca8f8c676b2f27957c2d7296b7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "456e595f_e13d713d",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-18T04:05:36Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,6,0)",
+      "revId": "ec0a563dc74dfeca8f8c676b2f27957c2d7296b7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1215a4ec_143b3632",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-18T04:05:36Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,6,0)\n                                             ^",
+      "revId": "ec0a563dc74dfeca8f8c676b2f27957c2d7296b7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "18a59c49_b0e03c54",
         "filename": "linux/user/ihklib.c",
         "patchSetId": 1
