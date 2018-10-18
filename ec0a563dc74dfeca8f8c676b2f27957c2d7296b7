@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "18a59c49_b0e03c54",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 28,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-18T01:06:46Z",
+      "side": 1,
+      "message": "This header exists since 2.6.12 - let\u0027s always include it, even if we only need it later, to not add unnecessary version checks that make the code more difficult to read",
+      "revId": "ec0a563dc74dfeca8f8c676b2f27957c2d7296b7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
