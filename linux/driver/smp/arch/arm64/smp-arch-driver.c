@@ -33,9 +33,6 @@
 #endif
 #include <linux/psci.h>
 #include <linux/fs.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
-#include <linux/kallsyms.h>
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0) */
 #include <uapi/linux/psci.h>
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
