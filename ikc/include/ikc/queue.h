@@ -75,6 +75,10 @@ struct ihk_ikc_channel_desc {
 	ihk_spinlock_t             packet_pool_lock;
 };
 
+struct ihk_ikc_packet { /* Super class */
+	struct ihk_ikc_channel_desc *channel;
+};
+
 struct ihk_ikc_free_packet *ihk_ikc_alloc_packet(struct ihk_ikc_channel_desc *c);
 void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p, struct ihk_ikc_channel_desc *c);
 

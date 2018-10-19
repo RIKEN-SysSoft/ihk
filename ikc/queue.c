@@ -465,6 +465,11 @@ int ihk_ikc_recv(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 #endif
 	if (ihk_ikc_channel_enabled(channel)) {
 		r = ihk_ikc_read_queue(channel->recv.queue, p, opt);
+
+		if (!r) {
+			((struct ihk_ikc_packet *)p)->channel = channel;
+		}
+
 		/* XXX: Optimal interrupt */
 		if (!(opt & IKC_NO_NOTIFY)) {
 			ihk_ikc_notify_remote_read(channel);
