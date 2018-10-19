@@ -16,6 +16,7 @@
 #define IHK_IKC_MASTER_MSG_PACKET_ON_CHANNEL 0x20000010
 
 struct ihk_ikc_master_packet {
+	struct ihk_ikc_packet_header header;
 	uint32_t msg;
 	uint32_t ref;
 	uint64_t param[5];
@@ -28,6 +29,7 @@ int ihk_ikc_master_channel_packet_handler(struct ihk_ikc_channel_desc *c,
                                           void *__packet, void *os);
 
 struct ikc_test_packet { 
+	struct ihk_ikc_channel_desc *channel; /* Inherited field */
 	uint32_t msg;
 	uint32_t param1;
 };
