@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "0acd9f8f_41a38b4b",
+        "filename": "ikc/include/ikc/msg.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-21T03:54:37Z",
+      "side": 1,
+      "message": "make that field ihk_ikc_packet, so it\u0027s a bit more \"future-proof\"?",
+      "revId": "d711018bd01b46eb08fb8e48fc860f38ea1e2665",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "fc494c55_6ff578ed",
+        "filename": "ikc/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 470,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-21T03:54:37Z",
+      "side": 1,
+      "message": "hmm, logically I\u0027d feel more at ease if channel was set in ihk_ikc_alloc_packet, and just making sure ihk_ikc_read_queue doesn\u0027t overwrite the channel.\nIf, instead of embedding the \"super\" ihk_ikc_packet you make it into two different structs it should be clean enough; e.g. ihk_ikc_packet would become:\n\n struct ihk_ikc_packet {\n  struct ihk_ikc_channel_descs *channel;\n  char payload[0];\n }\n\nThen use that type instead of void * for the inner handling, and use p-\u003epayload for the memcpy.\n\nThought?",
+      "revId": "d711018bd01b46eb08fb8e48fc860f38ea1e2665",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
