@@ -1816,9 +1816,6 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 {
 	int ret = 0, ret_ioctl;
 	int fd = -1;
-#ifdef POSTK_DEBUG_TEMP_FIX_80 /* ihk_os_setperfevent return value fix. */
-	int register_count = 0;
-#endif /* POSTK_DEBUG_TEMP_FIX_80 */
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -1833,16 +1830,7 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 	ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
 	CHKANDJUMP(ret_ioctl < 0, -errno, "ioctl failed\n");
 
-#ifdef POSTK_DEBUG_TEMP_FIX_80 /* ihk_os_setperfevent return value fix. */
-	register_count = ret_ioctl;
-
-	ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_NUM, register_count);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
-
-	ret = register_count;
-#else /* POSTK_DEBUG_TEMP_FIX_80 */
 	ret = ret_ioctl;
-#endif /* POSTK_DEBUG_TEMP_FIX_80 */
  out:
 	if (fd != -1) {
 		close(fd);
