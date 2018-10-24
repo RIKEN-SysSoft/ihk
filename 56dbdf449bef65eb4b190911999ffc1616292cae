@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9d1f8050_59ab8338",
+        "filename": "configure.ac",
+        "patchSetId": 1
+      },
+      "lineNbr": 278,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-24T04:28:29Z",
+      "side": 1,
+      "message": "FWIW I use this in cmake:\n git --git-dir\u003d$IHK_ABS_SRCDIR/.git rev-parse --short HEAD 2\u003e/dev/null || echo $IHK_VERSION",
+      "revId": "56dbdf449bef65eb4b190911999ffc1616292cae",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
