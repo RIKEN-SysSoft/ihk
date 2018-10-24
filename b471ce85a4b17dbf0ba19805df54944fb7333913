@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "09b181b0_d460628b",
+        "filename": "ikc/queue.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 124,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-24T02:53:41Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tmemcpyl(packet,\t(char *)q + sizeof(*q) + ((r % q-\u003epktcount) * q-\u003epktsize),",
+      "revId": "b471ce85a4b17dbf0ba19805df54944fb7333913",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
