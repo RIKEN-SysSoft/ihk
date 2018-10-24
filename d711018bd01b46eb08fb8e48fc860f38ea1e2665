@@ -87,6 +87,24 @@
       "revId": "d711018bd01b46eb08fb8e48fc860f38ea1e2665",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "cb65da93_ac369b43",
+        "filename": "ikc/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 470,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-10-24T04:24:16Z",
+      "side": 1,
+      "message": "Investigation result:\nSender-side payload is copied out in ihk_ikc_send(), so it\u0027s okay to allocate it on stack.",
+      "parentUuid": "e72bcde9_60048107",
+      "revId": "d711018bd01b46eb08fb8e48fc860f38ea1e2665",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     }
   ]
 }
