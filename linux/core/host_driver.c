@@ -2459,11 +2459,9 @@ int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
 {
 	struct ihk_host_linux_os_data *os;
 
-#ifdef POSTK_DEBUG_TEMP_FIX_79 /* return -EFAULT if ihk_get_request_os_cpu arg1 is NULL. */
 	if (ihk_os == NULL) {
 		return -EFAULT;
 	}
-#endif /* POSTK_DEBUG_TEMP_FIX_79 */
 
 	/*
 	 * Look up IHK OS structure
