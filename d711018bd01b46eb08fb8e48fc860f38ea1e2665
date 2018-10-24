@@ -69,6 +69,24 @@
       "revId": "d711018bd01b46eb08fb8e48fc860f38ea1e2665",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e72bcde9_60048107",
+        "filename": "ikc/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 470,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-24T03:19:44Z",
+      "side": 1,
+      "message": "\u003e Discussion result:\n\u003e * Setting on receiving is better because the redundant copy overhead is small.\n\nWhat about packets we send without receiving?\nE.g. sometimes on mckernel side we allocate a packet, send it, and free it without waiting for the answer.\nWe need to at least initialize it in alloc as well just to be safe.",
+      "parentUuid": "6afa8db8_9ca515da",
+      "revId": "d711018bd01b46eb08fb8e48fc860f38ea1e2665",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
