@@ -1372,7 +1372,8 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	os->status = BUILTIN_OS_STATUS_LOADING;
 	spin_unlock_irqrestore(&os->lock, flags);
 
-	strncpy(os->kernel_args, buf, sizeof(os->kernel_args));
+	strncpy(os->kernel_args, buf, sizeof(os->kernel_args) - 1);
+	os->kernel_args[sizeof(os->kernel_args) - 1] = '\0';
 	dprintk("%s,kernel_args=%s\n", __FUNCTION__, os->kernel_args);
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
