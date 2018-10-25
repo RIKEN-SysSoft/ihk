@@ -31,6 +31,7 @@
 #include <linux/string.h>
 #include <linux/eventfd.h>
 #include <linux/version.h>
+#include <linux/cred.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
 #include <asm/spinlock.h>
