@@ -222,17 +222,11 @@ static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 	CMOS_WRITE(0xa, 0xf);
 	spin_unlock_irqrestore(&rtc_lock, flags);
 	local_flush_tlb();
-	pr_debug("1.\n");
 	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_HIGH)) =
 		start_eip >> 4;
-	pr_debug("2.\n");
 	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_LOW)) =
 		start_eip & 0xf;
-	pr_debug("3.\n");
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,5)
-#warning smpboot_setup_warm_reset_vector() has been only tested up to 4.3.0 kernels
-#endif
 #endif
 
 static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
