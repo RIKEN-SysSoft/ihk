@@ -122,6 +122,7 @@ spinlock_t *_vmap_area_lock;
 static void (*___insert_vmap_area)(struct vmap_area *va);
 static void (*___free_vmap_area)(struct vmap_area *va);
 
+static pgd_t *_init_level4_pgt;
 
 int ihk_smp_arch_symbols_init(void)
 {
@@ -176,6 +177,14 @@ int ihk_smp_arch_symbols_init(void)
 
 	___free_vmap_area = (void *)kallsyms_lookup_name("__free_vmap_area");
 	if (WARN_ON(!___free_vmap_area))
+		return -EFAULT;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+	_init_level4_pgt = (void *)kallsyms_lookup_name("init_top_pgt");
+#else
+	_init_level4_pgt = (void *)kallsyms_lookup_name("init_level4_pgt");
+#endif
+	if (WARN_ON(!_init_level4_pgt))
 		return -EFAULT;
 
 	return 0;
@@ -381,9 +390,9 @@ void smp_ihk_setup_trampoline(void *priv)
 		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
 	}
 
-	os->param->linux_kernel_pgt_phys = __pa(&init_level4_pgt[0]);
-	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n",
-		__FUNCTION__, &init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
+	os->param->linux_kernel_pgt_phys = __pa(&_init_level4_pgt[0]);
+	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n", __func__,
+		&_init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
 
 	/* Make a temporary copy of the Linux trampoline */
 	if (using_linux_trampoline) {
