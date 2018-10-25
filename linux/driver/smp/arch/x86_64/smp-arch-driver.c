@@ -21,7 +21,7 @@
 #include <asm/hw_irq.h>
 #include <linux/version.h>
 #include <linux/kallsyms.h>
-#include <asm/mc146818rtc.h>
+#include <linux/mc146818rtc.h>
 #include <asm/tlbflush.h>
 #if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 #include <asm/smpboot_hooks.h>
