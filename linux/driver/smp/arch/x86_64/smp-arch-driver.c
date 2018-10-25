@@ -124,6 +124,8 @@ static void (*___free_vmap_area)(struct vmap_area *va);
 
 static pgd_t *_init_level4_pgt;
 
+static unsigned long *_used_vectors;
+
 int ihk_smp_arch_symbols_init(void)
 {
 	_real_mode_header = (void *) kallsyms_lookup_name("real_mode_header");
@@ -184,6 +186,12 @@ int ihk_smp_arch_symbols_init(void)
 		_init_level4_pgt =
 			(void *) kallsyms_lookup_name("init_level4_pgt");
 	if (WARN_ON(!_init_level4_pgt))
+		return -EFAULT;
+
+	_used_vectors = (void *) kallsyms_lookup_name("system_vectors");
+	if (!_used_vectors)
+		_used_vectors = (void *) kallsyms_lookup_name("used_vectors");
+	if (WARN_ON(!_used_vectors))
 		return -EFAULT;
 
 	return 0;
@@ -1109,7 +1117,7 @@ retry_trampoline:
 		struct irq_desc *desc;
 #endif
 
-		if (test_bit(vector, used_vectors)) {
+		if (test_bit(vector, _used_vectors)) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: used\n", vector);
 			continue;
 		}
