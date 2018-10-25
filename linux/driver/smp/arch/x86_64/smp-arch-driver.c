@@ -126,6 +126,9 @@ static pgd_t *_init_level4_pgt;
 
 static unsigned long *_used_vectors;
 
+static int (*_ioremap_page_range)(unsigned long addr, unsigned long end,
+				  phys_addr_t phys_addr, pgprot_t prot);
+
 int ihk_smp_arch_symbols_init(void)
 {
 	_real_mode_header = (void *) kallsyms_lookup_name("real_mode_header");
@@ -194,6 +197,11 @@ int ihk_smp_arch_symbols_init(void)
 #else
 	_used_vectors = (void *)kallsyms_lookup_name("used_vectors");
 #endif
+
+	_ioremap_page_range =
+		(void *)kallsyms_lookup_name("ioremap_page_range");
+	if (WARN_ON(!_ioremap_page_range))
+		return -EFAULT;
 
 	return 0;
 }
@@ -526,7 +534,7 @@ int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	if (vmap_area_taken)
 		return -1;
 
-	if (ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
+	if (_ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
 				phys, PAGE_KERNEL_EXEC) < 0) {
 		printk("%s: error: mapping LWK to Linux kernel space\n",
 				__FUNCTION__);
