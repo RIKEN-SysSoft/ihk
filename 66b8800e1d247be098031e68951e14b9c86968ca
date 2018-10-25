@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ab06e2b4_7fed0b82",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 640,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:19:55Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "66b8800e1d247be098031e68951e14b9c86968ca",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e1e17931_f041f5c1",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 659,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:19:55Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "66b8800e1d247be098031e68951e14b9c86968ca",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "616e6eab_ffb20a51",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 717,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:19:55Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "66b8800e1d247be098031e68951e14b9c86968ca",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba51b7b7_94d13593",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 731,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:19:55Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "66b8800e1d247be098031e68951e14b9c86968ca",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
