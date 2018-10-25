@@ -637,6 +637,9 @@ int ihk_smp_map_kernel(pgd_t *pt,
 		phys_addr_t paddr)
 {
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d_t *p4d;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
@@ -653,8 +656,22 @@ int ihk_smp_map_kernel(pgd_t *pt,
 				(unsigned long)pgd);
 		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
 	}
-	
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d = p4d_offset(pgd, vaddr);
+	if (p4d_none(*p4d)) {
+		pud = (pud_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pud)
+			goto err;
+		dprintk("%s: P4D: %d: PUD allocated: 0x%lx\n",
+				__func__,
+				(int)pgd_index(vaddr),
+				(unsigned long)pgd);
+		set_p4d(p4d, __p4d(__pa(pud) | _KERNPG_TABLE));
+	}
+	pud = pud_offset(p4d, vaddr);
+#else
 	pud = pud_offset(pgd, vaddr);
+#endif
 	if (!pud_present(*pud)) {
 		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
 		if (!pmd)
@@ -697,6 +714,9 @@ err:
 int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 {
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d_t *p4d;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
@@ -708,7 +728,16 @@ int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 		return VM_FAULT_OOM;
 	}
 	printk("%s: PGD: 0x%lx\n", __FUNCTION__, (unsigned long)pgd);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d = p4d_offset(pgd, address);
+	if (p4d_none(*p4d)) {
+		pr_warn("%s: no P4D for 0x%lx\n", __func__, address);
+		return VM_FAULT_OOM;
+	}
+	pud = pud_offset(p4d, address);
+#else
 	pud = pud_offset(pgd, address);
+#endif
 	if (!pud) {
 		printk("%s: no PUD for 0x%lx\n", __FUNCTION__, address);
 		return VM_FAULT_OOM;
