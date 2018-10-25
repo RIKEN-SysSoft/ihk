@@ -1,0 +1,361 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2972fa79_4d89e849",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Possible unwrapped commit description (prefer a maximum 75 chars per line)\n174afc3e7 (\"perf/x86/intel: Rename confusing \u0027freerunning PEBS\u0027 API and implementation to \u0027large PEBS\u0027\")",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9dc78c4c_195e349b",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 146,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 9, 0) || \\",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "955d7306_1c0e439d",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 147,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+    (defined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 4))",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "17987092_790b2fdf",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 147,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    (defined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 4))$",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6bb9c614_8cb731c1",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 151,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 17, 0)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2895779b_13c968e3",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 200,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 14, 0)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c7124c93_d283a132",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 207,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 13, 0)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "29e4f2ac_c8f30bc6",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 237,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 14, 0)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3f733969_96bafe73",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 241,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#elif LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 5, 0) || \\",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "feaa1a35_d9964d69",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 242,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tdefined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 3)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7156e2f9_f7f28733",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 249,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 6, 0) || \\",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "18da8734_d6ae1490",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 250,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tdefined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 3)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2f4f7d15_7c3faaad",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 257,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 16, 0)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1d8b1c31_efbc737c",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 259,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#elif LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 3, 0) || \\",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e1886835_550a3ce2",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 260,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tdefined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 3)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a0703e1d_025e4298",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 272,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 7, 0) || \\",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f2339e20_a89c9a58",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 273,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tdefined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 4)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ead24f73_5b65a189",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 280,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 1, 0) || \\",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cfe43d94_cece3138",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 281,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tdefined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 3)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e271a454_bec4c193",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 288,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 6, 0) || \\",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "84074d8e_330eef75",
+        "filename": "cokernel/smp/x86_64/perf_event.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 289,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-10-25T02:17:32Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tdefined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 3)",
+      "revId": "df3d549b5522d6a7620097587a5f1ad46eaaf3d4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
