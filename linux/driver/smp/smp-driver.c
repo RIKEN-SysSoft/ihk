@@ -2914,15 +2914,11 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
 #endif // USE_TRY_TO_FREE_PAGES
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	void (*__drain_all_pages)(struct zone *) = NULL;
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 	void (*__drain_all_pages)(void) = NULL;
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-	void (*__drain_all_pages)(void) = NULL;
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 	size_t (*__sum_zone_node_page_state)(int node,
 					     enum zone_stat_item item);
@@ -2952,7 +2948,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 			(struct zonelist *, int, gfp_t, nodemask_t *))
 			kallsyms_lookup_name("try_to_free_pages");
 #endif // USE_TRY_TO_FREE_PAGES
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	__drain_all_pages = (void (*)(struct zone *))
 			kallsyms_lookup_name("drain_all_pages");
@@ -2960,10 +2955,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	__drain_all_pages = (void (*)(void))
 			kallsyms_lookup_name("drain_all_pages");
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-	__drain_all_pages = (void (*)(void))
-			kallsyms_lookup_name("drain_all_pages");
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 	__sum_zone_node_page_state = (void *)
 			kallsyms_lookup_name("sum_zone_node_page_state");
@@ -2977,15 +2968,11 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 #endif
 
 	if (__drain_all_pages) {
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 		__drain_all_pages(NULL);
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 		__drain_all_pages();
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-		__drain_all_pages();
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 	}
 
 	/* Shrink slab/slub caches */
@@ -3096,15 +3083,11 @@ retry:
 #endif // USE_TRY_TO_FREE_PAGES
 
 			if (__drain_all_pages) {
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 				__drain_all_pages(NULL);
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 				__drain_all_pages();
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-				__drain_all_pages();
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 			}
 
 #ifdef USE_TRY_TO_FREE_PAGES
