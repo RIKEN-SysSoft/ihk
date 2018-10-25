@@ -587,6 +587,10 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 static void ihk_smp_free_page_tables(pgd_t *pt)
 {
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d_t *p4d, _p4d;
+	int p4d_i;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	int pgd_i, pud_i, pmd_i;
@@ -598,35 +602,61 @@ static void ihk_smp_free_page_tables(pgd_t *pt)
 		pgd = ((pgd_t *)pt) + pgd_i;
 		if (pgd_none(*pgd) || !pgd_present(*pgd))
 			continue;
-
-		for (pud_i = 0; pud_i < PTRS_PER_PUD; ++pud_i) {
-			pud = ((pud_t *)pgd_page_vaddr(*pgd)) + pud_i;
-
-			if (pud_none(*pud) || !pud_present(*pud))
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+		for (p4d_i = 0; p4d_i < PTRS_PER_P4D; ++p4d_i) {
+			if (PTRS_PER_P4D == 1) {
+				_p4d = __p4d(pgd_val(*pgd));
+				p4d = &_p4d;
+			} else {
+				p4d = ((p4d_t *)pgd_page_vaddr(*pgd)) + p4d_i;
+			}
+			if (p4d_none(*p4d) || !p4d_present(*p4d))
 				continue;
 
-			for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
-				pmd = ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;
+#endif
+			for (pud_i = 0; pud_i < PTRS_PER_PUD; ++pud_i) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+				pud = ((pud_t *)p4d_page_vaddr(*p4d)) + pud_i;
+#else
+				pud = ((pud_t *)pgd_page_vaddr(*pgd)) + pud_i;
+#endif
 
-				if (pmd_none(*pmd) || !pmd_present(*pmd))
+				if (pud_none(*pud) || !pud_present(*pud))
 					continue;
 
-				if (pmd_large(*pmd))
-					continue;
+				for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
+					pmd = ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;
 
-				dprintk("%s: freeing PGD %d: PUD %d: PMD %d\n",
-					__FUNCTION__, pgd_i, pud_i, pmd_i);
-				free_page(pmd_page_vaddr(*pmd));
+					if (pmd_none(*pmd) || !pmd_present(*pmd))
+						continue;
+
+					if (pmd_large(*pmd))
+						continue;
+
+					dprintk("%s: freeing PGD %d: PUD %d: PMD %d\n",
+						__func__, pgd_i, pud_i, pmd_i);
+					free_page(pmd_page_vaddr(*pmd));
+				}
+
+				dprintk("%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\n",
+						__func__, pgd_i, pud_i,
+						pud_page_vaddr(*pud));
+				free_page(pud_page_vaddr(*pud));
 			}
-
-			dprintk("%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\n",
-					__FUNCTION__, pgd_i, pud_i, pud_page_vaddr(*pud));
-			free_page(pud_page_vaddr(*pud));
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+			dprintk("%s: freeing PGD %d: P4D %d: PUD %d: PMD @ 0x%lx\n",
+				__func__, pgd_i, p4d_i, pud_i,
+				pud_page_vaddr(*pud));
+			free_page(p4d_page_vaddr(*p4d));
 		}
-
-		dprintk("%s: freeing PGD %d\n",
-				__FUNCTION__, pgd_i);
+		if (PTRS_PER_P4D != 1) {
+			dprintk("%s: freeing PGD %d\n", __func__, pgd_i);
+			free_page(pgd_page_vaddr(*pgd));
+		}
+#else
+		dprintk("%s: freeing PGD %d\n", __func__, pgd_i);
 		free_page(pgd_page_vaddr(*pgd));
+#endif
 	}
 
 	free_page((unsigned long)pt);
@@ -637,6 +667,9 @@ int ihk_smp_map_kernel(pgd_t *pt,
 		phys_addr_t paddr)
 {
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d_t *p4d;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
@@ -653,8 +686,22 @@ int ihk_smp_map_kernel(pgd_t *pt,
 				(unsigned long)pgd);
 		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
 	}
-	
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d = p4d_offset(pgd, vaddr);
+	if (!p4d_present(*p4d)) {
+		pud = (pud_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pud)
+			goto err;
+		dprintk("%s: P4D: %d: PUD allocated: 0x%lx\n",
+				__func__,
+				(int)pgd_index(vaddr),
+				(unsigned long)pgd);
+		set_p4d(p4d, __p4d(__pa(pud) | _KERNPG_TABLE));
+	}
+	pud = pud_offset(p4d, vaddr);
+#else
 	pud = pud_offset(pgd, vaddr);
+#endif
 	if (!pud_present(*pud)) {
 		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
 		if (!pmd)
@@ -697,6 +744,9 @@ err:
 int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 {
 	pgd_t *pgd;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d_t *p4d;
+#endif
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
@@ -708,7 +758,16 @@ int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
 		return VM_FAULT_OOM;
 	}
 	printk("%s: PGD: 0x%lx\n", __FUNCTION__, (unsigned long)pgd);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0) && defined(CONFIG_X86_64_SMP)
+	p4d = p4d_offset(pgd, address);
+	if (p4d_none(*p4d)) {
+		pr_warn("%s: no P4D for 0x%lx\n", __func__, address);
+		return VM_FAULT_OOM;
+	}
+	pud = pud_offset(p4d, address);
+#else
 	pud = pud_offset(pgd, address);
+#endif
 	if (!pud) {
 		printk("%s: no PUD for 0x%lx\n", __FUNCTION__, address);
 		return VM_FAULT_OOM;
