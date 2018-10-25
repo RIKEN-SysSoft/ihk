@@ -973,7 +973,7 @@ static struct irq_chip ihk_irq_chip = {
 static int
 vector_is_used(int vector, int core) {
 	int rtn = 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 					per_cpu_offset(core)));
@@ -981,27 +981,31 @@ vector_is_used(int vector, int core) {
 /* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0) */
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	if (vectors[vector] != VECTOR_UNUSED) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+		pr_info("IHK-SMP: IRQ vector %d in core %d: used %p\n",
 				vector, core, vectors[vector]);
 		rtn = 1;
 	}
 #else
 	if (vectors[vector] != -1) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+		pr_info("IHK-SMP: IRQ vector %d in core %d: used %d\n",
 				vector, core, vectors[vector]);
 		rtn = 1;
 	}
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0) */
 	return rtn;
 }
 
 static void
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+set_vector(int vector, int core, struct irq_desc *desc) {
+#else
 set_vector(int vector, int core) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 						per_cpu_offset(core)));
@@ -1010,7 +1014,7 @@ set_vector(int vector, int core) {
 				per_cpu_offset(core)));
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	if (vectors[vector] == VECTOR_UNUSED) {
 		dprintk(KERN_INFO "IHK-SMP: fixed vector_irq for %d in core %d\n", vector, core);
 		vectors[vector] = desc;
@@ -1025,7 +1029,7 @@ set_vector(int vector, int core) {
 
 static void
 release_vector(int vector, int core) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
@@ -1035,7 +1039,7 @@ release_vector(int vector, int core) {
 #endif
 
 	/* Release IRQ vector */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	vectors[vector] = VECTOR_UNUSED;
 #else
 	vectors[vector] = -1;
@@ -1186,7 +1190,11 @@ retry_trampoline:
 
 		/* Pretend a real external interrupt */
 		for (i = 0; i < nr_cpu_ids; i++) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+			set_vector(vector, i, desc);
+#else
 			set_vector(vector, i);
+#endif
 		}
 		break;
 	}
