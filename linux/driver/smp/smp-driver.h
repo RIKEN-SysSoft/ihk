@@ -141,8 +141,6 @@ extern unsigned long trampoline_phys;
 
 extern unsigned long ident_page_table;
 
-extern int this_module_put;
-
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size);
 void ihk_smp_unmap_virtual(void *virt);
 int ihk_smp_set_nmi_mode(ihk_os_t ihk_os, void *priv, int mode);

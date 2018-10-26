@@ -1187,6 +1187,13 @@ retry_trampoline:
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
 			continue;
 		}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+		/* drop the module ref from request_irq, and pretend we do not
+		 * own the irq anymore so free_irq will not bug the refcount
+		 */
+		module_put(THIS_MODULE);
+		desc->owner = NULL;
+#endif
 
 		/* Pretend a real external interrupt */
 		for (i = 0; i < nr_cpu_ids; i++) {
@@ -1223,18 +1230,12 @@ retry_trampoline:
 	error = collect_topology();
 	if (error) {
 		printk(KERN_ERR "IHK-SMP: error: collecting topology information failed\n");
-		free_irq(ihk_smp_irq, NULL);
 		goto error_free_irq;
 	}
 
 	return error;
 
 error_free_irq:
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
 
 	free_irq(ihk_smp_irq, NULL);
 
@@ -1613,11 +1614,6 @@ void smp_ihk_arch_exit(void)
 	}
 #endif
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
 	free_irq(ihk_smp_irq, NULL);
 
 #ifdef CONFIG_SPARSE_IRQ

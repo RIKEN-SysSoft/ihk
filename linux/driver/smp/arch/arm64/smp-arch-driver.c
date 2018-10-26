@@ -1123,6 +1123,13 @@ static int ihk_smp_reserve_irq(void)
 		pr_info("IHK-SMP: IRQ vector %d: request_irq failed\n", virq);
 		return -EFAULT;
 	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+	/* drop the module ref from request_irq, and pretend we do not
+	 * own the irq anymore so free_irq will not bug the refcount
+	 */
+	module_put(THIS_MODULE);
+	desc->owner = NULL;
+#endif
 
 	ihk_smp_irq.irq = virq;
 	ihk_smp_irq.hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);
@@ -1303,12 +1310,6 @@ retry_trampoline:
 	return error;
 
 error_free_irq:
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
-
 	free_irq(ihk_smp_irq.irq, NULL);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
@@ -1677,11 +1678,6 @@ int ihk_smp_reset_cpu(int hw_id)
 
 void smp_ihk_arch_exit(void)
 {
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
 	free_irq(ihk_smp_irq.irq, NULL);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
