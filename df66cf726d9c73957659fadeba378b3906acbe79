@@ -16,6 +16,24 @@
       "revId": "df66cf726d9c73957659fadeba378b3906acbe79",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "358229b2_965f78a4",
+        "filename": "ikc/include/ikc/msg.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 32,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-10-26T00:46:54Z",
+      "side": 1,
+      "message": "Thanks for pointing it out.",
+      "parentUuid": "6a725d2b_3c776b13",
+      "revId": "df66cf726d9c73957659fadeba378b3906acbe79",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     }
   ]
 }
