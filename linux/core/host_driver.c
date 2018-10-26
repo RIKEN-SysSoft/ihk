@@ -1478,6 +1478,8 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	kmsg_buf_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, kmsg_buf_order);
 	if (!kmsg_buf_pages) {
 		ekprintf("IHK: Cannot allocate kmsg buffer\n");
+		os_data[minor] = NULL;
+		kfree(os);
 		return -ENOMEM;
 	}
 
@@ -1506,6 +1508,8 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	/* Insert it into the list */
 	cont = kmalloc(sizeof(struct ihk_kmsg_buf_container), GFP_KERNEL);
 	if (!cont) {
+		os_data[minor] = NULL;
+		kfree(os);
 		return -ENOMEM;
 	}
 	cont->os_index = minor;
