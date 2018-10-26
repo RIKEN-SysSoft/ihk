@@ -1604,7 +1604,8 @@ static int __destroy_all_os(struct ihk_host_linux_device_data *data)
 	 */
 	spin_lock_irqsave(&os_data_lock, flags);
 	for (i = 0; i < os_max_minor; i++) {
-		if (os_data[i] && os_data[i]->dev_data == data) {
+		if (os_data[i] && os_data[i] != (void *)-1 &&
+		    os_data[i]->dev_data == data) {
 			os = os_data[i];
 			os_data[i] = NULL;
 			spin_unlock_irqrestore(&os_data_lock, flags);
