@@ -321,6 +321,10 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 }
 
 static void delete_kmsg_buf(struct ihk_kmsg_buf_container* cont) {
+	if (!cont) {
+		return;
+	}
+
 	__free_pages(virt_to_page(cont->kmsg_buf), cont->order);
 	dkprintf("%s: __free_pages kmsg_buf\n", __FUNCTION__);
 	
@@ -353,12 +357,14 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 	int index = ihk_host_os_get_index(data);
 
 	/* Call OS notifiers */
-	spin_lock(&ihk_os_notifiers_lock);
-	list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
-		if (_ion->ops && _ion->ops->shutdown)
-			_ion->ops->shutdown(index);
+	if (index != -1) {
+		spin_lock(&ihk_os_notifiers_lock);
+		list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
+			if (_ion->ops && _ion->ops->shutdown)
+				_ion->ops->shutdown(index);
+		}
+		spin_unlock(&ihk_os_notifiers_lock);
 	}
-	spin_unlock(&ihk_os_notifiers_lock);
 
 	ikc_master_finalize(data);
 
@@ -1428,6 +1434,9 @@ static int __ihk_device_get_buildid(struct ihk_host_linux_device_data *data,
 	return 0;
 }
 
+static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
+				   struct ihk_host_linux_os_data *os);
+
 /** \brief Create a OS file in the kernel
  *
  * @return minor number */
@@ -1440,7 +1449,7 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	int kmsg_buf_size;
 	unsigned int kmsg_buf_order;
 	struct page *kmsg_buf_pages;
-	struct ihk_kmsg_buf_container *cont;
+	struct ihk_kmsg_buf_container *cont = NULL;
 	struct ihk_kmsg_buf *kmsg_buf;
 	int nbufs = 0;
 
@@ -1478,8 +1487,9 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 
 	kmsg_buf_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, kmsg_buf_order);
 	if (!kmsg_buf_pages) {
-		ekprintf("IHK: Cannot allocate kmsg buffer\n");
-		return -ENOMEM;
+		pr_info("IHK: Cannot allocate kmsg buffer\n");
+		ret = -ENOMEM;
+		goto error;
 	}
 
 	/* Initialize kmsg_buf */
@@ -1507,7 +1517,10 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	/* Insert it into the list */
 	cont = kmalloc(sizeof(struct ihk_kmsg_buf_container), GFP_KERNEL);
 	if (!cont) {
-		return -ENOMEM;
+		pr_info("IHK: Cannot allocate kmsg buffer container\n");
+		__free_pages(kmsg_buf_pages, kmsg_buf_order);
+		ret = -ENOMEM;
+		goto error;
 	}
 	cont->os_index = minor;
 	cont->kmsg_buf = kmsg_buf;
@@ -1523,26 +1536,27 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	os->dev_num = mcos_dev_num + minor;
 
 	if (cdev_add(&os->cdev, os->dev_num, 1) < 0) {
-		/* XXX: call destroy */
 		printk("ihk: cdev_add failed (%d)\n", ret);
-		os_data[minor] = NULL;
-		kfree(os);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto error;
 	}
 
 	os->lindev = device_create(mcos_class, NULL, os->dev_num, NULL,
 			OS_DEV_NAME "%d", minor);
 	if (IS_ERR(os->lindev)) {
-		/* XXX: call destroy */
 		printk("ihk: device_create failed.\n");
-		os_data[minor] = NULL;
-		kfree(os);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto error;
 	}
 
 	os_data[minor] = os;
 
 	return minor;
+
+error:
+	delete_kmsg_buf(cont);
+	__ihk_device_destroy_os(data, os);
+	return ret;
 }
 
 /** \brief Destroy an OS structure, and also the corresponding device file */
@@ -1605,7 +1619,8 @@ static int __destroy_all_os(struct ihk_host_linux_device_data *data)
 	 */
 	spin_lock_irqsave(&os_data_lock, flags);
 	for (i = 0; i < os_max_minor; i++) {
-		if (os_data[i] && os_data[i]->dev_data == data) {
+		if (os_data[i] && os_data[i] != (void *)-1 &&
+		    os_data[i]->dev_data == data) {
 			os = os_data[i];
 			os_data[i] = NULL;
 			spin_unlock_irqrestore(&os_data_lock, flags);
