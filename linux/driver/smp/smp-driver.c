@@ -82,8 +82,6 @@ unsigned long trampoline_phys;
 
 unsigned long ident_page_table;
 
-int this_module_put = 0;
-
 static struct list_head ihk_mem_free_chunks;
 struct list_head ihk_mem_used_chunks;
 
@@ -4368,19 +4366,6 @@ static int __init smp_module_init(void)
 	}
 
 	builtin_data.ihk_dev = ihkd;
-
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-		(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,5)))
-	/* NOTE: this is nasty, but we need to decrease the refcount because
-	 * after Linux 3.0 request_irq holds an extra reference to the module. 
-	 * This causes rmmod to fail and report the module is in use when one
-	 * tries to unload it. To overcome this, we drop one ref here and get
-	 * an extra one before free_irq in the module's exit code */
-	if (module_refcount(THIS_MODULE) == 2) {
-		module_put(THIS_MODULE);
-		this_module_put = 1;
-	}
-#endif
 
 	return 0;
 }
