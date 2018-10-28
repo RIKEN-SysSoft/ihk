@@ -42,6 +42,30 @@
     },
     {
       "key": {
+        "uuid": "bf45cf40_f8742ba4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1132,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-10-28T08:58:19Z",
+      "side": 1,
+      "message": "Good question, I\u0027m actually not sure what folks are supposed to look at to know if it is available, but in the current linux kernel code the owner is only ever used for try_module_get and module_put so we should be safe.\n\nLooking at our own code we first check if the vector is used on any CPU through some magic vector array; if it was free we lookup the irq by number, and if something came yet action wasn\u0027t set we use it -- that won\u0027t change.\nThe request_irq function itself doesn\u0027t seem to do any checking, that\u0027s half surprising... but I guess that\u0027s how it works :/ If",
+      "parentUuid": "edddff27_d9ca3cbd",
+      "range": {
+        "startLine": 1132,
+        "startChar": 6,
+        "endLine": 1132,
+        "endChar": 0
+      },
+      "revId": "482cac3a79067341a7281d7b149a93cb29e2ccd3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "95f034bb_02987866",
         "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
         "patchSetId": 1
