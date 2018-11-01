@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "ca7da36e_20e11ecd",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1482,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-11-01T06:48:12Z",
+      "side": 1,
+      "message": "Thanks for pointing it out. I fixed it.",
+      "parentUuid": "c4c1ae21_42645f02",
+      "revId": "7516414b7a0582d9ad71eab63afb66071d1cfa44",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "df750e98_4438e5fa",
         "filename": "linux/core/host_driver.c",
         "patchSetId": 6
@@ -33,6 +51,24 @@
       "revId": "7516414b7a0582d9ad71eab63afb66071d1cfa44",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "6af394cc_dbcc7cf6",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1512,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-11-01T06:48:12Z",
+      "side": 1,
+      "message": "Okay, fixed.",
+      "parentUuid": "df750e98_4438e5fa",
+      "revId": "7516414b7a0582d9ad71eab63afb66071d1cfa44",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     }
   ]
 }
