@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1dd09c03_4f32bad1",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 8
+      },
+      "lineNbr": 1519,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-01T06:46:09Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n \tif (!cont) {\n+\t\tpr_info(\"IHK: Cannot allocate kmsg buffer container\\n\");",
+      "revId": "262cb9b5201ba78d74d189edfa5b411717d9ce18",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
