@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "c4c1ae21_42645f02",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1482,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-01T04:12:57Z",
+      "side": 1,
+      "message": "_ihk_device_create_os_init unfortunately allocates much more than just os, I think we should just call __ihk_device_destroy_os; it looks tolerant enough that it might just work...",
+      "revId": "7516414b7a0582d9ad71eab63afb66071d1cfa44",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "df750e98_4438e5fa",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1512,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-01T04:12:57Z",
+      "side": 1,
+      "message": "missing delete_kmsg_buf(cont) here as well - would suggest using a \u0027goto error\u0027 so you don\u0027t need to copy the same code multiple times",
+      "revId": "7516414b7a0582d9ad71eab63afb66071d1cfa44",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
