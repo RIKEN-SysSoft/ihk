@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "673f01d4_e68b0a4a",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 1437,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-01T06:40:42Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                                   struct ihk_host_linux_os_data *os);$",
+      "revId": "01c92c0a1a5aa1fd20a631609ff195df42590350",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9d846839_9343c4c5",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 1437,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-01T06:40:42Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                                   struct ihk_host_linux_os_data *os);$",
+      "revId": "01c92c0a1a5aa1fd20a631609ff195df42590350",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "181a86e8_a4dcb333",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 1519,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-01T06:40:42Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n \tif (!cont) {\n+\t\tpr_info(\"IHK: Cannot allocate kmsg buffer container\\n\");",
+      "revId": "01c92c0a1a5aa1fd20a631609ff195df42590350",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
