@@ -91,7 +91,7 @@ int ihk_ikc_queue_is_full(struct ihk_ikc_queue_head *q)
 
 	barrier();
 
-	if ((w - r) == q->pktcount)
+	if ((w - r) == (q->pktcount - 1))
 		return 1;
 
 	return 0;
@@ -171,7 +171,7 @@ retry:
 	barrier();
 
 	/* Is the queue full? */
-	if ((w - r) == q->pktcount) {
+	if ((w - r) == (q->pktcount - 1)) {
 		/* Did we run out of attempts? */
 		if (++attempt > IHK_IKC_WRITE_QUEUE_RETRY) {
 			kprintf("%s: queue %p r: %llu, w: %llu is full\n",
@@ -360,6 +360,7 @@ struct ihk_ikc_channel_desc *ihk_ikc_create_channel(ihk_os_t os,
 	if (!*rq) {
 		recvq = ihk_ikc_alloc_queue(qpages);
 		if (!recvq) {
+			ihk_ikc_free(desc);
 			return NULL;
 		}
 
@@ -513,6 +514,7 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 	int r = -ENOENT;
 
 	if (!channel) {
+		kprintf("%s: ERROR: channel doesn't exist\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -525,6 +527,7 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 	}
 
 	if ((r = ihk_ikc_recv(channel, p, opt | IKC_NO_NOTIFY)) != 0) {
+		kprintf("%s: ERROR: ihk_ikc_recv returned %d\n", __FUNCTION__, r);
 		ihk_ikc_free(p);
 		goto out;
 	}

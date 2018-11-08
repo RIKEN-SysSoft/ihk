@@ -30,6 +30,7 @@
 #include <linux/file.h>
 #include <linux/string.h>
 #include <linux/eventfd.h>
+#include <linux/version.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
 #include <asm/spinlock.h>
@@ -198,7 +199,6 @@ static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
 	int ret = 0;
 	loff_t size, done, pos = 0;
 	long r;
-	mm_segment_t fs;
 
 	if (data->ops->load_file) {
 		dprintf("IHK: os_load_file is defined. Use it.\n");
@@ -227,15 +227,14 @@ static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
 		}
 
 		for (done = 0; ret == 0 && done < size; ) {
-			fs = get_fs();
-			set_fs(get_ds());
-
-			r = vfs_read(file, buf, PAGE_SIZE, &pos);
-
-			set_fs(fs);
-			
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			r = kernel_read(file, buf, PAGE_SIZE, &pos);
+#else
+			r = kernel_read(file, pos, buf, PAGE_SIZE);
+			pos += r;
+#endif
 			if (r <= 0) {
-				dprintf("vfs_read failed: %ld\n", r);
+				dprintf("kernel_read failed: %ld\n", r);
 				ret = (int)r;
 				break;
 			}
@@ -2129,8 +2128,8 @@ int ihk_unregister_device(ihk_device_t ihkdev)
 	while (!list_empty(&ihk_kmsg_bufs)) {
 		struct ihk_kmsg_buf_container *cont;
 		cont = list_first_entry(&ihk_kmsg_bufs, struct ihk_kmsg_buf_container, list);
-		delete_kmsg_buf(cont);
 		ekprintf("%s: Warning: stray kmsg_buf %p freed\n", __FUNCTION__, cont);
+		delete_kmsg_buf(cont);
 	}
 	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
 
@@ -2455,6 +2454,10 @@ int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
 int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
 {
 	struct ihk_host_linux_os_data *os;
+
+	if (ihk_os == NULL) {
+		return -EFAULT;
+	}
 
 	/*
 	 * Look up IHK OS structure

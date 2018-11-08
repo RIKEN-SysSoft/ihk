@@ -4,6 +4,7 @@
 #include <ihk/perfctr.h>
 #include <errno.h>
 #include <registers.h>
+#include <string.h>
 #include "bootparam.h"
 #include <config.h>
 #include <kmsg.h>
@@ -194,6 +195,7 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 extern void (*x86_issue_ipi)(int, int);
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
+	//kprintf("%s: cpu=%d(%d),irq#=%d,vector=%d\n", __FUNCTION__, cpu, ihk_mc_get_apicid(cpu), ihk_ikc_irq, vector);
 	x86_issue_ipi(ihk_mc_get_apicid(cpu), ihk_ikc_irq);
 	return 0;
 }
@@ -255,6 +257,12 @@ int ihk_set_nmi_mode_addr(unsigned long addr)
 {
 	boot_param->nmi_mode_addr = addr;
 	
+	return 0;
+}
+
+int ihk_set_mckernel_do_futex(unsigned long addr)
+{
+	boot_param->mckernel_do_futex = addr; /* Pass virtual address */
 	return 0;
 }
 
@@ -384,6 +392,11 @@ int ihk_mc_get_apicid(int linux_core_id) {
 	return boot_param->ihk_ikc_irq_apicids[linux_core_id];
 }
 
+void *ihk_mc_get_linux_kernel_pgt(void)
+{
+	return phys_to_virt(boot_param->linux_kernel_pgt_phys);
+}
+
 void arch_delay(int us)
 {
 	unsigned long tsc;
@@ -397,13 +410,17 @@ void arch_delay(int us)
 
 void x86_set_warm_reset(unsigned long ip, char *first_page_va)
 {
+	unsigned short vect;
+
 	/* Write CMOS */
 	asm volatile("outb %0, $0x70" : : "a"((char)0xf));
 	asm volatile("outb %0, $0x71" : : "a"((char)0xa));
 
 	/* Set vector */
-	*(unsigned short *)(first_page_va + 0x469) = (ip >> 4);
-	*(unsigned short *)(first_page_va + 0x467) = ip & 0xf;
+	vect = (ip >> 4);
+	memcpy(first_page_va + 0x469, &vect, sizeof(vect));
+	vect = ip & 0xf;
+	memcpy(first_page_va + 0x467, &vect, sizeof(vect));
 }
 
 void builtin_mc_dma_init(unsigned long cfg_addr);

@@ -17,6 +17,7 @@
 #include <linux/of_address.h>
 #include <linux/acpi.h>
 #include <linux/version.h>
+#include <linux/kallsyms.h>
 #include <linux/platform_device.h>
 #include <linux/perf_event.h>
 #include <linux/irqchip/arm-gic-v3.h>
@@ -25,187 +26,14 @@
 #else
 # include <linux/perf/arm_pmu.h>
 #endif
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <uapi/linux/psci.h>
 #include <ihk/misc/debug.h>
 #include <ihk/ihk_host_user.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include "config-arm64.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
-
-#define UNSUPPORTED_GICV2
-
-/*
- * IHK-SMP unexported kernel symbols
- */
-#ifdef IHK_KSYM_gic_data_gicv2
-#if IHK_KSYM_gic_data_gicv2
-struct gic_chip_data_v2 *ihk_gic_data_v2 =
-	(struct gic_chip_data_v2 *)
-	IHK_KSYM_gic_data_gicv2;
-#endif
-#endif
-
-#ifdef IHK_KSYM_gic_data_gicv3
-#if IHK_KSYM_gic_data_gicv3
-struct gic_chip_data_v3 *ihk_gic_data_v3 =
-	(struct gic_chip_data_v3 *)
-	IHK_KSYM_gic_data_gicv3;
-#endif
-#endif
-
-#ifdef IHK_KSYM_gic_raise_softirq_gicv2
-#if IHK_KSYM_gic_raise_softirq_gicv2
-static void (*ihk___smp_cross_call_gicv2)(const struct cpumask *, unsigned int) =
-	(void *)
-	IHK_KSYM_gic_raise_softirq_gicv2;
-#endif
-#endif
-
-#ifdef IHK_KSYM_gic_raise_softirq_gicv3
-#if IHK_KSYM_gic_raise_softirq_gicv3
-static void (*ihk___smp_cross_call_gicv3)(const struct cpumask *, unsigned int) =
-	(void *)
-	IHK_KSYM_gic_raise_softirq_gicv3;
-#endif
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-#ifdef IHK_KSYM___irq_domain_alloc_irqs
-#if IHK_KSYM___irq_domain_alloc_irqs
-static int (*ihk___irq_domain_alloc_irqs)(struct irq_domain *domain,
-                                          int irq_base, unsigned int nr_irqs,
-                                          int node, void *arg, bool realloc) =
-	(void *)
-	IHK_KSYM___irq_domain_alloc_irqs;
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_domain_free_irqs
-#if IHK_KSYM_irq_domain_free_irqs
-static int (*ihk_irq_domain_free_irqs)(unsigned int virq, unsigned int nr_irqs) =
-	(void *)
-	IHK_KSYM_irq_domain_free_irqs;
-#endif
-#endif
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) */
-
-#ifdef IHK_KSYM_irq_to_desc
-#if IHK_KSYM_irq_to_desc
-typedef struct irq_desc *(*irq_desc_star_fn_int_t)(unsigned int);
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) =
-	(irq_desc_star_fn_int_t)
-	IHK_KSYM_irq_to_desc;
-#else /* exported */
-#include <linux/irqnr.h>
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = irq_to_desc;
-#endif
-#endif
-
-#ifdef IHK_KSYM_psci_ops
-#if IHK_KSYM_psci_ops
-struct psci_operations *ihk_psci_ops =
-	(struct psci_operations *)
-	IHK_KSYM_psci_ops;
-#endif
-#endif
-
-#ifdef IHK_KSYM___cpu_logical_map
-#if IHK_KSYM___cpu_logical_map
-static size_t ihk___cpu_logical_map_size = NR_CPUS;
-u64 *ihk___cpu_logical_map =
-	(u64 *)
-	IHK_KSYM___cpu_logical_map;
-#endif
-#endif
-
-#ifdef IHK_KSYM_invoke_psci_fn
-unsigned long *ihk_invoke_psci_fn = (unsigned long *)IHK_KSYM_invoke_psci_fn;
-#else
-unsigned long *ihk_invoke_psci_fn = NULL;
-#endif
-
-#ifdef IHK_KSYM___invoke_psci_fn_hvc
-unsigned long ihk___invoke_psci_fn_hvc = (unsigned long)IHK_KSYM___invoke_psci_fn_hvc;
-#else
-unsigned long ihk___invoke_psci_fn_hvc = 0;
-#endif
-
-#ifdef IHK_KSYM___invoke_psci_fn_smc
-unsigned long ihk___invoke_psci_fn_smc = (unsigned long)IHK_KSYM___invoke_psci_fn_smc;
-#else
-unsigned long ihk___invoke_psci_fn_smc = 0;
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-#
-# ifdef IHK_KSYM_cpu_pmu
-static struct arm_pmu **ihk_cpu_pmu = (struct arm_pmu**)IHK_KSYM_cpu_pmu;
-# else
-#  error "'struct arm_pmu cpu_pmu' address is unknown."
-# endif
-#
-#else
-#
-# ifdef IHK_KSYM___oprofile_cpu_pmu
-static struct arm_pmu **ihk_cpu_pmu = (struct arm_pmu**)IHK_KSYM___oprofile_cpu_pmu;
-# else
-#  error "'struct arm_pmu cpu_pmu' address is unknown."
-# endif
-#
-#endif
-
-#ifdef IHK_KSYM___irq_set_affinity
-int (*ihk___irq_set_affinity)(unsigned int irq, const struct cpumask *mask, bool force) = (void*)IHK_KSYM___irq_set_affinity;
-#else
-# error "'__irq_set_affinity' address is unknown."
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0) && !defined(CONFIG_ARM64)
-#ifdef IHK_KSYM_arch_timer_use_virtual
-static unsigned long is_arch_timer_use_virt(void)
-{
-	bool *arch_timer_use = (bool *)IHK_KSYM_arch_timer_use_virtual;
-	return (unsigned long)*arch_timer_use;
-}
-#else
-#error "'arch_timer_use_virtual' address is unknown."
-#endif
-
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0) */
-#ifdef IHK_KSYM_arch_timer_uses_ppi
-static unsigned long is_arch_timer_use_virt(void)
-{
-	enum ppi_nr {
-		PHYS_SECURE_PPI,
-		PHYS_NONSECURE_PPI,
-		VIRT_PPI,
-		HYP_PPI,
-		MAX_TIMER_PPI
-	};
-	enum ppi_nr *arch_timer_use = (enum ppi_nr *)IHK_KSYM_arch_timer_uses_ppi;
-
-	if (*arch_timer_use == VIRT_PPI) {
-		return 1UL;
-	} else if (MAX_TIMER_PPI > *arch_timer_use) {
-		return 0UL;
-	} else {
-		return ULONG_MAX;
-	}
-}
-#else
-#error "'arch_timer_uses_ppi' address is unknown."
-#endif
-
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0) */
-
-#ifdef IHK_KSYM_arch_timer_rate
-u32 *ihk_arch_timer_rate = (u32 *)IHK_KSYM_arch_timer_rate;
-#else
-#error "'arch_timer_rate' address is unknown."
-#endif
 
 /* ----------------------------------------------- */
 
@@ -238,8 +66,6 @@ static unsigned long ihk_smp_gic_cpu_size = 0;
 static unsigned int ihk_gic_percpu_offset = 0;
 static phys_addr_t ihk_smp_gic_rdist_pa[NR_CPUS];
 
-static void (*ihk___smp_cross_call)(const struct cpumask *, unsigned int);
-
 /*
  * If you edit IPI_XXX, you must edit following together.
  * mckernel/arch/arm64/kernel/include/irq.h::INTRID_xxx
@@ -248,101 +74,6 @@ static void (*ihk___smp_cross_call)(const struct cpumask *, unsigned int);
 #define INTRID_MEMDUMP   7
 
 /* ----------------------------------------------- */
-
-/**
- * @brief GICv2 chip data structs
- * @ref.impl drivers/irqchip/irq-gic.c
- */
-union gic_base {
-	void __iomem *common_base;
-	void __percpu * __iomem *percpu_base;
-};
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
-struct gic_chip_data_v2 {
-	union gic_base dist_base;
-	union gic_base cpu_base;
-#ifdef CONFIG_CPU_PM
-	u32 saved_spi_enable[DIV_ROUND_UP(1020, 32)];
-	u32 saved_spi_conf[DIV_ROUND_UP(1020, 16)];
-	u32 saved_spi_target[DIV_ROUND_UP(1020, 4)];
-	u32 __percpu *saved_ppi_enable;
-	u32 __percpu *saved_ppi_conf;
-#endif
-	struct irq_domain *domain;
-	unsigned int gic_irqs;
-#ifdef CONFIG_GIC_NON_BANKED
-	void __iomem *(*get_base)(union gic_base *);
-#endif
-};
-
-#elif ((LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)) && \
-	(LINUX_VERSION_CODE < KERNEL_VERSION(4,5,1))) //exact:4.5.0-22
-
-struct gic_chip_data_v2 {
-        struct irq_chip chip;
-        union gic_base dist_base;
-        union gic_base cpu_base;
-#ifdef CONFIG_CPU_PM
-        u32 saved_spi_enable[DIV_ROUND_UP(1020, 32)];
-        u32 saved_spi_active[DIV_ROUND_UP(1020, 32)];
-        u32 saved_spi_conf[DIV_ROUND_UP(1020, 16)];
-        u32 saved_spi_target[DIV_ROUND_UP(1020, 4)];
-        u32 __percpu *saved_ppi_enable;
-        u32 __percpu *saved_ppi_active;
-        u32 __percpu *saved_ppi_conf;
-#endif
-        struct irq_domain *domain;
-        unsigned int gic_irqs;
-#ifdef CONFIG_GIC_NON_BANKED
-        void __iomem *(*get_base)(union gic_base *);
-#endif
-};
-
-#elif ((LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,1)) && \
-	(LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)))
-struct gic_chip_data_v2 {
-	union gic_base dist_base;
-	union gic_base cpu_base;
-#ifdef CONFIG_CPU_PM
-	u32 saved_spi_enable[DIV_ROUND_UP(1020, 32)];
-	u32 saved_spi_active[DIV_ROUND_UP(1020, 32)];
-	u32 saved_spi_conf[DIV_ROUND_UP(1020, 16)];
-	u32 saved_spi_target[DIV_ROUND_UP(1020, 4)];
-	u32 __percpu *saved_ppi_enable;
-	u32 __percpu *saved_ppi_active;
-	u32 __percpu *saved_ppi_conf;
-#endif
-	struct irq_domain *domain;
-	unsigned int gic_irqs;
-#ifdef CONFIG_GIC_NON_BANKED
-	void __iomem *(*get_base)(union gic_base *);
-#endif
-};
-#else /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)) */
-struct gic_chip_data_v2 {
-	struct irq_chip chip;
-	union gic_base dist_base;
-	union gic_base cpu_base;
-	void __iomem *raw_dist_base;
-	void __iomem *raw_cpu_base;
-	u32 percpu_offset;
-#if defined(CONFIG_CPU_PM) || defined(CONFIG_ARM_GIC_PM)
-	u32 saved_spi_enable[DIV_ROUND_UP(1020, 32)];
-	u32 saved_spi_active[DIV_ROUND_UP(1020, 32)];
-	u32 saved_spi_conf[DIV_ROUND_UP(1020, 16)];
-	u32 saved_spi_target[DIV_ROUND_UP(1020, 4)];
-	u32 __percpu *saved_ppi_enable;
-	u32 __percpu *saved_ppi_active;
-	u32 __percpu *saved_ppi_conf;
-#endif
-	struct irq_domain *domain;
-	unsigned int gic_irqs;
-#ifdef CONFIG_GIC_NON_BANKED
-	void __iomem *(*get_base)(union gic_base *);
-#endif
-};
-#endif
 
 /*
  * @ref.impl drivers/irqchip/irq-gic-v3.c
@@ -379,6 +110,10 @@ struct gic_chip_data_v3 {
 	struct irq_domain	*domain;
 	u64			redist_stride;
 	u32			nr_redist_regions;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0) || \
+    (defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
+	bool			has_rss;
+#endif
 	unsigned int		irq_nr;
 	struct partition_desc	*ppi_descs[16];
 };
@@ -447,6 +182,159 @@ struct ihk_smp_trampoline_header {
 static unsigned long ihk_smp_psci_method = PSCI_METHOD_INVALID;	/* psci_method value */
 
 /* ----------------------------------------------- */
+
+/*
+ * IHK-SMP unexported kernel symbols
+ */
+static struct gic_chip_data_v3 *ihk_gic_data_v3;
+static void (*ihk___smp_cross_call)(const struct cpumask *, unsigned int);
+
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
+static int (*ihk___irq_domain_alloc_irqs)(struct irq_domain *domain,
+					  int irq_base, unsigned int nr_irqs,
+					  int node, void *arg, bool realloc);
+static int (*ihk_irq_domain_free_irqs)(unsigned int virq,
+				       unsigned int nr_irqs);
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) */
+static struct psci_operations *ihk_psci_ops;
+
+static size_t ihk___cpu_logical_map_size = NR_CPUS;
+static u64 *ihk___cpu_logical_map;
+
+static uintptr_t *ihk_invoke_psci_fn;
+static uintptr_t ihk___invoke_psci_fn_hvc;
+static uintptr_t ihk___invoke_psci_fn_smc;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
+static struct arm_pmu **ihk_cpu_pmu;
+#else
+static struct arm_pmu **ihk_cpu_pmu;
+#endif
+
+int (*ihk___irq_set_affinity)(unsigned int irq, const struct cpumask *mask,
+			      bool force);
+
+enum ppi_nr {
+	PHYS_SECURE_PPI,
+	PHYS_NONSECURE_PPI,
+	VIRT_PPI,
+	HYP_PPI,
+	MAX_TIMER_PPI
+};
+
+enum ppi_nr *ihk_arch_timer_uses_ppi;
+
+u32 *ihk_arch_timer_rate;
+
+/* There are two symbols with the same name, but thanksfully only one is
+ * actually used, and the other will contain 0s by definition.
+ * We can use that to figure which symbol to use
+ */
+int lookup_gic_data_v3(void *data, const char *name, struct module *mod,
+		       unsigned long address)
+{
+	unsigned long *gic_data;
+	int i;
+
+	if (strcmp(name, "gic_data") == 0) {
+		gic_data = (void *)address;
+		/* check the first (arbitrary) 8 words for data */
+		for (i = 0; i < 8; i++) {
+			if (gic_data[i]) {
+				ihk_gic_data_v3 = (void *) address;
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int ihk_smp_arch_symbols_init(void)
+{
+	if (WARN_ON(!kallsyms_on_each_symbol(lookup_gic_data_v3, NULL)))
+		return -EFAULT;
+
+	void **ihk___smp_cross_call_p =
+		(void *) kallsyms_lookup_name("__smp_cross_call");
+	if (WARN_ON(!ihk___smp_cross_call_p))
+		return -EFAULT;
+	ihk___smp_cross_call = *ihk___smp_cross_call_p;
+	if (WARN_ON(!ihk___smp_cross_call))
+		return -EFAULT;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
+	ihk___irq_domain_alloc_irqs =
+		(void *) kallsyms_lookup_name("__irq_domain_alloc_irqs");
+	if (WARN_ON(!ihk___irq_domain_alloc_irqs))
+		return -EFAULT;
+
+	ihk_irq_domain_free_irqs =
+		(void *) kallsyms_lookup_name("irq_domain_free_irqs");
+	if (WARN_ON(!ihk_irq_domain_free_irqs))
+		return -EFAULT;
+#endif
+	ihk_psci_ops = (void *) kallsyms_lookup_name("psci_ops");
+	if (WARN_ON(!ihk_psci_ops))
+		return -EFAULT;
+
+	ihk___cpu_logical_map =
+		(void *) kallsyms_lookup_name("__cpu_logical_map");
+	if (WARN_ON(!ihk___cpu_logical_map))
+		return -EFAULT;
+
+	ihk_invoke_psci_fn = (void *) kallsyms_lookup_name("invoke_psci_fn");
+	if (WARN_ON(!ihk_invoke_psci_fn))
+		return -EFAULT;
+
+	ihk___invoke_psci_fn_hvc =
+		(uintptr_t) kallsyms_lookup_name("__invoke_psci_fn_hvc");
+	if (WARN_ON(!ihk___invoke_psci_fn_hvc))
+		return -EFAULT;
+
+	ihk___invoke_psci_fn_smc =
+		(uintptr_t) kallsyms_lookup_name("__invoke_psci_fn_smc");
+	if (WARN_ON(!ihk___invoke_psci_fn_smc))
+		return -EFAULT;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
+	ihk_cpu_pmu = (void *) kallsyms_lookup_name("cpu_pmu");
+#else
+	ihk_cpu_pmu = (void *) kallsyms_lookup_name("__oprofile_cpu_pmu");
+#endif
+	if (WARN_ON(!ihk_cpu_pmu))
+		return -EFAULT;
+
+	ihk___irq_set_affinity =
+		(void *) kallsyms_lookup_name("__irq_set_affinity");
+	if (WARN_ON(!ihk___irq_set_affinity))
+		return -EFAULT;
+
+	ihk_arch_timer_uses_ppi =
+		(void *) kallsyms_lookup_name("arch_timer_uses_ppi");
+	if (WARN_ON(!ihk_arch_timer_uses_ppi))
+		return -EFAULT;
+
+	ihk_arch_timer_rate =
+		(void *) kallsyms_lookup_name("arch_timer_rate");
+	if (WARN_ON(!ihk_arch_timer_rate))
+		return -EFAULT;
+
+	return 0;
+}
+
+
+static unsigned long is_arch_timer_use_virt(void)
+{
+	if (*ihk_arch_timer_uses_ppi == VIRT_PPI) {
+		return 1UL;
+	} else if (MAX_TIMER_PPI > *ihk_arch_timer_uses_ppi) {
+		return 0UL;
+	} else {
+		return ULONG_MAX;
+	}
+}
 
 /* @ref.impl arch/arm64/kernel/perf_event.c:armpmu_reserve_hardware */
 static int
@@ -605,12 +493,6 @@ static int ihk_smp_acpi_parse_entries(char *id, unsigned long table_size,
 	return count;
 }
 
-#ifndef ACPI_GICV2_DIST_MEM_SIZE
-#define ACPI_GICV2_DIST_MEM_SIZE	SZ_4K
-#endif
-#ifndef ACPI_GICV2_CPU_IF_MEM_SIZE
-#define ACPI_GICV2_CPU_IF_MEM_SIZE	SZ_8K
-#endif
 #ifndef ACPI_GICV3_DIST_MEM_SIZE
 #define ACPI_GICV3_DIST_MEM_SIZE	SZ_64K
 #endif
@@ -618,34 +500,6 @@ static int ihk_smp_acpi_parse_entries(char *id, unsigned long table_size,
 #define ACPI_GICV3_CPU_IF_MEM_SIZE	SZ_64K
 #endif
 
-/*
- * @ref.impl drivers/irqchip/irq-gic.c:__init gic_acpi_parse_madt_cpu
- */
-static int ihk_smp_gicv2_acpi_parse_madt_cpu(struct acpi_subtable_header *header,
-			const unsigned long end)
-{
-	struct acpi_madt_generic_interrupt *processor;
-	phys_addr_t gic_cpu_base;
-	static int cpu_base_assigned;
-
-	processor = (struct acpi_madt_generic_interrupt *)header;
-	if (BAD_MADT_GICC_ENTRY(processor, end))
-		return -EINVAL;
-
-	/*
-	 * There is no support for non-banked GICv1/2 register in ACPI spec.
-	 * All CPU interface addresses have to be the same.
-	 */
-	gic_cpu_base = processor->base_address;
-	if (cpu_base_assigned && gic_cpu_base != ihk_smp_gic_cpu_base_pa)
-		return -EINVAL;
-
-	// set to global
-	ihk_smp_gic_cpu_base_pa = gic_cpu_base;
-	ihk_smp_gic_cpu_size = ACPI_GICV2_CPU_IF_MEM_SIZE;
-	cpu_base_assigned = 1;
-	return 0;
-}
 
 static void ihk_smp_gic_collect_rdist(void)
 {
@@ -653,14 +507,14 @@ static void ihk_smp_gic_collect_rdist(void)
 
 	/* Collect redistributor base addresses for all possible cpus */
 	for_each_cpu(cpu, cpu_possible_mask) {
-		ihk_smp_gic_rdist_pa[cpu] = 
+		ihk_smp_gic_rdist_pa[cpu] =
 			(per_cpu_ptr(ihk_gic_data_v3->rdists.rdist, cpu))->phys_base;
 	}
 
 	if(ihk_gic_data_v3->redist_stride) {
 		ihk_smp_gic_cpu_size = ihk_gic_data_v3->redist_stride;
 	} else {
-		unsigned long typer = 
+		unsigned long typer =
 			readq_relaxed(((this_cpu_ptr(ihk_gic_data_v3->rdists.rdist))->rd_base) + GICR_TYPER);
 		if (typer & GICR_TYPER_VLPIS) {
 			ihk_smp_gic_cpu_size = ACPI_GICV3_CPU_IF_MEM_SIZE * 4; /* RD + SGI + VLPI + reserved */
@@ -707,7 +561,8 @@ static int ihk_smp_acpi_parse_madt_distributor(struct acpi_subtable_header *head
 	if(ihk_gic_version >= ACPI_MADT_GIC_VERSION_V3) {
 		ihk_smp_gic_dist_size = ACPI_GICV3_DIST_MEM_SIZE;
 	} else {
-		ihk_smp_gic_dist_size = ACPI_GICV2_DIST_MEM_SIZE;
+		pr_err("Unsupported GICv2 or less\n");
+		return -EINVAL;
 	}
 
 	return 0;
@@ -756,30 +611,12 @@ static int ihk_smp_acpi_get_gic_base(void)
 		return -EINVAL;
 	}
 
-	if(ihk_gic_version >= ACPI_MADT_GIC_VERSION_V3) {
-		// for GICv3 or later
-		/* 
-		 * Collect re-distributor base PA infomation 
-		 * that the host-linux was constructed.
-		 */
-		ihk_smp_gic_collect_rdist();
-	} else {
-#ifndef UNSUPPORTED_GICV2
-		// for GICv2 or abobe
-		/* Collect CPU base addresses */
-		count = ihk_smp_acpi_parse_entries(ACPI_SIG_MADT,
-					   sizeof(struct acpi_table_madt),
-					   ihk_smp_gicv2_acpi_parse_madt_cpu, table,
-					   ACPI_MADT_TYPE_GENERIC_INTERRUPT, 0);
-		if (count <= 0) {
-			printk("ERROR: No valid GICC entries exist\n");
-			return -ENXIO;
-		}
-#else /* !UNSUPPORTED_GICV2 */
-		pr_err("Unsupported GIC versions below v2.\n");
-		return -EINVAL;
-#endif /* !UNSUPPORTED_GICV2 */
-	}
+	// for GICv3 or later
+	/*
+	 * Collect re-distributor base PA information
+	 * that the host-linux was constructed.
+	 */
+	ihk_smp_gic_collect_rdist();
 
 	return 0;
 }
@@ -806,13 +643,8 @@ static int ihk_smp_dt_get_gic_base(void)
 		ihk_gic_version = 3; /* GICv3 or later */
 		domain = ihk_gic_data_v3->domain;
 	} else {
-#ifndef UNSUPPORTED_GICV2
-		ihk_gic_version = 2; /* GICv2 or abobe */
-		domain = ihk_gic_data_v2->domain;
-#else /* !UNSUPPORTED_GICV2 */
-		pr_err("Unsupported GIC versions below v2.\n");
+		pr_err("Unsupported GIC versions 2 or less.\n");
 		return -EINVAL;
-#endif /* !UNSUPPORTED_GICV2 */
 	}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
@@ -831,29 +663,11 @@ static int ihk_smp_dt_get_gic_base(void)
 		return result;
 	}
 
-	/* get cpu base. */
-	if(ihk_gic_version >= 3) {
-		/* 
-		 * Collect re-distributor base PA infomation 
-		 * that the host-linux was constructed.
-		 */
-		ihk_smp_gic_collect_rdist();
-	} else {
-		result = of_address_to_resource(node, 1, &res);
-		if (result == 0) {
-			ihk_smp_gic_cpu_base_pa = res.start;
-			ihk_smp_gic_cpu_size = ALIGN(res.end - res.start + 1, PAGE_SIZE);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)
-			if (of_property_read_u32(node, "cpu-offset", &ihk_gic_percpu_offset))
-				ihk_gic_percpu_offset = 0;
-#else /* LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0) */
-			ihk_gic_percpu_offset = ihk_gic_data_v2->percpu_offset;
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0) */
-		} else {
-			printk("ERROR: GIC failed to get cpu I/F base PA\n");
-			return result;
-		}
-	}
+	/*
+	 * Collect re-distributor base PA information
+	 * that the host-linux was constructed.
+	 */
+	ihk_smp_gic_collect_rdist();
 
 	return 0;
 }
@@ -871,15 +685,7 @@ static int ihk_smp_collect_gic_info(void)
 		result = ihk_smp_dt_get_gic_base();
 	}
 
-	if(ihk_gic_version >= ACPI_MADT_GIC_VERSION_V3) {
-		ihk___smp_cross_call = ihk___smp_cross_call_gicv3;
-
-		ihk_gic_max_vector = ihk_gic_data_v3->irq_nr;
-	} else {
-		ihk___smp_cross_call = ihk___smp_cross_call_gicv2;
-
-		ihk_gic_max_vector = ihk_gic_data_v2->gic_irqs;
-	}
+	ihk_gic_max_vector = ihk_gic_data_v3->irq_nr;
 
 	return result;
 }
@@ -930,13 +736,9 @@ unsigned long calc_ns_per_tsc(void)
 unsigned long get_sve_default_vl(void)
 {
 	struct file* filp = NULL;
-	mm_segment_t oldfs;
 	int ret, vl = 0;
 	const char *path = "/proc/cpu/sve_default_vector_length";
 	char buf[16] = "";
-
-	oldfs = get_fs();
-	set_fs(get_ds());
 
 	filp = filp_open(path, O_RDONLY, 0);
 	if (IS_ERR(filp)) {
@@ -944,7 +746,11 @@ unsigned long get_sve_default_vl(void)
 		goto open_err;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 	ret = kernel_read(filp, 0, buf, sizeof(buf));
+#else
+	ret = kernel_read(filp, sizeof(buf), 0, buf);
+#endif
 	if (ret < 0) {
 		printk("%s: ERROR reading %s\n", __FUNCTION__, path);
 		goto read_err;
@@ -954,7 +760,6 @@ unsigned long get_sve_default_vl(void)
 read_err:
 	filp_close(filp, NULL);
 open_err:
-	set_fs(oldfs);
 	return vl;
 
 }
@@ -1025,7 +830,7 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 	return entry;
 }
 
-void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
+int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
 	struct smp_os_data *os = priv;
@@ -1045,6 +850,7 @@ void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	startup[6] = entry;
 	ihk_smp_unmap_virtual(startup);
 	os->boot_rip = startup_p;
+	return 0;
 }
 
 enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
@@ -1261,11 +1067,7 @@ static int ihk_smp_reserve_irq(void)
 		hwirq = ihk_start_irq;
 	}
 
-	if(ihk_gic_version >= ACPI_MADT_GIC_VERSION_V3) {
-		domain = ihk_gic_data_v3->domain;
-	} else {
-		domain = ihk_gic_data_v2->domain;
-	}
+	domain = ihk_gic_data_v3->domain;
 
 	for( ; hwirq < ihk_gic_max_vector; hwirq += 1 ) {
 		// check hwirq is in used?
@@ -1294,7 +1096,7 @@ static int ihk_smp_reserve_irq(void)
 	}
 	virq = irq_create_fwspec_mapping(&fw_args);
 
-	desc = _irq_to_desc(virq);
+	desc = irq_to_desc(virq);
 	if (!desc) {
 		printk("IRQ vector %d: still no descriptor??\n", virq);
 		return -EINVAL;
@@ -1318,13 +1120,13 @@ static int ihk_smp_reserve_irq(void)
 
 	if (request_irq(virq, smp_ihk_irq_handler,
 		IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", virq);
+		pr_info("IHK-SMP: IRQ vector %d: request_irq failed\n", virq);
 		return -EFAULT;
 	}
 
 	ihk_smp_irq.irq = virq;
 	ihk_smp_irq.hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);
-	printk("IHK-SMP: IKC irq vector: %d, hwirq#: %d\n", 
+	pr_info("IHK-SMP: IKC irq vector: %d, hwirq#: %d\n",
 		ihk_smp_irq.irq, ihk_smp_irq.hwirq);
 
 	return virq;
@@ -1424,17 +1226,13 @@ retry_trampoline:
 		struct irq_desc *desc;
 
 #ifdef CONFIG_SPARSE_IRQ
-		desc = _irq_to_desc(vector);
+		desc = irq_to_desc(vector);
 		if (!desc) {
 			int result;
 			struct irq_domain *domain;
 
 			struct of_phandle_args of_args;
-			if(ihk_gic_version >= ACPI_MADT_GIC_VERSION_V3) {
-				domain = ihk_gic_data_v3->domain;
-			} else {
-				domain = ihk_gic_data_v2->domain;
-			}
+			domain = ihk_gic_data_v3->domain;
 
 			of_args.np = domain->of_node;
 			of_args.args[0] = GIC_SPI;
@@ -1460,28 +1258,20 @@ retry_trampoline:
 			continue;
 		}
 
-		desc = _irq_to_desc(vector);
+		desc = irq_to_desc(vector);
 		if (!desc) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
 			continue;
 		}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 		if (desc->status_use_accessors & IRQ_NOREQUEST) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
 
 			desc->status_use_accessors &= ~IRQ_NOREQUEST;
 		}
-#else
-		if (desc->status & IRQ_NOREQUEST) {
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
-
-			desc->status &= ~IRQ_NOREQUEST;
-		}
-#endif
 #endif /* CONFIG_SPARSE_IRQ */
 
-		if (request_irq(vector, smp_ihk_irq_handler, 
+		if (request_irq(vector, smp_ihk_irq_handler,
 			IRQF_DISABLED, "IHK-SMP", NULL) != 0) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
 
@@ -1513,8 +1303,7 @@ retry_trampoline:
 	return error;
 
 error_free_irq:
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
 		try_module_get(THIS_MODULE);
 	}
@@ -1583,7 +1372,7 @@ static int ensure_continue(const char *errmsg, int result)
 			// no problem.
 			break;
 		case -ENOENT:
-			// When target file does not exist, 
+			// When target file does not exist,
 			// processes may be continued.
 			break;
 		default:
@@ -1888,8 +1677,7 @@ int ihk_smp_reset_cpu(int hw_id)
 
 void smp_ihk_arch_exit(void)
 {
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
 		try_module_get(THIS_MODULE);
 	}

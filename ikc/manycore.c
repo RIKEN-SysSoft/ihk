@@ -50,39 +50,26 @@ static void ihk_ikc_interrupt_handler(void *priv)
 
 	if (ihk_mc_get_processor_id() == 0) {
 		m_channel = ihk_ikc_get_master_channel(NULL);
-#ifdef POSTK_DEBUG_TEMP_FIX_67 /* uninitialized channel use fix */
-		if (m_channel) {
-			while (ihk_ikc_channel_enabled(m_channel) &&
-			       !ihk_ikc_queue_is_empty(m_channel->recv.queue) &&
-			       m_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
-				ihk_ikc_recv_handler(m_channel, m_channel->handler, NULL, 0);
-			}
-		}
-#else /* POSTK_DEBUG_TEMP_FIX_67 */
+		if (!m_channel)
+			goto no_m_channel;
+
 		while (ihk_ikc_channel_enabled(m_channel) &&
 		       !ihk_ikc_queue_is_empty(m_channel->recv.queue) &&
 		       m_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
 			ihk_ikc_recv_handler(m_channel, m_channel->handler, NULL, 0);
 		}
-#endif /* POSTK_DEBUG_TEMP_FIX_67 */
 	}
+no_m_channel:
 
 	r_channel = ihk_ikc_get_regular_channel(NULL, ihk_mc_get_processor_id());
-#ifdef POSTK_DEBUG_TEMP_FIX_67 /* uninitialized channel use fix */
-	if (r_channel) {
-		while (ihk_ikc_channel_enabled(r_channel) &&
-		       !ihk_ikc_queue_is_empty(r_channel->recv.queue) &&
-		       r_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
-			ihk_ikc_recv_handler(r_channel, r_channel->handler, NULL, 0);
-		}
-	}
-#else /* POSTK_DEBUG_TEMP_FIX_67 */
+	if (!r_channel)
+		return;
+
 	while (ihk_ikc_channel_enabled(r_channel) &&
 	       !ihk_ikc_queue_is_empty(r_channel->recv.queue) &&
 	       r_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
 		ihk_ikc_recv_handler(r_channel, r_channel->handler, NULL, 0);
 	}
-#endif /* POSTK_DEBUG_TEMP_FIX_67 */
 }
 
 int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)

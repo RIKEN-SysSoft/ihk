@@ -13,28 +13,21 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/mm.h>
+#include <linux/io.h>
 #include <linux/module.h>
 #include <linux/radix-tree.h>
 #include <linux/irq.h>
+#include <linux/vmalloc.h>
 #include <asm/hw_irq.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
-#include <linux/autoconf.h>
-#endif
+#include <linux/kallsyms.h>
 #include <asm/mc146818rtc.h>
 #include <asm/tlbflush.h>
 #if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
 #include <asm/smpboot_hooks.h>
 #endif
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38)
-#include <asm/trampoline.h>
-#elif (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
-#include <asm/trampoline.h>
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 #include <asm/realmode.h>
-#endif
-
 #include <asm/apic.h>
 #include <asm/ipi.h>
 #include <asm/uv/uv.h>
@@ -46,147 +39,6 @@
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
-
-/*
- * IHK-SMP unexported kernel symbols
- */
-
-/* x86_trampoline_base has been introduced in 2.6.38 */
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
-#ifdef IHK_KSYM_x86_trampoline_base
-#if IHK_KSYM_x86_trampoline_base
-unsigned char *x86_trampoline_base = 
-	(void *)
-	IHK_KSYM_x86_trampoline_base;
-#endif
-#endif
-#endif
-
-/* real_mode_header has been introduced in 3.10 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
-#ifdef IHK_KSYM_real_mode_header
-#if IHK_KSYM_real_mode_header
-struct real_mode_header *real_mode_header =
-	(void *)
-	IHK_KSYM_real_mode_header;
-#endif
-#endif
-#endif
-
-#ifdef IHK_KSYM_per_cpu__vector_irq
-#if IHK_KSYM_per_cpu__vector_irq
-void *_per_cpu__vector_irq =
-	(void *)
-	IHK_KSYM_per_cpu__vector_irq;
-#endif
-#endif
-
-#ifdef IHK_KSYM_vector_irq
-#if IHK_KSYM_vector_irq
-void *_vector_irq =
-	(void *)
-	IHK_KSYM_vector_irq;
-#endif
-#endif
-
-#ifdef IHK_KSYM_lapic_get_maxlvt
-#if IHK_KSYM_lapic_get_maxlvt
-typedef int (*int_star_fn_void_t)(void);
-int (*_lapic_get_maxlvt)(void) =
-	(int_star_fn_void_t)
-	IHK_KSYM_lapic_get_maxlvt;
-#endif
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
-#ifdef IHK_KSYM_init_deasserted
-#if IHK_KSYM_init_deasserted
-atomic_t *_init_deasserted =
-	(atomic_t *)
-	IHK_KSYM_init_deasserted;
-#endif
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_to_desc
-#if IHK_KSYM_irq_to_desc
-typedef struct irq_desc *(*irq_desc_star_fn_int_t)(unsigned int);
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) =
-	(irq_desc_star_fn_int_t)
-	IHK_KSYM_irq_to_desc;
-#else /* exported */
-#include <linux/irqnr.h>
-struct irq_desc *(*_irq_to_desc)(unsigned int irq) = irq_to_desc;
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_to_desc_alloc_node
-#if IHK_KSYM_irq_to_desc_alloc_node
-typedef struct irq_desc *(*irq_desc_star_fn_int_int_t)(unsigned int, int);
-struct irq_desc *(*_irq_to_desc_alloc_node)(unsigned int irq, int node) =
-	(irq_desc_star_fn_int_int_t)
-	IHK_KSYM_irq_to_desc_alloc_node;
-#endif
-#endif
-
-#ifdef IHK_KSYM_alloc_desc
-#if IHK_KSYM_alloc_desc
-typedef struct irq_desc *(*irq_desc_star_fn_int_int_module_star_t)
-	(int, int, struct module*);
-struct irq_desc *(*_alloc_desc)(int irq, int node, struct module *owner) =
-	(irq_desc_star_fn_int_int_module_star_t)
-	IHK_KSYM_alloc_desc;
-#endif
-#endif
-
-#ifdef IHK_KSYM_irq_desc_tree
-#if IHK_KSYM_irq_desc_tree
-struct radix_tree_root *_irq_desc_tree =
-	(struct radix_tree_root *)
-	IHK_KSYM_irq_desc_tree;
-#endif
-#endif
-
-#ifdef IHK_KSYM_dummy_irq_chip
-#if IHK_KSYM_dummy_irq_chip
-struct irq_chip *_dummy_irq_chip =
-	(struct irq_chip *)
-	IHK_KSYM_dummy_irq_chip;
-#else /* exported */
-struct irq_chip *_dummy_irq_chip = &dummy_irq_chip;
-#endif
-#endif
-
-#ifdef IHK_KSYM_get_uv_system_type
-#if IHK_KSYM_get_uv_system_type
-typedef enum uv_system_type (*uv_system_type_star_fn_void_t)(void);
-enum uv_system_type (*_get_uv_system_type)(void) =
-	(uv_system_type_star_fn_void_t)
-	IHK_KSYM_get_uv_system_type;
-#endif
-#else /* static */
-#define _get_uv_system_type get_uv_system_type
-#endif
-
-#ifdef IHK_KSYM_wakeup_secondary_cpu_via_init
-#if IHK_KSYM_wakeup_secondary_cpu_via_init
-int (*_wakeup_secondary_cpu_via_init)(int phys_apicid,
-	unsigned long start_eip) =
-	IHK_KSYM_wakeup_secondary_cpu_via_init;
-#endif
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0)
-#ifdef IHK_KSYM___default_send_IPI_dest_field
-#if IHK_KSYM___default_send_IPI_dest_field
-typedef void (*void_fn_unsigned_int_int_unsigned_int_t)(void);
-void (*___default_send_IPI_dest_field)(unsigned int mask, 
-	int vector, unsigned int dest)
-	= (void_fn_unsigned_int_int_unsigned_int_t)
-	IHK_KSYM___default_send_IPI_dest_field;
-#endif
-#endif
-#endif
 
 /* ----------------------------------------------- */
 
@@ -234,6 +86,100 @@ struct ihk_smp_trampoline_header {
 };
 
 /* ----------------------------------------------- */
+
+
+/*
+ * IHK-SMP unexported kernel symbols
+ */
+
+static struct real_mode_header *_real_mode_header;
+static void *_vector_irq;
+static int (*_lapic_get_maxlvt)(void);
+static struct radix_tree_root *_irq_desc_tree;
+static enum uv_system_type (*_get_uv_system_type)(void);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
+static atomic_t *_init_deasserted;
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) || \
+	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
+static struct irq_desc *(*_alloc_desc)(int irq, int node, unsigned int flags,
+				       const struct cpumask *affinity,
+				       struct module *owner);
+#else
+static struct irq_desc *(*_alloc_desc)(int irq, int node,
+				       struct module *owner);
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+static void (*___default_send_IPI_dest_field)(unsigned int mask, int vector,
+					      unsigned int dest);
+#endif
+
+struct rb_root *_vmap_area_root;
+spinlock_t *_vmap_area_lock;
+static void (*___insert_vmap_area)(struct vmap_area *va);
+static void (*___free_vmap_area)(struct vmap_area *va);
+
+
+int ihk_smp_arch_symbols_init(void)
+{
+	_real_mode_header = (void *) kallsyms_lookup_name("real_mode_header");
+	if (WARN_ON(!_real_mode_header))
+		return -EFAULT;
+
+	_vector_irq = (void *) kallsyms_lookup_name("vector_irq");
+	if (WARN_ON(!_vector_irq))
+		return -EFAULT;
+
+	_lapic_get_maxlvt = (void *) kallsyms_lookup_name("lapic_get_maxlvt");
+	if (WARN_ON(!_lapic_get_maxlvt))
+		return -EFAULT;
+
+	_irq_desc_tree = (void *) kallsyms_lookup_name("irq_desc_tree");
+	if (WARN_ON(!_irq_desc_tree))
+		return -EFAULT;
+
+	_get_uv_system_type =
+		(void *) kallsyms_lookup_name("get_uv_system_type");
+	if (WARN_ON(!_get_uv_system_type))
+		return -EFAULT;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
+	_init_deasserted = (void *) kallsyms_lookup_name("init_deasserted");
+	if (WARN_ON(!_init_deasserted))
+		return -EFAULT;
+#endif
+
+	_alloc_desc = (void *) kallsyms_lookup_name("alloc_desc");
+	if (WARN_ON(!_alloc_desc))
+		return -EFAULT;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
+	___default_send_IPI_dest_field =
+		(void *) kallsyms_lookup_name("__default_send_IPI_dest_field");
+	if (WARN_ON(!___default_send_IPI_dest_field))
+		return -EFAULT;
+#endif
+	_vmap_area_root = (void *)kallsyms_lookup_name("vmap_area_root");
+	if (WARN_ON(!_vmap_area_root))
+		return -EFAULT;
+
+	_vmap_area_lock = (void *)kallsyms_lookup_name("vmap_area_lock");
+	if (WARN_ON(!_vmap_area_lock))
+		return -EFAULT;
+
+	___insert_vmap_area = (void *)kallsyms_lookup_name("__insert_vmap_area");
+	if (WARN_ON(!___insert_vmap_area))
+		return -EFAULT;
+
+	___free_vmap_area = (void *)kallsyms_lookup_name("__free_vmap_area");
+	if (WARN_ON(!___free_vmap_area))
+		return -EFAULT;
+
+	return 0;
+}
 
 int ihk_smp_get_hw_id(int cpu)
 {
@@ -435,6 +381,10 @@ void smp_ihk_setup_trampoline(void *priv)
 		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
 	}
 
+	os->param->linux_kernel_pgt_phys = __pa(&init_level4_pgt[0]);
+	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n",
+		__FUNCTION__, &init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
+
 	/* Make a temporary copy of the Linux trampoline */
 	if (using_linux_trampoline) {
 		memcpy(linux_trampoline_backup, trampoline_va, IHK_SMP_TRAMPOLINE_SIZE);
@@ -455,67 +405,143 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 	return entry;
 }
 
-void smp_ihk_os_setup_startup(void *priv, unsigned long phys,
+static struct vmap_area *lwk_va = NULL;
+
+int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
 	struct smp_os_data *os = priv;
-	unsigned long pml4_p;
-	unsigned long pdp_p;
-	unsigned long pde_p;
-	unsigned long *pml4;
-	unsigned long *pdp;
-	unsigned long *pde;
-	unsigned long *cr3;
-	int n, i;
+	unsigned long flags;
+	unsigned long _virt, _phys, _len;
+	unsigned long stack_p;
 	extern char startup_data[];
 	extern char startup_data_end[];
 	unsigned long startup_p;
 	unsigned long *startup;
+	int vmap_area_taken = 0;
 
-	pml4_p = os->bootstrap_mem_end - PAGE_SIZE;
-	pdp_p = pml4_p - PAGE_SIZE;
-	pde_p = pdp_p - PAGE_SIZE;
+	os->boot_pt = (pgd_t *)get_zeroed_page(GFP_KERNEL);
+	if (!os->boot_pt) {
+		printk("%s: error: allocating boot PT\n", __FUNCTION__);
+		return -ENOMEM;
+	}
 
-	cr3 = ident_page_table_virt;
-	pml4 = ihk_smp_map_virtual(pml4_p, PAGE_SIZE);
-	pdp = ihk_smp_map_virtual(pdp_p, PAGE_SIZE);
-	pde = ihk_smp_map_virtual(pde_p, PAGE_SIZE);
+	/* Map identity (256GB) */
+	_len = 0x4000000000UL;
+	for (_virt = 0, _phys = 0; _virt < _len;
+			_virt += IHK_SMP_LARGE_PAGE, _phys += IHK_SMP_LARGE_PAGE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping identity\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
 
-	memset(pml4, '\0', PAGE_SIZE);
-	memset(pdp, '\0', PAGE_SIZE);
-	memset(pde, '\0', PAGE_SIZE);
+#if 0
+	/* Map PAGE_OFFSET */
+	for (_virt = PAGE_OFFSET, _phys = 0; _virt < (PAGE_OFFSET + _len);
+			_virt += IHK_SMP_LARGE_PAGE, _phys += IHK_SMP_LARGE_PAGE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping Linux area\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+#endif
+
+	/* Map ST */
+	for (_virt = IHK_SMP_MAP_ST_START, _phys = 0; _virt < (IHK_SMP_MAP_ST_START + _len);
+			_virt += IHK_SMP_LARGE_PAGE, _phys += IHK_SMP_LARGE_PAGE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping straight area\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+
+	/* Map kernel image */
+	_len = (4 * IHK_SMP_LARGE_PAGE);
+	for (_virt = IHK_SMP_MAP_KERNEL_START, _phys = phys; 
+			_virt < (IHK_SMP_MAP_KERNEL_START + _len);
+			_virt += IHK_SMP_LARGE_PAGE, _phys += IHK_SMP_LARGE_PAGE) {
+		if (ihk_smp_map_kernel(os->boot_pt, _virt, _phys) < 0) {
+			printk("%s: error: mapping kernel image\n", __FUNCTION__);
+			return -ENOMEM;
+		}
+	}
+
+	/* Stack grows down.. */
+	stack_p = os->bootstrap_mem_end - PAGE_SIZE; 
+	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
 
 	/*
-	 * TODO: do this mapping so that holes between memory chunks
-	 * are emitted
+	 * Map in LWK image to Linux kernel space
 	 */
-	pml4[0] = cr3[0];
-	pml4[(IHK_SMP_MAP_ST_START >> PTL4_SHIFT) & 511] = cr3[0];
-	pml4[(IHK_SMP_MAP_KERNEL_START >> PTL4_SHIFT) & 511] = pdp_p | 3;
-	pdp[(IHK_SMP_MAP_KERNEL_START >> PTL3_SHIFT) & 511] = pde_p | 3;
-	n = (os->bootstrap_mem_end - os->bootstrap_mem_start) >> PTL2_SHIFT;
-	if(n > 511)
-	n = 511;
-
-	for (i = 0; i < n; i++) {
-		pde[i] = (phys + (i << PTL2_SHIFT)) | 0x83;
+	lwk_va = kmalloc(sizeof(*lwk_va), GFP_KERNEL);
+	if (!lwk_va) {
+		printk("%s: ERROR: allocating LWK va\n", __FUNCTION__);
+		return -1;
 	}
-	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
-	pde[511] = startup_p | 0x83;
 
-	ihk_smp_unmap_virtual(pde);
-	ihk_smp_unmap_virtual(pdp);
-	ihk_smp_unmap_virtual(pml4);
+	spin_lock_irqsave(_vmap_area_lock, flags);
+	{
+		struct vmap_area *tmp_va;
+		struct rb_node *p = rb_last(_vmap_area_root);
+
+		if (p) {
+			tmp_va = rb_entry(p, struct vmap_area, rb_node);
+			if (tmp_va->va_start >= IHK_SMP_MAP_KERNEL_START)
+				vmap_area_taken = 1;
+		}
+	}
+
+	if (vmap_area_taken) {
+		kfree(lwk_va);
+		lwk_va = NULL;
+		printk("%s: ERROR: reserving LWK kernel memory virtual range\n",
+				__FUNCTION__);
+	}
+	else {
+		lwk_va->va_start = IHK_SMP_MAP_KERNEL_START;
+		lwk_va->va_end = MODULES_END;
+		lwk_va->flags = 0;
+		___insert_vmap_area(lwk_va);
+	}
+	spin_unlock_irqrestore(_vmap_area_lock, flags);
+
+	if (vmap_area_taken)
+		return -1;
+
+	if (ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
+				phys, PAGE_KERNEL_EXEC) < 0) {
+		printk("%s: error: mapping LWK to Linux kernel space\n",
+				__FUNCTION__);
+	}
 
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
-	startup[2] = pml4_p;
-	startup[3] = 0xffffffffc0000000;
+	startup[2] = __pa(os->boot_pt);
+	startup[3] = stack_p;
 	startup[4] = phys;
 	startup[5] = trampoline_phys;
 	startup[6] = entry;
 	ihk_smp_unmap_virtual(startup);
 	os->boot_rip = startup_p;
+
+	return 0;
+}
+
+int smp_ihk_os_unmap_lwk() {
+	if (lwk_va) {
+		unsigned long flags;
+
+		/* Unmap LWK from Linux kernel virtual */
+		unmap_kernel_range_noflush(IHK_SMP_MAP_KERNEL_START,
+				MODULES_END - IHK_SMP_MAP_KERNEL_START);
+
+		spin_lock_irqsave(_vmap_area_lock, flags);
+		___free_vmap_area(lwk_va);
+		lwk_va = NULL;
+		spin_unlock_irqrestore(_vmap_area_lock, flags);
+	}
+	return 0;
 }
 
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
@@ -840,21 +866,13 @@ static void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 		return;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	raw_spin_lock(&desc->lock);
-#else
-	spin_lock(&desc->lock);
-#endif
 
 //	printk("IHK-SMP: calling handler for IRQ %d\n", irq);
 	desc->action->handler(irq, NULL);
 //	ack_APIC_irq();
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	raw_spin_unlock(&desc->lock);
-#else
-	spin_unlock(&desc->lock);
-#endif
 }
 #endif
 
@@ -940,12 +958,9 @@ vector_is_used(int vector, int core) {
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 					per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+#else
 /* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(core)));
-#else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
 				per_cpu_offset(core)));
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
 
@@ -971,12 +986,9 @@ set_vector(int vector, int core) {
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 						per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+#else
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
-#else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
-		per_cpu_offset(core)));
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
@@ -998,11 +1010,8 @@ release_vector(int vector, int core) {
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
-				per_cpu_offset(core)));
 #else
-	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_per_cpu__vector_irq,
+	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
 #endif
 
@@ -1069,21 +1078,7 @@ retry_trampoline:
 		if (!trampoline_page || page_to_phys(trampoline_page) > 0xFF000) {
 			using_linux_trampoline = 1;
 			printk("IHK-SMP: warning: allocating trampoline_page failed, using Linux'\n");
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,38))
-			trampoline_phys = TRAMPOLINE_BASE;
-#elif ((LINUX_VERSION_CODE > KERNEL_VERSION(2,6,38)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)))
-#ifdef IHK_KSYM_x86_trampoline_base
-#if IHK_KSYM_x86_trampoline_base
-			trampoline_phys = __pa(x86_trampoline_base);
-#endif
-#endif
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0))
-#ifdef IHK_KSYM_real_mode_header
-#if IHK_KSYM_real_mode_header
-			trampoline_phys = real_mode_header->trampoline_start;
-#endif
-#endif
-#endif /* LINUX_VERSION_CODE check */
+			trampoline_phys = _real_mode_header->trampoline_start;
 			trampoline_va = __va(trampoline_phys);
 		}
 		else {
@@ -1125,25 +1120,22 @@ retry_trampoline:
 
 #ifdef CONFIG_SPARSE_IRQ
 		/* If no descriptor, create one */
-		desc = _irq_to_desc(vector);
+		desc = irq_to_desc(vector);
 		if (!desc) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) || \
+	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 5))
+			desc = _alloc_desc(vector, first_online_node,
+					   0 /* flags */, NULL /* affinity */,
+					   THIS_MODULE);
+#else
 			desc = _alloc_desc(vector, first_online_node,
 			                   THIS_MODULE);
-			desc->irq_data.chip = _dummy_irq_chip;
-			radix_tree_insert(_irq_desc_tree, vector, desc);
-#else
-			desc = _irq_to_desc_alloc_node(vector,
-			                               first_online_node);
-			if (!desc) {
-				printk(KERN_INFO "IHK-SMP: IRQ vector %d: failed allocating descriptor\n", vector);
-				continue;
-			}
-			desc->chip = _dummy_irq_chip;
 #endif
+			desc->irq_data.chip = &dummy_irq_chip;
+			radix_tree_insert(_irq_desc_tree, vector, desc);
 		}
 
-		desc = _irq_to_desc(vector);
+		desc = irq_to_desc(vector);
 		if (!desc) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: no descriptor\n", vector);
 			continue;
@@ -1154,21 +1146,12 @@ retry_trampoline:
 			continue;
 		}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 		if (desc->status_use_accessors & IRQ_NOREQUEST) {
 			
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
 			
 			desc->status_use_accessors &= ~IRQ_NOREQUEST;
 		}
-#else
-		if (desc->status & IRQ_NOREQUEST) {
-			
-			printk(KERN_INFO "IHK-SMP: IRQ vector %d: not allowed to request, fake it\n", vector);
-			
-			desc->status &= ~IRQ_NOREQUEST;
-		}
-#endif
 		orig_irq_flow_handler = desc->handle_irq;
 		desc->handle_irq = ihk_smp_irq_flow_handler;
 #endif // CONFIG_SPARSE_IRQ
@@ -1220,8 +1203,7 @@ retry_trampoline:
 	return error;
 
 error_free_irq:
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
 		try_module_get(THIS_MODULE);
 	}
@@ -1596,16 +1578,15 @@ void smp_ihk_arch_exit(void)
 	irq_set_chip(ihk_smp_irq, NULL);
 
 #ifdef CONFIG_SPARSE_IRQ
-	desc = _irq_to_desc(ihk_smp_irq);
+	desc = irq_to_desc(ihk_smp_irq);
 	if (desc) {
 		desc->handle_irq = orig_irq_flow_handler;
 	} else {
-		printk("%s: Warning: _irq_to_desc(ihk_smp_irq) returns NULL\n", __FUNCTION__);
+		printk("%s: Warning: irq_to_desc(ihk_smp_irq) returns NULL\n", __FUNCTION__);
 	}
 #endif
 
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)) && \
-	(LINUX_VERSION_CODE <= KERNEL_VERSION(4,3,0)))
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
 		try_module_get(THIS_MODULE);
 	}
@@ -1613,9 +1594,7 @@ void smp_ihk_arch_exit(void)
 	free_irq(ihk_smp_irq, NULL);
 
 #ifdef CONFIG_SPARSE_IRQ
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
 	irq_free_descs(ihk_smp_irq, 1);
-#endif
 #endif
 	if (trampoline_page) {
 		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)),

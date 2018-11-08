@@ -230,136 +230,6 @@ esac
 KDIR="$WITH_KERNELSRC"
 TARGET="$WITH_TARGET"
 
-IHK_LINUX_SYMTAB=""
-case "X$WITH_SYSTEM_MAP" in
-    Xyes | Xno | X)
-	IHK_LINUX_SYMTAB=""
-	;;
-    *)
-	IHK_LINUX_SYMTAB="$WITH_SYSTEM_MAP"
-	;;
-esac
-
-AC_MSG_CHECKING([[for System.map]])
-if test -r "$IHK_LINUX_SYMTAB"; then
-	IHK_LINUX_SYMTAB="$IHK_LINUX_SYMTAB"
-elif test -r "/boot/System.map-`uname -r`"; then
-	IHK_LINUX_SYMTAB="/boot/System.map-`uname -r`"	
-elif test -r "$KDIR/System.map"; then
-	IHK_LINUX_SYMTAB="$KDIR/System.map"	
-fi
-
-if test "$IHK_LINUX_SYMTAB" == ""; then
-	AC_MSG_ERROR([could not find])
-fi
-
-if test -z "`eval cat $IHK_LINUX_SYMTAB`"; then
-	AC_MSG_ERROR([could not read System.map file, no read permission?])
-fi
-AC_MSG_RESULT([$IHK_LINUX_SYMTAB])
-
-IHK_LINUX_SYMTAB_CMD="cat $IHK_LINUX_SYMTAB"
-
-# IHK_FIND_KSYM(SYMBOL)
-# ------------------------------------------------------
-# Search System.map for address of the given symbol and
-# do one of three things in config.h:
-# If not found, leave IHK_KSYM_foo undefined
-# If found to be exported, "#define IHK_KSYM_foo 0"
-# If found not to be exported, "#define IHK_KSYM_foo 0x<value>"
-
-# POSTK_DEBUG_ARCH_DEP_10, Enhance IHK_FIND_KSYM macro feature.
-AC_DEFUN([IHK_FIND_KSYM],[
-  AC_MSG_CHECKING([[System.map for symbol $1]])
-  symbol_src=$2
-  ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " $1\$" | cut -d\  -f1`
-  ihk_addr_array=($ihk_addr)
-  if test ${#ihk_addr_array[*]} -gt 1 ; then
-    for addr in $ihk_addr ; do
-      filename=`addr2line -e $KDIR/vmlinux ${addr} | cut -d ':' -f1 | rev | cut -d '/' -f1 | rev`
-      if test $filename = $symbol_src  ; then
-        ihk_addr=$addr
-        break
-      fi
-    done
-  fi
-  if test -z $ihk_addr; then
-    AC_MSG_RESULT([not found])
-  else
-    ihk_result=$ihk_addr
-    ihk_addr="0x$ihk_addr"
-    m4_ifval([$2],[],[
-      if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_$1\$" >/dev/null`; then
-        ihk_result="exported"
-        ihk_addr="0"
-      fi
-    ])
-    AC_MSG_RESULT([$ihk_result])
-    AC_DEFINE_UNQUOTED(IHK_KSYM_[]$1$3,$ihk_addr,
-			[Define to address of kernel symbol $1$3, or 0 if exported])
-  fi
-])
-# <older version>
-# AC_DEFUN([IHK_FIND_KSYM],[
-#   AC_MSG_CHECKING([[System.map for symbol $1]])
-#   ihk_addr=`eval $IHK_LINUX_SYMTAB_CMD | grep " $1\$" | cut -d\  -f1`
-#   if test -z $ihk_addr; then
-#     AC_MSG_RESULT([not found])
-#   else
-#     ihk_result=$ihk_addr
-#     ihk_addr="0x$ihk_addr"
-#     m4_ifval([$2],[],[
-#       if `eval $IHK_LINUX_SYMTAB_CMD | grep " __ksymtab_$1\$" >/dev/null`; then
-# 	ihk_result="exported"
-# 	ihk_addr="0"
-#       fi
-#     ])
-#     AC_MSG_RESULT([$ihk_result])
-#     AC_DEFINE_UNQUOTED(IHK_KSYM_[]$1,$ihk_addr,
-# 			[Define to address of kernel symbol $1, or 0 if exported])
-#   fi
-# ])
-
-if test "$TARGET" = "smp-x86"; then
-	IHK_FIND_KSYM([x86_trampoline_base])
-	IHK_FIND_KSYM([real_mode_header])
-	IHK_FIND_KSYM([per_cpu__vector_irq])
-	IHK_FIND_KSYM([vector_irq])
-	IHK_FIND_KSYM([lapic_get_maxlvt])
-	IHK_FIND_KSYM([init_deasserted])
-	IHK_FIND_KSYM([irq_to_desc])
-	IHK_FIND_KSYM([alloc_desc])
-	IHK_FIND_KSYM([irq_desc_tree])
-	IHK_FIND_KSYM([irq_to_desc_alloc_node])
-	IHK_FIND_KSYM([dummy_irq_chip])
-	IHK_FIND_KSYM([get_uv_system_type])
-	IHK_FIND_KSYM([wakeup_secondary_cpu_via_init])
-	IHK_FIND_KSYM([__default_send_IPI_dest_field])
-elif test "$TARGET" = "smp-arm64"; then
-	IHK_FIND_KSYM([gic_data], [irq-gic.c], [_gicv2])
-	IHK_FIND_KSYM([gic_data], [irq-gic-v3.c], [_gicv3])
-	IHK_FIND_KSYM([gic_raise_softirq], [irq-gic.c], [_gicv2])
-	IHK_FIND_KSYM([gic_raise_softirq], [irq-gic-v3.c], [_gicv3])
-	IHK_FIND_KSYM([__irq_domain_alloc_irqs])
-	IHK_FIND_KSYM([irq_domain_free_irqs])
-	IHK_FIND_KSYM([irq_to_desc])
-	IHK_FIND_KSYM([alloc_desc])
-	IHK_FIND_KSYM([irq_desc_tree])
-	IHK_FIND_KSYM([irq_to_desc_alloc_node])
-	IHK_FIND_KSYM([psci_ops])
-	IHK_FIND_KSYM([__cpu_logical_map])
-	IHK_FIND_KSYM([invoke_psci_fn])
-	IHK_FIND_KSYM([__invoke_psci_fn_hvc])
-	IHK_FIND_KSYM([__invoke_psci_fn_smc])
-	IHK_FIND_KSYM([acpi_gic_ver])
-	IHK_FIND_KSYM([cpu_pmu])
-	IHK_FIND_KSYM([__oprofile_cpu_pmu])
-	IHK_FIND_KSYM([__irq_set_affinity])
-	IHK_FIND_KSYM([arch_timer_use_virtual])
-	IHK_FIND_KSYM([arch_timer_uses_ppi])
-	IHK_FIND_KSYM([arch_timer_rate])
-fi
-
 if test "x$ENABLE_MEMDUMP" != "xno" ; then
 	enableval=yes
 # POSTK_DEBUG_ARCH_DEP_32, AC_CHECK_LIB for libiberty
@@ -436,8 +306,6 @@ AC_SUBST(uncomment_if_ENABLE_MEMDUMP)
 case "$TARGET" in
 smp*)
 	AC_CONFIG_HEADERS([config.h])
-	arch=`echo "$ARCH"`
-	AC_CONFIG_HEADERS([linux/driver/smp/arch/$arch/config-$arch.h])
 	;;
 esac
 
@@ -456,6 +324,12 @@ AC_CONFIG_FILES([
 	linux/include/ihk/ihklib.h:linux/include/ihk/ihklib.h.in
 	cokernel/Makefile.common
 ])
+
+if test -e "${ABS_SRCDIR}/test"; then
+AC_CONFIG_FILES([
+	mck_test_config.mk.sample:test/mck_test_config.mk.sample.in
+])
+fi
 
 if test "$TARGET" = "smp-x86"; then
 AC_CONFIG_FILES([

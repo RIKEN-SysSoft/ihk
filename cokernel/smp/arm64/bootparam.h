@@ -104,6 +104,7 @@ struct smp_boot_param {
 	unsigned long rusage_size;
 
 	unsigned long nmi_mode_addr;
+	unsigned long linux_kernel_pgt_phys;
 
 	unsigned long dma_address;
 	unsigned long ident_table;

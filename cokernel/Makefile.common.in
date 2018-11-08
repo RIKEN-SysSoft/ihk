@@ -5,7 +5,7 @@ TARGETDIR="smp/@ARCH@"
 CFLAGS += @CFLAGS@
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O2 -g
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include -Wno-unused-function -I$(IHKBASE)/../ikc/include -I$(IHKBASE)/../linux/include
-CFLAGS += -DIHK_OS_MANYCORE
+CFLAGS += -DIHK_OS_MANYCORE -D__KERNEL__
 ifneq ($(ARCH), arm64)
 CFLAGS += -mcmodel=large -mno-red-zone
 endif
@@ -23,7 +23,7 @@ IHK_OBJS += setup.o
 IHK_OBJS += dma.o
 include @abs_top_builddir@/../mckernel/arch/$(ARCH)/kernel/Makefile.arch
 
-CFLAGS += -I@abs_builddir@/../../mckernel -I$(SRC)/../lib/include -I$(SRC)/../arch/$(ARCH)/kernel/include
+CFLAGS += -I@abs_builddir@/../../mckernel -I$(SRC)/../kernel/include -I$(SRC)/../lib/include -I$(SRC)/../arch/$(ARCH)/kernel/include
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include
 ifeq ($(ARCH), arm64)
 CFLAGS += -I@abs_builddir@/../../mckernel/arch/arm64/kernel/include

@@ -39,7 +39,9 @@
 //#include "builtin_dma.h"
 #include <host_linux.h>
 #include <bootparam.h>
+#ifdef ENABLE_PERF
 #include <perf_event.h>
+#endif
 #include "config.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
@@ -71,14 +73,6 @@ module_param(ihk_cores, uint, 0644);
 MODULE_PARM_DESC(ihk_cores, "IHK reserved CPU cores");
 
 //#define BUILTIN_COM_VECTOR	0xf1
-
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
-        bitmap_scnlistprintf(buf, buflen, maskp, nmaskbits)
-#else
-#define BITMAP_SCNLISTPRINTF(buf, buflen, maskp, nmaskbits) \
-        scnprintf(buf, buflen, "%*pbl", nmaskbits, maskp)
-#endif
 
 #define BUILTIN_DEV_STATUS_READY	0
 #define BUILTIN_DEV_STATUS_BOOTING	1
@@ -590,13 +584,168 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	lwk_cpu_2_linux_cpu(os, 0);
 }
 
+static void ihk_smp_free_page_tables(pgd_t *pt)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	int pgd_i, pud_i, pmd_i;
+
+	if (!pt)
+		return;
+
+	for (pgd_i = 0; pgd_i < PTRS_PER_PGD; ++pgd_i) {
+		pgd = ((pgd_t *)pt) + pgd_i;
+		if (pgd_none(*pgd) || !pgd_present(*pgd))
+			continue;
+
+		for (pud_i = 0; pud_i < PTRS_PER_PUD; ++pud_i) {
+			pud = ((pud_t *)pgd_page_vaddr(*pgd)) + pud_i;
+
+			if (pud_none(*pud) || !pud_present(*pud))
+				continue;
+
+			for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
+				pmd = ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;
+
+				if (pmd_none(*pmd) || !pmd_present(*pmd))
+					continue;
+
+				if (pmd_large(*pmd))
+					continue;
+
+				dprintk("%s: freeing PGD %d: PUD %d: PMD %d\n",
+					__FUNCTION__, pgd_i, pud_i, pmd_i);
+				free_page(pmd_page_vaddr(*pmd));
+			}
+
+			dprintk("%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\n",
+					__FUNCTION__, pgd_i, pud_i, pud_page_vaddr(*pud));
+			free_page(pud_page_vaddr(*pud));
+		}
+
+		dprintk("%s: freeing PGD %d\n",
+				__FUNCTION__, pgd_i);
+		free_page(pgd_page_vaddr(*pgd));
+	}
+
+	free_page((unsigned long)pt);
+}
+
+int ihk_smp_map_kernel(pgd_t *pt,
+		unsigned long vaddr,
+		phys_addr_t paddr)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	int result = -ENOMEM;
+
+	pgd = pt + pgd_index(vaddr);
+	if (!pgd_present(*pgd)) {
+		pud = (pud_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pud)
+			goto err;
+		dprintk("%s: PGD: %d: PUD allocated: 0x%lx\n",
+				__FUNCTION__,
+				(int)pgd_index(vaddr),
+				(unsigned long)pgd);
+		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
+	}
+	
+	pud = pud_offset(pgd, vaddr);
+	if (!pud_present(*pud)) {
+		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pmd)
+			goto err;
+		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
+		dprintk("%s: PGD: %d: PUD: %d: PMD allocated: 0x%lx\n",
+				__FUNCTION__,
+				(int)pgd_index(vaddr), (int)pud_index(vaddr),
+				(unsigned long)pmd);
+	}
+	pmd = pmd_offset(pud, vaddr);
+
+	if (pmd_present(*pmd) && pmd_large(*pmd)) {
+		printk("%s: ERROR: mapping 0x%lx: PMD is busy\n",
+			__FUNCTION__, vaddr);
+		return -EBUSY;
+	}
+
+	/* Large page aligned and no mapping yet? Map it large then */
+	if (!pmd_present(*pmd) &&
+			!(vaddr & (IHK_SMP_LARGE_PAGE - 1)) &&
+			!(paddr & (IHK_SMP_LARGE_PAGE - 1))) {
+		set_pmd(pmd, pfn_pmd(paddr >> PAGE_SHIFT, PAGE_KERNEL_LARGE_EXEC));
+	}
+	else {
+		if (!pmd_present(*pmd)) {
+			pte = (pte_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+			if (!pte)
+				goto err;
+			set_pmd(pmd, __pmd(__pa(pte) | _KERNPG_TABLE));
+		}
+		pte = pte_offset_kernel(pmd, vaddr);
+		set_pte(pte, pfn_pte(paddr >> PAGE_SHIFT, PAGE_KERNEL_EXEC));
+	}
+	return 0;
+err:
+	return result;
+}
+
+int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	pte_t entry;
+
+	pgd = pgd_offset(mm, address);
+	if (!pgd) {
+		printk("%s: no PGD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PGD: 0x%lx\n", __FUNCTION__, (unsigned long)pgd);
+	pud = pud_offset(pgd, address);
+	if (!pud) {
+		printk("%s: no PUD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PUD: 0x%lx\n", __FUNCTION__, (unsigned long)pud);
+	pmd = pmd_offset(pud, address);
+	if (!pmd) {
+		printk("%s: no PMD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PMD: 0x%lx\n", __FUNCTION__, (unsigned long)pmd);
+	pte = pte_offset_map(pmd, address);
+	if (!pte) {
+		printk("%s: no PTE for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	entry = *pte;
+
+	if (!pte_present(entry)) {
+		printk("%s: non-present PTE for 0x%lx\n", __FUNCTION__, address);
+		return -1;
+	}
+
+	printk("%s: 0x%lx -> 0x%lx\n",
+		__FUNCTION__,
+		address,
+		(unsigned long)(pte_val(entry) & PTE_PFN_MASK));
+	return 0;
+}
+
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
+	int ret;
 	struct smp_os_data *os = priv;
 	struct file *file;
 	loff_t pos = 0;
 	long r;
-	mm_segment_t fs;
 	unsigned long phys;
 	unsigned long offset;
 	unsigned long maxoffset;
@@ -681,15 +830,16 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		return -EINVAL;
 	}
 
-	fs = get_fs();
-	set_fs(get_ds());
 	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n",
 		(unsigned long)ihk_os, os->bootstrap_mem_end - PAGE_SIZE);
 
-	r = vfs_read(file, (char *)elf64, PAGE_SIZE, &pos);
-	set_fs(fs);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	r = kernel_read(file, (char *)elf64, PAGE_SIZE, &pos);
+#else
+	r = kernel_read(file, pos, (char *)elf64, PAGE_SIZE);
+#endif
 	if (r <= 0) {
-		printk("vfs_read failed: %ld\n", r);
+		pr_err("kernel_read failed: %ld\n", r);
 		ihk_smp_unmap_virtual(elf64);
 		fput(file);
 		return (int)r;
@@ -741,16 +891,18 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 			}
 
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
-			fs = get_fs();
-			set_fs(get_ds());
-			r = vfs_read(file, buf, l, &pos);
-			set_fs(fs);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			r = kernel_read(file, buf, l, &pos);
+#else
+			r = kernel_read(file, pos, buf, l);
+			pos += r;
+#endif
 			if(r != PAGE_SIZE){
 				memset(buf + r, '\0', PAGE_SIZE - r);
 			}
 			ihk_smp_unmap_virtual(buf);
 			if (r <= 0) {
-				printk("vfs_read failed: %ld\n", r);
+				pr_err("kernel_read failed: %ld\n", r);
 				ihk_smp_unmap_virtual(elf64);
 				fput(file);
 				return (int)r;
@@ -778,8 +930,11 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 	fput(file);
 	ihk_smp_unmap_virtual(elf64);
-
-	smp_ihk_os_setup_startup(os, phys, entry);
+	
+	if ((ret = smp_ihk_os_setup_startup(os, phys, entry))) {
+		printk("%s: ERROR: smp_ihk_os_setup_startup failed (%d)\n", __FUNCTION__, ret);
+		return ret;
+	}
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 
@@ -948,6 +1103,16 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		       ihk_smp_cpus[i].id, ihk_smp_cpus[i].hw_id);
 	}
 	os->nr_cpus = 0;
+
+	if ((ret = smp_ihk_os_unmap_lwk())) {
+		printk("%s: ERROR: smp_ihk_os_unmap_lwk failed (%d)\n", __FUNCTION__, ret);
+	}
+
+	/* Free bootstrap page tables */
+	if (os->boot_pt) {
+		ihk_smp_free_page_tables(os->boot_pt);
+		os->boot_pt = NULL;
+	}
 
 	/* Drop memory chunk used by this OS */
 	list_for_each_entry_safe(os_mem_chunk, next_chunk,
@@ -1194,6 +1359,8 @@ static int smp_ihk_os_wait_for_status(ihk_os_t ihk_os, void *priv,
 		       s != status && s < IHK_OS_STATUS_SHUTDOWN
 		       && timeout > 0) {
 			mdelay(100);
+			dprintk("%s: waiting for: %d, status: %d\n",
+				__FUNCTION__, status, s);
 			timeout--;
 		}
 		return s == status ? 0 : -1;
@@ -1255,6 +1422,12 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 			return 0;
 		}
 		break;
+	case IHK_SPADDR_MCKERNEL_DO_FUTEX:
+		if (os->param->mckernel_do_futex) {
+			*addr = os->param->mckernel_do_futex;
+			return 0;
+		}
+		break;
 	}
 
 	return -EINVAL;
@@ -1294,12 +1467,18 @@ static int smp_ihk_os_unregister_handler(ihk_os_t os, void *os_priv, int itype,
 irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data)
 {
 	struct ihk_host_interrupt_handler *h;
+	int found = 0;
 
 	/* XXX: Linear search? */
 	list_for_each_entry(h, &builtin_interrupt_handlers, list) {
 		if (h->func) {
 			h->func(h->os, h->os_priv, h->priv);
+			found = 1;
 		}
+	}
+	
+	if(!found) {
+		kprintf("%s: ERROR: no handler registered\n", __FUNCTION__);
 	}
 
 	return IRQ_HANDLED;
@@ -1679,7 +1858,7 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	unsigned long flags;
 #ifdef POSTK_DEBUG_ARCH_DEP_46 /* user area direct access fix. */
 	char *string = NULL;
-	long len = strlen_user((const char __user *)arg);
+	long len = strnlen_user((const char __user *)arg, 32767);
 #else /* POSTK_DEBUG_ARCH_DEP_46 */
 	char *string = (char *)arg;
 #endif /* POSTK_DEBUG_ARCH_DEP_46 */
@@ -2439,6 +2618,7 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 	/* Put the image into the smallest NUMA id if value is -1,
 	 * use the designated NUMA node otherwise */
 	os->bootstrap_numa_id = -1;
+	os->boot_pt = NULL;
 
 	return 0;
 }
@@ -2750,11 +2930,24 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 #else /* POSTK_DEBUG_ARCH_DEP_79 */
 	void (*__drain_all_pages)(void) = NULL;
 #endif /* POSTK_DEBUG_ARCH_DEP_79 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+	size_t (*__sum_zone_node_page_state)(int node,
+					     enum zone_stat_item item);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	size_t (*__node_page_state)(int node, enum zone_stat_item item);
+#endif
 	int failed_free_attempts = 0;
 	unsigned long res_start = get_seconds();
 #ifdef CONFIG_MOVABLE_NODE
 	bool *__movable_node_enabled = NULL;
 #endif
+
+	if (!node_online(numa_id)) {
+		pr_err("IHK-SMP: error: NUMA node %d isn't online\n",
+		       numa_id);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
@@ -2778,6 +2971,12 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	__drain_all_pages = (void (*)(void))
 			kallsyms_lookup_name("drain_all_pages");
 #endif /* POSTK_DEBUG_ARCH_DEP_79 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+	__sum_zone_node_page_state = (void *)
+			kallsyms_lookup_name("sum_zone_node_page_state");
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	__node_page_state = (void *)kallsyms_lookup_name("node_page_state");
+#endif
 
 #ifdef CONFIG_MOVABLE_NODE
 	__movable_node_enabled =
@@ -2838,7 +3037,14 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	}
 	dprintk("%s: ihk_mem: %lu, want: %lu\n", __FUNCTION__, ihk_mem, want);
 	allocated = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+	available = __sum_zone_node_page_state(numa_id, NR_FREE_PAGES)
+				<< PAGE_SHIFT;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	available = __node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
+#else
 	available = (size_t)node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
+#endif
 	printk("%s: NUMA %d (online nodes: %d), free mem: %lu bytes\n",
 		__FUNCTION__, numa_id, num_online_nodes(), available);
 
@@ -2867,7 +3073,12 @@ retry:
 				__GFP_NORETRY,
 				//| __GFP_REPEAT,
 				order,
-				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+				numa_id,
+#else
+				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP),
+#endif
+				&nodemask);
 
 #ifdef CONFIG_MOVABLE_NODE
 		/* Try movable pages if supported */
@@ -2877,7 +3088,12 @@ retry:
 					__GFP_NORETRY,
 					//| __GFP_REPEAT,
 					order,
-					node_zonelist(numa_id, __GFP_COMP), &nodemask);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+					numa_id,
+#else
+					node_zonelist(numa_id, __GFP_COMP),
+#endif
+					&nodemask);
 		}
 #endif
 
@@ -3003,15 +3219,16 @@ pre_out:
 			/* Not in front of compound page? */
 			leftover_page = virt_to_page(leftover);
 			if (PageCompound(leftover_page) && !PageHead(leftover_page)) {
+				struct page *head = compound_head(leftover_page);
 				leftover = (struct chunk *)
-					phys_to_virt(page_to_phys(leftover_page->first_page)) +
-					(PAGE_SIZE << compound_order(leftover_page->first_page));
+					phys_to_virt(page_to_phys(head)) +
+					(PAGE_SIZE << compound_order(head));
 
 				printk("%s: adjusted leftover chunk to compound "
 						"page border: 0x%llx:%lu\n",
 						__FUNCTION__,
-						page_to_phys(leftover_page->first_page),
-						(PAGE_SIZE << compound_order(leftover_page->first_page)));
+						page_to_phys(head),
+						(PAGE_SIZE << compound_order(head)));
 			}
 
 			/* Only if there is really something left.. */
@@ -3129,33 +3346,31 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 static int _smp_ihk_write_cpu_sys_file(int cpu_id, char *val)
 {
 	struct file* filp = NULL;
-	mm_segment_t oldfs;
+	loff_t pos = 0;
 	int ret, err = 0;
 	char path[256];
 
 	sprintf(path, "/sys/devices/system/cpu/cpu%d/online", cpu_id);
 
-	oldfs = get_fs();
-
-	set_fs(get_ds());
 	filp = filp_open(path, O_RDWR, 0);
 	if (IS_ERR(filp)) {
-		 set_fs(oldfs);
 		 err = PTR_ERR(filp);
 		 printk("%s: error opening %s\n", __FUNCTION__, path);
 		 return -1;
 	}
 
-	ret = kernel_write(filp, val, 1, 0);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	ret = kernel_write(filp, val, 1, &pos);
+#else
+	ret = kernel_write(filp, val, 1, pos);
+#endif
 	if (ret != 1) {
 		 filp_close(filp, NULL);
-		 set_fs(oldfs);
 		 printk("%s: error writing %s\n", __FUNCTION__, path);
 		 return -1;
 	}
 
 	filp_close(filp, NULL);
-	set_fs(oldfs);
 	return 0;
 }
 
@@ -3218,7 +3433,8 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 #endif
 			printk("%s: invalid CPU requested: %d\n",
 					__FUNCTION__, cpu);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto out;
 		}
 	}
 
@@ -3477,8 +3693,8 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		cpumask_set_cpu(cpu, &cpus_reserved);
 	}
 
-	BITMAP_SCNLISTPRINTF(query_res, MAX_QUERY_RESULT,
-		cpumask_bits(&cpus_reserved), nr_cpumask_bits);
+	scnprintf(query_res, MAX_QUERY_RESULT, "%*pbl",
+		  nr_cpumask_bits, cpumask_bits(&cpus_reserved));
 
 	if (strlen(query_res) > 0) {
 		if (copy_to_user((char *)arg, query_res, strlen(query_res) + 1)) {
@@ -3564,7 +3780,11 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 	/* Do the reservation */
 	mem_token = strsep(&mem_string, ",");
 	while (mem_token) {
-		smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		ret = smp_ihk_parse_mem(mem_token, &mem_size, &numa_id);
+		if (ret != 0) {
+			printk("IHK-SMP: reserve_mem: error: parsing memory string\n");
+			break;
+		}
 		ret = __ihk_smp_reserve_mem(mem_size, numa_id);
 		if (ret != 0) {
 			printk("IHK-SMP: reserve_mem: error: reserving memory\n");
@@ -3736,7 +3956,6 @@ int read_file(void *buf, size_t size, char *fmt, va_list ap)
 	int n;
 	struct file *fp = NULL;
 	loff_t off;
-	mm_segment_t ofs;
 	ssize_t ss;
 
 	dprintk("read_file(%p,%ld,%s,%p)\n", buf, size, fmt, ap);
@@ -3762,13 +3981,14 @@ int read_file(void *buf, size_t size, char *fmt, va_list ap)
 	}
 
 	off = 0;
-	ofs = get_fs();
-	set_fs(KERNEL_DS);
-	ss = vfs_read(fp, buf, size, &off);
-	set_fs(ofs);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	ss = kernel_read(fp, buf, size, &off);
+#else
+	ss = kernel_read(fp, off, buf, size);
+#endif
 	if (ss < 0) {
 		error = ss;
-		eprintk("ihk:read_file:vfs_read failed. %d\n", error);
+		pr_warn("ihk:read_file:kernel_read failed. %d\n", error);
 		goto out;
 	}
 	if (ss >= size) {
@@ -4097,8 +4317,13 @@ static struct ihk_register_device_data builtin_dev_reg_data = {
 static int __init smp_module_init(void)
 {
 	ihk_device_t ihkd;
+	int ret;
 
 	printk(KERN_INFO "IHK-SMP: initializing...\n");
+
+	if ((ret = ihk_smp_arch_symbols_init())) {
+		return ret;
+	}
 
 	spin_lock_init(&builtin_data.lock);
 
