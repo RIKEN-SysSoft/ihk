@@ -1,0 +1,106 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "13308b96_4299e3ad",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 26,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-19T09:30:28Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,0,0)\n                                            ^",
+      "revId": "a04c308d73f1a709ea2ec48db0091882934d45f0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e24220f9_ab91467d",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 26,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-19T09:30:28Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,0,0)\n                                          ^",
+      "revId": "a04c308d73f1a709ea2ec48db0091882934d45f0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b094e7a9_eb244991",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 26,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-19T09:30:28Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,0,0)",
+      "revId": "a04c308d73f1a709ea2ec48db0091882934d45f0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5508e35e_028bf7cb",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 189,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-19T09:30:28Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,0,0)",
+      "revId": "a04c308d73f1a709ea2ec48db0091882934d45f0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5d8303e1_cff15f33",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 189,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-19T09:30:28Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,0,0)\n                                           ^",
+      "revId": "a04c308d73f1a709ea2ec48db0091882934d45f0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "93529226_87a3d7ae",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 189,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-19T09:30:28Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,0,0)\n                                             ^",
+      "revId": "a04c308d73f1a709ea2ec48db0091882934d45f0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
