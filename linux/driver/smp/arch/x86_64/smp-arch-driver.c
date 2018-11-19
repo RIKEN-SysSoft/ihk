@@ -23,7 +23,7 @@
 #include <linux/kallsyms.h>
 #include <asm/mc146818rtc.h>
 #include <asm/tlbflush.h>
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
 #include <asm/smpboot_hooks.h>
 #endif
 
@@ -186,8 +186,7 @@ int ihk_smp_get_hw_id(int cpu)
 	return per_cpu(x86_cpu_to_apicid, cpu);
 }
 
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
 /* origin: arch/x86/kernel/smpboot.c */
 static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 {
