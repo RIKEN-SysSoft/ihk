@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "0585dbe7_d272404f",
+        "filename": "ikc/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 531,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-20T23:33:47Z",
+      "side": 1,
+      "message": "I\u0027m not a fan of this kind of hints, instead of \"(-1 means empty)\" you can do something like this that only shows on -1 if you think it needs spelling out:\n kprintf(\"%s: WARNING: ihk_ikc_recv returned %d%s\\n\", __func__, r, r \u003d\u003d -1 ? \" (empty queue)\" : \"\")",
+      "revId": "3ec75f7049985812a75e118b2a8b690d84422f80",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
