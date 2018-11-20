@@ -527,8 +527,10 @@ int ihk_ikc_recv_handler(struct ihk_ikc_channel_desc *channel,
 	}
 
 	if ((r = ihk_ikc_recv(channel, p, opt | IKC_NO_NOTIFY)) != 0) {
-		kprintf("%s: ERROR: ihk_ikc_recv returned %d\n", __FUNCTION__, r);
-		ihk_ikc_free(p);
+		kprintf("%s: WARNING: ihk_ikc_recv returned %d "
+			"(-1 means empty)\n", __func__, r);
+		ihk_ikc_release_packet((struct ihk_ikc_free_packet *)p,
+				       channel);
 		goto out;
 	}
 
