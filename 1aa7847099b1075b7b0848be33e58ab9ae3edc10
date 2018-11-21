@@ -1,0 +1,225 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f599c536_1e4ad174",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 590,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "843618d9_d9495430",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 605,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "98462b27_33b5e0f5",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 618,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ece621d2_950eee95",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 628,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tpmd \u003d ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0a40bca9_0660f222",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 630,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tif (pmd_none(*pmd) || !pmd_present(*pmd))",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "35ef0d6c_0ea30038",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 636,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tdprintk(\"%s: freeing PGD %d: PUD %d: PMD %d\\n\",",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a7c26041_2bb6f460",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 641,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintk(\"%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\\n\",",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "94668c9c_ab86b042",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 646,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "76f20048_f25ca940",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 647,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintk(\"%s: freeing PGD %d: P4D %d: PUD %d: PMD @ 0x%lx\\n\",",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e2202df5_499612ba",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 670,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0f5f0660_36b5dfcd",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 689,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "035b0ea7_183af115",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 747,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "60e9f5c3_6cc05a82",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 761,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T07:29:52Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 12, 0) \u0026\u0026 defined(CONFIG_X86_64_SMP)",
+      "revId": "1aa7847099b1075b7b0848be33e58ab9ae3edc10",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
