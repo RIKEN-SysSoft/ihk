@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "4549baac_a7a38a1f",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-21T13:44:46Z",
+      "side": 1,
+      "message": "WARNING: \u0027existance\u0027 may be misspelled - perhaps \u0027existence\u0027?\nwould blindly rely on the existance of the .git file even if git does not",
+      "revId": "29056b87df67069e38c4e68b04085456269dfb9f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
