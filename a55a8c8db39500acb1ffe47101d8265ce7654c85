@@ -16,6 +16,23 @@
       "revId": "a55a8c8db39500acb1ffe47101d8265ce7654c85",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c8bf5f3c_60040d89",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 552,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-21T05:54:24Z",
+      "side": 1,
+      "message": "PAGE_SIZE * 63 should be (PAGE_SIZE * 64) - 1",
+      "revId": "a55a8c8db39500acb1ffe47101d8265ce7654c85",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     }
   ]
 }
