@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d6a82d79_ec8a44d2",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1929,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-22T09:57:35Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_err([subsystem]dev, ... then dev_err(dev, ... then pr_err(...  to printk(KERN_ERR ...\n+\t\t\t\tprintk(KERN_ERR \"kstrtoint() failed. ikc_cpu\u003d%s\\n\", ikc_cpu);",
+      "revId": "383b2824283bf26ff507dd0efbf8c62a1c2355f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d5f1da7c_ae923b41",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1929,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-22T09:57:35Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tprintk(KERN_ERR \"kstrtoint() failed. ikc_cpu\u003d%s\\n\", ikc_cpu);",
+      "revId": "383b2824283bf26ff507dd0efbf8c62a1c2355f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba2853fe_f2f5fa36",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1935,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-22T09:57:35Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_err([subsystem]dev, ... then dev_err(dev, ... then pr_err(...  to printk(KERN_ERR ...\n+\t\t\t\tprintk(KERN_ERR \"ikc_map included over SMP_MAX_CPUS(%d) number(%d).\\n\",",
+      "revId": "383b2824283bf26ff507dd0efbf8c62a1c2355f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9f6a64d0_4dfee4ed",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1943,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-22T09:57:35Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_err([subsystem]dev, ... then dev_err(dev, ... then pr_err(...  to printk(KERN_ERR ...\n+\t\t\t\tprintk(KERN_ERR \"ikc_map included McKernel-core number(%d).\\n\",",
+      "revId": "383b2824283bf26ff507dd0efbf8c62a1c2355f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
