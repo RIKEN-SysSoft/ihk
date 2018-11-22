@@ -543,14 +543,17 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 			i = 0;
 			list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+				const size_t csize = os_mem_chunk->size;
 
 				if (i) {
 					dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
 				}
 
 				dump_page->start = os_mem_chunk->addr;
-				dump_page->map_count = ((os_mem_chunk->size + (PAGE_SIZE * 63)) >> 18);
-				map_end = (os_mem_chunk->size >> PAGE_SHIFT);
+				dump_page->map_count =
+					((csize + ((PAGE_SIZE * 64) - 1))
+							>> (PAGE_SHIFT + 6));
+				map_end = (csize >> PAGE_SHIFT);
 
 				for (index = 0; index < map_end; index++) {
 					if(MAP_INDEX(index) >= dump_page->map_count) {
