@@ -33,6 +33,29 @@
       "revId": "385d92739e2605166787e0b11d475b2397785140",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8eeeff21_9ff77f25",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 659,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-11-22T04:37:23Z",
+      "side": 1,
+      "message": "ここにwhile(!udev_device_get_is_initialized(dev)) { }のようなものを入れて試してください。",
+      "range": {
+        "startLine": 659,
+        "startChar": 0,
+        "endLine": 659,
+        "endChar": 37
+      },
+      "revId": "385d92739e2605166787e0b11d475b2397785140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
