@@ -1126,9 +1126,13 @@ static int ihk_smp_reserve_irq(void)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
 	/* drop the module ref from request_irq, and pretend we do not
 	 * own the irq anymore so free_irq will not bug the refcount
+	 * Only do this if we own the vector, this apparently is not
+	 * always true ?!
 	 */
-	module_put(THIS_MODULE);
-	desc->owner = NULL;
+	if (desc->owner == THIS_MODULE) {
+		module_put(THIS_MODULE);
+		desc->owner = NULL;
+	}
 #endif
 
 	ihk_smp_irq.irq = virq;
