@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "51b16a10_12853233",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 556,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-23T06:04:42Z",
+      "side": 1,
+      "message": "Should probably have noticed this at the same time (and it\u0027s also unrelated to this patch), but  I think this one should be rounded up as well to catch out-of-range chunk below.\nWell, it\u0027s just a warning..",
+      "revId": "05d9a511b7f7121fc0f524d6097f41a281418f99",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
