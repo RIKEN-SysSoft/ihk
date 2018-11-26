@@ -1644,11 +1644,13 @@ int ihk_os_get_num_numa_nodes(int index)
 	return ret;
 }
 
-int _ihklib_os_query_free_mem(int index, char *result, ssize_t sz_result)
+int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,
+			      const char *type)
 {
-	int ret = 0;
+	int ret;
 	int node = 0;
 	char path[PATH_MAX];
+	char scanfmt[1024];
 	int len = 0;
 	struct stat sb;
 
@@ -1669,10 +1671,14 @@ int _ihklib_os_query_free_mem(int index, char *result, ssize_t sz_result)
 
 		while (getline(&line, &line_len, f) != -1) {
 			int scan_node;
-			if (sscanf(line, "Node %d MemFree:%16lu kB",
-						&scan_node, &free_kb) == 2) {
+
+			sprintf(scanfmt, "Node %%d %s:%%16lu kB", type);
+
+			if (sscanf(line, scanfmt,
+				   &scan_node, &free_kb) == 2) {
 				if (node > 0)
-					len += snprintf(&result[len], sz_result - len, ",");
+					len += snprintf(&result[len],
+							sz_result - len, ",");
 
 				len += snprintf(&result[len], sz_result - len,
 						"%lu@%d",
@@ -1691,16 +1697,18 @@ int _ihklib_os_query_free_mem(int index, char *result, ssize_t sz_result)
 		fclose(f);
 	}
 
-	CHKANDJUMP(len == 0, -1, "MemFree not found\n");
+	CHKANDJUMP(len == 0, -1, "%s not found\n", type);
 
- out:
+	ret = 0;
+out:
 	return ret;
 }
 
-int ihk_os_query_free_mem(int index, unsigned long *memfree, int num_numa_nodes)
+static int ihklib_os_query_mem(int index, unsigned long *result,
+		 int num_numa_nodes, enum ihklib_os_query_mem_type type)
 {
-	int i, ret = 0, ret_internal;
-    char result[16 * IHK_MAX_NUM_NUMA_NODES];
+	int i, ret;
+	char result_str[16 * IHK_MAX_NUM_NUMA_NODES];
 	struct ihk_mem_chunk mem_chunks[IHK_MAX_NUM_NUMA_NODES];
 	int num_mem_chunks = num_numa_nodes;
 	int fd = -1;
@@ -1712,24 +1720,46 @@ int ihk_os_query_free_mem(int index, unsigned long *memfree, int num_numa_nodes)
 		goto out;
 	}
 
-	ret_internal = _ihklib_os_query_free_mem(index, result, sizeof(result));
-	CHKANDJUMP(ret_internal != 0, -EINVAL, "ihklib_os_query_free_mem failed\n");
+	ret = ihklib_os_query_mem_sysfs(index, result_str,
+					sizeof(result_str),
+					ihklib_os_query_mem_type_str[type]);
+	CHKANDJUMP(ret != 0, -EINVAL,
+		   "ihklib_os_query_total_mem failed\n");
 
 	memset(mem_chunks, 0, sizeof(mem_chunks));
-	mem_str2array(result, &num_mem_chunks, mem_chunks);
+	mem_str2array(result_str, &num_mem_chunks, mem_chunks);
 
-	CHKANDJUMP(num_mem_chunks != num_numa_nodes, -EINVAL, "actual number of NUMA nodes (%d) is different than requested (%d)\n", num_mem_chunks, num_numa_nodes);
+	CHKANDJUMP(num_mem_chunks != num_numa_nodes, -EINVAL,
+		   "actual number of NUMA nodes (%d) is different than requested (%d)\n",
+		   num_mem_chunks, num_numa_nodes);
 
 	for (i = 0; i < num_mem_chunks; i++) {
-		CHKANDJUMP(mem_chunks[i].numa_node_number >= num_numa_nodes || mem_chunks[i].numa_node_number < 0, -EINVAL, "NUMA node number out of range\n");
-		memfree[mem_chunks[i].numa_node_number] = mem_chunks[i].size;
+		CHKANDJUMP(mem_chunks[i].numa_node_number >= num_numa_nodes ||
+			   mem_chunks[i].numa_node_number < 0, -EINVAL,
+			   "NUMA node number out of range\n");
+		result[mem_chunks[i].numa_node_number] = mem_chunks[i].size;
 	}
 
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
 	}
 	return ret;
+}
+
+int ihk_os_query_total_mem(int index, unsigned long *result,
+			   int num_numa_nodes)
+{
+	return ihklib_os_query_mem(index, result, num_numa_nodes,
+				   IHKLIB_OS_QUERY_MEM_TOTAL);
+}
+
+int ihk_os_query_free_mem(int index, unsigned long *result,
+		      int num_numa_nodes)
+{
+	return ihklib_os_query_mem(index, result, num_numa_nodes,
+				   IHKLIB_OS_QUERY_MEM_FREE);
 }
 
 int ihk_os_get_num_pagesizes(int index)
