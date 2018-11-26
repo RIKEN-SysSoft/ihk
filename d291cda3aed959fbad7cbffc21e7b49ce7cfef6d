@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "59649e5b_96051f84",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1686,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-26T08:45:59Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\teprintf(\"%s: error: type string (%s) is too long\\n\",",
+      "revId": "d291cda3aed959fbad7cbffc21e7b49ce7cfef6d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c04ec897_90dc43aa",
+        "filename": "linux/user/ihkosctl.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 493,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2018-11-26T08:45:59Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tihklib_os_query_mem_type_str[IHKLIB_OS_QUERY_MEM_FREE]);",
+      "revId": "d291cda3aed959fbad7cbffc21e7b49ce7cfef6d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
