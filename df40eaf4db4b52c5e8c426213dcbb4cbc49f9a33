@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "fe31368a_12250850",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-11-26T09:28:50Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "45790ceb_dea4dc0c",
+      "revId": "df40eaf4db4b52c5e8c426213dcbb4cbc49f9a33",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "669d691a_4d6f25ae",
         "filename": "linux/include/ihk/status.h",
         "patchSetId": 2
@@ -33,6 +51,24 @@
       "revId": "df40eaf4db4b52c5e8c426213dcbb4cbc49f9a33",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "acc6c5fb_4487eced",
+        "filename": "linux/include/ihk/status.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 24,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-11-26T09:28:50Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "669d691a_4d6f25ae",
+      "revId": "df40eaf4db4b52c5e8c426213dcbb4cbc49f9a33",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     }
   ]
 }
