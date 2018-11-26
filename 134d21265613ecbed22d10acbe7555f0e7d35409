@@ -72,6 +72,24 @@
     },
     {
       "key": {
+        "uuid": "b95c1cc2_d30abb35",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1679,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-26T08:49:06Z",
+      "side": 1,
+      "message": "I agree both won\u0027t happen in practice (I just checked a file is created with Mem*: 0 kB if node 0 is not used); but it\u0027s not robust - it\u0027s the same level of checks as checking argument here for a function one can easily verify is only called with argument \u003c 900 chars (or whatever is safe to print into scanfmt) right now.\nAnyway as said in the other commit, we have more important things to fix, let\u0027s go with this.",
+      "parentUuid": "a58ca915_de354a6a",
+      "revId": "134d21265613ecbed22d10acbe7555f0e7d35409",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "f7780ef7_672265a6",
         "filename": "linux/user/ihkosctl.c",
         "patchSetId": 2
