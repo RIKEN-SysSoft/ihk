@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "168907e1_6d50a6b0",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1675,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-11-26T08:33:11Z",
+      "side": 1,
+      "message": "I\u0027ve fixed this!",
+      "parentUuid": "d497026b_85e96d95",
+      "revId": "134d21265613ecbed22d10acbe7555f0e7d35409",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "b8891b97_920a9169",
         "filename": "linux/user/ihklib.c",
         "patchSetId": 2
@@ -30,6 +48,24 @@
       "writtenOn": "2018-11-26T06:11:07Z",
       "side": 1,
       "message": "(old bug) it shouldn\u0027t check node to print comma, but whether something else was printed before e.g. len?\nWith the current code, it\u0027s possible to not have anything on node 0 and print a comma before the first element, or conversely to have multiple chunks on node 0 and not print a comma between these.",
+      "revId": "134d21265613ecbed22d10acbe7555f0e7d35409",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a58ca915_de354a6a",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1679,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-11-26T08:33:11Z",
+      "side": 1,
+      "message": "I don\u0027t think the empty memory_nodes[0] case would occur because all of the memory_nodes[] elements are filled in numa_init().\nIn addition, I don\u0027t think multiple-chunk case would occur because numa_sysfs_show_meminfo shows the info of the per-node-allocator instead of the memory chunks.",
+      "parentUuid": "b8891b97_920a9169",
       "revId": "134d21265613ecbed22d10acbe7555f0e7d35409",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
