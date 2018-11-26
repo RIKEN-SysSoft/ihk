@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f503b645_81b771b3",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-26T06:11:07Z",
+      "side": 1,
+      "message": "probably need to rebase for tests",
+      "revId": "79d6d57d6c4c5abe38d3d6eb8fa14ace973bccac",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}

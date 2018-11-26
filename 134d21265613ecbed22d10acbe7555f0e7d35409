@@ -2,6 +2,40 @@
   "comments": [
     {
       "key": {
+        "uuid": "d497026b_85e96d95",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1675,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-26T06:11:07Z",
+      "side": 1,
+      "message": "since type is an argument you should use snprintf and check the length doesn\u0027t go over size, but this is called with static strings so I guess it might be ok...",
+      "revId": "134d21265613ecbed22d10acbe7555f0e7d35409",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b8891b97_920a9169",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1679,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-11-26T06:11:07Z",
+      "side": 1,
+      "message": "(old bug) it shouldn\u0027t check node to print comma, but whether something else was printed before e.g. len?\nWith the current code, it\u0027s possible to not have anything on node 0 and print a comma before the first element, or conversely to have multiple chunks on node 0 and not print a comma between these.",
+      "revId": "134d21265613ecbed22d10acbe7555f0e7d35409",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "f7780ef7_672265a6",
         "filename": "linux/user/ihkosctl.c",
         "patchSetId": 2
