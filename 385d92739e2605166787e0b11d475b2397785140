@@ -59,6 +59,30 @@
     },
     {
       "key": {
+        "uuid": "993a3218_adaa4581",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 163,
+      "author": {
+        "id": 1015270
+      },
+      "writtenOn": "2018-12-03T10:31:16Z",
+      "side": 1,
+      "message": "stat()/access()の2種で待ちループを挿入して試してみましたが、やはりopenが失敗するケースが存在しました。\nstat()/access()がどちらも成功するのにopenだけは失敗(errno\u003dENOENT)となるケースがあるようで、解消には至る事が出来ませんでした。",
+      "parentUuid": "4c1d8cca_04c47c61",
+      "range": {
+        "startLine": 163,
+        "startChar": 0,
+        "endLine": 163,
+        "endChar": 34
+      },
+      "revId": "385d92739e2605166787e0b11d475b2397785140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "8eeeff21_9ff77f25",
         "filename": "linux/user/ihkmond.c",
         "patchSetId": 3
@@ -70,6 +94,30 @@
       "writtenOn": "2018-11-22T04:37:23Z",
       "side": 1,
       "message": "ここにwhile(!udev_device_get_is_initialized(dev)) { }のようなものを入れて試してください。",
+      "range": {
+        "startLine": 659,
+        "startChar": 0,
+        "endLine": 659,
+        "endChar": 37
+      },
+      "revId": "385d92739e2605166787e0b11d475b2397785140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f1054aa7_343eca2b",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 659,
+      "author": {
+        "id": 1015270
+      },
+      "writtenOn": "2018-12-03T10:31:16Z",
+      "side": 1,
+      "message": "while(!udev_device_get_is_initialized(dev)) { usleep(200) }を挿入して試してみましたが、hungup_detected()でopenが失敗する現象は解消出来ませんでした。",
+      "parentUuid": "8eeeff21_9ff77f25",
       "range": {
         "startLine": 659,
         "startChar": 0,
