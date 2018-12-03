@@ -83,6 +83,30 @@
     },
     {
       "key": {
+        "uuid": "a4d019b1_ad1db1ab",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 163,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-12-03T11:20:54Z",
+      "side": 1,
+      "message": "D\u0027oh, I thought that ENOENT came from the file not being there, but ihk_host_os_open can return ENOENT if (!data || data \u003d\u003d OS_DATA_INVALID)... I bet if you change that return value, you\u0027ll get a different return code there.\nudev_device_get_is_initialized() is pretty much the same as a while(stat() \u003d\u003d -1 \u0026\u0026 errno \u003d\u003d ENOENT) sleep() in more performant so I\u0027m not surprise you get the same result.\n\nWe need to either make ihk_host_os_open wait (I don\u0027t like that idea as if data is OS_DATA_INVALID it could also be past shutdown, and not just pre-boot, and we don\u0027t want to wait in the former case) or just make sure the device is created after the device is ready... I\u0027ll have a look tomorrow morning if I have time.",
+      "parentUuid": "993a3218_adaa4581",
+      "range": {
+        "startLine": 163,
+        "startChar": 0,
+        "endLine": 163,
+        "endChar": 34
+      },
+      "revId": "385d92739e2605166787e0b11d475b2397785140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "8eeeff21_9ff77f25",
         "filename": "linux/user/ihkmond.c",
         "patchSetId": 3
