@@ -123,6 +123,8 @@ static void* detect_hungup(void* _arg) {
 	struct epoll_event events[1];
 	int ret = 0, ret_lib;
 	int i;
+	char fn[32];
+	struct stat st;
 
 	epfd = epoll_create(1);
 	CHKANDJUMP(epfd == -1, 255, "epoll_create failed\n");
@@ -143,6 +145,19 @@ static void* detect_hungup(void* _arg) {
 	}
 	arg->mcos_added = 0;
 	pthread_mutex_unlock(&arg->lock);
+
+	i = 0;
+	snprintf(fn, sizeof(fn), "/dev/mcos%d", arg->os_index);
+	while (stat(fn, &st) == -1) {
+		CHKANDJUMP(errno != ENOENT, -errno,
+			"/dev/mcosX access failed\n");
+		usleep(200);
+		i++;
+
+		/* about 10s timeout check */
+		CHKANDJUMP(50 * 1000 < i, -ETIMEDOUT,
+			"/dev/mcosX create timeout\n");
+	}
 
  next:
 	dprintf("next\n");
