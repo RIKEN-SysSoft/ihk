@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7b3509ab_94eada0a",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 149,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-12-04T03:36:15Z",
+      "side": 1,
+      "message": "This will generate a warning with gcc 8 -Wstringop-truncation because it can silently truncate the string with char fn[16] if your index is \u003e 10000000-ish\nI\u0027m sure we\u0027ll have thousands of these when the time comes, but let\u0027s not add new ones when we can avoid it... You can either increase the size to 24/32 or check the return value (or use asprintf+check+free or...)",
+      "revId": "d8eee993a7be5f28f05c3cbf752fb95efb4b2206",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "096ee150_407b4753",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 152,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2018-12-04T03:36:15Z",
+      "side": 1,
+      "message": "Should we try to be nice™ and usleep a bit or sched_yield()? I have no preference",
+      "revId": "d8eee993a7be5f28f05c3cbf752fb95efb4b2206",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
