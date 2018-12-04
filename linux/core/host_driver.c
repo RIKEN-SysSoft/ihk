@@ -1470,7 +1470,7 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	}
 
 	minor = i;
-	os_data[minor] = (void *)-1;
+	os_data[minor] = OS_DATA_INVALID;
 
 	spin_unlock_irqrestore(&os_data_lock, flags);
 
@@ -1541,6 +1541,11 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 		goto error;
 	}
 
+	/* set os_data[minor] before creating device to avoid creating
+	 * the device before it's useable
+	 */
+	os_data[minor] = os;
+
 	os->lindev = device_create(mcos_class, NULL, os->dev_num, NULL,
 			OS_DEV_NAME "%d", minor);
 	if (IS_ERR(os->lindev)) {
@@ -1548,8 +1553,6 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 		ret = -ENOMEM;
 		goto error;
 	}
-
-	os_data[minor] = os;
 
 	return minor;
 
