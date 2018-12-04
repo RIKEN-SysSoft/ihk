@@ -33,6 +33,24 @@
       "revId": "d8eee993a7be5f28f05c3cbf752fb95efb4b2206",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "24a90cf8_42cc1fd8",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 152,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2018-12-04T04:59:38Z",
+      "side": 1,
+      "message": "usleepと組み合わせて10秒くらいまって、だめであれば何か出力してreturn NULLすることによって、異常を報告するようにしてください。",
+      "parentUuid": "096ee150_407b4753",
+      "revId": "d8eee993a7be5f28f05c3cbf752fb95efb4b2206",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
