@@ -649,7 +649,7 @@ ihk_armpmu_get_irq_affi_acpi(int irqs[], const struct arm_pmu *armpmu,
 		return -ENODEV;
 	}
 
-	if (irq_is_percpu_devid(irq)) {
+	if (irq_is_percpu(irq)) {
 		pr_info("PMU irq is percpu.\n");
 		return 0;
 	}
