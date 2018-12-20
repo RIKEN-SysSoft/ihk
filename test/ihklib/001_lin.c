@@ -582,10 +582,11 @@ int main(int argc, char **argv)
 		// get ikc_map
 		ret = ihk_os_get_ikc_map(0, ikc_map, num_cpus);
 		OKNG(ret == 0 &&
-		     ikc_map[0].src_cpu == 3 &&
-		     ikc_map[0].dst_cpu == 0 &&
-		     ikc_map[1].src_cpu == 1 &&
-		     ikc_map[1].dst_cpu == 2, "ihk_os_get_ikc_map (2)\n");
+			((ikc_map[0].src_cpu == 1 && ikc_map[0].dst_cpu == 2 &&
+			ikc_map[1].src_cpu == 3 && ikc_map[1].dst_cpu == 0) ||
+			(ikc_map[0].src_cpu == 3 && ikc_map[0].dst_cpu == 0 &&
+			ikc_map[1].src_cpu == 1 && ikc_map[1].dst_cpu == 2)),
+			"ihk_os_get_ikc_map (2)\n");
 	} else {
 		// set ikc_map
 		sprintf(cmd, "%s/sbin/ihkosctl 0 set ikc_map 3:0+1:2 2>&1",

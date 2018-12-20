@@ -260,30 +260,8 @@ prepare
 sudo ${SBIN_DIR}/ihkconfig 0 reserve mem 512M@0
 sudo ${SBIN_DIR}/ihkosctl 0 assign mem 512M@0
 sudo ${SBIN_DIR}/ihkosctl 0 release mem 512M@0
-${conf} ${cnt} not0 "error" release mem 
+${conf} ${cnt} not0 "Usage" release mem ""
 ${conf} ${cnt} 0 "536870912@0" query mem 
-
-###
-prepare
-sudo ${SBIN_DIR}/ihkconfig 0 reserve mem 512M@0
-sudo ${SBIN_DIR}/ihkosctl 0 assign mem 512M@0
-${conf} ${cnt} not0 "error" release mem 
-${conf} ${cnt} 0 "" query mem 
-
-###
-prepare
-sudo ${SBIN_DIR}/ihkconfig 0 reserve mem 256M@0,256M@1
-sudo ${SBIN_DIR}/ihkosctl 0 assign mem 256M@0,256M@1
-sudo ${SBIN_DIR}/ihkosctl 0 release mem 256M@0,256M@1
-${conf} ${cnt} not0 "error" release mem 
-${conf} ${cnt} 0 "268435456@0" query mem 
-
-###
-prepare
-sudo ${SBIN_DIR}/ihkconfig 0 reserve mem 256M@0,256M@1
-sudo ${SBIN_DIR}/ihkosctl 0 assign mem 256M@0,256M@1
-${conf} ${cnt} not0 "error" release mem 
-${conf} ${cnt} 0 "" query mem 
 
 echo "【Test for ihkconfig query mem】"
 ###

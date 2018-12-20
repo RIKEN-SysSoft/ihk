@@ -1,0 +1,65 @@
+【Issue#1168 動作確認】
+□ テスト内容
+CT001: ihklib のテストを用いたihklib関数の確認 (366件)
+	ihk/test/ihklib に配置されている001_lin のテストを実行し、
+	すべての項目がOKとなることを確認する。
+	当該テストは、ihklib関数の基本的な動作を確認するテストである。
+
+CT002: ihkconfig コマンドの確認 (22件)
+	ihkconfigコマンドを用いたCPU、メモリに対する操作が
+	正しく動作することを以下の流れで確認する。
+	[CPU]
+	 1: reserve cpu 5-7,1,3 実行後の、query cpu の結果を確認 ("1,3,5-7")
+	 2: release cpu 5-6     実行後の、query cpu の結果を確認 ("1,3,7")
+	 3: release cpu 1,3,7   実行後の、query cpu の結果を確認 (空)
+	 4: reserve cpu, release cpu でCPUを指定しない場合に
+	   Usageが表示されることを確認
+
+	[MEM]
+	 1: reserve mem 256M@0,256M@1 実行後の、query mem の結果を確認
+	   ("268435456@0,268435456@1")
+	 2: release mem 256M@1 実行後の、query mem の結果を確認
+	   ("268435456@0")
+	 3: release mem 256M@0 実行後の、query mem の結果を確認 (空)
+	 4: reserve mem 256M@0,256M@1 実行後、release mem all を実行し、
+	   query mem の結果を確認 (空)
+	 5: reserve mem でメモリ情報を指定しない場合にUsageが表示されることを確認
+
+CT003: ihkosctl コマンドの確認 (33件)
+	ihkosctlコマンドを用いたCPU、メモリ、およびikc-map設定の
+	操作が正しく動作することを以下の流れで確認する。
+	[CPU]
+	 1: ihkconfig reserve cpu 1-7 でCPU 1-7 を確保
+	 2: assign cpu 2-4,6    実行後の、query cpu の結果を確認 ("2-4,6")
+	 3: release cpu 2,6   実行後の、query cpu の結果を確認 ("3-4")
+	 4: release cpu 3-4   実行後の、query cpu の結果を確認 (空)
+	 5: assign cpu, release cpu でCPUを指定しない場合に
+	   Usageが表示されることを確認
+
+	[MEM]
+	 1: ihkconfig reserve mem 512M@0,512M@1 でメモリを確保
+	 2: assign mem 256M@0,256M@1 実行後の、query mem の結果を確認
+	   ("268435456@0,268435456@1")
+	 3: release mem 256M@1 実行後の、query mem の結果を確認
+	   ("268435456@0")
+	 4: release mem 256M@0 実行後の、query mem の結果を確認 (空)
+	 5: assign mem 256M@0,256M@1 実行後、release mem all を実行し、
+	   query mem の結果を確認 (空)
+
+	[ikc-map]
+	 1: ihkconfig reserve cpu 1-3,5-7 でCPUを確保
+	 2: assign cpu 1-3,5-7 でCPUを割り当て
+	 3: set ikc_map 5-7:4+1-3:0 でikc-mapを設定
+	 4: get ikc_map の結果を確認 ("1,2,3:0+5,6,7:4")
+
+□ 実行手順
+$ make test
+
+McKernelのインストール先や、OSTEST, LTPの配置場所は、
+$HOME/.mck_test_config を参照している
+.mck_test_config は、McKernelをビルドした際に生成されるmck_test_config.sample ファイルを
+$HOMEにコピーし、適宜編集する
+
+□ 実行結果
+result.log 参照。
+すべての項目をPASSしていることを確認。
