@@ -4,6 +4,7 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -76,6 +77,7 @@ struct namespace_file namespace_files[] = {
 	{ .nstype = 0, .name = NULL, .fd = -1 }
 };
 
+#if 0
 static void cpus_array2str(char* cpu_list, ssize_t sz_cpu_list, int num_cpus, int* cpus) {
 	int i;
 	char cpu_str[64];
@@ -88,15 +90,52 @@ static void cpus_array2str(char* cpu_list, ssize_t sz_cpu_list, int num_cpus, in
 		}
 	}
 }
+#endif
+
+static int snprintf_realloc(char **str, size_t *size,
+		size_t offset, const char *format, ...)
+{
+	int ret, needed;
+	char *tmp;
+	va_list ap;
+
+	va_start(ap, format);
+	while (0 <= (ret = vsnprintf(*str + offset, *size - offset,
+				format, ap))
+		  && *size - offset < (needed = ret + 1)) {
+		va_end(ap);
+
+		*size *= 2;
+		tmp = realloc(*str, *size);
+
+		if (tmp) {
+			*str = tmp;
+		} else {
+			free(*str);
+			*str = NULL;
+			return -1;
+		}
+		va_start(ap, format);
+	}
+	va_end(ap);
+
+	return ret;
+}
 
 /* Return number of CPUs on success, negative on failure */
-static int do_cpus_str2array(char *_cpu_list, int *cpus)
+static int cpu_str2array(char *_cpu_list, int num_cpus, int *cpus)
 {
 	int ret = 0;
 	int i;
 	int cpu_rank = 0;
-	char *cpu_list;
+	char *cpu_list, *to_free = NULL;
 	char *token, *minus;
+
+	if (!_cpu_list) {
+		/* nothing to do */
+		ret = 0;
+		goto out;
+	}
 
 	if (!(cpu_list = strdup(_cpu_list))) {
 		eprintf("%s: error: allocating cpu_list\n",
@@ -104,6 +143,7 @@ static int do_cpus_str2array(char *_cpu_list, int *cpus)
 		ret = -errno;
 		goto out;
 	}
+	to_free = cpu_list;
 
 	token = strsep(&cpu_list, ",");
 	while (token) {
@@ -128,16 +168,19 @@ static int do_cpus_str2array(char *_cpu_list, int *cpus)
 			for (i = start; i <= end; i++) {
 				dprintf("%s: cpus[%d]=%d\n",
 					__func__, cpu_rank, i);
-				if (cpus) {
-					cpus[cpu_rank++] = i;
+				if (cpus && num_cpus > cpu_rank) {
+					cpus[cpu_rank] = i;
 				}
+				cpu_rank++;
 			}
-		} else {
+		}
+		else {
 			dprintf("%s: cpus[%d]=%d\n",
 				__func__, cpu_rank, atoi(token));
-			if (cpus) {
-				cpus[cpu_rank++] = atoi(token);
+			if (cpus && num_cpus > cpu_rank) {
+				cpus[cpu_rank] = atoi(token);
 			}
+			cpu_rank++;
 		}
 		token = strsep(&cpu_list, ",");
 	}
@@ -145,60 +188,49 @@ static int do_cpus_str2array(char *_cpu_list, int *cpus)
 	ret = cpu_rank;
 
  out:
-	free(cpu_list);
+	free(to_free);
 	return ret;
 }
 
-/* Return number of CPUs on success, negative on failure */
-int cpus_str2count(char *cpu_list)
+int cpu_str2count(char *cpu_list)
 {
-	return do_cpus_str2array(cpu_list, NULL);
+	return cpu_str2array(cpu_list, 0, NULL);
 }
 
-/* Return 0 on success, negative on failure */
-int cpus_str2array(char *cpu_list, int *cpus)
+/* Return number of CPUs on success, negative on failure */
+int cpu_str2req(char *_cpu_list, int num_cpus, struct ihk_cpu_req *req)
 {
 	int ret = 0;
 
-	if ((ret = do_cpus_str2array(cpu_list, cpus)) < 0) {
+	if (!req) {
+		eprintf("%s: error: invalid req pointer (NULL)\n", __func__);
+		ret = -EINVAL;
 		goto out;
 	}
 
-	ret = 0;
+	ret = cpu_str2array(_cpu_list, num_cpus, req->cpus);
+	req->num_cpus = ret;
+
  out:
 	return ret;
 }
 
-static void mem_array2str(char* mem_list, ssize_t sz_mem_list, int num_mem_chunks, struct ihk_mem_chunk* mem_chunks) {
-	int i;
-	char mem_str[128];
-
-	memset(mem_list, 0, sz_mem_list);
-	mem_str[0] = '\0';
-	for (i = 0; i < num_mem_chunks; i++) {
-		snprintf(mem_str, sizeof(mem_str) - strlen(mem_str) - 1, "%lu@%d",
-				 mem_chunks[i].size, mem_chunks[i].numa_node_number);
-		strncat(mem_list, mem_str, sz_mem_list - strlen(mem_list) - 1);
-		if(i != num_mem_chunks - 1) {
-			strncat(mem_list, ",", sz_mem_list - strlen(mem_list) - 1);
-		}
-	}
-}
-
-static int mem_str2array(char* mem_list, int *num_mem_chunks, struct ihk_mem_chunk* mem_chunks) {
+static int mem_str2array(char *mem_list, int *num_mem_chunks,
+			struct ihk_mem_chunk *mem_chunks)
+{
 	int ret = 0;
 	int mem_count = 0;
-	char* chunk = mem_list;
-	char* token = strsep(&chunk, ",");
+	char *chunk = mem_list;
+	char *token = strsep(&chunk, ",");
 	while (token != NULL) {
 		if(*token == 0) {
 			goto empty_mem;
 		}
 		char* cdr = token;
 		token = strsep(&cdr, "@");
-		if(*num_mem_chunks > mem_count) {
+		if (mem_chunks && *num_mem_chunks > mem_count) {
 			mem_chunks[mem_count].size = atol(token);
-			if(cdr != NULL) {
+			if (cdr != NULL) {
 				mem_chunks[mem_count].numa_node_number = atol(cdr);
 			}
 		}
@@ -206,9 +238,369 @@ static int mem_str2array(char* mem_list, int *num_mem_chunks, struct ihk_mem_chu
 	empty_mem:
 		token = strsep(&chunk, ",");
 	}
-	*num_mem_chunks = mem_count;
-	//out:
+
+	ret = mem_count;
+
     return ret;
+}
+
+/* Return number of maps on success, negative on failure */
+static int ikc_str2array(char *_ikc_list, int num_maps,
+		int *src_cpus, int *dst_cpus)
+{
+	int ret = 0;
+	int i;
+	int token_cnt = 0, total_cnt = 0;
+	int cpu_buf[IHK_MAX_NUM_CPUS] = {0};
+	char *ikc_list, *to_free = NULL;
+	char *token;
+
+	if (!_ikc_list) {
+		/* nothing to do */
+		ret = 0;
+		goto out;
+	}
+
+	if (!(ikc_list = strdup(_ikc_list))) {
+		eprintf("%s: error: allocating ikc_list\n",
+			__func__);
+		ret = -errno;
+		goto out;
+	}
+	to_free = ikc_list;
+
+	token = strsep(&ikc_list, "+");
+	while (token) {
+		char *cpu_list;
+		char *ikc_cpu;
+		int dst_cpu;
+
+		cpu_list = strsep(&token, ":");
+		if (!cpu_list) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		token_cnt = cpu_str2array(cpu_list, IHK_MAX_NUM_CPUS, cpu_buf);
+
+		ikc_cpu = strsep(&token, ":");
+		if (!ikc_cpu) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		dst_cpu = atoi(ikc_cpu);
+
+		/* Store IKC target CPU */
+		for (i = 0; i < token_cnt; i++) {
+			if (src_cpus && dst_cpus && num_maps > total_cnt) {
+				src_cpus[total_cnt] = cpu_buf[i];
+				dst_cpus[total_cnt] = dst_cpu;
+			}
+			total_cnt++;
+		}
+
+		token = strsep(&ikc_list, "+");
+	}
+
+	ret = total_cnt;
+
+ out:
+	free(to_free);
+	return ret;
+}
+
+int ikc_str2count(char *_ikc_list)
+{
+	return ikc_str2array(_ikc_list, 0, NULL, NULL);
+}
+
+int ikc_str2req(char *_ikc_list, int num_cpus, struct ihk_ikc_req *req)
+{
+	int ret = 0;
+
+	if (!req) {
+		eprintf("%s: error: invalid req pointer (NULL)\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = ikc_str2array(_ikc_list, num_cpus, req->src_cpus, req->dst_cpus);
+	req->num_cpus = ret;
+
+ out:
+	return ret;
+}
+
+
+static size_t ihk_memparse(char *token)
+{
+	size_t ret;
+	char *endp = token + strlen(token) - 1;
+
+	ret = atol(token);
+
+	switch (*endp) {
+	case 'e':
+	case 'E':
+		ret <<= 10;
+	case 'p':
+	case 'P':
+		ret <<= 10;
+	case 't':
+	case 'T':
+		ret <<= 10;
+	case 'g':
+	case 'G':
+		ret <<= 10;
+	case 'm':
+	case 'M':
+		ret <<= 10;
+	case 'k':
+	case 'K':
+		ret <<= 10;
+	default:
+		// do nothing
+		break;
+	}
+
+	return ret;
+}
+
+/* Return number of MEM chunks on success, negative on failure */
+int mem_str2req(char *_mem_list, int num_mem_chunks, struct ihk_mem_req *req)
+{
+	int ret = 0;
+	int mem_count = 0;
+	char *mem_list, *to_free = NULL;
+	char *token, *cdr;
+
+	if (!_mem_list) {
+		/* nothing to do */
+		ret = 0;
+		goto out;
+	}
+
+	if (!(mem_list = strdup(_mem_list))) {
+		eprintf("%s: error: allocating mem_list\n",
+			__func__);
+		ret = -errno;
+		goto out;
+	}
+	to_free = mem_list;
+
+	token = strsep(&mem_list, ",");
+	while (token) {
+		if (*token == 0) {
+			eprintf("%s: error: illegal expression: %s\n",
+				__func__, _mem_list); /* empty token */
+			ret = -EINVAL;
+			goto out;
+		}
+		cdr = token;
+		token = strsep(&cdr, "@");
+		if (req && num_mem_chunks > mem_count) {
+			req->sizes[mem_count] = ihk_memparse(token);
+			if (cdr != NULL) {
+				req->numa_ids[mem_count] = atol(cdr);
+			}
+		}
+		mem_count++;
+
+		token = strsep(&mem_list, ",");
+	}
+
+	if (req) {
+		req->num_chunks = mem_count;
+	}
+
+	ret = mem_count;
+
+ out:
+	free(to_free);
+	return ret;
+}
+
+int mem_str2count(char *mem_list)
+{
+	return mem_str2req(mem_list, 0, NULL);
+}
+
+static char *cpu_array2str(int num_cpus, int *cpus)
+{
+	/* prev_cpu should be < -1 so that "if (prev_cpu != cpus[i] - 1)"
+	 * won't misunderstand that the cursor is pointing to "0"
+	 * following "-1".
+	 */
+	int i, prev_cpu = -10, in_seq = 0, n = 0;
+	size_t buflen = 64;
+	char *str = NULL;
+
+	str = malloc(buflen);
+	if (!str) {
+		goto out;
+	}
+
+	memset(str, 0, buflen);
+
+	for (i = 0; i < num_cpus; i++) {
+		if (prev_cpu != cpus[i] - 1) {
+			if (prev_cpu > 0) {
+				n += snprintf_realloc(&str, &buflen, n,
+					"%d,", prev_cpu);
+			}
+			in_seq = 0;
+		}
+		else {
+			if (!in_seq) {
+				n += snprintf_realloc(&str, &buflen, n,
+					"%d-", prev_cpu);
+				in_seq = 1;
+			}
+		}
+
+		prev_cpu = cpus[i];
+	}
+
+	if (prev_cpu >= 0) {
+		n += snprintf_realloc(&str, &buflen, n,
+			"%d", prev_cpu);
+	}
+
+ out:
+	return str;
+}
+
+char *cpu_req2str(struct ihk_cpu_req *req)
+{
+	return cpu_array2str(req->num_cpus, req->cpus);
+}
+
+static char *mem_array2str(int num_mem_chunks, size_t *sizes, int *numa_ids)
+{
+	int i, n = 0;
+	size_t buflen = 64;
+	char *str = NULL;
+
+	str = malloc(buflen);
+	if (!str) {
+		goto out;
+	}
+
+	memset(str, 0, buflen);
+
+	for (i = 0; i < num_mem_chunks; i++) {
+		n += snprintf_realloc(&str, &buflen, n,
+			"%lu@%d", sizes[i], numa_ids[i]);
+		if (i != num_mem_chunks - 1) {
+			n += snprintf_realloc(&str, &buflen, n, ",");
+		}
+	}
+
+ out:
+	return str;
+}
+
+char *mem_req2str(struct ihk_mem_req *req)
+{
+	return mem_array2str(req->num_chunks, req->sizes, req->numa_ids);
+}
+
+char *ikc_req2str(struct ihk_ikc_req *req)
+{
+	int i, src, dst, max_dst = -1, idx, n = 0;
+	char *str = NULL;
+	size_t buflen = 64;
+
+	/* Sender-set (sset): Set of senders sharing the same destination */
+	int *rank = NULL; /* Order in sender-set, indexed by IKC source CPU# */
+	int *ikc_sset_sizes = NULL; /* Indexed by IKC destination CPU# */
+	int **ikc_sset_members = NULL; /* Indexed by IKC destination CPU# */
+
+	str = malloc(buflen);
+	if (!str) {
+		goto out;
+	}
+
+	memset(str, 0, buflen);
+
+	rank = calloc(sizeof(int), IHK_MAX_NUM_CPUS);
+	if (!rank) {
+		eprintf("%s: error: allocating rank\n", __func__);
+		goto out;
+	}
+
+	ikc_sset_sizes = calloc(sizeof(int), IHK_MAX_NUM_CPUS);
+	if (!ikc_sset_sizes) {
+		eprintf("%s: error: allocating num_ikc_ssets\n", __func__);
+		goto out;
+	}
+
+	ikc_sset_members = calloc(sizeof(int *), IHK_MAX_NUM_CPUS);
+	if (!ikc_sset_members) {
+		eprintf("%s: error: allocating ikc_sset_members\n", __func__);
+		goto out;
+	}
+
+	for (idx = 0; idx < req->num_cpus; idx++) {
+		src = req->src_cpus[idx];
+		dst = req->dst_cpus[idx];
+
+		rank[src] = ikc_sset_sizes[dst];
+		ikc_sset_sizes[dst]++;
+		if (max_dst < dst) {
+			max_dst = dst;
+		}
+	}
+
+	for (idx = 0; idx < req->num_cpus; idx++) {
+		src = req->src_cpus[idx];
+		dst = req->dst_cpus[idx];
+
+		if (!ikc_sset_members[dst]) {
+			ikc_sset_members[dst] = calloc(sizeof(int),
+					ikc_sset_sizes[dst]);
+			if (!ikc_sset_members[dst]) {
+				eprintf("%s: error: allocating ikc_sset_members\n",
+					__func__);
+				goto out;
+			}
+		}
+		*(ikc_sset_members[dst] + rank[src]) = src;
+	}
+
+	for (dst = 0; dst < IHK_MAX_NUM_CPUS; dst++) {
+		if (ikc_sset_sizes[dst] == 0) {
+			continue;
+		}
+
+		for (i = 0; i < ikc_sset_sizes[dst]; i++) {
+			n += snprintf_realloc(&str, &buflen, n,
+				"%d", *(ikc_sset_members[dst] + i));
+			if (i != ikc_sset_sizes[dst] - 1) {
+				n += snprintf_realloc(&str, &buflen, n, ",");
+			}
+		}
+		n += snprintf_realloc(&str, &buflen, n, ":%d", dst);
+		if (dst != max_dst) {
+			n += snprintf_realloc(&str, &buflen, n, "+");
+		}
+	}
+
+	dprintf("get_ikc_map,query_res=%s\n", str);
+
+out:
+	if (ikc_sset_members) {
+		for (dst = 0; dst < IHK_MAX_NUM_CPUS; ++dst) {
+			free(ikc_sset_members[dst]);
+		}
+	}
+
+	free(ikc_sset_members);
+	free(ikc_sset_sizes);
+	free(rank);
+
+	return str;
 }
 
 int ihklib_device_open(int index)
@@ -240,7 +632,7 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 {
 	int ret = 0, ret_ioctl;
 	char cpu_list[IHK_MAX_NUM_CPUS];
-	struct ihk_ioctl_desc req;
+	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL, "too many cpus requested\n");
@@ -252,11 +644,8 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 		goto out;
 	}
 
-	cpus_array2str(cpu_list, sizeof(cpu_list), num_cpus, cpus);
-
-	req.string = cpu_list;
-	req.string_len = strlen(cpu_list);
-	CHKANDJUMP(!req.string || !req.string_len, -EINVAL, "invalid format, string=%s\n", cpu_list);
+	req.cpus = cpus;
+	req.num_cpus = num_cpus;
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, string=%s\n", cpu_list);
@@ -293,7 +682,7 @@ int ihk_get_num_reserved_cpus(int index)
 int ihk_query_cpu(int index, int *cpus, int num_cpus)
 {
 	int ret = 0;
-	char *result = NULL;
+	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
 	if (num_cpus > IHK_MAX_NUM_CPUS) {
@@ -325,30 +714,18 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
-	/* Assuming 7 digits are enough for cpu# */
-	if (!(result = calloc(8 * num_cpus, sizeof(char)))) {
-		eprintf("%s: error: allocating result\n",
-			__func__);
-		ret = -ENOMEM;
-		goto out;
-	}
+	req.cpus = cpus;
+	req.num_cpus = num_cpus;
+	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL, "invalid format\n");
 
-	if ((ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, result))) {
+	if ((ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, &req))) {
 		eprintf("%s: error: IHK_DEVICE_QUERY_CPU\n",
 			__func__);
 		ret = -errno;
 		goto out;
 	}
 
-	if ((ret = cpus_str2array(result, cpus))) {
-		eprintf("%s: error: cpus_str2array\n",
-			__func__);
-		ret = -EINVAL;
-		goto out;
-	}
-
  out:
-	free(result);
 	if (fd != -1) {
 		close(fd);
 	}
@@ -358,8 +735,7 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 int ihk_release_cpu(int index, int* cpus, int num_cpus)
 {
 	int ret = 0, ret_ioctl;
-	struct ihk_ioctl_desc req;
-	char cpu_list[IHK_MAX_NUM_CPUS];
+	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
@@ -372,15 +748,13 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 		goto out;
 	}
 
-	cpus_array2str(cpu_list, sizeof(cpu_list), num_cpus, cpus);
-
-	req.string = cpu_list;
-	req.string_len = strlen(cpu_list);
-	CHKANDJUMP(!req.string || !req.string_len, -EINVAL,
-		"invalid format, string=%s\n", cpu_list);
+	req.cpus = cpus;
+	req.num_cpus = num_cpus;
+	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL,
+		"invalid format\n");
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RELEASE_CPU, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, string=%s\n", cpu_list);
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
  out:
 	if (fd != -1) {
@@ -391,9 +765,8 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 
 int ihk_reserve_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks)
 {
-	int ret = 0, ret_ioctl;
-	struct ihk_ioctl_desc req;
-	char mem_list[16 * IHK_MAX_NUM_MEM_CHUNKS];
+	int ret = 0, ret_ioctl, i;
+	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL, "too many memory chunks requested\n");
@@ -405,28 +778,47 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 		goto out;
 	}
 
-	mem_array2str(mem_list, sizeof(mem_list), num_mem_chunks, mem_chunks);
+	CHKANDJUMP(!mem_chunks || !num_mem_chunks, -EINVAL, "invalid format\n");
 
-	req.string = mem_list;
-	req.string_len = strlen(mem_list);
-	CHKANDJUMP(!req.string || !req.string_len, -EINVAL, "invalid format, list=%s\n", mem_list);
+	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
+	if (!req.sizes) {
+		eprintf("%s: error: allocating request sizes\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.numa_ids = calloc(num_mem_chunks, sizeof(int));
+	if (!req.numa_ids) {
+		eprintf("%s: error: allocating request numa_ids\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < num_mem_chunks; i++) {
+		req.sizes[i] = (size_t)mem_chunks[i].size;
+		req.numa_ids[i] = mem_chunks[i].numa_node_number;
+	}
+	req.num_chunks = num_mem_chunks;
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RESERVE_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, list=%s\n", mem_list);
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
+	free(req.sizes);
+	free(req.numa_ids);
 	return ret;
 }
 
 int ihk_get_num_reserved_mem_chunks(int index)
 {
-	int ret = 0, ret_ioctl, ret_ihklib; 
-	char result[16 * IHK_MAX_NUM_MEM_CHUNKS];
-	int num_mem_chunks = 0;
+	int ret = 0, ret_ioctl;
 	int fd = -1;
+	struct ihk_ioctl_mem_desc req = { 0 };
 
 	if ((fd = ihklib_device_open(index)) < 0) {
 		eprintf("%s: error: ihklib_device_open\n",
@@ -435,15 +827,12 @@ int ihk_get_num_reserved_mem_chunks(int index)
 		goto out;
 	}
 
-	memset(result, 0, sizeof(result));
+	req.num_chunks = 0;   /* means only get num_reserved_mem_chunks */
 
-	ret_ioctl = ioctl(fd, IHK_DEVICE_QUERY_MEM, result);
+	ret_ioctl = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
-	ret_ihklib = mem_str2array(result, &num_mem_chunks, NULL);
-	CHKANDJUMP(ret_ihklib != 0, -EINVAL, "mem_str2array failed\n");
-
-	ret = num_mem_chunks;
+	ret = req.num_chunks;
 
  out:
 	if (fd != -1) {
@@ -454,10 +843,10 @@ int ihk_get_num_reserved_mem_chunks(int index)
 
 int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks)
 {
-	int ret = 0, ret_ioctl, ret_ihklib;
-	char result[16 * IHK_MAX_NUM_MEM_CHUNKS];
-	int num_mem_chunks = _num_mem_chunks;
+	int ret = 0, ret_ioctl;
 	int fd = -1;
+	int i;
+	struct ihk_ioctl_mem_desc req = { 0 };
 
 	if ((fd = ihklib_device_open(index)) < 0) {
 		eprintf("%s: error: ihklib_device_open\n",
@@ -466,30 +855,49 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 		goto out;
 	}
 
-	memset(result, 0, sizeof(result));
+	req.sizes = calloc(_num_mem_chunks, sizeof(size_t));
+	if (!req.sizes) {
+		eprintf("%s: error: allocating request sizes\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	ret_ioctl = ioctl(fd, IHK_DEVICE_QUERY_MEM, result);
+	req.numa_ids = calloc(_num_mem_chunks, sizeof(int));
+	if (!req.numa_ids) {
+		eprintf("%s: error: allocating request numa_ids\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.num_chunks = _num_mem_chunks;
+
+	ret_ioctl = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
-	ret_ihklib = mem_str2array(result, &num_mem_chunks, mem_chunks);
-	CHKANDJUMP(ret_ihklib != 0, -EINVAL, "mem_str2array failed\n");
-
-	CHKANDJUMP(num_mem_chunks != _num_mem_chunks, -EINVAL,
+	CHKANDJUMP(req.num_chunks != _num_mem_chunks, -EINVAL,
 		   "actual number of memory chunks (%d) is different than requested (%d)\n",
-		   num_mem_chunks, _num_mem_chunks);
+		   req.num_chunks, _num_mem_chunks);
+
+	for (i = 0; i < _num_mem_chunks; i++) {
+		mem_chunks[i].size = req.sizes[i];
+		mem_chunks[i].numa_node_number = req.numa_ids[i];
+	}
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
+	free(req.sizes);
+	free(req.numa_ids);
 	return ret;
 }
 
 int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks)
 {
-	int ret = 0, ret_ioctl;
-	struct ihk_ioctl_desc req;
-	char mem_list[IHK_MAX_NUM_MEM_CHUNKS];
+	int ret = 0, i, ret_ioctl;
+	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
@@ -502,20 +910,40 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 		goto out;
 	}
 
-	mem_array2str(mem_list, sizeof(mem_list), num_mem_chunks, mem_chunks);
+	CHKANDJUMP(!mem_chunks || !num_mem_chunks, -EINVAL,
+		"invalid format\n");
 
-	req.string = mem_list;
-	req.string_len = strlen(mem_list);
-	CHKANDJUMP(!req.string || !req.string_len, -EINVAL,
-		"invalid format, string=%s\n", mem_list);
+	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
+	if (!req.sizes) {
+		eprintf("%s: error: allocating request sizes\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.numa_ids = calloc(num_mem_chunks, sizeof(int));
+	if (!req.numa_ids) {
+		eprintf("%s: error: allocating request numa_ids\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < num_mem_chunks; i++) {
+		req.sizes[i] = (size_t)mem_chunks[i].size;
+		req.numa_ids[i] = mem_chunks[i].numa_node_number;
+	}
+	req.num_chunks = num_mem_chunks;
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RELEASE_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, string=%s\n", mem_list);
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
+	free(req.sizes);
+	free(req.numa_ids);
 	return ret;
 }
 
@@ -661,8 +1089,7 @@ int ihklib_os_open(int index)
 int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 {
 	int ret = 0, ret_ioctl;
-	char cpu_list[IHK_MAX_NUM_CPUS];
-	struct ihk_ioctl_desc req;
+	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
@@ -675,15 +1102,13 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 		goto out;
 	}
 
-	cpus_array2str(cpu_list, sizeof(cpu_list), num_cpus, cpus);
-
-	req.string = cpu_list;
-	req.string_len = strlen(cpu_list);
-	CHKANDJUMP(!req.string || !req.string_len, -EINVAL,
-		"invalid format, string=%s\n", cpu_list);
+	req.cpus = cpus;
+	req.num_cpus = num_cpus;
+	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL,
+		"invalid format\n");
 
 	ret_ioctl = ioctl(fd, IHK_OS_ASSIGN_CPU, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, string=%s\n", cpu_list);
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
  out:
 	if (fd != -1) {
@@ -717,7 +1142,7 @@ int ihk_os_get_num_assigned_cpus(int index)
 int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 {
 	int ret = 0;
-	char *result = NULL;
+	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
 	if (num_cpus > IHK_MAX_NUM_CPUS) {
@@ -749,30 +1174,18 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
-	/* Assuming 7 digits are enough for cpu# */
-	if (!(result = calloc(8 * num_cpus, sizeof(char)))) {
-		eprintf("%s: error: allocating result\n",
-			__func__);
-		ret = -ENOMEM;
-		goto out;
-	}
+	req.cpus = cpus;
+	req.num_cpus = num_cpus;
+	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL, "invalid format\n");
 
-	if ((ret = ioctl(fd, IHK_OS_QUERY_CPU, result))) {
+	if ((ret = ioctl(fd, IHK_OS_QUERY_CPU, &req))) {
 		eprintf("%s: error: IHK_OS_QUERY_CPU returned %d\n",
 			__func__, errno);
 		ret = -errno;
 		goto out;
 	}
 
-	if ((ret = cpus_str2array(result, cpus))) {
-		eprintf("%s: error: cpus_str2array\n",
-			__func__);
-		ret = -EINVAL;
-		goto out;
-	}
-
  out:
-	free(result);
 	if (fd != -1) {
 		close(fd);
 	}
@@ -782,8 +1195,7 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 {
 	int ret = 0, ret_ioctl;
-	struct ihk_ioctl_desc req;
-	char cpu_list[IHK_MAX_NUM_CPUS];
+	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
@@ -796,15 +1208,13 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
-	cpus_array2str(cpu_list, sizeof(cpu_list), num_cpus, cpus);
-
-	req.string = cpu_list;
-	req.string_len = strlen(cpu_list);
-	CHKANDJUMP(!req.string || !req.string_len, -EINVAL,
-		"invalid format, string=%s\n", cpu_list);
+	req.cpus = cpus;
+	req.num_cpus = num_cpus;
+	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL,
+		"invalid format\n");
 
 	ret_ioctl = ioctl(fd, IHK_OS_RELEASE_CPU, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, string=%s\n", cpu_list);
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
  out:
 	if (fd != -1) {
@@ -815,15 +1225,9 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 
 int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
-	int ret = 0, ret_ioctl;
-	int i, j;
-	char map_str[8 * (IHK_MAX_NUM_CPUS + IHK_MAX_NUM_NUMA_NODES)];
-	char cpu_str[16];
+	int ret = 0, i, ret_ioctl;
+	struct ihk_ioctl_ikc_desc req = { 0 };
 	int fd = -1;
-
-	int dst_existence[IHK_MAX_NUM_CPUS];
-	int num_ssets = 0;
-	int dst_sorted[IHK_MAX_NUM_CPUS];
 
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
 		"too many cpus specified\n");
@@ -835,52 +1239,44 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 		goto out;
 	}
 
-	memset(dst_existence, 0, sizeof(dst_existence));
-	memset(dst_sorted, 0, sizeof(dst_sorted));
+	req.src_cpus = calloc(num_cpus, sizeof(int));
+	if (!req.src_cpus) {
+		eprintf("%s: error: allocating request src_cpus\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.dst_cpus = calloc(num_cpus, sizeof(int));
+	if (!req.dst_cpus) {
+		eprintf("%s: error: allocating request dst_cpuss\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	for (i = 0; i < num_cpus; i++) {
-		if (dst_existence[map[i].dst_cpu] == 0) {
-			dst_existence[map[i].dst_cpu] = 1;
-			dst_sorted[num_ssets] = map[i].dst_cpu;
-			num_ssets++;
-		}
+		req.src_cpus[i] = map[i].src_cpu;
+		req.dst_cpus[i] = map[i].dst_cpu;
 	}
+	req.num_cpus = num_cpus;
 
-	memset(map_str, 0, sizeof(map_str));
-	for (i = 0; i < num_ssets; i++) {
-		if(i != 0) {
-			strcat(map_str, "+");
-		}
-		int sset_size = 0;
-		for (j = 0; j < num_cpus; j++) {
-			if (map[j].dst_cpu == dst_sorted[i]) {
-				if(sset_size != 0) {
-					strcat(map_str, ",");
-				}
-				snprintf(cpu_str, sizeof(cpu_str), "%d", map[j].src_cpu);
-				strcat(map_str, cpu_str);
-				sset_size++;
-			}
-		}
-		strcat(map_str, ":");
-		snprintf(cpu_str, sizeof(cpu_str), "%d", dst_sorted[i]);
-		strcat(map_str, cpu_str);
-	}
-
-	ret_ioctl = ioctl(fd, IHK_OS_SET_IKC_MAP, map_str);
+	ret_ioctl = ioctl(fd, IHK_OS_SET_IKC_MAP, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
+	free(req.src_cpus);
+	free(req.dst_cpus);
 	return ret;
 }
 
 int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
-	int ret = 0, ret_ioctl;
-	char query_result[8 * (IHK_MAX_NUM_CPUS + IHK_MAX_NUM_NUMA_NODES)];
+	int ret = 0, i, ret_ioctl;
+	struct ihk_ioctl_ikc_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
@@ -893,51 +1289,51 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 		goto out;
 	}
 
-	memset(query_result, 0, sizeof(query_result));
+	req.src_cpus = calloc(num_cpus, sizeof(int));
+	if (!req.src_cpus) {
+		eprintf("%s: error: allocating request src_cpus\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_GET_IKC_MAP, query_result);
+	req.dst_cpus = calloc(num_cpus, sizeof(int));
+	if (!req.dst_cpus) {
+		eprintf("%s: error: allocating request dst_cpuss\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.num_cpus = num_cpus;
+
+	ret_ioctl = ioctl(fd, IHK_OS_GET_IKC_MAP, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
-	char *sset = query_result;
-	char *token = strsep(&sset, "+");
-	int pair_rank = 0;
-	while (token != NULL) {
-		if(*token == 0) {
-			goto empty_pair;
-		}
-		char *cdr = token;
-		token = strsep(&cdr, ":");
-		CHKANDJUMP(*token == 0, -EINVAL, "get_ikc_map,empty LWK cpus,str=%s\n", query_result);
-		CHKANDJUMP(cdr == NULL, -EINVAL, "get_ikc_map,colon not found,str=%s\n", query_result);
+	CHKANDJUMP(req.num_cpus != num_cpus, -EINVAL,
+		   "actual number of ikc_maps (%d) is different than requested (%d)\n",
+		   req.num_cpus, num_cpus);
 
-		char* cpus = token;
-		token = strsep(&cpus, ",");
-		while (token != NULL) {
-			if(*token == 0) {
-				goto empty_cpu;
-			}
-			map[pair_rank].src_cpu = atol(token);
-			map[pair_rank].dst_cpu = atol(cdr);
-			pair_rank++;
-		empty_cpu:
-			token = strsep(&cpus, ",");
-		}
-	empty_pair:
-		token = strsep(&sset, "+");
+	for (i = 0; i < req.num_cpus; i++) {
+		map[i].src_cpu = req.src_cpus[i];
+		map[i].dst_cpu = req.dst_cpus[i];
 	}
+
+	ret = 0;
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
+	free(req.src_cpus);
+	free(req.dst_cpus);
 	return ret;
 }
 
 int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_chunks)
 {
-	int ret = 0, ret_ioctl;
-	struct ihk_ioctl_desc req;
-	char mem_list[16 * IHK_MAX_NUM_MEM_CHUNKS];
+	int ret = 0, ret_ioctl, i;
+	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL, "too many memory chunks requested\n");
@@ -949,28 +1345,47 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 		goto out;
 	}
 
-	mem_array2str(mem_list, sizeof(mem_list), num_mem_chunks, mem_chunks);
+	CHKANDJUMP(!mem_chunks || !num_mem_chunks, -EINVAL,
+		"invalid format\n");
 
-	req.string = mem_list;
-	req.string_len = strlen(mem_list);
-	CHKANDJUMP(!req.string || !req.string_len, -EINVAL, "invalid format, string=%s\n", mem_list);
+	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
+	if (!req.sizes) {
+		eprintf("%s: error: allocating request sizes\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.numa_ids = calloc(num_mem_chunks, sizeof(int));
+	if (!req.numa_ids) {
+		eprintf("%s: error: allocating request numa_ids\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < num_mem_chunks; i++) {
+		req.sizes[i] = (size_t)mem_chunks[i].size;
+		req.numa_ids[i] = mem_chunks[i].numa_node_number;
+	}
+	req.num_chunks = num_mem_chunks;
 
 	ret_ioctl = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, list=%s\n", mem_list);
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
+	free(req.sizes);
+	free(req.numa_ids);
 	return ret;
 }
 
 int ihk_os_get_num_assigned_mem_chunks(int index)
 {
-	int ret = 0, ret_ioctl, ret_ihklib;
-	char result[16 * IHK_MAX_NUM_MEM_CHUNKS];
-	struct ihk_mem_chunk mem_chunks[IHK_MAX_NUM_MEM_CHUNKS];
-	int num_mem_chunks = 0;
+	int ret = 0, ret_ioctl;
+	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
 	if ((fd = ihklib_os_open(index)) < 0) {
@@ -980,15 +1395,12 @@ int ihk_os_get_num_assigned_mem_chunks(int index)
 		goto out;
 	}
 
-	memset(result, 0, sizeof(result));
+	req.num_chunks = 0;   /* means only get num_chunks */
 
-	ret_ioctl = ioctl(fd, IHK_OS_QUERY_MEM, result);
+	ret_ioctl = ioctl(fd, IHK_OS_QUERY_MEM, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
-	ret_ihklib = mem_str2array(result, &num_mem_chunks, mem_chunks);
-	CHKANDJUMP(ret_ihklib != 0, -EINVAL, "mem_str2array failed\n");
-
-	ret = num_mem_chunks;
+	ret = req.num_chunks;
 
  out:
 	if (fd != -1) {
@@ -999,9 +1411,8 @@ int ihk_os_get_num_assigned_mem_chunks(int index)
 
 int ihk_os_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks)
 {
-	int ret = 0, ret_ioctl, ret_ihklib;
-	char result[16 * IHK_MAX_NUM_MEM_CHUNKS];
-	int num_mem_chunks = _num_mem_chunks;
+	int ret = 0, ret_ioctl, i;
+	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
 	if ((fd = ihklib_os_open(index)) < 0) {
@@ -1011,31 +1422,52 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_c
 		goto out;
 	}
 
-	memset(result, 0, sizeof(result));
+	req.sizes = calloc(_num_mem_chunks, sizeof(size_t));
+	if (!req.sizes) {
+		eprintf("%s: error: allocating request sizes\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_QUERY_MEM, result);
+	req.numa_ids = calloc(_num_mem_chunks, sizeof(int));
+	if (!req.numa_ids) {
+		eprintf("%s: error: allocating request numa_ids\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.num_chunks = _num_mem_chunks;
+
+	ret_ioctl = ioctl(fd, IHK_OS_QUERY_MEM, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
-	ret_ihklib = mem_str2array(result, &num_mem_chunks, mem_chunks);
-	CHKANDJUMP(ret_ihklib != 0, -EINVAL, "mem_str2array failed\n");
+	CHKANDJUMP(req.num_chunks != _num_mem_chunks, -EINVAL,
+		   "actual number of memory chunks (%d) is different than requested (%d)\n",
+		   req.num_chunks, _num_mem_chunks);
 
-	CHKANDJUMP(num_mem_chunks != _num_mem_chunks, -EINVAL,
-		"actual number of memory chunks (%d) is different than requested (%d)\n",
-		num_mem_chunks, _num_mem_chunks);
+	for (i = 0; i < _num_mem_chunks; i++) {
+		mem_chunks[i].size = req.sizes[i];
+		mem_chunks[i].numa_node_number = req.numa_ids[i];
+	}
+
+	ret = 0;
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
+	free(req.sizes);
+	free(req.numa_ids);
 	return ret;
 }
 
 int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		int num_mem_chunks)
 {
-	int ret = 0, ret_ioctl;
-	struct ihk_ioctl_desc req;
-	char mem_list[IHK_MAX_NUM_MEM_CHUNKS];
+	int ret = 0, i, ret_ioctl;
+	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
@@ -1048,19 +1480,37 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		goto out;
 	}
 
-	mem_array2str(mem_list, sizeof(mem_list), num_mem_chunks, mem_chunks);
+	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
+	if (!req.sizes) {
+		eprintf("%s: error: allocating request sizes\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	req.string = mem_list;
-	req.string_len = strlen(mem_list);
-	CHKANDJUMP(!req.string || !req.string_len, -EINVAL, "invalid format, string=%s\n", mem_list);
+	req.numa_ids = calloc(num_mem_chunks, sizeof(int));
+	if (!req.numa_ids) {
+		eprintf("%s: error: allocating request numa_ids\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < num_mem_chunks; i++) {
+		req.sizes[i] = (size_t)mem_chunks[i].size;
+		req.numa_ids[i] = mem_chunks[i].numa_node_number;
+	}
+	req.num_chunks = num_mem_chunks;
 
 	ret_ioctl = ioctl(fd, IHK_OS_RELEASE_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, string=%s\n", mem_list);
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
+	free(req.sizes);
+	free(req.numa_ids);
 	return ret;
 }
 
