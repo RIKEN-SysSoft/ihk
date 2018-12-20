@@ -4,7 +4,7 @@ CC = gcc
 
 CPPFLAGS = -I$(MCK_DIR)/include -DMCK_DIR=$(MCK_DIR) -DTARGET=$(TARGET) -DARCH=$(ARCH)
 CCFLAGS = -Wall -Werror -g
-LDFLAGS = -L$(MCK_DIR)/lib -lihk -Wl,-rpath -Wl,$(MCK_DIR)/lib -lbfd -lpthread
+LDFLAGS = -L$(MCK_DIR)/lib64 -lihk -Wl,-rpath -Wl,$(MCK_DIR)/lib64 -lbfd -lpthread
 SRCS = $(shell ls *_lin.c)
 EXES = $(SRCS:.c=)
 OBJS = $(SRCS:.c=.o)

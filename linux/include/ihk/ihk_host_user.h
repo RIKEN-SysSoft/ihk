@@ -117,10 +117,22 @@ typedef struct dumpargs_s {
 #define DUMP_ALL_MEM 0
 #define DUMP_CHUNK_MEM 24
 
-typedef struct ihk_resource_req_s {
-	char *string;
-	int string_len;
-} ihk_resource_req_t;
+struct ihk_cpu_req {
+	int *cpus;
+	int num_cpus;
+};
+
+struct ihk_mem_req {
+	size_t *sizes;
+	int *numa_ids;
+	int num_chunks;
+};
+
+struct ihk_ikc_req {
+	int *src_cpus;	/* LWC CPUs as IKC source */
+	int *dst_cpus;	/* Linux CPUs as IKC destination */
+	int num_cpus;
+};
 
 /* Used by IHK-core and ihklib */
 struct ihk_os_ioctl_eventfd_desc {
@@ -140,6 +152,5 @@ struct ihk_device_read_kmsg_buf_desc {
 	int shift;    /* IN: Empty the buffer or not */
 	char* buf;    /* OUT: Buffer */
 };
-
 
 #endif /* !defined(__HEADER_IHK_HOST_USER_H) */
