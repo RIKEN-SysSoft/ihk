@@ -1,0 +1,736 @@
+***CT001} start *************************************
+Executing 001
+make[1]: Entering directory `/home/satoken/mck_srcs/gerrit/ihk/test/ihklib'
+gcc -Wall -Werror -g -I/home/satoken/ppos/include -DMCK_DIR=/home/satoken/ppos -DTARGET=smp-x86 -DARCH=x86_64 -c 001_lin.c
+gcc -o 001_lin 001_lin.o -L/home/satoken/ppos/lib -lihk -Wl,-rpath -Wl,/home/satoken/ppos/lib -lbfd -lpthread
+rm 001_lin.o
+make[1]: Leaving directory `/home/satoken/mck_srcs/gerrit/ihk/test/ihklib'
+logname=satoken
+groups=mckernel
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_reserve_cpu: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_get_num_reserved_cpus: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_query_cpu: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_release_cpu: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_reserve_mem: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_get_num_reserved_mem_chunks: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_query_mem: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_release_mem: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_create_os: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_get_num_os_instances: error: ihklib_device_open
+Actual # of OS instances (0) is different than requested (1)
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ihk_get_num_os_instances: error: ihklib_device_open
+ihklib_device_open: error: stat /dev/mcd0: No such file or directory
+ioctl failed
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_assign_cpu: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_num_assigned_cpus: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_query_cpu: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_release_cpu: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_assign_mem: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_num_assigned_mem_chunks: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_query_mem: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_release_mem: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_set_ikc_map: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_ikc_map: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_load: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_kargs: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_boot: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_status: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_create_pseudofs: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_kmsg_size: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_kmsg: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_clear_kmsg: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_num_numa_nodes: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihklib_os_query_mem: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_num_pagesizes: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_pagesizes: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_getrusage: error: ihklib_os_open
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_shutdown: error: ihklib_os_open
+ioctl failed
+logname=satoken
+groups=mckernel
+[ OK ] ihk_os_destroy_pseudofs (1)
+[ OK ] ihk_reserve_cpu (1)
+[ OK ] ihk_get_num_reserved_cpu (1)
+[ OK ] ihk_query_cpu (1)
+[ OK ] ihk_release_cpu (1)
+[ OK ] ihk_reserve_mem w/o /dev/mcd0
+[ OK ] ihk_get_num_reserved_mem_chunks w/o /dev/mcd0
+[ OK ] ihk_query_mem (1)
+[ OK ] ihk_release_mem w/o /dev/mcd0
+[ OK ] ihk_create_os (1)
+[ OK ] ihk_get_num_os_instances (1)
+[ OK ] ihk_get_os_instances (1)
+[ OK ] ihkconfig 0 get os_instances (1) returned:
+do_get_os_instances,ihk_get_num_os_instances failed
+
+[ OK ] ihk_destroy_os (1)
+chown satoken:mckernel /dev/mcd*
+
+[ OK ] ihk_reserve_cpu
+[ OK ] ihk_get_num_reserved_cpu (2)
+[ OK ] ihk_query_cpu (2)
+[ OK ] ihk_release_cpu (2)
+[ OK ] ihk_get_num_reserved_cpu (3)
+[ OK ] ihk_query_cpu (3)
+[ OK ] ihk_reserve_cpu
+[ OK ] ihk_get_num_reserved_cpu (3)
+[ OK ] ihk_query_cpu (4)
+[ OK ] ihk_reserve_mem
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (2)
+[ OK ] ihk_release_mem w/o /dev/mcd0
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (3)
+[ OK ] ihk_reserve_mem
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (3)
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (4)
+[ OK ] ihk_os_release_cpu (1)
+[ OK ] ihk_os_assign_mem (1)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (1)
+[ OK ] ihk_os_release_mem
+[ OK ] ihk_os_set_ikc_map
+[ OK ] ihk_os_get_ikc_map (1)
+[ OK ] ihk_os_load
+[ OK ] ihk_os_kargs
+[ OK ] ihk_os_boot
+[ OK ] ihk_os_get_status (1)
+[ OK ] ihkconfig 0 get status (1) returned:
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_status: error: ihklib_os_open
+do_get_status,error: ihk_os_get_status failed
+
+[ OK ] ihk_os_create_pseudofs
+[ OK ] ihk_os_get_kmsg_size
+[ OK ] ihk_os_kmsg returns -2
+[ OK ] ihk_os_clear_kmsg
+[ OK ] ihk_os_get_num_numa_nodes
+[ OK ] ihk_os_query_free_mem
+[ OK ] ihk_os_get_num_pagesizes
+[ OK ] ihk_os_get_pagesizes
+[ OK ] ihk_os_getrusage
+[ OK ] ihk_os_shutdown (1)
+[ OK ] ihk_destroy_os (2)
+logname=satoken
+groups=mckernel
+[ OK ] ihk_os_destroy_pseudofs (1)
+[ OK ] ihk_reserve_cpu (1)
+[ OK ] ihk_get_num_reserved_cpu (1)
+[ OK ] ihk_query_cpu (1)
+[ OK ] ihk_release_cpu (1)
+[ OK ] ihk_reserve_mem w/o /dev/mcd0
+[ OK ] ihk_get_num_reserved_mem_chunks w/o /dev/mcd0
+[ OK ] ihk_query_mem (1)
+[ OK ] ihk_release_mem w/o /dev/mcd0
+[ OK ] ihk_create_os (1)
+[ OK ] ihk_get_num_os_instances (1)
+[ OK ] ihk_get_os_instances (1)
+[ OK ] ihkconfig 0 get os_instances (1) returned:
+do_get_os_instances,ihk_get_num_os_instances failed
+
+[ OK ] ihk_destroy_os (1)
+chown satoken:mckernel /dev/mcd*
+
+[ OK ] ihk_reserve_cpu
+[ OK ] ihk_get_num_reserved_cpu (2)
+[ OK ] ihk_query_cpu (2)
+[ OK ] ihk_release_cpu (2)
+[ OK ] ihk_get_num_reserved_cpu (3)
+[ OK ] ihk_query_cpu (3)
+[ OK ] ihk_reserve_cpu
+[ OK ] ihk_get_num_reserved_cpu (3)
+[ OK ] ihk_query_cpu (4)
+[ OK ] ihk_reserve_mem
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (2)
+[ OK ] ihk_release_mem w/o /dev/mcd0
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (3)
+[ OK ] ihk_reserve_mem
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (3)
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (4)
+[ OK ] ihk_os_release_cpu (1)
+[ OK ] ihk_os_assign_mem (1)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (1)
+[ OK ] ihk_os_release_mem
+[ OK ] ihk_os_set_ikc_map
+[ OK ] ihk_os_get_ikc_map (1)
+[ OK ] ihk_os_load
+[ OK ] ihk_os_kargs
+[ OK ] ihk_os_boot
+[ OK ] ihk_os_get_status (1)
+[ OK ] ihkconfig 0 get status (1) returned:
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_status: error: ihklib_os_open
+do_get_status,error: ihk_os_get_status failed
+
+[ OK ] ihk_os_create_pseudofs
+[ OK ] ihk_os_get_kmsg_size
+[ OK ] ihk_os_kmsg returns -2
+[ OK ] ihk_os_clear_kmsg
+[ OK ] ihk_os_get_num_numa_nodes
+[ OK ] ihk_os_query_free_mem
+[ OK ] ihk_os_get_num_pagesizes
+[ OK ] ihk_os_get_pagesizes
+[ OK ] ihk_os_getrusage
+[ OK ] ihk_os_shutdown (1)
+[ OK ] ihk_destroy_os (2)
+[ OK ] ihk_os_destroy_pseudofs (2)
+[ OK ] ihk_create_os (2)
+[ OK ] ihk_get_num_os_instances (2)
+[ OK ] ihk_get_os_instances (2)
+[ OK ] ihkconfig 0 get os_instances (3) returned:
+0
+
+[ OK ] ihk_os_get_status (2)
+[ OK ] ihkconfig 0 get status (2) returned:
+INACTIVE
+
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (5)
+[ OK ] ihk_os_release_cpu (2)
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (6)
+[ OK ] ihk_os_release_cpu (3)
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_set_ikc_map
+[ OK ] ihk_os_get_ikc_map (2)
+[ OK ] ihk_os_assign_mem (2)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (2)
+[ OK ] ihk_os_release_mem
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (3)
+[ OK ] ihk_os_assign_mem (3)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (4)
+[ OK ] ihk_os_load
+[ OK ] ihk_os_kargs
+[ OK ] ihk_os_boot
+[ OK ] ihk_os_get_status (3)
+[ OK ] ihkconfig 0 get status (3) returned:
+RUNNING
+
+[ OK ] ihk_os_get_status (4)
+[ OK ] ihkconfig 0 get status (4) returned:
+RUNNING
+
+logname=satoken
+groups=mckernel
+[ OK ] ihk_os_destroy_pseudofs (1)
+[ OK ] ihk_reserve_cpu (1)
+[ OK ] ihk_get_num_reserved_cpu (1)
+[ OK ] ihk_query_cpu (1)
+[ OK ] ihk_release_cpu (1)
+[ OK ] ihk_reserve_mem w/o /dev/mcd0
+[ OK ] ihk_get_num_reserved_mem_chunks w/o /dev/mcd0
+[ OK ] ihk_query_mem (1)
+[ OK ] ihk_release_mem w/o /dev/mcd0
+[ OK ] ihk_create_os (1)
+[ OK ] ihk_get_num_os_instances (1)
+[ OK ] ihk_get_os_instances (1)
+[ OK ] ihkconfig 0 get os_instances (1) returned:
+do_get_os_instances,ihk_get_num_os_instances failed
+
+[ OK ] ihk_destroy_os (1)
+chown satoken:mckernel /dev/mcd*
+
+[ OK ] ihk_reserve_cpu
+[ OK ] ihk_get_num_reserved_cpu (2)
+[ OK ] ihk_query_cpu (2)
+[ OK ] ihk_release_cpu (2)
+[ OK ] ihk_get_num_reserved_cpu (3)
+[ OK ] ihk_query_cpu (3)
+[ OK ] ihk_reserve_cpu
+[ OK ] ihk_get_num_reserved_cpu (3)
+[ OK ] ihk_query_cpu (4)
+[ OK ] ihk_reserve_mem
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (2)
+[ OK ] ihk_release_mem w/o /dev/mcd0
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (3)
+[ OK ] ihk_reserve_mem
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (3)
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (4)
+[ OK ] ihk_os_release_cpu (1)
+[ OK ] ihk_os_assign_mem (1)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (1)
+[ OK ] ihk_os_release_mem
+[ OK ] ihk_os_set_ikc_map
+[ OK ] ihk_os_get_ikc_map (1)
+[ OK ] ihk_os_load
+[ OK ] ihk_os_kargs
+[ OK ] ihk_os_boot
+[ OK ] ihk_os_get_status (1)
+[ OK ] ihkconfig 0 get status (1) returned:
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_status: error: ihklib_os_open
+do_get_status,error: ihk_os_get_status failed
+
+[ OK ] ihk_os_create_pseudofs
+[ OK ] ihk_os_get_kmsg_size
+[ OK ] ihk_os_kmsg returns -2
+[ OK ] ihk_os_clear_kmsg
+[ OK ] ihk_os_get_num_numa_nodes
+[ OK ] ihk_os_query_free_mem
+[ OK ] ihk_os_get_num_pagesizes
+[ OK ] ihk_os_get_pagesizes
+[ OK ] ihk_os_getrusage
+[ OK ] ihk_os_shutdown (1)
+[ OK ] ihk_destroy_os (2)
+[ OK ] ihk_os_destroy_pseudofs (2)
+[ OK ] ihk_create_os (2)
+[ OK ] ihk_get_num_os_instances (2)
+[ OK ] ihk_get_os_instances (2)
+[ OK ] ihkconfig 0 get os_instances (3) returned:
+0
+
+[ OK ] ihk_os_get_status (2)
+[ OK ] ihkconfig 0 get status (2) returned:
+INACTIVE
+
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (5)
+[ OK ] ihk_os_release_cpu (2)
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (6)
+[ OK ] ihk_os_release_cpu (3)
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_set_ikc_map
+[ OK ] ihk_os_get_ikc_map (2)
+[ OK ] ihk_os_assign_mem (2)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (2)
+[ OK ] ihk_os_release_mem
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (3)
+[ OK ] ihk_os_assign_mem (3)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (4)
+[ OK ] ihk_os_load
+[ OK ] ihk_os_kargs
+[ OK ] ihk_os_boot
+[ OK ] ihk_os_get_status (3)
+[ OK ] ihkconfig 0 get status (3) returned:
+RUNNING
+
+[ OK ] ihk_os_get_status (4)
+[ OK ] ihkconfig 0 get status (4) returned:
+RUNNING
+
+[ OK ] ihk_os_create_pseudofs()
+[ OK ] ihk_os_get_kmsg_size
+[ OK ] ihk_os_kmsg
+[ OK ] ihk_os_clear_kmsg
+[ OK ] mcexec
+[ OK ] mcexec cat /proc/stat
+[ OK ] ihk_os_get_num_numa_nodes
+[ OK ] ihk_os_query_free_mem
+[ OK ] ihk_os_get_num_pagesizes
+[ OK ] ihk_os_get_pagesizes
+[ OK ] ihk_os_shutdown (2)
+[ OK ] ihk_os_get_status (5) returned 3
+[ OK ] ihkconfig 0 get status (5) returned:
+SHUTDOWN
+
+[ OK ] ihk_destroy_os (4)
+[ OK ] ihk_get_num_os_instances (3)
+[ OK ] ihk_get_os_instances (3)
+[ OK ] ihkconfig 0 get os_instances (4) returned:
+
+
+logname=satoken
+groups=mckernel
+[ OK ] ihk_os_destroy_pseudofs (1)
+[ OK ] ihk_reserve_cpu (1)
+[ OK ] ihk_get_num_reserved_cpu (1)
+[ OK ] ihk_query_cpu (1)
+[ OK ] ihk_release_cpu (1)
+[ OK ] ihk_reserve_mem w/o /dev/mcd0
+[ OK ] ihk_get_num_reserved_mem_chunks w/o /dev/mcd0
+[ OK ] ihk_query_mem (1)
+[ OK ] ihk_release_mem w/o /dev/mcd0
+[ OK ] ihk_create_os (1)
+[ OK ] ihk_get_num_os_instances (1)
+[ OK ] ihk_get_os_instances (1)
+[ OK ] ihkconfig 0 get os_instances (1) returned:
+do_get_os_instances,ihk_get_num_os_instances failed
+
+[ OK ] ihk_destroy_os (1)
+chown satoken:mckernel /dev/mcd*
+
+[ OK ] ihk_reserve_cpu
+[ OK ] ihk_get_num_reserved_cpu (2)
+[ OK ] ihk_query_cpu (2)
+[ OK ] ihk_release_cpu (2)
+[ OK ] ihk_get_num_reserved_cpu (3)
+[ OK ] ihk_query_cpu (3)
+[ OK ] ihk_reserve_cpu
+[ OK ] ihk_get_num_reserved_cpu (3)
+[ OK ] ihk_query_cpu (4)
+[ OK ] ihk_reserve_mem
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (2)
+[ OK ] ihk_release_mem w/o /dev/mcd0
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (3)
+[ OK ] ihk_reserve_mem
+[ OK ] ihk_get_num_reserved_mem_chunks
+[ OK ] ihk_query_mem (3)
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (4)
+[ OK ] ihk_os_release_cpu (1)
+[ OK ] ihk_os_assign_mem (1)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (1)
+[ OK ] ihk_os_release_mem
+[ OK ] ihk_os_set_ikc_map
+[ OK ] ihk_os_get_ikc_map (1)
+[ OK ] ihk_os_load
+[ OK ] ihk_os_kargs
+[ OK ] ihk_os_boot
+[ OK ] ihk_os_get_status (1)
+[ OK ] ihkconfig 0 get status (1) returned:
+ihklib_os_open: error: stat /dev/mcos0: No such file or directory
+ihk_os_get_status: error: ihklib_os_open
+do_get_status,error: ihk_os_get_status failed
+
+[ OK ] ihk_os_create_pseudofs
+[ OK ] ihk_os_get_kmsg_size
+[ OK ] ihk_os_kmsg returns -2
+[ OK ] ihk_os_clear_kmsg
+[ OK ] ihk_os_get_num_numa_nodes
+[ OK ] ihk_os_query_free_mem
+[ OK ] ihk_os_get_num_pagesizes
+[ OK ] ihk_os_get_pagesizes
+[ OK ] ihk_os_getrusage
+[ OK ] ihk_os_shutdown (1)
+[ OK ] ihk_destroy_os (2)
+[ OK ] ihk_os_destroy_pseudofs (2)
+[ OK ] ihk_create_os (2)
+[ OK ] ihk_get_num_os_instances (2)
+[ OK ] ihk_get_os_instances (2)
+[ OK ] ihkconfig 0 get os_instances (3) returned:
+0
+
+[ OK ] ihk_os_get_status (2)
+[ OK ] ihkconfig 0 get status (2) returned:
+INACTIVE
+
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (5)
+[ OK ] ihk_os_release_cpu (2)
+[ OK ] ihk_os_get_num_assigned_cpus
+[ OK ] ihk_os_query_cpu (6)
+[ OK ] ihk_os_release_cpu (3)
+[ OK ] ihk_os_assign_cpu
+[ OK ] ihk_os_set_ikc_map
+[ OK ] ihk_os_get_ikc_map (2)
+[ OK ] ihk_os_assign_mem (2)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (2)
+[ OK ] ihk_os_release_mem
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (3)
+[ OK ] ihk_os_assign_mem (3)
+[ OK ] ihk_os_get_num_assigned_mem_chunks
+[ OK ] ihk_os_query_mem (4)
+[ OK ] ihk_os_load
+[ OK ] ihk_os_kargs
+[ OK ] ihk_os_boot
+[ OK ] ihk_os_get_status (3)
+[ OK ] ihkconfig 0 get status (3) returned:
+RUNNING
+
+[ OK ] ihk_os_get_status (4)
+[ OK ] ihkconfig 0 get status (4) returned:
+RUNNING
+
+[ OK ] ihk_os_create_pseudofs()
+[ OK ] ihk_os_get_kmsg_size
+[ OK ] ihk_os_kmsg
+[ OK ] ihk_os_clear_kmsg
+[ OK ] mcexec
+[ OK ] mcexec cat /proc/stat
+[ OK ] ihk_os_get_num_numa_nodes
+[ OK ] ihk_os_query_free_mem
+[ OK ] ihk_os_get_num_pagesizes
+[ OK ] ihk_os_get_pagesizes
+[ OK ] ihk_os_shutdown (2)
+[ OK ] ihk_os_get_status (5) returned 3
+[ OK ] ihkconfig 0 get status (5) returned:
+SHUTDOWN
+
+[ OK ] ihk_destroy_os (4)
+[ OK ] ihk_get_num_os_instances (3)
+[ OK ] ihk_get_os_instances (3)
+[ OK ] ihkconfig 0 get os_instances (4) returned:
+
+
+[ OK ] ihk_os_destroy_pseudofs (3)
+[INFO] All tests finished
+*** Summary: All tests are OK
+*** CT001: PASSED (ok:366, ng:0)
+***CT002} start *************************************
+*** Test for ihkconfig CPU
+[ OK ] ihkconfig query cpu   =>  ret:0 out:""
+[ OK ] ihkconfig reserve cpu 5-7,1,3   =>  ret:0 out:""
+[ OK ] ihkconfig query cpu   =>  ret:0 out:"1,3,5-7"
+[ OK ] ihkconfig release cpu 5-6   =>  ret:0 out:""
+[ OK ] ihkconfig query cpu   =>  ret:0 out:"1,3,7"
+[ OK ] ihkconfig release cpu 1,3,7   =>  ret:0 out:""
+[ OK ] ihkconfig query cpu   =>  ret:0 out:""
+[ OK ] ihkconfig reserve cpu   =>  ret:255 out:"Usage: ihkconfig (dev #) (action)
+action:
+    create
+    destroy
+    scratch
+    sbox
+    read
+    mmap
+    ioctl
+    clear_kmsg
+    clear_kmsg_write
+    reserve cpu|mem [resources]
+    release cpu [resources]
+    release mem
+    query cpu|mem
+    get os_instances
+    get buildid"
+[ OK ] ihkconfig release cpu   =>  ret:255 out:"Usage: ihkconfig (dev #) (action)
+action:
+    create
+    destroy
+    scratch
+    sbox
+    read
+    mmap
+    ioctl
+    clear_kmsg
+    clear_kmsg_write
+    reserve cpu|mem [resources]
+    release cpu [resources]
+    release mem
+    query cpu|mem
+    get os_instances
+    get buildid"
+*** Test for ihkconfig MEM
+[ OK ] ihkconfig query mem   =>  ret:0 out:""
+[ OK ] ihkconfig reserve mem 256M@0,256M@1   =>  ret:0 out:""
+[ OK ] ihkconfig query mem   =>  ret:0 out:"268435456@0,268435456@1"
+[ OK ] ihkconfig release mem 256M@1   =>  ret:0 out:""
+[ OK ] ihkconfig query mem   =>  ret:0 out:"268435456@0"
+[ OK ] ihkconfig release mem 256M@0   =>  ret:0 out:""
+[ OK ] ihkconfig query mem   =>  ret:0 out:""
+[ OK ] ihkconfig reserve mem 256M@0,256M@1   =>  ret:0 out:""
+[ OK ] ihkconfig query mem   =>  ret:0 out:"268435456@0,268435456@1"
+[ OK ] ihkconfig release mem all   =>  ret:0 out:""
+[ OK ] ihkconfig query mem   =>  ret:0 out:""
+[ OK ] ihkconfig reserve mem   =>  ret:255 out:"Usage: ihkconfig (dev #) (action)
+action:
+    create
+    destroy
+    scratch
+    sbox
+    read
+    mmap
+    ioctl
+    clear_kmsg
+    clear_kmsg_write
+    reserve cpu|mem [resources]
+    release cpu [resources]
+    release mem
+    query cpu|mem
+    get os_instances
+    get buildid"
+[ OK ] ihkconfig release mem   =>  ret:255 out:"Usage: ihkconfig (dev #) (action)
+action:
+    create
+    destroy
+    scratch
+    sbox
+    read
+    mmap
+    ioctl
+    clear_kmsg
+    clear_kmsg_write
+    reserve cpu|mem [resources]
+    release cpu [resources]
+    release mem
+    query cpu|mem
+    get os_instances
+    get buildid"
+*** CT002: PASSED (ok:22, ng:0)
+***CT003} start *************************************
+*** Test for ihkosctl CPU
+[ OK ] ihkconfig reserve cpu 1-7   =>  ret:0 out:""
+[ OK ] ihkconfig query cpu   =>  ret:0 out:"1-7"
+[ OK ] ihkosctl assign cpu 2-4,6   =>  ret:0 out:""
+[ OK ] ihkosctl query cpu   =>  ret:0 out:"2-4,6"
+[ OK ] ihkconfig query cpu   =>  ret:0 out:"1,5,7"
+[ OK ] ihkosctl release cpu 2,6   =>  ret:0 out:""
+[ OK ] ihkosctl query cpu   =>  ret:0 out:"3-4"
+[ OK ] ihkconfig query cpu   =>  ret:0 out:"1-2,5-7"
+[ OK ] ihkosctl release cpu 3-4   =>  ret:0 out:""
+[ OK ] ihkosctl query cpu   =>  ret:0 out:""
+[ OK ] ihkconfig release cpu 1-7   =>  ret:0 out:""
+[ OK ] ihkosctl assign cpu   =>  ret:255 out:"Usage: ihkosctl (dev #) (action)
+action:
+    load (kernel.img)
+    boot
+    shutdown
+    assign cpu|mem
+           cpu (cpu_list)
+           mem (size@NUMA)
+    release cpu|mem
+            cpu (cpu_list)
+            mem (size@NUMA)
+    set ikc_map (cpu_list:cpu+cpu_list:cpu+..)
+    get ikc_map
+    query [cpu|mem]
+    query_free_mem
+    kargs (kernel arg)
+    get status
+    kmsg
+    clear_kmsg
+    intr cpu irq_vector
+    ioctl (req) (arg)
+    dump [-d level] [file]"
+[ OK ] ihkosctl release cpu   =>  ret:255 out:"Usage: ihkosctl (dev #) (action)
+action:
+    load (kernel.img)
+    boot
+    shutdown
+    assign cpu|mem
+           cpu (cpu_list)
+           mem (size@NUMA)
+    release cpu|mem
+            cpu (cpu_list)
+            mem (size@NUMA)
+    set ikc_map (cpu_list:cpu+cpu_list:cpu+..)
+    get ikc_map
+    query [cpu|mem]
+    query_free_mem
+    kargs (kernel arg)
+    get status
+    kmsg
+    clear_kmsg
+    intr cpu irq_vector
+    ioctl (req) (arg)
+    dump [-d level] [file]"
+*** Test for ihkosctl MEM
+[ OK ] ihkconfig reserve mem 512M@0,512M@1   =>  ret:0 out:""
+[ OK ] ihkosctl assign mem 256M@0,256M@1   =>  ret:0 out:""
+[ OK ] ihkosctl query mem   =>  ret:0 out:"268435456@0,268435456@1"
+[ OK ] ihkconfig query mem   =>  ret:0 out:"268435456@0,268435456@1"
+[ OK ] ihkosctl release mem 256M@1   =>  ret:0 out:""
+[ OK ] ihkosctl query mem   =>  ret:0 out:"268435456@0"
+[ OK ] ihkosctl release mem 256M@0   =>  ret:0 out:""
+[ OK ] ihkosctl query mem   =>  ret:0 out:""
+[ OK ] ihkosctl assign mem 256M@0,256M@1   =>  ret:0 out:""
+[ OK ] ihkosctl release mem all   =>  ret:0 out:""
+[ OK ] ihkosctl query mem   =>  ret:0 out:""
+[ OK ] ihkosctl assign mem   =>  ret:255 out:"Usage: ihkosctl (dev #) (action)
+action:
+    load (kernel.img)
+    boot
+    shutdown
+    assign cpu|mem
+           cpu (cpu_list)
+           mem (size@NUMA)
+    release cpu|mem
+            cpu (cpu_list)
+            mem (size@NUMA)
+    set ikc_map (cpu_list:cpu+cpu_list:cpu+..)
+    get ikc_map
+    query [cpu|mem]
+    query_free_mem
+    kargs (kernel arg)
+    get status
+    kmsg
+    clear_kmsg
+    intr cpu irq_vector
+    ioctl (req) (arg)
+    dump [-d level] [file]"
+[ OK ] ihkosctl release mem   =>  ret:255 out:"Usage: ihkosctl (dev #) (action)
+action:
+    load (kernel.img)
+    boot
+    shutdown
+    assign cpu|mem
+           cpu (cpu_list)
+           mem (size@NUMA)
+    release cpu|mem
+            cpu (cpu_list)
+            mem (size@NUMA)
+    set ikc_map (cpu_list:cpu+cpu_list:cpu+..)
+    get ikc_map
+    query [cpu|mem]
+    query_free_mem
+    kargs (kernel arg)
+    get status
+    kmsg
+    clear_kmsg
+    intr cpu irq_vector
+    ioctl (req) (arg)
+    dump [-d level] [file]"
+*** Test for ihkosctl ikc_map
+[ OK ] ihkconfig reserve cpu 1-3,5-7   =>  ret:0 out:""
+[ OK ] ihkosctl assign cpu 1-3,5-7   =>  ret:0 out:""
+[ OK ] ihkosctl query cpu   =>  ret:0 out:"1-3,5-7"
+[ OK ] ihkosctl set ikc_map 5-7:4+1-3:0   =>  ret:0 out:""
+[ OK ] ihkosctl get ikc_map   =>  ret:0 out:"1,2,3:0+5,6,7:4"
+[ OK ] ihkosctl release cpu 1-3,5-7   =>  ret:0 out:""
+[ OK ] ihkconfig release cpu 1-3,5-7   =>  ret:0 out:""
+*** CT003: PASSED (ok:33, ng:0)

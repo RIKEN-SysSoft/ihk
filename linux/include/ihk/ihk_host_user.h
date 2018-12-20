@@ -122,6 +122,23 @@ typedef struct ihk_resource_req_s {
 	int string_len;
 } ihk_resource_req_t;
 
+typedef struct ihk_cpu_req_s {
+	int *cpus;
+	int num_cpus;
+} ihk_cpu_req_t;
+
+typedef struct ihk_mem_req_s {
+	size_t *sizes;
+	int *numa_ids;
+	int num_chunks;
+} ihk_mem_req_t;
+
+typedef struct ihk_ikc_req_s {
+	int *src_cpus;	/* LWC CPUs as IKC source */
+	int *dst_cpus;	/* Linux CPUs as IKC destination */
+	int num_cpus;
+} ihk_ikc_req_t;
+
 /* Used by IHK-core and ihklib */
 struct ihk_os_ioctl_eventfd_desc {
 	int fd;
@@ -140,6 +157,5 @@ struct ihk_device_read_kmsg_buf_desc {
 	int shift;    /* IN: Empty the buffer or not */
 	char* buf;    /* OUT: Buffer */
 };
-
 
 #endif /* !defined(__HEADER_IHK_HOST_USER_H) */

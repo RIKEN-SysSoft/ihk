@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <ihk/ihklib.h>
+#include <ihk/ihklib_private.h>
 
 int __argc;
 char **__argv;
@@ -233,31 +234,53 @@ static int do_sbox(int fd)
 
 static int do_reserve(int fd)
 {
-	int ret;
-	ihk_resource_req_t req;
+	int ret, cnt;
+	ihk_cpu_req_t req_cpu = {NULL, 0};
+	ihk_mem_req_t req_mem = {NULL, NULL, 0};
 
 	if (__argc < 5) {
 		usage(__argv);
 		return -1;
 	}
 
-	req.string = __argv[4];
-	req.string_len = strlen(__argv[4]);
-	if (!req.string || !req.string_len) {
-		usage(__argv);
-		return -1;
-	}
-
 	if (!strcmp(__argv[3], "cpu")) {
-		ret = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req);
+		/* Parse CPU list */
+		cnt = cpu_str2count(__argv[4]);
+		IHKCONFIG_CHKANDJUMP(cnt <= 0,
+				"get num of requested cpus", -1);
 
+		req_cpu.cpus = calloc(sizeof(int), cnt);
+		IHKCONFIG_CHKANDJUMP(!req_cpu.cpus,
+				"allocate request space", -1);
+
+		ret = cpu_str2req(__argv[4], cnt, &req_cpu);
+		IHKCONFIG_CHKANDJUMP(ret < 0,
+				"parse provided cpulist string", -1);
+
+		ret = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req_cpu);
 		if (ret != 0) {
 			fprintf(stderr, "error: reserving CPUs: %s\n", __argv[4]);
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ioctl(fd, IHK_DEVICE_RESERVE_MEM, &req);
+		/* Parse memory list */
+		cnt = mem_str2count(__argv[4]);
+		IHKCONFIG_CHKANDJUMP(cnt <= 0,
+				"get num of requested mems", -1);
 
+		req_mem.sizes = calloc(sizeof(ssize_t), cnt);
+		IHKCONFIG_CHKANDJUMP(!req_mem.sizes,
+				"allocate request space", -1);
+
+		req_mem.numa_ids = calloc(sizeof(int), cnt);
+		IHKCONFIG_CHKANDJUMP(!req_mem.numa_ids,
+				"allocate request space", -1);
+
+		ret = mem_str2req(__argv[4], cnt, &req_mem);
+		IHKCONFIG_CHKANDJUMP(ret < 0,
+				"parse provided memlist string", -1);
+
+		ret = ioctl(fd, IHK_DEVICE_RESERVE_MEM, &req_mem);
 		if (ret != 0) {
 			fprintf(stderr, "error: reserving memory: %s\n", __argv[4]);
 		}
@@ -267,33 +290,90 @@ static int do_reserve(int fd)
 		ret = -EINVAL;
 	}
 
+ fn_exit:
+	free(req_cpu.cpus);
+	free(req_mem.sizes);
+	free(req_mem.numa_ids);
 	dprintf("ret = %d\n", ret);
 	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 static int do_release(int fd)
 {
-	int ret;
-	ihk_resource_req_t req;
+	int ret, cnt;
+	ihk_cpu_req_t req_cpu = {NULL, 0};
+	ihk_mem_req_t req_mem = {NULL, NULL, 0};
 
-	if (__argc < 4) {
+	if (__argc < 5) {
 		usage(__argv);
 		return -1;
 	}
 
-	req.string = __argv[4];
-	req.string_len = __argv[4] ? strlen(__argv[4]) : 0;
-
 	if (!strcmp(__argv[3], "cpu")) {
-		ret = ioctl(fd, IHK_DEVICE_RELEASE_CPU, &req);
+		/* Parse CPU list */
+		cnt = cpu_str2count(__argv[4]);
+		IHKCONFIG_CHKANDJUMP(cnt <= 0,
+				"get num of requested cpus", -1);
 
+		req_cpu.cpus = calloc(sizeof(int), cnt);
+		IHKCONFIG_CHKANDJUMP(!req_cpu.cpus,
+				"allocate request space", -1);
+
+		ret = cpu_str2req(__argv[4], cnt, &req_cpu);
+		IHKCONFIG_CHKANDJUMP(ret < 0,
+				"parse provided cpulist string", -1);
+
+		ret = ioctl(fd, IHK_DEVICE_RELEASE_CPU, &req_cpu);
 		if (ret != 0) {
 			fprintf(stderr, "error: releasing CPUs: %s\n", __argv[4]);
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM, &req);
+		if (!strcmp(__argv[4], "all")) {
+			/* Special case for releasing all memory */
 
+			/* to get num of mem_chunks */
+			ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req_mem);
+			if (ret != 0) {
+				fprintf(stderr, "error: get mem chunks\n");
+			}
+			cnt = req_mem.num_chunks;
+
+			req_mem.sizes = calloc(sizeof(ssize_t), cnt);
+			IHKCONFIG_CHKANDJUMP(!req_mem.sizes,
+					"allocate request space", -1);
+
+			req_mem.numa_ids = calloc(sizeof(int), cnt);
+			IHKCONFIG_CHKANDJUMP(!req_mem.numa_ids,
+					"allocate request space", -1);
+
+			ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req_mem);
+			if (ret != 0) {
+				fprintf(stderr, "error: querying memory\n");
+			}
+		}
+		else {
+			/* Parse memory list */
+			cnt = mem_str2count(__argv[4]);
+			IHKCONFIG_CHKANDJUMP(cnt <= 0,
+					"get num of requested mems", -1);
+
+			req_mem.sizes = calloc(sizeof(ssize_t), cnt);
+			IHKCONFIG_CHKANDJUMP(!req_mem.sizes,
+					"allocate request space", -1);
+
+			req_mem.numa_ids = calloc(sizeof(int), cnt);
+			IHKCONFIG_CHKANDJUMP(!req_mem.numa_ids,
+					"allocate request space", -1);
+
+			ret = mem_str2req(__argv[4], cnt, &req_mem);
+			IHKCONFIG_CHKANDJUMP(ret < 0,
+					"parse provided memlist string", -1);
+		}
+
+		ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM, &req_mem);
 		if (ret != 0) {
 			fprintf(stderr, "error: releasing memory: %s\n", __argv[4]);
 		}
@@ -303,14 +383,22 @@ static int do_release(int fd)
 		ret = -EINVAL;
 	}
 
+ fn_exit:
+	free(req_cpu.cpus);
+	free(req_mem.sizes);
+	free(req_mem.numa_ids);
 	dprintf("ret = %d\n", ret);
 	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 static int do_query(int fd)
 {
-	int ret;
-	char query_result[65536];
+	int cnt, ret;
+	ihk_cpu_req_t req_cpu = {NULL, 0};
+	ihk_mem_req_t req_mem = {NULL, NULL, 0};
+	char query_result[IHK_MAX_STR_LEN];
 
 	if (__argc < 4) {
 		usage(__argv);
@@ -320,18 +408,47 @@ static int do_query(int fd)
 	memset(query_result, 0, sizeof(query_result));
 
 	if (!strcmp(__argv[3], "cpu")) {
-		ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, query_result);
+		cnt = ioctl(fd, IHK_DEVICE_GET_NUM_CPUS);
+		if (cnt < 0) {
+			fprintf(stderr, "error: querying num CPUs\n");
+		}
+
+		req_cpu.cpus = calloc(sizeof(int), cnt);
+		IHKCONFIG_CHKANDJUMP(!req_cpu.cpus,
+				"allocate request space", -1);
+
+		ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, &req_cpu);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: querying CPUs\n");
 		}
+
+		cpu_req2str(query_result, IHK_MAX_STR_LEN, &req_cpu);
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, query_result);
+		/* to get num of mem chunks */
+		req_mem.num_chunks = 0;
+		ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req_mem);
+		if (ret != 0) {
+			fprintf(stderr, "error: get mem chunks\n");
+		}
+		cnt = req_mem.num_chunks;
+
+		req_mem.sizes = calloc(sizeof(ssize_t), cnt);
+		IHKCONFIG_CHKANDJUMP(!req_mem.sizes,
+				"allocate request space", -1);
+
+		req_mem.numa_ids = calloc(sizeof(int), cnt);
+		IHKCONFIG_CHKANDJUMP(!req_mem.numa_ids,
+				"allocate request space", -1);
+
+		ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req_mem);
 
 		if (ret != 0) {
 			fprintf(stderr, "error: querying memory\n");
 		}
+
+		mem_req2str(query_result, IHK_MAX_STR_LEN, &req_mem);
 	}
 	else {
 		usage(__argv);
@@ -342,8 +459,14 @@ static int do_query(int fd)
 		printf("%s\n", query_result);
 	}
 
+ fn_exit:
+	free(req_cpu.cpus);
+	free(req_mem.sizes);
+	free(req_mem.numa_ids);
 	dprintf("ret = %d\n", ret);
 	return ret;
+ fn_fail:
+	goto fn_exit;
 }
 
 static int do_ioctl(int fd)
