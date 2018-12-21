@@ -160,6 +160,7 @@ irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data);
 #ifndef POSTK_DEBUG_ARCH_DEP_113 /* Separation of architecture dependent code. */
 int ihk_smp_map_kernel(pgd_t *pt, unsigned long vaddr, phys_addr_t paddr);
 #endif /* !POSTK_DEBUG_ARCH_DEP_113 */
+void smp_ihk_arch_dcache_flush(void *addr, size_t len);
 
 int read_file(void *buf, size_t size, char *fmt, va_list ap);
 int file_readable(char *fmt, ...);
