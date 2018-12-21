@@ -153,6 +153,7 @@ void *ihk_smp_map_virtual(unsigned long phys, unsigned long size)
 void ihk_smp_unmap_virtual(void *virt)
 {
 	/* TODO: look up chunks and report error if not in range */
+	smp_ihk_arch_dcache_flush(virt, PAGE_SIZE);
 	return;
 }
 
