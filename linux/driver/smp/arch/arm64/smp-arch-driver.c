@@ -279,9 +279,6 @@ enum ppi_nr *ihk_arch_timer_uses_ppi;
 
 u32 *ihk_arch_timer_rate;
 
-void (*ihk___flush_dcache_area)(void *addr, size_t len);
-
-
 /* There are two symbols with the same name, but thanksfully only one is
  * actually used, and the other will contain 0s by definition.
  * We can use that to figure which symbol to use
@@ -378,11 +375,6 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!ihk_arch_timer_rate))
 		return -EFAULT;
 
-	ihk___flush_dcache_area =
-		(void *) kallsyms_lookup_name("__flush_dcache_area");
-	if (WARN_ON(!ihk___flush_dcache_area))
-		return -EFAULT;
-
 	return 0;
 }
 
@@ -395,10 +387,6 @@ static unsigned long is_arch_timer_use_virt(void)
 	} else {
 		return ULONG_MAX;
 	}
-}
-
-void smp_ihk_arch_dcache_flush(void *addr, size_t len) {
-	ihk___flush_dcache_area(addr, len);
 }
 
 #if 0 // TODO[PMU]
@@ -659,7 +647,7 @@ ihk_armpmu_get_irq_affi_acpi(int irqs[], const struct arm_pmu *armpmu,
 		return -ENODEV;
 	}
 
-	if (irq_is_percpu(irq)) {
+	if (irq_is_percpu_devid(irq)) {
 		pr_info("PMU irq is percpu.\n");
 		return 0;
 	}
@@ -1003,8 +991,6 @@ void smp_ihk_setup_trampoline(void *priv)
 	// TODO[PMU]: McKernel側でコアが起きた後にaffinity設定しないと駄目なら、ここでの設定は止める。
 	// TODO[PMU]: A log that fails in __irq_set_affinity() in combination with CPUFW-0.8.0 or later is output.
 	//ihk_armpmu_set_irq_affi(header->pmu_irq_affi, os);
-
-	ihk___flush_dcache_area(header, IHK_SMP_TRAMPOLINE_SIZE);
 }
 
 unsigned long smp_ihk_adjust_entry(unsigned long entry,
@@ -1438,6 +1424,17 @@ static int ihk_smp_reserve_irq(struct ihk_smp_irq_table *smp_irq,
 		pr_info("IHK-SMP: IRQ vector %d: request_irq failed\n", virq);
 		return -EFAULT;
 	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+	/* drop the module ref from request_irq, and pretend we do not
+	 * own the irq anymore so free_irq will not bug the refcount
+	 * Only do this if we own the vector, this apparently is not
+	 * always true ?!
+	 */
+	if (desc->owner == THIS_MODULE) {
+		module_put(THIS_MODULE);
+		desc->owner = NULL;
+	}
+#endif
 
 	smp_irq->irq = virq;
 	smp_irq->hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);
@@ -1512,6 +1509,18 @@ static int ihk_smp_reserve_irq(struct ihk_smp_irq_table *smp_irq,
 			irq_free_descs(vector, 1);
 			continue;
 		}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+		/* drop the module ref from request_irq, and pretend we do not
+		 * own the irq anymore so free_irq will not bug the refcount
+		 * Only do this if we own the vector, this apparently is not
+		 * always true ?!
+		 */
+		if (desc->owner == THIS_MODULE) {
+			module_put(THIS_MODULE);
+			desc->owner = NULL;
+		}
+#endif
 
 		/* get HwIRQ# through desc->irq_data */
 		smp_irq->hwirq = (u32)(irq_desc_get_irq_data(desc)->hwirq);

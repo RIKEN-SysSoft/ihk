@@ -281,7 +281,7 @@ fi
 
 ABS_SRCDIR=$( cd $( dirname $0 ); pwd )
 IHK_ABS_SRCDIR=${ABS_SRCDIR}/../ihk
-BUILDID=$( cd $IHK_ABS_SRCDIR; if @<:@ ! -d .git @:>@; then echo $IHK_VERSION; else bash -c 'git rev-list -1 HEAD | cut -c1-8'; fi )
+BUILDID=$( git --git-dir=$IHK_ABS_SRCDIR/.git rev-parse --short HEAD 2>/dev/null || echo $IHK_VERSION )
 AC_MSG_NOTICE([BUILDID=$BUILDID])
 if test "x$BUILDID" != "x" ; then
    AC_DEFINE_UNQUOTED(BUILDID,"$BUILDID",[IHK build-id to confirm IHK and McKernel built at the same time are used])

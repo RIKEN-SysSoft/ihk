@@ -21,9 +21,9 @@
 #include <asm/hw_irq.h>
 #include <linux/version.h>
 #include <linux/kallsyms.h>
-#include <asm/mc146818rtc.h>
+#include <linux/mc146818rtc.h>
 #include <asm/tlbflush.h>
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
 #include <asm/smpboot_hooks.h>
 #endif
 
@@ -122,6 +122,12 @@ spinlock_t *_vmap_area_lock;
 static void (*___insert_vmap_area)(struct vmap_area *va);
 static void (*___free_vmap_area)(struct vmap_area *va);
 
+static pgd_t *_init_level4_pgt;
+
+static unsigned long *_used_vectors;
+
+static int (*_ioremap_page_range)(unsigned long addr, unsigned long end,
+				  phys_addr_t phys_addr, pgprot_t prot);
 
 int ihk_smp_arch_symbols_init(void)
 {
@@ -178,6 +184,24 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!___free_vmap_area))
 		return -EFAULT;
 
+	_init_level4_pgt = (void *) kallsyms_lookup_name("init_top_pgt");
+	if (!_init_level4_pgt)
+		_init_level4_pgt =
+			(void *) kallsyms_lookup_name("init_level4_pgt");
+	if (WARN_ON(!_init_level4_pgt))
+		return -EFAULT;
+
+	_used_vectors = (void *) kallsyms_lookup_name("system_vectors");
+	if (!_used_vectors)
+		_used_vectors = (void *) kallsyms_lookup_name("used_vectors");
+	if (WARN_ON(!_used_vectors))
+		return -EFAULT;
+
+	_ioremap_page_range =
+		(void *)kallsyms_lookup_name("ioremap_page_range");
+	if (WARN_ON(!_ioremap_page_range))
+		return -EFAULT;
+
 	return 0;
 }
 
@@ -186,10 +210,7 @@ int ihk_smp_get_hw_id(int cpu)
 	return per_cpu(x86_cpu_to_apicid, cpu);
 }
 
-void smp_ihk_arch_dcache_flush(void *addr, size_t len) { }
-
-#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
 /* origin: arch/x86/kernel/smpboot.c */
 static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 {
@@ -199,17 +220,11 @@ static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 	CMOS_WRITE(0xa, 0xf);
 	spin_unlock_irqrestore(&rtc_lock, flags);
 	local_flush_tlb();
-	pr_debug("1.\n");
 	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_HIGH)) =
 		start_eip >> 4;
-	pr_debug("2.\n");
 	*((volatile unsigned short *)phys_to_virt(TRAMPOLINE_PHYS_LOW)) =
 		start_eip & 0xf;
-	pr_debug("3.\n");
 }
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,5)
-#warning smpboot_setup_warm_reset_vector() has been only tested up to 4.3.0 kernels
-#endif
 #endif
 
 static int smp_wakeup_secondary_cpu_via_init(int phys_apicid,
@@ -383,9 +398,9 @@ void smp_ihk_setup_trampoline(void *priv)
 		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
 	}
 
-	os->param->linux_kernel_pgt_phys = __pa(&init_level4_pgt[0]);
-	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n",
-		__FUNCTION__, &init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
+	os->param->linux_kernel_pgt_phys = __pa(&_init_level4_pgt[0]);
+	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n", __func__,
+		&_init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
 
 	/* Make a temporary copy of the Linux trampoline */
 	if (using_linux_trampoline) {
@@ -511,7 +526,7 @@ int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	if (vmap_area_taken)
 		return -1;
 
-	if (ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
+	if (_ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
 				phys, PAGE_KERNEL_EXEC) < 0) {
 		printk("%s: error: mapping LWK to Linux kernel space\n",
 				__FUNCTION__);
@@ -860,10 +875,8 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		break;
 	case BUILTIN_OS_STATUS_HUNGUP:
 		return IHK_OS_STATUS_HUNGUP;
-#ifdef POSTK_DEBUG_TEMP_FIX_82 /* ihk_os_get_status() SHUTDOWN detect fix */
 	case BUILTIN_OS_STATUS_SHUTDOWN:
 		return IHK_OS_STATUS_SHUTDOWN;
-#endif /* POSTK_DEBUG_TEMP_FIX_82 */
 	default:
 		return IHK_OS_STATUS_NOT_BOOTED;
 	}
@@ -1049,7 +1062,7 @@ static struct irq_chip ihk_irq_chip = {
 static int
 vector_is_used(int vector, int core) {
 	int rtn = 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 					per_cpu_offset(core)));
@@ -1057,27 +1070,31 @@ vector_is_used(int vector, int core) {
 /* TODO: find out where exactly between 2.6.32 and 3.0.0 vector_irq was changed */
 	int *vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0) */
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	if (vectors[vector] != VECTOR_UNUSED) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+		pr_info("IHK-SMP: IRQ vector %d in core %d: used %p\n",
 				vector, core, vectors[vector]);
 		rtn = 1;
 	}
 #else
 	if (vectors[vector] != -1) {
-		printk(KERN_INFO "IHK-SMP: IRQ vector %d in core %d: used %d \n",
+		pr_info("IHK-SMP: IRQ vector %d in core %d: used %d\n",
 				vector, core, vectors[vector]);
 		rtn = 1;
 	}
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0) */
 	return rtn;
 }
 
 static void
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+set_vector(int vector, int core, struct irq_desc *desc) {
+#else
 set_vector(int vector, int core) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 						per_cpu_offset(core)));
@@ -1086,7 +1103,7 @@ set_vector(int vector, int core) {
 				per_cpu_offset(core)));
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	if (vectors[vector] == VECTOR_UNUSED) {
 		dprintk(KERN_INFO "IHK-SMP: fixed vector_irq for %d in core %d\n", vector, core);
 		vectors[vector] = desc;
@@ -1101,7 +1118,7 @@ set_vector(int vector, int core) {
 
 static void
 release_vector(int vector, int core) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	/* As of 4.3.0, vector_irq is an array of struct irq_desc pointers */
 	struct irq_desc **vectors = (*SHIFT_PERCPU_PTR((vector_irq_t *)_vector_irq,
 				per_cpu_offset(core)));
@@ -1111,7 +1128,7 @@ release_vector(int vector, int core) {
 #endif
 
 	/* Release IRQ vector */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	vectors[vector] = VECTOR_UNUSED;
 #else
 	vectors[vector] = -1;
@@ -1196,7 +1213,7 @@ retry_trampoline:
 		struct irq_desc *desc;
 #endif
 
-		if (test_bit(vector, used_vectors)) {
+		if (test_bit(vector, _used_vectors)) {
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: used\n", vector);
 			continue;
 		}
@@ -1259,10 +1276,25 @@ retry_trampoline:
 			printk(KERN_INFO "IHK-SMP: IRQ vector %d: request_irq failed\n", vector);
 			continue;
 		}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+		/* drop the module ref from request_irq, and pretend we do not
+		 * own the irq anymore so free_irq will not bug the refcount
+		 * Only do this if we own the vector, this apparently is not
+		 * always true ?!
+		 */
+		if (desc->owner == THIS_MODULE) {
+			module_put(THIS_MODULE);
+			desc->owner = NULL;
+		}
+#endif
 
 		/* Pretend a real external interrupt */
 		for (i = 0; i < nr_cpu_ids; i++) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+			set_vector(vector, i, desc);
+#else
 			set_vector(vector, i);
+#endif
 		}
 		break;
 	}
@@ -1291,18 +1323,12 @@ retry_trampoline:
 	error = collect_topology();
 	if (error) {
 		printk(KERN_ERR "IHK-SMP: error: collecting topology information failed\n");
-		free_irq(ihk_smp_irq, NULL);
 		goto error_free_irq;
 	}
 
 	return error;
 
 error_free_irq:
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
 
 	free_irq(ihk_smp_irq, NULL);
 
@@ -1818,11 +1844,6 @@ void smp_ihk_arch_exit(void)
 	}
 #endif
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
-	if (this_module_put) {
-		try_module_get(THIS_MODULE);
-	}
-#endif
 	free_irq(ihk_smp_irq, NULL);
 
 #ifdef CONFIG_SPARSE_IRQ

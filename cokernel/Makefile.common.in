@@ -5,7 +5,7 @@ TARGETDIR="smp/@ARCH@"
 CFLAGS += @CFLAGS@
 CFLAGS += -Wall -nostdinc -isystem $(shell $(CC) -print-file-name=include) -O2 -g
 CFLAGS += -I$(IHKBASE)/$(TARGETDIR)/include -Wno-unused-function -I$(IHKBASE)/../ikc/include -I$(IHKBASE)/../linux/include
-CFLAGS += -DIHK_OS_MANYCORE
+CFLAGS += -DIHK_OS_MANYCORE -D__KERNEL__
 ifneq ($(ARCH), arm64)
 CFLAGS += -mcmodel=large -mno-red-zone
 endif

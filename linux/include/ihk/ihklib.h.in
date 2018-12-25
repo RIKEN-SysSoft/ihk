@@ -100,6 +100,7 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg);
 int ihk_os_clear_kmsg(int index);
 int ihk_os_get_num_numa_nodes(int index);
 int ihk_os_query_free_mem(int os_index, unsigned long *memfree, int num_numa_nodes);
+int ihk_os_query_total_mem(int os_index, unsigned long *memtotal, int num_numa_nodes);
 int ihk_os_get_num_pagesizes(int index);
 int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes);
 int ihk_os_getrusage(int index, void *rusage, size_t size_rusage);
