@@ -17,7 +17,7 @@
 # define GRANULE_SIZE _SZ4KB
 #endif
 
-const int ihk_pgsizes[] = {
+const long ihk_pgsizes[] = {
 #if GRANULE_SIZE == _SZ4KB
 	1ULL << 12,
 	1ULL << 21,
