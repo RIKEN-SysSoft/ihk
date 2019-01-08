@@ -2,6 +2,97 @@
   "comments": [
     {
       "key": {
+        "uuid": "9131b5a2_85250e6a",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 57,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "(before reading the rest) I don\u0027t like this; but if string length is only used for debugging messages I guess it\u0027s ok...",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b80ed7f5_0913d741",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 251,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "-10? -1 ?",
+      "range": {
+        "startLine": 251,
+        "startChar": 20,
+        "endLine": 251,
+        "endChar": 22
+      },
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0fbf442f_fc2a8a7e",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 262,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "I don\u0027t understand the point of the intermediate buffer; you can directly snprintf to str at the right position with the right size? e.g. keep track of the intermediate index, then you won\u0027t need to get strlen all the time:\n n +\u003d snprintf(str + n, len - n, \"...\")",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "d2b6d815_84bc4f10",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 275,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "can move this out of the for loop and use prev_cpu?\nStill need to check num_cpus \u003e 0",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "1a92c18c_8d5d07e4",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 325,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "same comment (especially since no size check here)",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "5a353c59_2324b655",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 1
@@ -84,6 +175,57 @@
       "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "40c45128_c7912d55",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1990,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "leaking req_src_cpus here",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "040e0efa_88aa6bb0",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2001,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "req_string isn\u0027t used?",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "83d7e449_f300d96e",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2044,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "leaking req_src_cpus/req_dst_cpus?",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     },
     {
       "key": {
@@ -206,6 +348,23 @@
     },
     {
       "key": {
+        "uuid": "b3d99514_cb747941",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3490,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "doesn\u0027t seem to use req_string either",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "ef11fdad_1102d8e5",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 1
@@ -291,6 +450,24 @@
     },
     {
       "key": {
+        "uuid": "522d7c01_e6501743",
+        "filename": "linux/include/ihk/ihk_host_user.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 125,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "I agree with these, let\u0027s use \"struct ihk_cpu_req\" directly everywhere for new structs.\nIt\u0027s incoherent but we already have most of the rest of the code respecting this rule..",
+      "parentUuid": "651a22b4_e6131e4c",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "59570402_034b9617",
         "filename": "linux/include/ihk/ihk_host_user.h",
         "patchSetId": 1
@@ -322,6 +499,57 @@
       "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "871d4479_c8580c9d",
+        "filename": "linux/include/ihk/ihklib_private.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "Now this one isn\u0027t for debug only, it\u0027s rather ugly :/\nFor userspace it would be rather easy to have the \"x2str\" functions do their own allocation and grow string as required (start with e.g. 64 or 128 bytes and double everytime we hit limit); there\u0027s a krealloc in kernel as well but I\u0027m not as convinced it\u0027s as useful there if it\u0027s just debugging.\nWhat do you think?\n\nEDIT: hmm, I\u0027m seeing now that the limit already existed in the old code, so I guess it\u0027s technically already an improvement to have it in a define...",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "61bfff2f_a6fbb280",
+        "filename": "linux/user/ihkconfig.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 238,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "(nitpick) doesn\u0027t have to change here, but in general you can just do \"struct foo bar \u003d {};\" to zero structures on the stack",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "ee316bf8_91c9209f",
+        "filename": "linux/user/ihkconfig.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 299,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-08T01:35:35Z",
+      "side": 1,
+      "message": "if this is just a goto, define the label with the other?",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     },
     {
       "key": {
