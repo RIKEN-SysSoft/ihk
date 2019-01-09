@@ -1,4 +1,4 @@
-/* smp-defines-driver.h COPYRIGHT FUJITSU LIMITED 2015 */
+/* smp-defines-driver.h COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /**
  * \file smp-defines-driver.h
  * \brief

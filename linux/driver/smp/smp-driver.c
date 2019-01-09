@@ -1870,7 +1870,7 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	int q_len = 0;
 	int q_added;
 
-	if (!(query_res = kmalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+	if (!(query_res = kzalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
 		pr_err("%s: error: allocating query_res\n",
 		       __func__);
 		ret = -ENOMEM;
@@ -2568,7 +2568,7 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	int first = 1;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 
-	if (!(query_res = kmalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+	if (!(query_res = kzalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
 		pr_err("%s: error: allocating query_res\n",
 		       __func__);
 		ret = -ENOMEM;
@@ -3967,7 +3967,7 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	int first = 1;
 	struct chunk *mem_chunk;
 
-	if (!(query_res = kmalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+	if (!(query_res = kzalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
 		pr_err("%s: error: allocating query_res\n",
 			__func__);
 		ret = -ENOMEM;
