@@ -1,4 +1,4 @@
-/* smp-arch-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
+/* smp-arch-driver.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /**
  * \file smp-arch-driver.c
  * \brief
@@ -659,7 +659,7 @@ ihk_armpmu_get_irq_affi_acpi(int irqs[], const struct arm_pmu *armpmu,
 		return -ENODEV;
 	}
 
-	if (irq_is_percpu(irq)) {
+	if (irq_is_percpu_devid(irq)) {
 		pr_info("PMU irq is percpu.\n");
 		return 0;
 	}
@@ -927,7 +927,7 @@ unsigned long get_sve_default_vl(void)
 static const unsigned long *__pwr_g_retention_state_flag;
 DEFINE_RAW_SPINLOCK(__retention_state_lock);
 
-void ihk_pwr_set_retention_state_flag_address(const unsigned long* addr)
+void ihk_pwr_set_retention_state_flag_address(const unsigned long *addr)
 {
 	unsigned long flags;
 

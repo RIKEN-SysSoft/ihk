@@ -1,4 +1,4 @@
-/* smp-arm64-trampoline_64.S COPYRIGHT FUJITSU LIMITED 2015 */
+/* smp-arm64-trampoline.S COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /*
  * Kloader transition code:
  */

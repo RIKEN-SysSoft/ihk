@@ -1,4 +1,4 @@
-# Makefile.config COPYRIGHT FUJITSU LIMITED 2015-2016
+# Makefile.config.in COPYRIGHT FUJITSU LIMITED 2015-2018
 include @abs_builddir@/Makefile.predefines
 
 CFLAGS += $(foreach i, $(shell seq 6 120), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))
