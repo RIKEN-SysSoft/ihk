@@ -210,7 +210,10 @@ int ihk_smp_get_hw_id(int cpu)
 	return per_cpu(x86_cpu_to_apicid, cpu);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+void smp_ihk_arch_dcache_flush(void *addr, size_t len) { }
+
+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0))
+#else
 /* origin: arch/x86/kernel/smpboot.c */
 static inline void smpboot_setup_warm_reset_vector(unsigned long start_eip)
 {
