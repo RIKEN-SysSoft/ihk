@@ -305,8 +305,7 @@ void ihk_ikc_linux_init_work_data(ihk_os_t ihk_os,
 void ihk_ikc_linux_schedule_work(ihk_os_t ihk_os)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
-
-	schedule_work(&os->ikc_work);
+	schedule_work_on(smp_processor_id(), &os->ikc_work);
 }
 
 /** \brief Get ihk_os_t from the work struct */
