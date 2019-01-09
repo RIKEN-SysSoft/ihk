@@ -1,3 +1,4 @@
+/* host_driver.c COPYRIGHT FUJITSU LIMITED 2012-2018 */
 /**
  * \file host_driver.c
  * 

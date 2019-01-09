@@ -1,4 +1,4 @@
-/* mikc.c COPYRIGHT FUJITSU LIMITED 2015-2016 */
+/* mikc.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /** 
  * \file host/linux/mikc.c
  *
@@ -319,7 +319,7 @@ void ihk_ikc_linux_schedule_work(ihk_os_t ihk_os)
 #ifdef POSTK_DEBUG_ARCH_DEP_97 /* Make schedule_work() execute core designable */
 	struct ikc_work_struct *work;
 
-	work = kmalloc(sizeof(struct ikc_work_struct), GFP_KERNEL);
+	work = kmalloc(sizeof(struct ikc_work_struct), GFP_ATOMIC);
 	if (work == NULL) {
 		printk("%s: work_struct allocation failed.\n", __FUNCTION__);
 		return;
