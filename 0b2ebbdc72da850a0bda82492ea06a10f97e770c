@@ -320,6 +320,30 @@
     },
     {
       "key": {
+        "uuid": "1195efbf_ffdb93f5",
+        "filename": "linux/user/ihkconfig.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 307,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-16T06:09:29Z",
+      "side": 1,
+      "message": "{} zeroes as well, standard says any unspecified field is zeroed.\n{ 0 } would work here as well, but I\u0027m pretty sure it does not always work (depending on what is included in the struct): it tries to cast 0 to whatever the first field of the struct is, so for example if the first field is another embedded struct it would give an error. I cannot seem to reproduce now though, maybe compiler version... Right, this started working since gcc 4.8.1: https://godbolt.org/z/oa3dDD\nFor other fields, it\u0027s the same rule as the previous expression that zero them.",
+      "parentUuid": "2f496b58_13728964",
+      "range": {
+        "startLine": 307,
+        "startChar": 0,
+        "endLine": 307,
+        "endChar": 33
+      },
+      "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "ade054af_822020c0",
         "filename": "linux/user/ihklib.c",
         "patchSetId": 2
@@ -388,6 +412,24 @@
       "writtenOn": "2019-01-16T05:45:55Z",
       "side": 1,
       "message": "should be { 0 }.\nsee https://stackoverflow.com/questions/17589533/is-an-empty-initializer-list-valid-c-code",
+      "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "58d52ef1_61987497",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 734,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-16T06:09:29Z",
+      "side": 1,
+      "message": "hm, I had forgotten this is a gnu extension; clang supports it. gcc/clang don\u0027t even warn about it with -std\u003dc99 unless you also pass -pedantic... I\u0027m not sure if we care about this.\nEither will work here (and previously), so happy either way - sorry for the trouble.",
+      "parentUuid": "04b2c65d_3e4316fb",
       "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
