@@ -108,6 +108,30 @@
     },
     {
       "key": {
+        "uuid": "5a93e982_0d6f0678",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 251,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-01-16T05:45:55Z",
+      "side": 1,
+      "message": "prev_cpu should be \u003c -1 so that \"if (prev_cpu !\u003d cpus[i] - 1)\" won\u0027t misunderstand that the cursor is pointing to \"0\" following \"-1\".",
+      "parentUuid": "b80ed7f5_0913d741",
+      "range": {
+        "startLine": 251,
+        "startChar": 20,
+        "endLine": 251,
+        "endChar": 22
+      },
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "0fbf442f_fc2a8a7e",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 1

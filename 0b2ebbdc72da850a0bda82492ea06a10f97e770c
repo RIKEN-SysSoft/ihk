@@ -2,6 +2,29 @@
   "comments": [
     {
       "key": {
+        "uuid": "9c75e08c_897be2c8",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 275,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-01-16T05:45:55Z",
+      "side": 1,
+      "message": "should be \"prev_cpu \u003e\u003d 0\" to show \"0\" for \"mcreboot.sh -c 0\"?",
+      "range": {
+        "startLine": 275,
+        "startChar": 0,
+        "endLine": 275,
+        "endChar": 20
+      },
+      "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "611b9a69_41c1fd8c",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 2
@@ -274,6 +297,29 @@
     },
     {
       "key": {
+        "uuid": "2f496b58_13728964",
+        "filename": "linux/user/ihkconfig.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 307,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-01-16T05:45:55Z",
+      "side": 1,
+      "message": "Does \"{}\", not \"{ 0 }\" zeroing?",
+      "range": {
+        "startLine": 307,
+        "startChar": 0,
+        "endLine": 307,
+        "endChar": 33
+      },
+      "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "ade054af_822020c0",
         "filename": "linux/user/ihklib.c",
         "patchSetId": 2
@@ -291,6 +337,29 @@
     },
     {
       "key": {
+        "uuid": "343c25c2_2d6497f3",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 461,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-01-16T05:45:55Z",
+      "side": 1,
+      "message": "should be \"\u003e\u003d 0\" for the same reason above.",
+      "range": {
+        "startLine": 461,
+        "startChar": 0,
+        "endLine": 461,
+        "endChar": 20
+      },
+      "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "580eb2fb_0896643a",
         "filename": "linux/user/ihklib.c",
         "patchSetId": 2
@@ -305,6 +374,40 @@
       "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "04b2c65d_3e4316fb",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 734,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-01-16T05:45:55Z",
+      "side": 1,
+      "message": "should be { 0 }.\nsee https://stackoverflow.com/questions/17589533/is-an-empty-initializer-list-valid-c-code",
+      "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "88a8e103_589361a2",
+        "filename": "test/ihkcmd/go_test_ihkconfig.sh",
+        "patchSetId": 2
+      },
+      "lineNbr": 265,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-01-16T05:45:55Z",
+      "side": 1,
+      "message": "why are the following 3 tests deleted?",
+      "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
