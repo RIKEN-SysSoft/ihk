@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "0b195a1e_aa8b1bdc",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-16T03:40:19Z",
+      "side": 1,
+      "message": "ERROR: Please use git commit description style \u0027commit \u003c12+ chars of sha1\u003e (\"\u003ctitle line\u003e\")\u0027 - ie: \u0027commit fatal: bad o (\"99e46411ba09e4973\")\u0027\n* Cherry-pick of 47d4ccb38e9e1759c0d3b5399e46411ba09e4973",
+      "revId": "cb50761eadbd0ff9732d17ce50fb2fc35919b1de",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba0cfab8_1b0e2ad2",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 400,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-16T03:40:19Z",
+      "side": 1,
+      "message": "ERROR: open brace \u0027{\u0027 following function definitions go on the next line\n+void smp_ihk_arch_dcache_flush(void *addr, size_t len) {",
+      "revId": "cb50761eadbd0ff9732d17ce50fb2fc35919b1de",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cd4332c1_00a6ad07",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-16T03:40:19Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,0,0))\n                                                                         ^",
+      "revId": "cb50761eadbd0ff9732d17ce50fb2fc35919b1de",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cf798313_f9b842f1",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-16T03:40:19Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,0,0))\n                                                                           ^",
+      "revId": "cb50761eadbd0ff9732d17ce50fb2fc35919b1de",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "83ad6cab_5be2b8fd",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-16T03:40:19Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if defined(RHEL_RELEASE_CODE) || (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,0,0))",
+      "revId": "cb50761eadbd0ff9732d17ce50fb2fc35919b1de",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
