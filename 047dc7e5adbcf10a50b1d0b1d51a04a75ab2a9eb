@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1fa1f443_5b964e3a",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-16T03:40:30Z",
+      "side": 1,
+      "message": "ERROR: Please use git commit description style \u0027commit \u003c12+ chars of sha1\u003e (\"\u003ctitle line\u003e\")\u0027 - ie: \u0027commit fatal: bad o (\"9accea1fcb1eb06a6\")\u0027\n* Merge 3ea77ec33df9464915b6b6c9accea1fcb1eb06a6",
+      "revId": "047dc7e5adbcf10a50b1d0b1d51a04a75ab2a9eb",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
