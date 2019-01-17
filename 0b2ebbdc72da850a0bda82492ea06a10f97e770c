@@ -468,6 +468,24 @@
       "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "536ea9db_e7a6bde6",
+        "filename": "test/ihkcmd/go_test_ihkconfig.sh",
+        "patchSetId": 2
+      },
+      "lineNbr": 265,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-01-17T02:26:31Z",
+      "side": 1,
+      "message": "Fix usage part of ihkconfig.c as well.",
+      "parentUuid": "02d5e922_8bff83b5",
+      "revId": "0b2ebbdc72da850a0bda82492ea06a10f97e770c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
