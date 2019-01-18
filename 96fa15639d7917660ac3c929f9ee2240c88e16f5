@@ -132,6 +132,30 @@
     },
     {
       "key": {
+        "uuid": "9ac5b773_45695038",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 251,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2019-01-18T01:29:44Z",
+      "side": 1,
+      "message": "I Added the comment.",
+      "parentUuid": "5a93e982_0d6f0678",
+      "range": {
+        "startLine": 251,
+        "startChar": 20,
+        "endLine": 251,
+        "endChar": 22
+      },
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "0fbf442f_fc2a8a7e",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 1
@@ -820,6 +844,24 @@
       "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9a0853b0_fe53306f",
+        "filename": "linux/user/ihkconfig.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 299,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2019-01-18T01:29:44Z",
+      "side": 1,
+      "message": "We discussed about this and decided to leave this as it is so far.",
+      "parentUuid": "be0eac31_62ac434b",
+      "revId": "96fa15639d7917660ac3c929f9ee2240c88e16f5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     },
     {
       "key": {
