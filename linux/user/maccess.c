@@ -3,20 +3,6 @@
 #include <stdlib.h>
 #include <ihk/rdtsc.h>
 
-#if 0
-static unsigned long rdtsc(void)
-{
-	unsigned int low, high;
-
-/* POSTK_DEBUG_ARCH_DEP_7 */
-#ifdef __x86_64
-	asm volatile("rdtsc" : "=a"(low), "=d"(high));
-#endif /* __x86_64 */ 
- 
-	return (low | ((unsigned long)high << 32));
-}
-#endif
-
 #define rdtscll(v) ( v = rdtsc() )
 
 #define LEN  256 * 1024 * 1024
