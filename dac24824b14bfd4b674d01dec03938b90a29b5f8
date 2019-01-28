@@ -1,0 +1,633 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "01ae6561_be4bdce1",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: Possible unwrapped commit description (prefer a maximum 75 chars per line)\nBut are they really arch-dependant?! all these pgd/pud/pmd should be shared...",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "284c4f68_ff9cad9c",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: \u0027dependant\u0027 may be misspelled - perhaps \u0027dependent\u0027?\nSubject: [PATCH] smp_free_page_table/map_kernel/print_pte: make arch-dependant",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ce043d06_1cdd135a",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: \u0027dependant\u0027 may be misspelled - perhaps \u0027dependent\u0027?\nBut are they really arch-dependant?! all these pgd/pud/pmd should be shared...",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7dce0f41_8dbee7e9",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1724,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\tprintk(KERN_WARNING \"%s: function not implemented.\\n\", __FUNCTION__);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fd45942e_7d767382",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1724,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_warn([subsystem]dev, ... then dev_warn(dev, ... then pr_warn(...  to printk(KERN_WARNING ...\n+\tprintk(KERN_WARNING \"%s: function not implemented.\\n\", __FUNCTION__);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "24e6443b_0b33a7d1",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1729,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_warn([subsystem]dev, ... then dev_warn(dev, ... then pr_warn(...  to printk(KERN_WARNING ...\n+\tprintk(KERN_WARNING \"%s: function not implemented.\\n\", __FUNCTION__);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4eafa7c8_3d529925",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1729,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\tprintk(KERN_WARNING \"%s: function not implemented.\\n\", __FUNCTION__);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b1d3e828_ad8e0ff6",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1735,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_warn([subsystem]dev, ... then dev_warn(dev, ... then pr_warn(...  to printk(KERN_WARNING ...\n+\tprintk(KERN_WARNING \"%s: function not implemented.\\n\", __FUNCTION__);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "761af5be_b6ae4998",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1735,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\tprintk(KERN_WARNING \"%s: function not implemented.\\n\", __FUNCTION__);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e1eb9016_77eb2d07",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1717,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\t\t__FUNCTION__, pgd_i, pud_i, pmd_i);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bd6a0df6_c22e9629",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1722,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\t\t__FUNCTION__, pgd_i, pud_i, pud_page_vaddr(*pud));",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a2d0c91d_ac4e578f",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1722,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t__FUNCTION__, pgd_i, pud_i, pud_page_vaddr(*pud));",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2d56b4cf_60a749f6",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1727,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\t__FUNCTION__, pgd_i);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c7decf49_b8141dce",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1748,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\t__FUNCTION__,",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "14bc1f3d_164255b9",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1761,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\t__FUNCTION__,",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0ae3107c_1b7411dd",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1768,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: ERROR: mapping 0x%lx: PMD is busy\\n\",",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1964dca8_558df788",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1769,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t__FUNCTION__, vaddr);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a82dd6d_be1f54b6",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1777,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tset_pmd(pmd, pfn_pmd(paddr \u003e\u003e PAGE_SHIFT, PAGE_KERNEL_LARGE_EXEC));",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5e0b40b8_cd26ee63",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1804,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: no PGD for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "08c5ffc8_ab297e8c",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1804,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tprintk(\"%s: no PGD for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "619d058f_f4d24d25",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1807,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"%s: PGD: 0x%lx\\n\", __FUNCTION__, (unsigned long)pgd);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fe57b6fb_ca527320",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1807,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\tprintk(\"%s: PGD: 0x%lx\\n\", __FUNCTION__, (unsigned long)pgd);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "88332c0a_44de9164",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1810,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tprintk(\"%s: no PUD for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "456fe409_8ac1c0ea",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1810,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: no PUD for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3e4c72f0_95e5a8c7",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1813,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"%s: PUD: 0x%lx\\n\", __FUNCTION__, (unsigned long)pud);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b2a54abb_eb46e323",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1813,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\tprintk(\"%s: PUD: 0x%lx\\n\", __FUNCTION__, (unsigned long)pud);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5fd13089_87a5d976",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1816,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tprintk(\"%s: no PMD for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "605d7405_b339dfc7",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1816,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: no PMD for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "414797ba_f4dbfa81",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1819,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\tprintk(\"%s: PMD: 0x%lx\\n\", __FUNCTION__, (unsigned long)pmd);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7d22b08c_87038b17",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1819,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"%s: PMD: 0x%lx\\n\", __FUNCTION__, (unsigned long)pmd);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "72b77e8c_18c54332",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1822,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tprintk(\"%s: no PTE for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e0d751bf_6ae33f13",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1822,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: no PTE for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "30e616a3_26b120ae",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1828,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: non-present PTE for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5ad0bf51_532cbc51",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1828,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tprintk(\"%s: non-present PTE for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3b6fedc1_bd8c7630",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1828,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tprintk(\"%s: non-present PTE for 0x%lx\\n\", __FUNCTION__, address);",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "68a99ee1_1f8e6c8d",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1832,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"%s: 0x%lx -\u003e 0x%lx\\n\",",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c2600ecf_1f11c91f",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1833,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:31:27Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t__FUNCTION__,",
+      "revId": "dac24824b14bfd4b674d01dec03938b90a29b5f8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
