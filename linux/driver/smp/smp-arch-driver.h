@@ -63,4 +63,8 @@ int smp_ihk_os_unmap_lwk(void);
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode);
 int smp_ihk_arch_get_perf_event_map(struct smp_boot_param *param);
 
+void ihk_smp_free_page_tables(pgd_t *pt);
+int ihk_smp_map_kernel(pgd_t *pt, unsigned long vaddr, phys_addr_t paddr);
+int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address);
+
 #endif /* HEADER_SMP_SMP_ARCH_DRIVER_H */
