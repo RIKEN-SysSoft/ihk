@@ -1656,6 +1656,52 @@ out:
 	return error;
 } /* collect_topology() */
 
+int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os)
+{
+	int i = 0, j = 0, cpu_count = 0, ret = 0, min = INT_MAX;
+	uint8_t checkers[SMP_MAX_CPUS];
+
+	memset(checkers, 0, sizeof(checkers));
+	for (i = 0; i < SMP_MAX_CPUS; i++) {
+		if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+		    (ihk_smp_cpus[i].os != ihk_os) ||
+		    (checkers[i] == 1)) {
+			continue;
+		}
+
+		for (j = 0; j < SMP_MAX_CPUS; j++) {
+			if ((ihk_smp_cpus[j].status != IHK_SMP_CPU_ASSIGNED) ||
+			    (ihk_smp_cpus[j].os != ihk_os)) {
+				continue;
+			}
+
+			if (ihk_smp_cpus[i].ikc_map_cpu == ihk_smp_cpus[j].ikc_map_cpu) {
+				checkers[j] = 1;
+			}
+		}
+
+		if (ihk_smp_cpus[i].ikc_map_cpu < min) {
+			min = ihk_smp_cpus[i].ikc_map_cpu;
+		}
+		cpu_count++;
+		dprintk("%s: ihk_smp_cpus[%d].ikc_map_cpu=%d\n",
+			__FUNCTION__, i, ihk_smp_cpus[i].ikc_map_cpu);
+	}
+
+	if (min != 0) {
+		dprintk("%s: min is not 0.\n", __FUNCTION__);
+		cpu_count++;
+	}
+
+	dprintk("%s: ihk_nr_irq=%d, cpu_count=%d\n", __FUNCTION__, ihk_nr_irq, cpu_count);
+	if (ihk_nr_irq < cpu_count) {
+		ret = 1;
+		pr_warn("%s: ikc_map sections over ihk_nr_irqs, using default setting.\n",
+			__func__);
+	}
+	return ret;
+}
+
 int ihk_smp_reset_cpu(int hw_id)
 {
 	int ret = 0;
