@@ -1,0 +1,3404 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dc29b339_aa40cbe0",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: externs should be avoided in .c files\n+extern struct ihk_kmsg_buf *kmsg_buf;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ca4e028a_443a2eb5",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: do not initialise globals to 0\n+int nr_spi_table \u003d 0;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "64d05ad6_ea301baf",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+\tif (SMP_MAX_CPUS \u003c ihk_cpu_info-\u003encpus) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7cb100ce_a81f7ab5",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 142,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tif (ihk_cpu_info-\u003eikc_cpus[i] \u003d\u003d ihk_cpu_info-\u003eikc_cpus[j]) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "56ee649d_34771baa",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 199,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t((unsigned long)_end + MAP_EARLY_ALLOC_SIZE + MAP_BOOT_PARAM_SIZE \u003c (unsigned long)_end)) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d7eee6ce_de886116",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 235,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t/* Map kmsg_buf, which is out of kernel image, with the non-bootstrap map. */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1c420b46_eb7cd13b",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 237,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tkmsg_buf \u003d (struct ihk_kmsg_buf *)map_fixed_area(msg_buffer, msg_buffer_size, 0);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a3a368a1_5889ebee",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 565,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: return is not a function, parentheses are not required\n+\treturn (boot_param-\u003edump_level);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "14e961c0_f37a5379",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 570,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: return is not a function, parentheses are not required\n+\treturn (\u0026boot_param-\u003edump_page_set);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "92d01e1e_96af6fea",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 575,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: return is not a function, parentheses are not required\n+\treturn (dump_page);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fff1e81b_46758898",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 579,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c4d595b6_b535f3af",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 614,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d1dae48a_d1262654",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 24,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,4,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d2456534_aa730ceb",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 24,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,4,0)\n                                            ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aa891cee_4fc1fffe",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 24,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,4,0)\n                                          ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2b38b257_c921fa7d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,12,0)\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ae81571c_9bd0bacc",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,12,0)\n                                          ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "97d7a480_246719c6",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,12,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "403447da_379d7855",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2fb39626_9d3d13e1",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "46aebb16_e8f29f66",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e1beb258_3782e2ab",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 99,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,19,0))\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ab86abcc_2f8219b4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 99,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,19,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a2921319_cecf5294",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 99,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,19,0))\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8b7745c3_4cad08db",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 101,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,6,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "babcfcfb_f57567bf",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 101,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,6,0))\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9077f064_bc02aee4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 101,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,6,0))\n                                               ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9ec6843a_7bd34a1c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,19,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "376fb42e_b38c50eb",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,19,0))\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "eb45a81b_db5377c2",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,19,0))\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9f0e0423_2cb31916",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 121,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,7,0))\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6e3060e3_db9e8f0b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 121,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,7,0))\n                                               ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "342f5a77_49760c8c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 121,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,7,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a1e7456a_59c7eb84",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 132,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,15,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "36ba10eb_5408772e",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 132,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,15,0))\n                                                ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3bb38b0f_b685e2b4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 132,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,15,0))\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fad74b81_3788c96c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 142,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+#if defined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(7, 5)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d55a2b2b_709d524f",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 169,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,9,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a392841a_4762e511",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 169,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,9,0))\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "79fb232c_7f661daf",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 169,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if (LINUX_VERSION_CODE \u003c KERNEL_VERSION(3,9,0))\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "04855105_162a5289",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 171,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,2,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "98cb1b7c_35cc2945",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 171,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,2,0))\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "21fa767f_8de4add3",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 171,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,2,0))\n                                               ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "77b38498_50633c71",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 189,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,3,0))\n                                               ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "31e69560_1e83d1d7",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 189,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,3,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3afb40dd_8703c181",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 189,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#elif (LINUX_VERSION_CODE \u003c KERNEL_VERSION(4,3,0))\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "15259ede_62e03c11",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 231,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tint nr_pmu_irq_affi;\t\t/* number of pmu affinity list elements */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "114877d1_bb0b448d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 314,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tihk___smp_cross_call_p \u003d (void *) kallsyms_lookup_name(\"__smp_cross_call\");",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d288abf7_36b9cc28",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 444,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t(per_cpu_ptr(ihk_gic_data_v3-\u003erdists.rdist, cpu))-\u003ephys_base;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c996fa72_00c73fa7",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 447,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required before the open parenthesis \u0027(\u0027\n+\tif(ihk_gic_data_v3-\u003eredist_stride) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "47417793_8e3f5395",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 451,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\treadq_relaxed(((this_cpu_ptr(ihk_gic_data_v3-\u003erdists.rdist))-\u003erd_base) + GICR_TYPER);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aedcebfe_625ed151",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 453,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tihk_smp_gic_cpu_size \u003d ACPI_GICV3_CPU_IF_MEM_SIZE * 4; /* RD + SGI + VLPI + reserved */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "428f0c78_d84a7b13",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 455,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tihk_smp_gic_cpu_size \u003d ACPI_GICV3_CPU_IF_MEM_SIZE * 2; /* RD + SGI */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "53fe0082_2123e4ca",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 622,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "48d89478_28e593ca",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 622,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1cc74467_1b24c9b5",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 622,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e84f9888_2aaa40b2",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 636,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tpr_err(\"%s: %s() is not implemented.\\n\", GICC_FUNC_NAME, __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "90aeda0e_0645ea0b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 636,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tpr_err(\"%s: %s() is not implemented.\\n\", GICC_FUNC_NAME, __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "81cab5cd_24850bff",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 637,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: ENOSYS means \u0027invalid syscall nr\u0027 and nothing else\n+\t\treturn -ENOSYS;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "93d5e99b_5cd8a3a5",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 642,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tpr_err(\"%s: %s(0) return NULL.\\n\", GICC_FUNC_NAME, __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "91302b7c_d2727d08",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 642,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tpr_err(\"%s: %s(0) return NULL.\\n\", GICC_FUNC_NAME, __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4c4cdd5d_7fecb3a7",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 648,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tpr_err(\"%s: acpi_gsi_to_irq() failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f4db913e_792b1fb4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 681,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"ERROR: System is really ACPI environment?\\n\");",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "556209d1_a4edd05e",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 685,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d0f34e9e_4d3f6af9",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 685,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a9988923_71eb75c8",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 685,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a978348a_ee4fa163",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 700,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+\tstruct platform_device* pmu_device;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "679487d6_406d124e",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 716,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t// TODO[PMU]: ここにくるときはPPIと予想。割込みコアは固定されているはず。",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8770b275_f6b2d11a",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 726,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t// McKにおける論理CPU番号がインデックスになるように、",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "71cca1d6_86d921d8",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 758,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3beffa68_ef1785eb",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 758,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "565dd9c7_9279e6c2",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 758,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,12,0)\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e0813d25_32da49f4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 779,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required before the open parenthesis \u0027(\u0027\n+\tif(ihk_gic_data_v3-\u003edomain !\u003d NULL) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e766a8c5_26b079fe",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 787,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "451d00c6_1bfb79bc",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 787,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ef54a32f_25d53946",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 787,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cf04a81a_2da27b4e",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 797,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tihk_smp_gic_dist_size \u003d ALIGN(res.end - res.start + 1, PAGE_SIZE);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8d983789_1095d1dd",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 799,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"ERROR: GIC failed to get distributor base PA\\n\");",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7088fce6_db76ffa6",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 816,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required before the open brace \u0027{\u0027\n+\tif (!acpi_disabled){",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "abb2480c_6936e624",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 817,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"INFO: This is the ACPI environment.\\n\");",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "40db194e_79e42951",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 821,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"INFO: This is the Device Tree environment.\\n\");",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c9abec95_06ca2f62",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 877,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,15,0)\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3f5e7347_0487beb3",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 877,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,15,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b3330d7d_4f3228ed",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 877,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,15,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "49cac0aa_ce19f199",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 883,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,14,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "52251da6_5bea008d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 883,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,14,0)\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "badb4cf5_926dfc6d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 883,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,14,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "28348e6b_16c02a30",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 893,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,14,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e6ceb338_94ef3745",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 893,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,14,0)\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9d0c06b0_b8e976ec",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 893,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,14,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "066f4e1f_06ac4690",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 920,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+void ihk_pwr_set_retention_state_flag_address(const unsigned long* addr)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a13ad4c0_2d9b9a11",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 983,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\theader-\u003eretention_state_flag_pa \u003d __pa(__pwr_g_retention_state_flag);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1033e984_5f32929a",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 987,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tnr_irqs \u003d ihk_armpmu_get_irq_affi(header-\u003epmu_irq_affi, *ihk_cpu_pmu, os);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c523423d_20e2b371",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1096,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+\t\tif (IHK_DUMP_PAGE_SET_COMPLETED \u003d\u003d os-\u003eparam-\u003edump_page_set.completion_flag) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cc93ab19_d55a51fb",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1096,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tif (IHK_DUMP_PAGE_SET_COMPLETED \u003d\u003d os-\u003eparam-\u003edump_page_set.completion_flag) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "caa76e2b_7a6db3a9",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1099,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: msleep \u003c 20ms can sleep for up to 20ms; see Documentation/timers/timers-howto.txt\n+\t\tmsleep(10); /* 10ms sleep */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "98d452c7_c2e57119",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1105,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdump_page \u003d (struct ihk_dump_page *)((char *)dump_page + ((dump_page-\u003emap_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dd72a498_51e45a8a",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1126,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\treturn (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "394e9bdd_702a3ba8",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1133,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+\tint i,j,k,index;\n \t     ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a7b55e6_6b5956e5",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1133,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+\tint i,j,k,index;\n \t       ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "500afb7b_1db023c0",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1133,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+\tint i,j,k,index;\n \t         ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "93a5de37_12a11784",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1139,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: externs should be avoided in .c files\n+\textern struct list_head ihk_mem_used_chunks;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d0daa54f_3288e5c9",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1147,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: switch and case should be at the same indent\n+\t\tswitch (args-\u003elevel) {\n+\t\t\tcase DUMP_LEVEL_ALL:\n+\t\t\tcase DUMP_LEVEL_USER_UNUSED_EXCLUDE:\n[...]\n+\t\t\tdefault:",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ad75446b_4d981d82",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1153,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\tprintk(\"%s:invalid dump level:%d\\n\", __FUNCTION__, args-\u003elevel);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "299a1aef_bdded6b4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1153,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"%s:invalid dump level:%d\\n\", __FUNCTION__, args-\u003elevel);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4581febf_cb7b91a1",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1153,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tprintk(\"%s:invalid dump level:%d\\n\", __FUNCTION__, args-\u003elevel);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "861d92cb_86510afa",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1159,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tif (os-\u003eparam-\u003edump_page_set.completion_flag !\u003d  IHK_DUMP_PAGE_SET_COMPLETED) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "66760c72_56d283a8",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1173,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "884a1c27_54ba7ad7",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1173,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff96b29c_6fa378a4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1194,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5df0e77b_a16f2fa7",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1194,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0e443a92_1bc1287b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1205,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "79814c38_9a0ed34c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1205,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ebd22759_ac823309",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1212,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tfor (i \u003d 0, index \u003d 0; i \u003c os-\u003eparam-\u003edump_page_set.count; i++) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f51aff4a_af50acc0",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1215,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdump_page \u003d (struct ihk_dump_page *)((char *)dump_page + ((dump_page-\u003emap_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ed94a9d5_d6c7c7de",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1218,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tfor (j \u003d 0, bit_count \u003d 0; j \u003c dump_page-\u003emap_count; j++) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "34f0a35a_fd4bdadc",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1221,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Too many leading tabs - consider code refactoring\n+\t\t\t\t\t\tif (!bit_count) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cf866da3_da44dfee",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1222,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\tmap_start \u003d (unsigned long)(dump_page-\u003estart + ((unsigned long)j \u003c\u003c (PAGE_SHIFT+6)));",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a8b96760_68eec35e",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1223,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\tmap_start \u003d map_start + ((unsigned long)k \u003c\u003c PAGE_SHIFT);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "76ff8328_26106c2a",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1227,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Too many leading tabs - consider code refactoring\n+\t\t\t\t\t\tif (bit_count) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c912b588_f5da2e8c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1228,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\tmem_chunks-\u003echunks[index].addr \u003d map_start;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "894d3b90_46d22e0c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1229,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\tmem_chunks-\u003echunks[index].size \u003d (bit_count \u003c\u003c PAGE_SHIFT);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "09f4e30c_3a2a1e74",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1239,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tmem_chunks-\u003echunks[index].size \u003d (bit_count \u003c\u003c PAGE_SHIFT);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2a52a29e_1b4e217b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1248,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t(os-\u003ebootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) \u0026 IHK_SMP_LARGE_PAGE_MASK;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "17c0386f_0d565b23",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1251,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "410aad4d_c76406bd",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1251,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "09038eca_23548a58",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1334,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                         unsigned long local_phys,$",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d598f5c0_c47592ee",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1334,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                         unsigned long local_phys,$",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c960ee31_8f35c7c3",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1335,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                         unsigned long size)$",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "50986546_5851f220",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1335,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                         unsigned long size)$",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6098bb0f_6445fa09",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1344,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if (LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,3,0))\n                                            ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c67400d3_5676c434",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1344,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if (LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,3,0))",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6084fa93_130a261b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1344,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if (LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,3,0))\n                                              ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2db485ee_71bcf5c2",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1353,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "78481809_4123e42b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1353,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2047b819_68501d78",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1353,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e7ec8eba_fd66a08b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1362,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required before the open brace \u0027{\u0027\n+\tif (start_irq \u003c 32){",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c8a0da13_f04bdcd7",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1372,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space prohibited before that close parenthesis \u0027)\u0027\n+\tfor( ; hwirq \u003c ihk_gic_max_vector; hwirq +\u003d 1 ) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f50c6bc0_ef775a8e",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1372,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required before the open parenthesis \u0027(\u0027\n+\tfor( ; hwirq \u003c ihk_gic_max_vector; hwirq +\u003d 1 ) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "32f501f3_6b328695",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1380,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required before the open parenthesis \u0027(\u0027\n+\tif(hwirq \u003d\u003d ihk_gic_max_vector) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3706b8f9_00f8440a",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1381,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"IRQ vector : There is no blank irq\\n\");",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "67301b0d_eb0e76d4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1401,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"IRQ vector %d: still no descriptor??\\n\", virq);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "21921675_1b79fa60",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1405,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(3,2,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c62b1eb9_2e30026d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1405,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(3,2,0)\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a5facd90_07e6b808",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1405,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(3,2,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3ff3b5ca_1c038b64",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1407,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"IRQ vector %d: not allowed to request, fake it\\n\",",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a6500039_9ac2afe4",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1414,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"IRQ vector %d: not allowed to request, fake it\\n\",",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5786805c_74ed5c04",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1453,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Missing a blank line after declarations\n+\t\t\tstruct of_phandle_args of_args;\n+\t\t\tdomain \u003d ihk_gic_data_v3-\u003edomain;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "79c4076b_517c369d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1462,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tdomain,\t\t\t/* struct irq_domain *domain */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6e7b12dd_47c65864",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1463,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tvector,\t\t\t/* int irq_base */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d4381eb6_7b097f33",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1464,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t1,\t\t\t/*  unsigned int nr_irqs */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d687f822_f67ca054",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1467,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tfalse);\t\t\t/* bool realloc */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6874d28e_9580d968",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1469,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required before the open brace \u0027{\u0027\n+\t\t\tif (result \u003c\u003d 0){",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "124abfaf_a5a78a01",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1470,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tprintk(\"IRQ vector %d: irq_domain_alloc_irqs failed.(%d)\\n\", vector, result);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f708d3ee_4b8d1d73",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1470,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"IRQ vector %d: irq_domain_alloc_irqs failed.(%d)\\n\", vector, result);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "33191e93_60415480",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1475,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\tprintk(\"IRQ vector %d: has descriptor\\n\", vector);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a32f1d64_01ccf780",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1481,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_info([subsystem]dev, ... then dev_info(dev, ... then pr_info(...  to printk(KERN_INFO ...\n+\t\t\tprintk(KERN_INFO \"IHK-SMP: IRQ vector %d: failed allocating descriptor\\n\", vector);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "545e0361_7e960e0d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1481,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tprintk(KERN_INFO \"IHK-SMP: IRQ vector %d: failed allocating descriptor\\n\", vector);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a650fc22_c9bd0451",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1486,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_info([subsystem]dev, ... then dev_info(dev, ... then pr_info(...  to printk(KERN_INFO ...\n+\t\t\tprintk(KERN_INFO \"IHK-SMP: IRQ vector %d: not allowed to request, fake it\\n\", vector);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ee516577_4d52daa8",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1486,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tprintk(KERN_INFO \"IHK-SMP: IRQ vector %d: not allowed to request, fake it\\n\", vector);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "953f17f6_cb3a035c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1492,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tsnprintf(smp_irq-\u003eirq_name, sizeof(smp_irq-\u003eirq_name), \"IHK-SMP%d\", nr);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7d2a1f20_80a007f1",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1495,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tprintk(KERN_INFO \"IHK-SMP: IRQ vector %d: request_irq failed\\n\", vector);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8f926ceb_36cdb94c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1495,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_info([subsystem]dev, ... then dev_info(dev, ... then pr_info(...  to printk(KERN_INFO ...\n+\t\t\tprintk(KERN_INFO \"IHK-SMP: IRQ vector %d: request_irq failed\\n\", vector);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "26cd5ae9_e0560a7d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1507,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"IHK-SMP: error: allocating IKC irq vector\\n\");",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1459cf89_104f4f39",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1512,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"IHK-SMP: IKC irq vector: %d, hwirq#: %d\\n\", vector,",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b55ee328_d534ffc5",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1519,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tfree_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)), 1);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5bf35cae_eae93a93",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1532,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)\n                                           ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6069614f_a55ba78d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1532,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)\n                                             ^",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "427fbd5e_0924895f",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1532,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,4,0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b67b749a_0f03d2db",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1541,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo** bar\" should be \"foo **bar\"\n+int ihk_pwr_mck_request(void** handle)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b14b4b6d_fb251a12",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1551,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t// オフロードからの呼び出しではない場合",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4f8701de_e083e862",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1567,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+\tstruct ihk_cpu_info* info;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "375447bc_2817b281",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1600,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+\tstruct ihk_cpu_info* info;",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cafd9093_2d0730c5",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1614,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+\tif (0 \u003c\u003d mck_cpu \u0026\u0026 mck_cpu \u003c info-\u003en_cpus) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "de01b4f5_fe7570b9",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1626,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int ihk_pwr_ipi_read_register_locked(void *handle, int mck_cpu, u32 sys_reg, u64* value)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2751a9e2_1de6c16c",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1626,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+static int ihk_pwr_ipi_read_register_locked(void *handle, int mck_cpu, u32 sys_reg, u64* value)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "11e16e99_8d410da2",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1644,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t// TODO[確認] struct ihk_os_cpu_register::syncが未定義。IPIの同期はihk_os_read_cpu_register内部でとる？",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "540e627c_fcf64451",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1650,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+static int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c0b1eb79_79e12151",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1650,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "167ea2f7_c83aa08d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1662,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int ihk_pwr_ipi_write_register_locked(void *handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3b98c0b1_4e94ebeb",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1669,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tret \u003d ihk_pwr_ipi_read_register_locked(handle, mck_cpu, sys_reg, \u0026value);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6389e207_bebf1bcc",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1682,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t// TODO[確認] struct ihk_os_cpu_register::syncが未定義。IPIの同期はihk_os_write_cpu_register内部でとる？",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "77049d63_26d40a18",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1687,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int ihk_pwr_ipi_write_register(void *handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5aaa0b76_52d183e9",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1693,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tret \u003d ihk_pwr_ipi_write_register_locked(handle, mck_cpu, sys_reg, set_bit, clear_bit);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "29fa5d5a_27f05b45",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1777,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+\tif (SMP_MAX_IRQS \u003c ihk_nr_irq) {",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e9ec5ad7_1c551c1a",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1778,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: Since ihk_nr_irq is larger than %d,\\n\",",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4ec33324_794265eb",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1779,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t__FUNCTION__, SMP_MAX_IRQS);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1df75a41_2db637fd",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1793,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\tprintk(\"IHK-SMP%d: error: request IRQ faild.(ret\u003d%d)\\n\", i, error);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cabe931e_10a0fb42",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1793,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tprintk(\"IHK-SMP%d: error: request IRQ faild.(ret\u003d%d)\\n\", i, error);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "75421a4a_7a71ad53",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1793,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: \u0027faild\u0027 may be misspelled - perhaps \u0027failed\u0027?\n+\t\t\tprintk(\"IHK-SMP%d: error: request IRQ faild.(ret\u003d%d)\\n\", i, error);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b374b839_d2f270ff",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1807,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003c\u003d KERNEL_VERSION(4, 3, 0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5e05fc35_91ed5d72",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2196,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Block comments use a trailing */ on a separate line\n+\t * while it is dying. So, try again a few times. */",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa57bcf2_48156624",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2199,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tpr_warn(\"IHK-SMP: ihk_smp_get_cpu_affinity failed.(ret\u003d%d)\\n\", ret);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aaebe427_4b5d57e1",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2211,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tihk___smp_cross_call(cpumask_of(hw_id), INTRID_CPU_STOP);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "38da439e_e2aa1d9a",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2213,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tihk___smp_cross_call(\u0026cpumask_of_cpu(hw_id), INTRID_CPU_STOP);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba941d7e_a908cd66",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2228,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003c\u003d KERNEL_VERSION(4, 3, 0)",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d4b209a1_8282772a",
+        "filename": "linux/driver/smp/arch/arm64/smp-pwr-mck-bridge.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 5,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+void ihk_pwr_set_retention_state_flag_address(const unsigned long* addr);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d2bc0a11_74c35c8b",
+        "filename": "linux/driver/smp/arch/arm64/smp-pwr-mck-bridge.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c3a840fe_a5fb08b6",
+        "filename": "linux/driver/smp/arch/arm64/smp-pwr-mck-bridge.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f449eac1_cfba7f29",
+        "filename": "linux/driver/smp/arch/arm64/smp-pwr-mck-bridge.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-01-28T05:23:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_pwr_ipi_write_register(void *handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit);",
+      "revId": "7da1749dacb2be9e1a7f9bd88c728a72870c87a8",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
