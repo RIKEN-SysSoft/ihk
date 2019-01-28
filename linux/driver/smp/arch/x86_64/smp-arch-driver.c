@@ -1682,3 +1682,156 @@ int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
 	return 0;
 }
 #endif /* ENABLE_PERF */
+
+void ihk_smp_free_page_tables(pgd_t *pt)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	int pgd_i, pud_i, pmd_i;
+
+	if (!pt)
+		return;
+
+	for (pgd_i = 0; pgd_i < PTRS_PER_PGD; ++pgd_i) {
+		pgd = ((pgd_t *)pt) + pgd_i;
+		if (pgd_none(*pgd) || !pgd_present(*pgd))
+			continue;
+
+		for (pud_i = 0; pud_i < PTRS_PER_PUD; ++pud_i) {
+			pud = ((pud_t *)pgd_page_vaddr(*pgd)) + pud_i;
+
+			if (pud_none(*pud) || !pud_present(*pud))
+				continue;
+
+			for (pmd_i = 0; pmd_i < PTRS_PER_PMD; ++pmd_i) {
+				pmd = ((pmd_t *)pud_page_vaddr(*pud)) + pmd_i;
+
+				if (pmd_none(*pmd) || !pmd_present(*pmd))
+					continue;
+
+				if (pmd_large(*pmd))
+					continue;
+
+				dprintk("%s: freeing PGD %d: PUD %d: PMD %d\n",
+					__FUNCTION__, pgd_i, pud_i, pmd_i);
+				free_page(pmd_page_vaddr(*pmd));
+			}
+
+			dprintk("%s: freeing PGD %d: PUD %d: PMD @ 0x%lx\n",
+					__FUNCTION__, pgd_i, pud_i, pud_page_vaddr(*pud));
+			free_page(pud_page_vaddr(*pud));
+		}
+
+		dprintk("%s: freeing PGD %d\n",
+				__FUNCTION__, pgd_i);
+		free_page(pgd_page_vaddr(*pgd));
+	}
+
+	free_page((unsigned long)pt);
+}
+
+int ihk_smp_map_kernel(pgd_t *pt, unsigned long vaddr, phys_addr_t paddr)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	int result = -ENOMEM;
+
+	pgd = pt + pgd_index(vaddr);
+	if (!pgd_present(*pgd)) {
+		pud = (pud_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pud)
+			goto err;
+		dprintk("%s: PGD: %d: PUD allocated: 0x%lx\n",
+				__FUNCTION__,
+				(int)pgd_index(vaddr),
+				(unsigned long)pgd);
+		set_pgd(pgd, __pgd(__pa(pud) | _KERNPG_TABLE));
+	}
+
+	pud = pud_offset(pgd, vaddr);
+	if (!pud_present(*pud)) {
+		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+		if (!pmd)
+			goto err;
+		set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
+		dprintk("%s: PGD: %d: PUD: %d: PMD allocated: 0x%lx\n",
+				__FUNCTION__,
+				(int)pgd_index(vaddr), (int)pud_index(vaddr),
+				(unsigned long)pmd);
+	}
+	pmd = pmd_offset(pud, vaddr);
+
+	if (pmd_present(*pmd) && pmd_large(*pmd)) {
+		printk("%s: ERROR: mapping 0x%lx: PMD is busy\n",
+			__FUNCTION__, vaddr);
+		return -EBUSY;
+	}
+
+	/* Large page aligned and no mapping yet? Map it large then */
+	if (!pmd_present(*pmd) &&
+			!(vaddr & (IHK_SMP_LARGE_PAGE - 1)) &&
+			!(paddr & (IHK_SMP_LARGE_PAGE - 1))) {
+		set_pmd(pmd, pfn_pmd(paddr >> PAGE_SHIFT, PAGE_KERNEL_LARGE_EXEC));
+	}
+	else {
+		if (!pmd_present(*pmd)) {
+			pte = (pte_t *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
+			if (!pte)
+				goto err;
+			set_pmd(pmd, __pmd(__pa(pte) | _KERNPG_TABLE));
+		}
+		pte = pte_offset_kernel(pmd, vaddr);
+		set_pte(pte, pfn_pte(paddr >> PAGE_SHIFT, PAGE_KERNEL_EXEC));
+	}
+	return 0;
+err:
+	return result;
+}
+
+int ihk_smp_print_pte(struct mm_struct *mm, unsigned long address)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	pte_t entry;
+
+	pgd = pgd_offset(mm, address);
+	if (!pgd) {
+		printk("%s: no PGD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PGD: 0x%lx\n", __FUNCTION__, (unsigned long)pgd);
+	pud = pud_offset(pgd, address);
+	if (!pud) {
+		printk("%s: no PUD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PUD: 0x%lx\n", __FUNCTION__, (unsigned long)pud);
+	pmd = pmd_offset(pud, address);
+	if (!pmd) {
+		printk("%s: no PMD for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	printk("%s: PMD: 0x%lx\n", __FUNCTION__, (unsigned long)pmd);
+	pte = pte_offset_map(pmd, address);
+	if (!pte) {
+		printk("%s: no PTE for 0x%lx\n", __FUNCTION__, address);
+		return VM_FAULT_OOM;
+	}
+	entry = *pte;
+
+	if (!pte_present(entry)) {
+		printk("%s: non-present PTE for 0x%lx\n", __FUNCTION__, address);
+		return -1;
+	}
+
+	printk("%s: 0x%lx -> 0x%lx\n",
+		__FUNCTION__,
+		address,
+		(unsigned long)(pte_val(entry) & PTE_PFN_MASK));
+	return 0;
+}
