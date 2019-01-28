@@ -1637,3 +1637,48 @@ void smp_ihk_arch_exit(void)
 		           ident_npages_order);
 	}
 }
+
+#ifdef ENABLE_PERF
+int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
+{
+	struct x86_pmu *__pmu;
+	struct extra_reg *er;
+	unsigned long *__hw_cache_event_ids;
+	unsigned long *__hw_cache_extra_regs;
+	unsigned long *__intel_perfmon_event_map;
+	int i, er_cnt = 0;
+
+	__pmu = (struct x86_pmu *)kallsyms_lookup_name("x86_pmu");
+	__hw_cache_event_ids = (unsigned long *)kallsyms_lookup_name("hw_cache_event_ids");
+	__hw_cache_extra_regs = (unsigned long *)kallsyms_lookup_name("hw_cache_extra_regs");
+	__intel_perfmon_event_map = (unsigned long *)kallsyms_lookup_name("intel_perfmon_event_map");
+
+	if (__pmu->extra_regs) {
+		er = __pmu->extra_regs;
+		for (i = 0; er->msr; er++) {
+			param->ereg_event[i] = er->event;
+			param->ereg_msr[i] = er->msr;
+			param->ereg_valid_mask[i] = er->valid_mask;
+			param->ereg_idx[i] = er->idx;
+			er_cnt++;
+			i++;
+		}
+	}
+
+	if (er_cnt > PERF_EXTRA_REG_MAX) {
+		printk("IHK: number os extra_reg is too many .\n");
+		return -EINVAL;
+	}
+	param->nr_extra_regs = er_cnt;
+	memcpy(param->hw_event_map, __intel_perfmon_event_map, sizeof(param->hw_event_map));
+	memcpy(param->hw_cache_event_ids, __hw_cache_event_ids, sizeof(param->hw_cache_event_ids));
+	memcpy(param->hw_cache_extra_regs, __hw_cache_extra_regs, sizeof(param->hw_cache_extra_regs));
+
+	return 0;
+}
+#else /* ENABLE_PERF */
+int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
+{
+	return 0;
+}
+#endif /* ENABLE_PERF */
