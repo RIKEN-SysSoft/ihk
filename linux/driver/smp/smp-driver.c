@@ -1764,7 +1764,9 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		token = strsep(&string, "+");
 	}
 	/* Mapping has been requested */
-	os->cpu_ikc_mapped = 1;
+	if (smp_ihk_os_check_ikc_map(ihk_os) == 0) {
+		os->cpu_ikc_mapped = 1;
+	}
 
 out:
 	/* In case of no mapped, restore default setting */
