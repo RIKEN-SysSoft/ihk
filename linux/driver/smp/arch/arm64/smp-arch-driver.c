@@ -1706,3 +1706,15 @@ void smp_ihk_arch_exit(void)
 		           ident_npages_order);
 	}
 }
+
+#ifdef ENABLE_PERF
+int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
+{
+	return 0;
+}
+#else /* ENABLE_PERF */
+int smp_ihk_arch_get_perf_event(struct smp_boot_param *param)
+{
+	return 0;
+}
+#endif /* ENABLE_PERF */
