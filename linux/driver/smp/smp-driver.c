@@ -1,4 +1,4 @@
-/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
+/* smp-driver.c COPYRIGHT FUJITSU LIMITED 2015-2018 */
 /**
  * \file smp-x86-driver.c
  * \brief
@@ -25,6 +25,7 @@
 #include <linux/slub_def.h>
 #include <linux/time.h>
 #include <asm/hw_irq.h>
+#include <asm/pgtable.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
