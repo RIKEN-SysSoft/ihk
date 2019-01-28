@@ -266,14 +266,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	int i, j;
 	unsigned long buffer_size, map_end, index;
 	struct ihk_dump_page *dump_page;
-#ifdef ENABLE_PERF
-	struct x86_pmu *__pmu;
-	struct extra_reg *er;
-	unsigned long *__hw_cache_event_ids;
-	unsigned long *__hw_cache_extra_regs;
-	unsigned long *__intel_perfmon_event_map;
-	int er_cnt = 0;
-#endif
+	int ret;
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
@@ -350,33 +343,10 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->nr_numa_nodes = nr_numa_nodes;
 
-#ifdef ENABLE_PERF
-	__pmu = (struct x86_pmu *)kallsyms_lookup_name("x86_pmu");
-	__hw_cache_event_ids = (unsigned long *)kallsyms_lookup_name("hw_cache_event_ids");
-	__hw_cache_extra_regs = (unsigned long *)kallsyms_lookup_name("hw_cache_extra_regs");
-	__intel_perfmon_event_map = (unsigned long *)kallsyms_lookup_name("intel_perfmon_event_map");
-
-	if (__pmu->extra_regs) {
-		er = __pmu->extra_regs;
-		for (i = 0; er->msr; er++) {
-			os->param->ereg_event[i] = er->event;
-			os->param->ereg_msr[i] = er->msr;
-			os->param->ereg_valid_mask[i] = er->valid_mask;
-			os->param->ereg_idx[i] = er->idx;
-			er_cnt++;
-			i++;
-		}
+	ret = smp_ihk_arch_get_perf_event_map(os->param);
+	if (ret) {
+		return ret;
 	}
-
-	if (er_cnt > PERF_EXTRA_REG_MAX) {
-		printk("IHK: number os extra_reg is too many .\n");
-		return -EINVAL;
-	}
-	os->param->nr_extra_regs = er_cnt;
-	memcpy(os->param->hw_event_map, __intel_perfmon_event_map, sizeof(os->param->hw_event_map));
-	memcpy(os->param->hw_cache_event_ids, __hw_cache_event_ids, sizeof(os->param->hw_cache_event_ids));
-	memcpy(os->param->hw_cache_extra_regs, __hw_cache_extra_regs, sizeof(os->param->hw_cache_extra_regs));
-#endif // ENABLE_PERF 
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
 			sizeof(*os->param));
