@@ -1547,6 +1547,11 @@ out:
 	return error;
 } /* collect_topology() */
 
+int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os)
+{
+	return 0;
+}
+
 int ihk_smp_reset_cpu(int phys_apicid)
 {
 	unsigned long send_status;
