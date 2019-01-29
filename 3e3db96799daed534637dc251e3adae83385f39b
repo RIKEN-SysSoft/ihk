@@ -2,6 +2,40 @@
   "comments": [
     {
       "key": {
+        "uuid": "7a62f99f_e5b635a2",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 248,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-29T05:00:02Z",
+      "side": 1,
+      "message": "Might be interesting to either return n or at least if we had wanted to write more than len (n \u003e\u003d len check), even if we don\u0027t use it yet.",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b4b8751d_6a9093a3",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 263,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-29T05:00:02Z",
+      "side": 1,
+      "message": "Sorry, I know I suggested this but there\u0027s a problem with this: snprintf returns the length that would have been written if it fits, so if it is too big n will be \u003e len eventually; but the \"size\" argument of snprintf is a size_t (unsigned) so it will incorrectly think there is room to write.\n\nI probably have added incorrect code in the past (for e.g. procfs), will fix that later... Sorry for the incomplete advice.\n\nFor this, depending on what we return (overflow bool or full length) I would either check-and-return immediately after each snprintf, or use an intermediate variable conditionally decremented for len, or use ternary `len - n \u003e 0 ? len - n : 0` but that isn\u0027t pretty.\n\nThis applies to other functions using n +\u003d snprintf() below as well",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "ab7051ff_746e6ac2",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 3
@@ -271,6 +305,40 @@
       "revId": "3e3db96799daed534637dc251e3adae83385f39b",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfe03b59_9144c920",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 80,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-29T05:00:02Z",
+      "side": 1,
+      "message": "(nitpick) I don\u0027t like dead code - let\u0027s just remove the old function; if someone needs it later they can get it back from git.",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "4a705927_c5f1363f",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 108,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-01-29T05:00:02Z",
+      "side": 1,
+      "message": "We already know how big we need here, so instead of looping on vsnprintf why not just loop on *size *\u003d 2 ?",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     },
     {
       "key": {
