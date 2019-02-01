@@ -1,0 +1,412 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "288cf31e_afd0ba4f",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: \u0027orignal\u0027 may be misspelled - perhaps \u0027original\u0027?\ncompared to the orignal fujitsu version",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "59592c42_deac1ac2",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: Possible unwrapped commit description (prefer a maximum 75 chars per line)\nAdded extra bounds check (mem_size \u003d min(args-\u003esize, ...) and break when i too big)",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "237fb908_5b58c629",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 605,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+\t\tif (IHK_DUMP_PAGE_SET_COMPLETED \u003d\u003d os-\u003eparam-\u003edump_page_set.completion_flag) {",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "278864f6_7a1211ee",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 605,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tif (IHK_DUMP_PAGE_SET_COMPLETED \u003d\u003d os-\u003eparam-\u003edump_page_set.completion_flag) {",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fd3f5643_47b947d9",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 608,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: msleep \u003c 20ms can sleep for up to 20ms; see Documentation/timers/timers-howto.txt\n+\t\tmsleep(10); /* 10ms sleep */",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "77296b79_0f62a12c",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 614,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdump_page \u003d (struct ihk_dump_page *)((char *)dump_page + ((dump_page-\u003emap_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "78ae0d41_ca744607",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 635,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\treturn (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "24664540_b9e910fe",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 642,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+\tint i,j,k,index;\n \t         ^",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f403d45c_093db705",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 642,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+\tint i,j,k,index;\n \t       ^",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "93ce9152_390b47ac",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 642,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "ERROR: space required after that \u0027,\u0027 (ctx:VxV)\n+\tint i,j,k,index;\n \t     ^",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3d9397a8_504dc5e7",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 684,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0e2b2af4_de5a4331",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 684,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ee4d2dc8_7be8945e",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 684,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a007f78_92ef24bb",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 695,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t(sizeof(struct dump_mem_chunk) * (i+1)))",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6442a933_1baa2cdf",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 709,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "011ccbfc_2cf12351",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 709,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2b35ecb7_570d925b",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 709,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9bc324ef_4e8226e1",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 720,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fc657e99_bf30501c",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 720,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "86e58c27_edab621d",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 720,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"%s: memory allocation failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f7f96cab_48cd98d7",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 729,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t(sizeof(struct dump_mem_chunk) * (index+1)))",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8ad6af46_f511be8a",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 769,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0e0f7ecc_e4c1e6b0",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 769,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c8b6a4a3_4234d64f",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 769,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:19Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tprintk(\"%s: copy_to_user failed.\\n\", __FUNCTION__);",
+      "revId": "f7667331f2701c3b86e13d27322dc2e336e68cd1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
