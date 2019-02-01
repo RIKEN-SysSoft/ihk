@@ -1,0 +1,123 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "4ec473ac_462751a2",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1652,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T06:48:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t__hw_cache_event_ids \u003d (unsigned long *)kallsyms_lookup_name(\"hw_cache_event_ids\");",
+      "revId": "2cd598b7170b8f500795140c52528617f278c194",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0a6cfc6e_56b9f841",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1653,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T06:48:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t__hw_cache_extra_regs \u003d (unsigned long *)kallsyms_lookup_name(\"hw_cache_extra_regs\");",
+      "revId": "2cd598b7170b8f500795140c52528617f278c194",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "071ba069_590ce424",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1654,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T06:48:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t__intel_perfmon_event_map \u003d (unsigned long *)kallsyms_lookup_name(\"intel_perfmon_event_map\");",
+      "revId": "2cd598b7170b8f500795140c52528617f278c194",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a347b0e_8b0f8466",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1669,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T06:48:16Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"IHK: number os extra_reg is too many .\\n\");",
+      "revId": "2cd598b7170b8f500795140c52528617f278c194",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d8ee0ad4_420558d1",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1673,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T06:48:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tmemcpy(param-\u003ehw_event_map, __intel_perfmon_event_map, sizeof(param-\u003ehw_event_map));",
+      "revId": "2cd598b7170b8f500795140c52528617f278c194",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7b586bec_c7483b97",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1674,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T06:48:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tmemcpy(param-\u003ehw_cache_event_ids, __hw_cache_event_ids, sizeof(param-\u003ehw_cache_event_ids));",
+      "revId": "2cd598b7170b8f500795140c52528617f278c194",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8b250ed1_98399b19",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1675,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T06:48:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tmemcpy(param-\u003ehw_cache_extra_regs, __hw_cache_extra_regs, sizeof(param-\u003ehw_cache_extra_regs));",
+      "revId": "2cd598b7170b8f500795140c52528617f278c194",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
