@@ -107,6 +107,30 @@
       "revId": "02ac63c2603afbf07749219e214236f412520edf",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0510f8d4_37a73ce9",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-02-01T07:32:56Z",
+      "side": 1,
+      "message": "Not sure why this was changed as part of this commit, probably some rebase going badly...\n\nIn the first place I\u0027m not sure why Balazs\u0027 cherry-pick ended here and not the original one, will rebase without this change.",
+      "parentUuid": "d3e01b67_ef7667a5",
+      "range": {
+        "startLine": 215,
+        "startChar": 0,
+        "endLine": 215,
+        "endChar": 78
+      },
+      "revId": "02ac63c2603afbf07749219e214236f412520edf",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
