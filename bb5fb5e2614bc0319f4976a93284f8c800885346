@@ -1,0 +1,140 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5a210029_e551e913",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T07:11:22Z",
+      "side": 1,
+      "message": "ERROR: Please use git commit description style \u0027commit \u003c12+ chars of sha1\u003e (\"\u003ctitle line\u003e\")\u0027 - ie: \u0027commit 1fe43400ba96 (\"support PERF_TYPE_{HARDWARE|HW_CACHE} in perf_event_open refs #829\")\u0027\nMoved code corresponds to original commit 1fe43400ba969 (\"support",
+      "revId": "bb5fb5e2614bc0319f4976a93284f8c800885346",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8a09c011_8f4ca1d9",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1652,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T07:11:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t__hw_cache_event_ids \u003d (unsigned long *)kallsyms_lookup_name(\"hw_cache_event_ids\");",
+      "revId": "bb5fb5e2614bc0319f4976a93284f8c800885346",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "74b3f097_6ce59476",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1653,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T07:11:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t__hw_cache_extra_regs \u003d (unsigned long *)kallsyms_lookup_name(\"hw_cache_extra_regs\");",
+      "revId": "bb5fb5e2614bc0319f4976a93284f8c800885346",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8424deb9_987b35f0",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1654,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T07:11:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t__intel_perfmon_event_map \u003d (unsigned long *)kallsyms_lookup_name(\"intel_perfmon_event_map\");",
+      "revId": "bb5fb5e2614bc0319f4976a93284f8c800885346",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6b7d3575_83c14b72",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1669,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T07:11:22Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"IHK: number os extra_reg is too many .\\n\");",
+      "revId": "bb5fb5e2614bc0319f4976a93284f8c800885346",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "07840641_1737f0bb",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1673,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T07:11:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tmemcpy(param-\u003ehw_event_map, __intel_perfmon_event_map, sizeof(param-\u003ehw_event_map));",
+      "revId": "bb5fb5e2614bc0319f4976a93284f8c800885346",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da208b6d_a7ab903b",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1674,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T07:11:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tmemcpy(param-\u003ehw_cache_event_ids, __hw_cache_event_ids, sizeof(param-\u003ehw_cache_event_ids));",
+      "revId": "bb5fb5e2614bc0319f4976a93284f8c800885346",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "991986c8_99b98f29",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1675,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T07:11:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tmemcpy(param-\u003ehw_cache_extra_regs, __hw_cache_extra_regs, sizeof(param-\u003ehw_cache_extra_regs));",
+      "revId": "bb5fb5e2614bc0319f4976a93284f8c800885346",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
