@@ -1,0 +1,106 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "24a53bb1_60ac5f82",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:05Z",
+      "side": 1,
+      "message": "WARNING: \u0027dependant\u0027 may be misspelled - perhaps \u0027dependent\u0027?\nmake the check part arch dependant",
+      "revId": "e578508ca2b76cee08e69557b093e1d71b2b7d7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "695ac7fe_3352fa84",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1678,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tif (ihk_smp_cpus[i].ikc_map_cpu \u003d\u003d ihk_smp_cpus[j].ikc_map_cpu) {",
+      "revId": "e578508ca2b76cee08e69557b093e1d71b2b7d7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f5aca415_1b07a86d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1688,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:05Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t__FUNCTION__, i, ihk_smp_cpus[i].ikc_map_cpu);",
+      "revId": "e578508ca2b76cee08e69557b093e1d71b2b7d7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9b885583_317bc215",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1692,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:05Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tdprintk(\"%s: min is not 0.\\n\", __FUNCTION__);",
+      "revId": "e578508ca2b76cee08e69557b093e1d71b2b7d7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "74f81d06_97bffcfc",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1696,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tdprintk(\"%s: ihk_nr_irq\u003d%d, cpu_count\u003d%d\\n\", __FUNCTION__, ihk_nr_irq, cpu_count);",
+      "revId": "e578508ca2b76cee08e69557b093e1d71b2b7d7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e0cbbf8e_ddaebc7f",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1696,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:01:05Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\tdprintk(\"%s: ihk_nr_irq\u003d%d, cpu_count\u003d%d\\n\", __FUNCTION__, ihk_nr_irq, cpu_count);",
+      "revId": "e578508ca2b76cee08e69557b093e1d71b2b7d7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
