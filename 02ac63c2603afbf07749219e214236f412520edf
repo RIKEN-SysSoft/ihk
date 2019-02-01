@@ -84,6 +84,29 @@
       "revId": "02ac63c2603afbf07749219e214236f412520edf",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d3e01b67_ef7667a5",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-02-01T07:30:23Z",
+      "side": 1,
+      "message": "shouldn\u0027t it be \n  #if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4,0,0)\n  /* origin: ... */\n?",
+      "range": {
+        "startLine": 215,
+        "startChar": 0,
+        "endLine": 215,
+        "endChar": 78
+      },
+      "revId": "02ac63c2603afbf07749219e214236f412520edf",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
