@@ -1,0 +1,106 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "8025bad2_284fe430",
+        "filename": "linux/core/Makefile.module.in",
+        "patchSetId": 4
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:02:22Z",
+      "side": 1,
+      "message": "WARNING: Use of EXTRA_CFLAGS is deprecated, please use `ccflags-y instead.\n+EXTRA_CFLAGS +\u003d $(foreach i, $(shell seq 6 120), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))",
+      "revId": "4ba21cecf39f0cf9a30496674948162a2be1a94e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "52cd78c2_11bca619",
+        "filename": "linux/core/Makefile.module.in",
+        "patchSetId": 4
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:02:22Z",
+      "side": 1,
+      "message": "WARNING: Use of EXTRA_CFLAGS is deprecated, please use `ccflags-y instead.\n+EXTRA_CFLAGS +\u003d $(foreach i, $(shell seq 6 110), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))",
+      "revId": "4ba21cecf39f0cf9a30496674948162a2be1a94e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cc837a73_d9b5ba33",
+        "filename": "linux/driver/builtin/Makefile.in",
+        "patchSetId": 4
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:02:22Z",
+      "side": 1,
+      "message": "WARNING: Use of EXTRA_CFLAGS is deprecated, please use `ccflags-y instead.\n+EXTRA_CFLAGS +\u003d $(foreach i, $(shell seq 6 120), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))",
+      "revId": "4ba21cecf39f0cf9a30496674948162a2be1a94e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a45fae0f_22612fb2",
+        "filename": "linux/driver/builtin/Makefile.in",
+        "patchSetId": 4
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:02:22Z",
+      "side": 1,
+      "message": "WARNING: Use of EXTRA_CFLAGS is deprecated, please use `ccflags-y instead.\n+EXTRA_CFLAGS +\u003d $(foreach i, $(shell seq 6 110), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))",
+      "revId": "4ba21cecf39f0cf9a30496674948162a2be1a94e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6d530325_cec8c72e",
+        "filename": "linux/driver/smp/Makefile.in",
+        "patchSetId": 4
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:02:22Z",
+      "side": 1,
+      "message": "WARNING: Use of EXTRA_CFLAGS is deprecated, please use `ccflags-y instead.\n+EXTRA_CFLAGS +\u003d $(foreach i, $(shell seq 6 120), $(addprefix -DPOSTK_DEBUG_ARCH_DEP_, $(i)))",
+      "revId": "4ba21cecf39f0cf9a30496674948162a2be1a94e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c2f426cd_2812f777",
+        "filename": "linux/driver/smp/Makefile.in",
+        "patchSetId": 4
+      },
+      "lineNbr": 22,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-01T12:02:22Z",
+      "side": 1,
+      "message": "WARNING: Use of EXTRA_CFLAGS is deprecated, please use `ccflags-y instead.\n+EXTRA_CFLAGS +\u003d $(foreach i, $(shell seq 6 110), $(addprefix -DPOSTK_DEBUG_TEMP_FIX_, $(i)))",
+      "revId": "4ba21cecf39f0cf9a30496674948162a2be1a94e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
