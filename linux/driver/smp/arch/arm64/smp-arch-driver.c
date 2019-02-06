@@ -930,7 +930,7 @@ unsigned long get_sve_default_vl(void)
 static const unsigned long *__pwr_g_retention_state_flag;
 DEFINE_RAW_SPINLOCK(__retention_state_lock);
 
-void ihk_pwr_set_retention_state_flag_address(const unsigned long* addr)
+void ihk_pwr_set_retention_state_flag_address(const unsigned long *addr)
 {
 	unsigned long flags;
 
