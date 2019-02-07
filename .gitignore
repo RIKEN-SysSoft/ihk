@@ -8,3 +8,16 @@ Module.symvers
 .tmp_versions
 target
 target.knf
+CMakeFiles
+Makefile
+cmake_install.cmake
+config.h
+Kbuild
+old_timestamp
+linux/include/ihk/ihklib.h
+linux/user/ihkconfig
+linux/user/ihkconfig.1
+linux/user/ihkmond
+linux/user/ihkosctl
+linux/user/ihkosctl.1
+linux/user/libihk.so
