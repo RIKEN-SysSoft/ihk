@@ -5,7 +5,7 @@
 #include <bfd.h>
 #define PATH_SYS_NODE "/sys/devices/system/node"
 #define PATH_DEV "/dev"
-#define SBINDIR "@SBINDIR@"
+#define SBINDIR "@CMAKE_INSTALL_FULL_SBINDIR@"
 
 #include <ihk/affinity.h> 
 
