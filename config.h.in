@@ -11,3 +11,8 @@
 
 /* whether rusage is enabled */
 #cmakedefine ENABLE_RUSAGE 1
+
+/* for non-RHEL kernels */
+#ifndef RHEL_RELEASE_VERSION
+#define RHEL_RELEASE_VERSION(a,b) (((a) << 8) + (b))
+#endif
