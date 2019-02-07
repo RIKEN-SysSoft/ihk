@@ -10,6 +10,7 @@
  * Code partially based on IHK Builtin driver written by
  * Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */
+#include "config.h"
 #include <linux/delay.h>
 #include <linux/elf.h>
 #include <linux/file.h>
@@ -43,7 +44,6 @@
 #ifdef ENABLE_PERF
 #include <perf_event.h>
 #endif
-#include "config.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
