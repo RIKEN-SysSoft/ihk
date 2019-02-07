@@ -1,5 +1,0 @@
-# Makefile for linux
-obj-$(CONFIG_IHK)    := $(IKC_OBJS)
-
-EXTRA_CFLAGS = -I$(src)/../host/include
-
