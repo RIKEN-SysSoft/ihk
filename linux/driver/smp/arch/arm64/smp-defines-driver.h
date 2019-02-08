@@ -65,4 +65,6 @@
 
 #define IHK_SMP_CHUNK_BASE_SIZE	(4UL << 20)	/* 4MiB a chunk */
 
+extern unsigned long rdtsc(void);
+
 #endif /* HEADER_SMP_SMP_DEFINES_DRIVER_H */

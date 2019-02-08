@@ -219,10 +219,17 @@ unsigned long ihk_mc_get_ns_per_tsc(void)
 	return boot_param->ns_per_tsc;
 }
 
-void ihk_mc_get_boot_time(unsigned long *tv_sec, unsigned long *tv_nsec)
+unsigned long ihk_mc_get_tsc_khz(void)
+{
+	return boot_param->tsc_khz;
+}
+
+void ihk_mc_get_boot_time(unsigned long *tv_sec, unsigned long *tv_nsec,
+			  unsigned long *tsc)
 {
 	*tv_sec = boot_param->boot_sec;
 	*tv_nsec = boot_param->boot_nsec;
+	*tsc = boot_param->boot_tsc;
 }
 
 char *ihk_get_kargs(void)
