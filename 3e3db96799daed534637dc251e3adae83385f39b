@@ -36,6 +36,24 @@
     },
     {
       "key": {
+        "uuid": "49fbb302_3fdd180b",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 263,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-02-08T05:31:32Z",
+      "side": 1,
+      "message": "how about write a wrapper like this?\n#define my_snprintf(...) { int n \u003d snprintf(...); n \u003e\u003d size ? size - 1 : n; }",
+      "parentUuid": "b4b8751d_6a9093a3",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "ab7051ff_746e6ac2",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 3
