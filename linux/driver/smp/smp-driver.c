@@ -3787,7 +3787,7 @@ int read_file(void *buf, size_t size, char *fmt, va_list ap)
 	loff_t off;
 	ssize_t ss;
 
-	dprintk("read_file(%p,%ld,%s,%p)\n", buf, size, fmt, ap);
+	dprintk("read_file(%p,%ld,%s)\n", buf, size, fmt);
 	filename = kmalloc(PATH_MAX, GFP_KERNEL);
 	if (!filename) {
 		error = -ENOMEM;
@@ -3836,7 +3836,7 @@ out:
 		}
 	}
 	kfree(filename);
-	dprintk("read_file(%p,%ld,%s,%p): %d\n", buf, size, fmt, ap, error);
+	dprintk("read_file(%p,%ld,%s): %d\n", buf, size, fmt, error);
 	return error;
 } /* read_file() */
 
