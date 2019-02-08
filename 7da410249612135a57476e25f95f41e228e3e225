@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "eb81bec8_f7c45a83",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 893,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-02-08T06:10:33Z",
+      "side": 1,
+      "message": "Would it be possible to use arch_timer_get_cntfrq() from linux instead? Since this is linux driver side.",
+      "revId": "7da410249612135a57476e25f95f41e228e3e225",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f9c2e57f_12348c85",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 903,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-02-08T06:10:33Z",
+      "side": 1,
+      "message": "same with arch_counter_get_cntvct()",
+      "revId": "7da410249612135a57476e25f95f41e228e3e225",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
