@@ -34,6 +34,7 @@ int smp_wakeup_secondary_cpu(int hw_id, unsigned long start_eip);
 #ifdef POSTK_DEBUG_ARCH_DEP_29
 unsigned long calc_ns_per_tsc(void);
 #endif	/* POSTK_DEBUG_ARCH_DEP_29 */
+unsigned long get_tsc_khz(void);
 void smp_ihk_setup_trampoline(void *priv);
 unsigned long smp_ihk_adjust_entry(unsigned long entry,
                                           unsigned long phys);

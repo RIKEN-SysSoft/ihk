@@ -882,6 +882,28 @@ unsigned long calc_ns_per_tsc(void)
 }
 #endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 
+unsigned long get_tsc_khz(void)
+{
+	unsigned int freq;
+
+	asm volatile(
+"	mrs	%0, cntfrq_el0\n"
+	: "=r" (freq)
+	:
+	: "memory");
+
+	return freq / 1000L;
+}
+
+unsigned long rdtsc(void)
+{
+	unsigned long tsc;
+
+	asm volatile("isb" : : : "memory");
+	asm volatile("mrs %0, " __stringify(cntvct_el0) : "=r" (tsc));
+	return tsc;
+}
+
 #ifdef CONFIG_ARM64_SVE
 unsigned long get_sve_default_vl(void)
 {

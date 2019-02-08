@@ -379,6 +379,11 @@ unsigned long calc_ns_per_tsc(void)
 }
 #endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 
+unsigned long get_tsc_khz(void)
+{
+	return tsc_khz;
+}
+
 unsigned long x2apic_is_enabled(void)
 {
 	unsigned long msr;
