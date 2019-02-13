@@ -2935,6 +2935,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 #endif /* POSTK_DEBUG_ARCH_DEP_79 */
 	}
 
+#if 0 // Disable this as a counter-measure to redmine issue #1220
 	/* Shrink slab/slub caches */
 	{
 		struct mutex *slab_mutexp =
@@ -2952,6 +2953,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 			mutex_unlock(slab_mutexp);
 		}
 	}
+#endif
 
 	/* Sort page list (from Intel XPPSL patch) */
 	{
