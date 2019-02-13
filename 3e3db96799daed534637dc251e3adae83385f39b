@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "2d243928_e65d804f",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 248,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2019-02-13T02:16:40Z",
+      "side": 1,
+      "message": "I made this function return n.",
+      "parentUuid": "7a62f99f_e5b635a2",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "b4b8751d_6a9093a3",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 3
@@ -48,6 +66,24 @@
       "side": 1,
       "message": "how about write a wrapper like this?\n#define my_snprintf(...) { int n \u003d snprintf(...); n \u003e\u003d size ? size - 1 : n; }",
       "parentUuid": "b4b8751d_6a9093a3",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a24755ff_fe1e3b52",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 263,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2019-02-13T02:16:40Z",
+      "side": 1,
+      "message": "I added truncate_snprint() as static inline function.\n(Takagi-san said \"static inline might be better\".)\n\nAnd, I\u0027m wondering whether to where to put this.\nI put it to ihk/linux/driver/smp/smp-driver.c for now.",
+      "parentUuid": "49fbb302_3fdd180b",
       "revId": "3e3db96799daed534637dc251e3adae83385f39b",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
@@ -343,6 +379,24 @@
     },
     {
       "key": {
+        "uuid": "f2240b03_1e6651be",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 80,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2019-02-13T02:16:40Z",
+      "side": 1,
+      "message": "Sorry, I forgot to remove this. (Debugging code)",
+      "parentUuid": "dfe03b59_9144c920",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "4a705927_c5f1363f",
         "filename": "linux/user/ihklib.c",
         "patchSetId": 3
@@ -354,6 +408,24 @@
       "writtenOn": "2019-01-29T05:00:02Z",
       "side": 1,
       "message": "We already know how big we need here, so instead of looping on vsnprintf why not just loop on *size *\u003d 2 ?",
+      "revId": "3e3db96799daed534637dc251e3adae83385f39b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9359e6a7_8be0291c",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 108,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2019-02-13T02:16:40Z",
+      "side": 1,
+      "message": "It\u0027s my carelessness. I agree with you.\nI made it loop on *size *\u003d 2.",
+      "parentUuid": "4a705927_c5f1363f",
       "revId": "3e3db96799daed534637dc251e3adae83385f39b",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
