@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f6c6b3fb_74a699fe",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3790,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-14T04:28:11Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027read_file\u0027, this function\u0027s name, in a string\n+\tdprintk(\"read_file(%p,%ld,%s)\\n\", buf, size, fmt);",
+      "revId": "2ebc02931e3525324b7cc82c280b9139bb7b8a51",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
