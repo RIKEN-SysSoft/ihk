@@ -2,6 +2,40 @@
   "comments": [
     {
       "key": {
+        "uuid": "187e3e21_3922de44",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 145,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-02-14T01:01:59Z",
+      "side": 1,
+      "message": "Shouldn\u0027t this be vsnprintf?",
+      "revId": "1e929b603fd22b8d7e4073973eb56d3b6996aad3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "d8dc5e2b_14fba0ef",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 149,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-02-14T01:01:59Z",
+      "side": 1,
+      "message": "There\u0027s a weird corner case if truncate_snprintf is called with a 0 size; it should never happen in practice (because in successive calls we\u0027ll always leave 1 out) but I\u0027d just return size early (before the va_start) if size \u003c\u003d 1 (or \u003d\u003d 0 as you prefer) to avoid it",
+      "revId": "1e929b603fd22b8d7e4073973eb56d3b6996aad3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "2da15368_00ce98d2",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 4
