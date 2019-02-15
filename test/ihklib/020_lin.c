@@ -12,7 +12,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <ihklib.h>
-#include <mckernel/ihklib_rusage.h>
 #include <sys/types.h>
 #include <errno.h>
 #include <pwd.h>
