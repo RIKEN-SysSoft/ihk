@@ -5,7 +5,6 @@
 #include <string.h>
 #include <ihklib.h>
 #include <errno.h>
-#include <mckernel/ihklib_rusage.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
 #include "util.h"

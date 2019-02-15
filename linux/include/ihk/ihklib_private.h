@@ -3,10 +3,6 @@
 
 //#include <ihk/ihk_monitor.h>
 
-#define IHK_MAX_NUM_PGSIZES 4
-#define IHK_MAX_NUM_NUMA_NODES 32
-#define IHK_MAX_NUM_CPUS 1024
-
 #define IHK_MAX_NUM_MEM_CHUNKS 2048
 
 #define IHK_OS_EVENTFD_MONITOR_INTERVAL (1000*1000*2) /* usec */
@@ -17,8 +13,7 @@ struct ihk_ioctl_desc {
 };
 
 struct mcctrl_ioctl_getrusage_desc {
-	void* rusage;
-	size_t size_rusage;
+	void *rusage;
 };
 
 struct namespace_file {
