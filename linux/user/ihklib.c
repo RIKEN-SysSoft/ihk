@@ -30,7 +30,6 @@
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihklib.h>
 #include <ihk/ihklib_private.h>
-#include <ihk/ihk_arch_rusage.h>
 
 int __argc;
 char **__argv;
@@ -2229,7 +2228,7 @@ int ihk_os_get_num_pagesizes(int index)
 		goto out;
 	}
 
-	ret = IHK_NUM_PAGESIZES;
+	ret = IHK_MAX_NUM_PGSIZES;
 
  out:
 	if (fd != -1) {
@@ -2251,8 +2250,13 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 		goto out;
 	}
 
+	if (num_pgsizes != IHK_MAX_NUM_PGSIZES) {
+		ret = -EINVAL;
+		goto out;
+	}
+
 	for (i = 0; i < num_pgsizes; i++) {
-		pgsizes[i] = ihk_pgsizes[i];
+		pgsizes[i] = rusage_pgtype_to_pgsize((enum ihk_os_pgsize)i);
 	}
 
  out:
@@ -2263,10 +2267,14 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 }
 
 #ifdef ENABLE_RUSAGE
-int ihk_os_getrusage(int index, void *rusage, size_t size_rusage)
+int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
+		     size_t size_rusage)
 {
 	int ret = 0, ret_ioctl;
-	struct mcctrl_ioctl_getrusage_desc desc = { .rusage = rusage, .size_rusage = size_rusage };
+	struct mcctrl_ioctl_getrusage_desc desc = {
+		.rusage = rusage,
+		.size_rusage = size_rusage,
+	};
 	int fd = -1;
 
 	if ((fd = ihklib_os_open(index)) < 0) {
@@ -2286,7 +2294,8 @@ int ihk_os_getrusage(int index, void *rusage, size_t size_rusage)
 	return ret;
 }
 #else
-int ihk_os_getrusage(int index, void *rusage, size_t size_rusage)
+int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
+		     size_t size_rusage)
 {
 	eprintf("Specify --enable-rusage when configuring.\n");
 	return -ENOSYS;

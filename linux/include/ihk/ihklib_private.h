@@ -1,13 +1,8 @@
 #ifndef IHKLIB_PRIVATE_H_INCLUDED
 #define IHKLIB_PRIVATE_H_INCLUDED
-
-//#include <ihk/ihk_monitor.h>
 #include <ihk/ihklib.h>
 #include <ihk/ihk_host_user.h>
-
-#define IHK_MAX_NUM_PGSIZES 4
-#define IHK_MAX_NUM_NUMA_NODES 32
-#define IHK_MAX_NUM_CPUS 1024
+#include <ihk/ihk_rusage.h>
 
 #define IHK_MAX_NUM_MEM_CHUNKS 2048
 
@@ -36,7 +31,7 @@ struct ihk_ioctl_ikc_desc {
 };
 
 struct mcctrl_ioctl_getrusage_desc {
-	void* rusage;
+	struct ihk_os_rusage *rusage;
 	size_t size_rusage;
 };
 

@@ -8,6 +8,7 @@
 #define SBINDIR "@CMAKE_INSTALL_FULL_SBINDIR@"
 
 #include <ihk/affinity.h> 
+#include <ihk/ihk_rusage.h>
 
 #ifndef IHK_OS_EVENTFD_TYPE_DEFINED
 #define IHK_OS_EVENTFD_TYPE_DEFINED
@@ -101,7 +102,7 @@ int ihk_os_query_free_mem(int os_index, unsigned long *memfree, int num_numa_nod
 int ihk_os_query_total_mem(int os_index, unsigned long *memtotal, int num_numa_nodes);
 int ihk_os_get_num_pagesizes(int index);
 int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes);
-int ihk_os_getrusage(int index, void *rusage, size_t size_rusage);
+int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage, size_t size_rusage);
 int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n);
 int ihk_os_perfctl(int index, int comm);
 int ihk_os_getperfevent(int index, unsigned long *counter, int n);
