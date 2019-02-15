@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <pthread.h>
 #include <ihklib.h>
-#include <mckernel/ihklib_rusage.h>
 #include "util.h"
 
 #define NTHR 4
