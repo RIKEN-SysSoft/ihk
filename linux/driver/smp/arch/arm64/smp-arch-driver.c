@@ -883,6 +883,15 @@ unsigned long calc_ns_per_tsc(void)
 }
 #endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 
+unsigned long rdtsc(void)
+{
+	unsigned long tsc;
+
+	asm volatile("isb" : : : "memory");
+	asm volatile("mrs %0, " __stringify(cntvct_el0) : "=r" (tsc));
+	return tsc;
+}
+
 #ifdef CONFIG_ARM64_SVE
 unsigned long get_sve_default_vl(void)
 {

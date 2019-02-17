@@ -115,6 +115,7 @@ struct smp_boot_param {
 	unsigned long dma_address;
 	unsigned long ident_table;
 	unsigned long ns_per_tsc;
+	unsigned long boot_tsc;
 	unsigned long boot_sec;
 	unsigned long boot_nsec;
 	unsigned int ihk_ikc_irq;
