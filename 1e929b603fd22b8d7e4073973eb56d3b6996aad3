@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "69007924_8f82ebc5",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 145,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2019-02-19T07:05:04Z",
+      "side": 1,
+      "message": "Ack",
+      "parentUuid": "187e3e21_3922de44",
+      "revId": "1e929b603fd22b8d7e4073973eb56d3b6996aad3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "d8dc5e2b_14fba0ef",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 4
@@ -33,6 +51,24 @@
       "revId": "1e929b603fd22b8d7e4073973eb56d3b6996aad3",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "88d7cfff_b3a44331",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 149,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2019-02-19T07:05:04Z",
+      "side": 1,
+      "message": "Ack",
+      "parentUuid": "d8dc5e2b_14fba0ef",
+      "revId": "1e929b603fd22b8d7e4073973eb56d3b6996aad3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     },
     {
       "key": {
