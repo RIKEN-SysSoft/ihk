@@ -1,0 +1,310 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2f25e6ce_ea582bfb",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1499,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_cpus) {\n+\t\tpr_err(\"%s: error: allocating request cpus\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c6d95072_ca81665c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1575,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_cpus) {\n+\t\tpr_err(\"%s: error: allocating request cpus\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "db074390_48accb60",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1751,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Prefer kmalloc_array over kmalloc with multiply\n+\treq_src_cpus \u003d kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cacf49b4_0b760c55",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1753,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_src_cpus) {\n+\t\tpr_err(\"%s: error: allocating request src_cpus\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6ec688f8_1232fe4c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1766,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_dst_cpus) {\n+\t\tpr_err(\"%s: error: allocating request dst_cpus\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d02b5c4e_a93e322b",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1850,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!res_src_cpus) {\n+\t\tpr_err(\"%s: error: allocating request src_cpus\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a0fe5a26_ae3dd1be",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1856,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!res_dst_cpus) {\n+\t\tpr_err(\"%s: error: allocating request dst_cpus\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "502f5c6a_951f3bb6",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2155,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_sizes) {\n+\t\tpr_err(\"%s: error: allocating request sizes\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ad9187c7_039e5b6c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2161,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_numa_ids) {\n+\t\tpr_err(\"%s: error: allocating request numa_ids\\n\",",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "74968460_de75b400",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2220,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Prefer kmalloc_array over kmalloc with multiply\n+\treq_sizes \u003d kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6a854273_acb504ea",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2223,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Prefer kmalloc_array over kmalloc with multiply\n+\treq_numa_ids \u003d kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "666e740e_9db25e67",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 3261,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_cpus) {\n+\t\tpr_err(\"%s: error: allocating request cpus\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ec8fd72d_9cf1d9f6",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 3594,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_sizes) {\n+\t\tpr_err(\"%s: error: allocating request sizes\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a3db0094_aa7d2403",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 3600,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_numa_ids) {\n+\t\tpr_err(\"%s: error: allocating request numa_ids\\n\", __func__);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f3383e4f_b9a14e3c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 3665,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Prefer kmalloc_array over kmalloc with multiply\n+\treq_sizes \u003d kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ecb70f04_482dc924",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 3668,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Prefer kmalloc_array over kmalloc with multiply\n+\treq_numa_ids \u003d kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "49eede23_4e878520",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 350,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: Possible switch case/default not preceded by break or fallthrough comment\n+\tdefault:",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "540ded3b_78f8ea5a",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 552,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-02-19T06:54:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\teprintf(\"%s: error: allocating ikc_sset_members\\n\",",
+      "revId": "0f94fa31a0a483f5919b42fbda8108f48f46a25b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
