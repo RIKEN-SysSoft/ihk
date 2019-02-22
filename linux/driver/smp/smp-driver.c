@@ -30,6 +30,7 @@
 #include <linux/autoconf.h>
 #endif
 #include <asm/uaccess.h>
+#include "config.h"
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
@@ -43,7 +44,6 @@
 #ifdef ENABLE_PERF
 #include <perf_event.h>
 #endif
-#include "config.h"
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
