@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ef1c1187_4bd75a0b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1068,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-02-26T05:13:47Z",
+      "side": 1,
+      "message": "setup_startup() is called for each os so it looks wrong to allocate something in a global variable here, it should either be done somewhere else or stored in the os struct. . . but I see that\u0027s how it\u0027s done in x86 so I guess nobody cares; feel free to ignore this.",
+      "revId": "7aefdbca09f9edc10b28da7878f0afba585038e4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
