@@ -47,18 +47,15 @@
 # error invalid page size
 #endif
 
+# define IHK_SMP_MAP_KERNEL_START	(MODULES_END - 0x800000UL)
 #if IHK_SMP_MEMORY_LAYOUT_TYPE == 1
 # define IHK_SMP_LARGE_PAGE_SHIFT	21
-# define IHK_SMP_MAP_KERNEL_START	0xffffffffff800000UL
 #elif IHK_SMP_MEMORY_LAYOUT_TYPE == 2
 # define IHK_SMP_LARGE_PAGE_SHIFT	21
-# define IHK_SMP_MAP_KERNEL_START	0xffffffffff800000UL
 #elif IHK_SMP_MEMORY_LAYOUT_TYPE == 3
 # define IHK_SMP_LARGE_PAGE_SHIFT	16
-# define IHK_SMP_MAP_KERNEL_START	0xffffffffe0000000UL
 #elif IHK_SMP_MEMORY_LAYOUT_TYPE == 4
 # define IHK_SMP_LARGE_PAGE_SHIFT	16
-# define IHK_SMP_MAP_KERNEL_START	0xffffffffe0000000UL
 #else
 # error invalid memory layout type
 #endif

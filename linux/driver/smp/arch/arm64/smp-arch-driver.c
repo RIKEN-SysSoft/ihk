@@ -283,6 +283,12 @@ u32 *ihk_arch_timer_rate;
 
 void (*ihk___flush_dcache_area)(void *addr, size_t len);
 
+static int (*ihk_ioremap_page_range)(unsigned long addr, unsigned long end,
+				     phys_addr_t phys_addr, pgprot_t prot);
+spinlock_t *ihk_vmap_area_lock;
+struct rb_root *ihk_vmap_area_root;
+static void (*ihk___insert_vmap_area)(struct vmap_area *va);
+static void (*ihk___free_vmap_area)(struct vmap_area *va);
 
 /* There are two symbols with the same name, but thanksfully only one is
  * actually used, and the other will contain 0s by definition.
@@ -383,6 +389,28 @@ int ihk_smp_arch_symbols_init(void)
 	ihk___flush_dcache_area =
 		(void *) kallsyms_lookup_name("__flush_dcache_area");
 	if (WARN_ON(!ihk___flush_dcache_area))
+		return -EFAULT;
+
+	ihk_ioremap_page_range =
+		(void *)kallsyms_lookup_name("ioremap_page_range");
+	if (WARN_ON(!ihk_ioremap_page_range))
+		return -EFAULT;
+
+	ihk_vmap_area_lock = (void *)kallsyms_lookup_name("vmap_area_lock");
+	if (WARN_ON(!ihk_vmap_area_lock))
+		return -EFAULT;
+
+	ihk_vmap_area_root = (void *)kallsyms_lookup_name("vmap_area_root");
+	if (WARN_ON(!ihk_vmap_area_root))
+		return -EFAULT;
+
+	ihk___insert_vmap_area =
+		(void *)kallsyms_lookup_name("__insert_vmap_area");
+	if (WARN_ON(!ihk___insert_vmap_area))
+		return -EFAULT;
+
+	ihk___free_vmap_area = (void *)kallsyms_lookup_name("__free_vmap_area");
+	if (WARN_ON(!ihk___free_vmap_area))
 		return -EFAULT;
 
 	return 0;
@@ -1021,14 +1049,70 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 	return entry;
 }
 
+static struct vmap_area *lwk_va;
+
 int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
 	struct smp_os_data *os = priv;
+	unsigned long flags;
 	extern char startup_data[];
 	extern char startup_data_end[];
 	unsigned long startup_p;
 	unsigned long *startup;
+	int vmap_area_taken = 0;
+
+	/*
+	 * Map in LWK image to Linux kernel space
+	 */
+	lwk_va = kmalloc(sizeof(*lwk_va), GFP_KERNEL);
+	if (!lwk_va) {
+		return -1;
+	}
+
+	spin_lock_irqsave(ihk_vmap_area_lock, flags);
+	{
+		struct vmap_area *tmp_va;
+		struct rb_node *p = ihk_vmap_area_root->rb_node;
+
+		while (p) {
+			tmp_va = rb_entry(p, struct vmap_area, rb_node);
+
+			if (tmp_va->va_end >= IHK_SMP_MAP_KERNEL_START) {
+				if (tmp_va->va_start < MODULES_END) {
+					vmap_area_taken = 1;
+					break;
+				}
+				p = p->rb_left;
+			}
+			else {
+				p = p->rb_right;
+			}
+		}
+	}
+
+	if (vmap_area_taken) {
+		kfree(lwk_va);
+		lwk_va = NULL;
+		pr_info("%s: ERROR: reserving LWK kernel memory virtual range\n",
+				__func__);
+	}
+	else {
+		lwk_va->va_start = IHK_SMP_MAP_KERNEL_START;
+		lwk_va->va_end = MODULES_END;
+		lwk_va->flags = 0;
+		ihk___insert_vmap_area(lwk_va);
+	}
+	spin_unlock_irqrestore(ihk_vmap_area_lock, flags);
+
+	if (vmap_area_taken)
+		return -1;
+
+	if (ihk_ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
+				   phys, PAGE_KERNEL_EXEC) < 0) {
+		pr_info("%s: error: mapping LWK to Linux kernel space\n",
+				__func__);
+	}
 
 	startup_p = os->bootstrap_mem_end - (2 << IHK_SMP_LARGE_PAGE_SHIFT);
 	D("startup_p=0x%lx\n", startup_p);
@@ -1041,6 +1125,23 @@ int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	startup[6] = entry;
 	ihk_smp_unmap_virtual(startup);
 	os->boot_rip = startup_p;
+	return 0;
+}
+
+int smp_ihk_os_unmap_lwk(void)
+{
+	if (lwk_va) {
+		unsigned long flags;
+
+		/* Unmap LWK from Linux kernel virtual */
+		unmap_kernel_range_noflush(IHK_SMP_MAP_KERNEL_START,
+				MODULES_END - IHK_SMP_MAP_KERNEL_START);
+
+		spin_lock_irqsave(ihk_vmap_area_lock, flags);
+		ihk___free_vmap_area(lwk_va);
+		lwk_va = NULL;
+		spin_unlock_irqrestore(ihk_vmap_area_lock, flags);
+	}
 	return 0;
 }
 
@@ -1070,11 +1171,6 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 	default:
 		return IHK_OS_STATUS_NOT_BOOTED;
 	}
-}
-
-int smp_ihk_os_unmap_lwk(void)
-{
-	return 0;
 }
 
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
