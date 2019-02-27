@@ -10,9 +10,16 @@
 //#define DEBUG_PRINT_IKC
 
 #ifdef DEBUG_PRINT_IKC
+#ifndef dkprintf
 #define dkprintf kprintf
 #else
+#undef DDEBUG_DEFAULT
+#define DDEBUG_DEFAULT DDEBUG_PRINT
+#endif
+#else
+#ifndef dkprintf
 #define dkprintf(...)
+#endif
 #endif
 
 #ifdef IHK_OS_MANYCORE
