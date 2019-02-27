@@ -11,12 +11,17 @@
 
 //#define DEBUG_QUEUE
 
-#ifdef DEBUG_QUEUE
-#define	dkprintf(...)	kprintf(__VA_ARGS__)
-#define	ekprintf(...)	kprintf(__VA_ARGS__)
+#ifdef DEBUG_PRINT_IKC
+#ifndef dkprintf
+#define dkprintf kprintf
 #else
+#undef DDEBUG_DEFAULT
+#define DDEBUG_DEFAULT DDEBUG_PRINT
+#endif
+#else
+#ifndef dkprintf
 #define dkprintf(...)
-#define	ekprintf(...)	kprintf(__VA_ARGS__)
+#endif
 #endif
 
 #define IHK_IKC_WRITE_QUEUE_RETRY	128
