@@ -7,11 +7,7 @@
  * \author Balazs Gerofi  <bgerofi@riken.jp> \par
  * Copyright (C) 2011-2017 RIKEN AICS>
  */
-#ifdef POSTK_DEBUG_ARCH_DEP_70 /* add config.h include to ihkconfig */
 #include <config.h>
-#else
-#include <config.h>
-#endif /* POSTK_DEBUG_ARCH_DEP_70 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
