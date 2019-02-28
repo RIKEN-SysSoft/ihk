@@ -306,18 +306,12 @@ static int cpu_array2str(char *str, ssize_t len,
 	return n;
 }
 
-static int cpu_desc2str(char *str, ssize_t len, struct ihk_cpu_req *desc)
-{
-	return cpu_array2str(str, len, desc->num_cpus, desc->cpus);
-}
-
-static int ikc_desc2str(char *str, ssize_t len, struct ihk_ikc_req *desc)
+static int ikc_array2str(char *str, ssize_t len, int num_cpus,
+			 int *src_cpus, int *dst_cpus)
 {
 	int ret = 0, max_dst = 0, n = 0;
 	int *num_ikc_src = NULL;
 	int src_cnt, dst, i;
-	int *src_cpus = desc->src_cpus;
-	int *dst_cpus = desc->dst_cpus;
 
 	num_ikc_src = kzalloc(sizeof(int) * SMP_MAX_CPUS, GFP_KERNEL);
 	if (!num_ikc_src) {
@@ -325,7 +319,7 @@ static int ikc_desc2str(char *str, ssize_t len, struct ihk_ikc_req *desc)
 		goto out;
 	}
 
-	for (i = 0; i < desc->num_cpus; i++) {
+	for (i = 0; i < num_cpus; i++) {
 		num_ikc_src[dst_cpus[i]]++;
 
 		if (dst_cpus[i] > max_dst) {
@@ -339,7 +333,7 @@ static int ikc_desc2str(char *str, ssize_t len, struct ihk_ikc_req *desc)
 		}
 
 		src_cnt = 0;
-		for (i = 0; i < desc->num_cpus; i++) {
+		for (i = 0; i < num_cpus; i++) {
 			if (dst_cpus[i] != dst) {
 				continue;
 			}
@@ -1508,7 +1502,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 
 	req_string[0] = '\0';
-	cpu_desc2str(req_string, sizeof(req_string), &req);
+	cpu_array2str(req_string, sizeof(req_string), req.num_cpus, req_cpus);
 
 	memset(&cpus_to_assign, 0, sizeof(cpus_to_assign));
 
@@ -1584,7 +1578,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 
 	req_string[0] = '\0';
-	cpu_desc2str(req_string, sizeof(req_string), &req);
+	cpu_array2str(req_string, sizeof(req_string), req.num_cpus, req_cpus);
 
 	memset(&cpus_to_release, 0, sizeof(cpus_to_release));
 
@@ -1690,7 +1684,7 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 
 	if (idx > 0) {
-		if (copy_to_user(res->cpus, res_cpus, sizeof(int) * idx)) {
+		if (copy_to_user(req.cpus, res_cpus, sizeof(int) * idx)) {
 			pr_err("%s: error: copying CPU array to user-space\n",
 			       __func__);
 			ret = -EFAULT;
@@ -1776,7 +1770,8 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 
 	req_string[0] = '\0';
-	if (ikc_desc2str(req_string, sizeof(req_string), &req)) {
+	if (ikc_array2str(req_string, sizeof(req_string), req.num_cpus,
+			  req_src_cpus, req_dst_cpus)) {
 		pr_warn("%s: failed to build ikc_map string\n", __func__);
 	}
 
@@ -1891,14 +1886,14 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 
 	if (idx > 0) {
-		if (copy_to_user(res->src_cpus, res_src_cpus,
+		if (copy_to_user(req.src_cpus, res_src_cpus,
 						 sizeof(int) * idx)) {
 			pr_err("%s: error: copying src_cpus to user-space\n",
 				__func__);
 			ret = -EFAULT;
 			goto out;
 		}
-		if (copy_to_user(res->dst_cpus, res_dst_cpus,
+		if (copy_to_user(req.dst_cpus, res_dst_cpus,
 						 sizeof(int) * idx)) {
 			pr_err("%s: error: copying dst_cpus to user-space\n",
 				__func__);
@@ -2338,14 +2333,14 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	}
 
 	if (idx > 0) {
-		if (copy_to_user(res->sizes, query_res_size,
+		if (copy_to_user(req.sizes, query_res_size,
 						 sizeof(size_t) * idx)) {
 			pr_err("%s: error: copying mem sizes to user-space\n",
 				__func__);
 			ret = -EFAULT;
 			goto out;
 		}
-		if (copy_to_user(res->numa_ids, query_res_numa_id,
+		if (copy_to_user(req.numa_ids, query_res_numa_id,
 						 sizeof(int) * idx)) {
 			pr_err("%s: error: copying mem numa_ids to user-space\n",
 				__func__);
@@ -3270,7 +3265,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	}
 
 	req_string[0] = '\0';
-	cpu_desc2str(req_string, sizeof(req_string), &req);
+	cpu_array2str(req_string, sizeof(req_string), req.num_cpus, req_cpus);
 
 	memset(&cpus_to_offline, 0, sizeof(cpus_to_offline));
 
@@ -3551,7 +3546,7 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	}
 
 	if (idx > 0) {
-		if (copy_to_user(res->cpus, res_cpus, sizeof(int) * idx)) {
+		if (copy_to_user(req.cpus, res_cpus, sizeof(int) * idx)) {
 			pr_err("%s: error: copying CPU array to user-space\n",
 			       __func__);
 			ret = -EFAULT;
@@ -3746,14 +3741,14 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	}
 
 	if (idx > 0) {
-		if (copy_to_user(res->sizes, query_res_size,
+		if (copy_to_user(req.sizes, query_res_size,
 				sizeof(size_t) * idx)) {
 			pr_err("%s: error: copying mem sizes to user-space\n",
 				__func__);
 			ret = -EFAULT;
 			goto out;
 		}
-		if (copy_to_user(res->numa_ids, query_res_numa_id,
+		if (copy_to_user(req.numa_ids, query_res_numa_id,
 				sizeof(int) * idx)) {
 			pr_err("%s: error: copying mem numa_ids to user-space\n",
 				__func__);
