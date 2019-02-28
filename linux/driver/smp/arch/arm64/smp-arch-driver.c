@@ -1021,6 +1021,29 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 	return entry;
 }
 
+int smp_ihk_arch_vmap_area_taken(void)
+{
+	int vmap_area_taken = 0;
+	struct vmap_area *tmp_va;
+	struct rb_node *p = ihk_vmap_area_root->rb_node;
+
+	while (p) {
+		tmp_va = rb_entry(p, struct vmap_area, rb_node);
+
+		if (tmp_va->va_end >= IHK_SMP_MAP_KERNEL_START) {
+			if (tmp_va->va_start < MODULES_END) {
+				vmap_area_taken = 1;
+				break;
+			}
+			p = p->rb_left;
+		}
+		else {
+			p = p->rb_right;
+		}
+	}
+	return vmap_area_taken;
+}
+
 int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
@@ -1070,11 +1093,6 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 	default:
 		return IHK_OS_STATUS_NOT_BOOTED;
 	}
-}
-
-int smp_ihk_os_unmap_lwk(void)
-{
-	return 0;
 }
 
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)

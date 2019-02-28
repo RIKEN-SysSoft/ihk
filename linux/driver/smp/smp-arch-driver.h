@@ -59,7 +59,7 @@ int ihk_smp_arch_symbols_init(void);
 int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os);
 int ihk_smp_reset_cpu(int hw_id);
 void smp_ihk_arch_exit(void);
-int smp_ihk_os_unmap_lwk(void);
+int smp_ihk_arch_vmap_area_taken(void);
 int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode);
 int smp_ihk_arch_get_perf_event_map(struct smp_boot_param *param);
 
