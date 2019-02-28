@@ -117,17 +117,9 @@ static void (*___default_send_IPI_dest_field)(unsigned int mask, int vector,
 					      unsigned int dest);
 #endif
 
-struct rb_root *_vmap_area_root;
-spinlock_t *_vmap_area_lock;
-static void (*___insert_vmap_area)(struct vmap_area *va);
-static void (*___free_vmap_area)(struct vmap_area *va);
-
 static pgd_t *_init_level4_pgt;
 
 static unsigned long *_used_vectors;
-
-static int (*_ioremap_page_range)(unsigned long addr, unsigned long end,
-				  phys_addr_t phys_addr, pgprot_t prot);
 
 int ihk_smp_arch_symbols_init(void)
 {
@@ -168,22 +160,6 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!___default_send_IPI_dest_field))
 		return -EFAULT;
 #endif
-	_vmap_area_root = (void *)kallsyms_lookup_name("vmap_area_root");
-	if (WARN_ON(!_vmap_area_root))
-		return -EFAULT;
-
-	_vmap_area_lock = (void *)kallsyms_lookup_name("vmap_area_lock");
-	if (WARN_ON(!_vmap_area_lock))
-		return -EFAULT;
-
-	___insert_vmap_area = (void *)kallsyms_lookup_name("__insert_vmap_area");
-	if (WARN_ON(!___insert_vmap_area))
-		return -EFAULT;
-
-	___free_vmap_area = (void *)kallsyms_lookup_name("__free_vmap_area");
-	if (WARN_ON(!___free_vmap_area))
-		return -EFAULT;
-
 	_init_level4_pgt = (void *) kallsyms_lookup_name("init_top_pgt");
 	if (!_init_level4_pgt)
 		_init_level4_pgt =
@@ -195,11 +171,6 @@ int ihk_smp_arch_symbols_init(void)
 	if (!_used_vectors)
 		_used_vectors = (void *) kallsyms_lookup_name("used_vectors");
 	if (WARN_ON(!_used_vectors))
-		return -EFAULT;
-
-	_ioremap_page_range =
-		(void *)kallsyms_lookup_name("ioremap_page_range");
-	if (WARN_ON(!_ioremap_page_range))
 		return -EFAULT;
 
 	return 0;
@@ -424,20 +395,30 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 	return entry;
 }
 
-static struct vmap_area *lwk_va = NULL;
+int smp_ihk_arch_vmap_area_taken(void)
+{
+	int vmap_area_taken = 0;
+	struct vmap_area *tmp_va;
+	struct rb_node *p = rb_last(ihk_vmap_area_root);
+
+	if (p) {
+		tmp_va = rb_entry(p, struct vmap_area, rb_node);
+		if (tmp_va->va_start >= IHK_SMP_MAP_KERNEL_START)
+			vmap_area_taken = 1;
+	}
+	return vmap_area_taken;
+}
 
 int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
 {
 	struct smp_os_data *os = priv;
-	unsigned long flags;
 	unsigned long _virt, _phys, _len;
 	unsigned long stack_p;
 	extern char startup_data[];
 	extern char startup_data_end[];
 	unsigned long startup_p;
 	unsigned long *startup;
-	int vmap_area_taken = 0;
 
 	os->boot_pt = (pgd_t *)get_zeroed_page(GFP_KERNEL);
 	if (!os->boot_pt) {
@@ -490,50 +471,6 @@ int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	stack_p = os->bootstrap_mem_end - PAGE_SIZE; 
 	startup_p = (os->bootstrap_mem_end & IHK_SMP_LARGE_PAGE_MASK) - (2 << PTL2_SHIFT);
 
-	/*
-	 * Map in LWK image to Linux kernel space
-	 */
-	lwk_va = kmalloc(sizeof(*lwk_va), GFP_KERNEL);
-	if (!lwk_va) {
-		printk("%s: ERROR: allocating LWK va\n", __FUNCTION__);
-		return -1;
-	}
-
-	spin_lock_irqsave(_vmap_area_lock, flags);
-	{
-		struct vmap_area *tmp_va;
-		struct rb_node *p = rb_last(_vmap_area_root);
-
-		if (p) {
-			tmp_va = rb_entry(p, struct vmap_area, rb_node);
-			if (tmp_va->va_start >= IHK_SMP_MAP_KERNEL_START)
-				vmap_area_taken = 1;
-		}
-	}
-
-	if (vmap_area_taken) {
-		kfree(lwk_va);
-		lwk_va = NULL;
-		printk("%s: ERROR: reserving LWK kernel memory virtual range\n",
-				__FUNCTION__);
-	}
-	else {
-		lwk_va->va_start = IHK_SMP_MAP_KERNEL_START;
-		lwk_va->va_end = MODULES_END;
-		lwk_va->flags = 0;
-		___insert_vmap_area(lwk_va);
-	}
-	spin_unlock_irqrestore(_vmap_area_lock, flags);
-
-	if (vmap_area_taken)
-		return -1;
-
-	if (_ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
-				phys, PAGE_KERNEL_EXEC) < 0) {
-		printk("%s: error: mapping LWK to Linux kernel space\n",
-				__FUNCTION__);
-	}
-
 	startup = ihk_smp_map_virtual(startup_p, PAGE_SIZE);
 	memcpy(startup, startup_data, startup_data_end - startup_data);
 	startup[2] = __pa(os->boot_pt);
@@ -544,22 +481,6 @@ int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
 	ihk_smp_unmap_virtual(startup);
 	os->boot_rip = startup_p;
 
-	return 0;
-}
-
-int smp_ihk_os_unmap_lwk() {
-	if (lwk_va) {
-		unsigned long flags;
-
-		/* Unmap LWK from Linux kernel virtual */
-		unmap_kernel_range_noflush(IHK_SMP_MAP_KERNEL_START,
-				MODULES_END - IHK_SMP_MAP_KERNEL_START);
-
-		spin_lock_irqsave(_vmap_area_lock, flags);
-		___free_vmap_area(lwk_va);
-		lwk_va = NULL;
-		spin_unlock_irqrestore(_vmap_area_lock, flags);
-	}
 	return 0;
 }
 
