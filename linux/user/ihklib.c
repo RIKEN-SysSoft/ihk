@@ -2538,11 +2538,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 	bfd_init();
 
-#ifdef POSTK_DEBUG_ARCH_DEP_34
 	abfd = bfd_fopen(dump_file, NULL, "w", -1);
-#else	/* POSTK_DEBUG_ARCH_DEP_34 */
-	abfd = bfd_fopen(dump_file, "elf64-x86-64", "w", -1);
-#endif	/* POSTK_DEBUG_ARCH_DEP_34 */
 
 	CHKANDJUMP(abfd == NULL, -EINVAL, "bfd_fopen failed: %s\n", bfd_errmsg(bfd_get_error()));
 
