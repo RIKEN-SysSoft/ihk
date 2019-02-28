@@ -158,4 +158,6 @@ int read_string(char **valuep, char *fmt, ...);
 extern struct list_head cpu_topology_list;
 extern struct list_head node_topology_list;
 
+extern struct rb_root *ihk_vmap_area_root;
+
 #endif /* HEADER_SMP_SMP_DRIVER_H */
