@@ -1,0 +1,514 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "83d435b5_8eb7cdeb",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+#include \u003cihk/affinity.h\u003e $",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "02fb1776_8b6dd172",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tIHK_OS_EVENTFD_TYPE_OOM \u003d 0, /* Raise an event when physical memory used exceeds the limit */",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "76b92e1e_17158f70",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tIHK_OS_EVENTFD_TYPE_STATUS \u003d 2, /* Raise an event when detecting hung-up or panic */",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0fa2266a_046db120",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 18,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t/* Raise an event when kmsg buffer is full. The kmsg taker is expected to take the kmsg. */",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0e1726f6_c2f98755",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 48,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: do not add new typedefs\n+typedef struct ihk_perf_event_attr {",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "36338023_b5ab9d52",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^Iunsigned long config; $",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "551f4b04_83ed19eb",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 65,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_reserve_cpu(int index, int* cpus, int num_cpus);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f65f2003_8fc84c37",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_query_cpu(int index, int* cpus, int _num_cpus);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b84d4cc1_503355a6",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_release_cpu(int index, int* cpus, int num_cpus);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b79ec1c4_53fa7949",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_reserve_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5b83bee0_4dba8e04",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_reserve_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2d0e8dab_e2fdab49",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 71,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8833f8a0_11c41204",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 71,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f049ca5_4d9b485b",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 72,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aff1ddaa_ecf3558f",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 72,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a36380c8_2860a69a",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 78,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_os_assign_cpu(int index, int* cpus, int num_cpus);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8007bd30_9b954349",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 80,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_os_query_cpu(int index, int* cpus, int _num_cpus);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0b97f395_ed7dc305",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 81,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_os_release_cpu(int index, int* cpus, int num_cpus);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e96eba95_82761ca9",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 84,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "57c1209f_e62d152c",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 86,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_os_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "41b06ca6_ae8f4e40",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 86,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_os_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0e3239df_26921581",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 87,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_os_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5920ca44_a991bd21",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 87,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_os_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6ad639ee_53781045",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 89,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_os_load(int index, char* fn);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "617b0749_605460da",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 90,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_os_kargs(int index, char* kargs);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c50e941c_f319f425",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 95,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "34cc41bd_be77202b",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 98,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_os_query_free_mem(int os_index, unsigned long *memfree, int num_numa_nodes);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "877a87d1_5617f305",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 99,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_os_query_total_mem(int os_index, unsigned long *memtotal, int num_numa_nodes);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ae6df1ae_97a50234",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 102,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage, size_t size_rusage);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f96c75c5_fde4575e",
+        "filename": "linux/include/ihk/ihklib.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 108,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-01T05:37:53Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interactive);",
+      "revId": "283b10e18f2e4c722948f367d7dda0f3e35b950e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
