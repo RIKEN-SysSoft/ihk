@@ -6,7 +6,7 @@ endif (NOT CMAKE_BUILD_TYPE)
 
 # C flags need to be set before enabling language?
 set(CMAKE_C_FLAGS_DEBUG "-g -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare" CACHE STRING "Debug compiler flags")
-set(CMAKE_C_FLAGS_RELEAES "-Wall" CACHE STRING "Release compiler flags")
+set(CMAKE_C_FLAGS_RELEASE "-Wall" CACHE STRING "Release compiler flags")
 
 enable_language(C)
 
