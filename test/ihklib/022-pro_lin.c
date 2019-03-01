@@ -187,10 +187,6 @@ int main(int argc, char **argv)
 	nspid = atoi(argv[1]);
 	//printf("%s: nspid=%d\n", __FILE__, nspid);
 
-	// overlay the McKernel /proc over the restricted Linux /proc
-	ret = ihk_os_create_pseudofs(0, nspid, CLONE_NEWNS | CLONE_NEWPID);
-	OKNG(ret == 0, "ihk_os_create_pseudofs succeeded\n");
-
 	// job-scheduler can see the unrestricted Linux /proc
 	sprintf(cmd, "cat /proc/1/cmdline > ./cmdline.global");
 	status = system(cmd);

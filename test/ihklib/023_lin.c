@@ -202,14 +202,6 @@ int main(int argc, char **argv)
 	ret = ihk_set_loglevel(IHKLIB_LOGLEVEL_EMERG);
 	CHKANDJUMP(ret == -1, -1, "ihk_set_loglevel");
 
-	// ihk_os_destroy_pseudofs
-	ret = ihk_os_destroy_pseudofs(0, 0, 0);
-	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(ret == 0 && strstr(buf, "/tmp/mcos/mcos0_sys") == NULL,
-	     "ihk_os_destroy_pseudofs (1)\n");
-
 	sprintf(cmd, "insmod %s/kmod/ihk.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
@@ -321,15 +313,6 @@ int main(int argc, char **argv)
 	while ((ret = ihk_os_get_status(0)) != IHK_STATUS_RUNNING) {
 	}
 
-	// create pseudofs
-	ret = ihk_os_create_pseudofs(0, 0, 0);
-	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys",
-		   "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(ret == 0 && strstr(buf, "/tmp/mcos/mcos0_sys") != NULL,
-	     "ihk_os_create_pseudofs()\n");
-
 	// create threads to call ihklib functions concurrently
 	pthread_barrier_init(&bar2, NULL, NTHR + 1);
 
@@ -370,14 +353,6 @@ int main(int argc, char **argv)
 	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
-
-	// destroy pseudofs
-	ret = ihk_os_destroy_pseudofs(0, 0, 0);
-	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(ret == 0 && strstr(buf, "/tmp/mcos/mcos0_sys") == NULL,
-	     "ihk_os_destroy_pseudofs\n");
 
 	// rmmod ihk-smp-x86.ko
 	sprintf(cmd, "rmmod %s/kmod/ihk-smp-%s.ko",
