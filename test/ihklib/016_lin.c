@@ -40,14 +40,6 @@ int main(int argc, char **argv)
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system /sbin/ihkmond");
 #endif
-	// ihk_os_destroy_pseudofs
-	ret = ihk_os_destroy_pseudofs(0, 0, 0);
-	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(ret == 0 && strstr(buf, "/tmp/mcos/mcos0_sys") == NULL,
-	     "ihk_os_destroy_pseudofs (1)\n");
-
 	sprintf(cmd, "insmod %s/kmod/ihk.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system insmod");
@@ -123,21 +115,6 @@ int main(int argc, char **argv)
 		OKNG(ret == 0, "ihk_os_boot\n");
 
 		usleep(100*1000);
-
-		// create pseudofs
-		fp = popen("grep mcoverlay /proc/modules", "r");
-		nread = fread(buf, 1, sizeof(buf), fp);
-		buf[nread] = 0;
-		if (strstr(buf, "mcoverlay") == NULL) {
-			ret = ihk_os_create_pseudofs(0, 0, 0);
-			fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys",
-				   "r");
-			nread = fread(buf, 1, sizeof(buf), fp);
-			buf[nread] = 0;
-			OKNG(ret == 0 &&
-			     strstr(buf, "/tmp/mcos/mcos0_sys") != NULL,
-			     "ihk_os_create_pseudofs()\n");
-		}
 
 		// mcexec
 		sprintf(cmd, "%s/bin/mcexec ./ihklib016_mck", QUOTE(MCK_DIR));
@@ -216,14 +193,6 @@ destroyed:;
 	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "rmmod mcctrl failed\n");
-
-	// destroy pseudofs
-	ret = ihk_os_destroy_pseudofs(0, 0, 0);
-	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(ret == 0 && strstr(buf, "/tmp/mcos/mcos0_sys") == NULL,
-	     "ihk_os_destroy_pseudofs (3)\n");
 
 	// rmmod ihk-smp-x86
 	sprintf(cmd, "rmmod %s/kmod/ihk-smp-%s.ko",

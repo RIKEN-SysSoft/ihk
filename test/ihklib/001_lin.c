@@ -83,15 +83,6 @@ int main(int argc, char **argv)
 		printf("Execute as a root\n");
 	}
 
-	// ihk_os_destroy_pseudofs
-	ret = ihk_os_destroy_pseudofs(0, 0, 0);
-	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(ret == 0 &&
-	     strstr(buf, "/tmp/mcos/mcos0_sys") == NULL,
-	     "ihk_os_destroy_pseudofs (1)\n");
-
 	/* Test error handling */
 
 	// reserve cpu
@@ -406,10 +397,6 @@ int main(int argc, char **argv)
 	OKNG(strstr(buf, "rror") != NULL,
 	     "ihkconfig 0 get status (1) returned:\n%s\n", buf);
 
-	// create pseudofs
-	ret = ihk_os_create_pseudofs(0, 0, 0);
-	OKNG(ret != 0, "ihk_os_create_pseudofs\n");
-
 	// kmsg size
 	kmsg_size = ihk_os_get_kmsg_size(0);
 	OKNG(kmsg_size < 0, "ihk_os_get_kmsg_size\n");
@@ -449,11 +436,6 @@ int main(int argc, char **argv)
 	// destroy os
 	ret = ihk_destroy_os(0, 0);
 	OKNG(ret != 0, "ihk_destroy_os (2)\n");
-
-	// destroy pseudofs. Note that it doesn't check the existence
-	// of the OS.
-	ret = ihk_os_destroy_pseudofs(0, 0, 0);
-	OKNG(ret == 0, "ihk_os_destroy_pseudofs (2)\n");
 
 	/* Expected to succeed */
 
@@ -726,15 +708,6 @@ int main(int argc, char **argv)
 	OKNG(strstr(buf, "RUNNING") != NULL,
 	     "ihkconfig 0 get status (4) returned:\n%s\n", buf);
 
-	// create pseudofs
-	ret = ihk_os_create_pseudofs(0, 0, 0);
-	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(ret == 0 &&
-	     strstr(buf, "/tmp/mcos/mcos0_sys") != NULL,
-	     "ihk_os_create_pseudofs()\n");
-
 	// get kmsg size
 	kmsg_size = ihk_os_get_kmsg_size(0);
 	OKNG(kmsg_size > 0, "ihk_os_get_kmsg_size\n");
@@ -858,15 +831,6 @@ int main(int argc, char **argv)
 	sprintf(cmd, "rmmod %s/kmod/mcctrl.ko", QUOTE(MCK_DIR));
 	status = system(cmd);
 	CHKANDJUMP(WEXITSTATUS(status) != 0, -1, "system");
-
-	// destroy pseudofs
-	ret = ihk_os_destroy_pseudofs(0, 0, 0);
-	fp = popen("cat /proc/mounts | grep /tmp/mcos/mcos0_sys", "r");
-	nread = fread(buf, 1, sizeof(buf), fp);
-	buf[nread] = 0;
-	OKNG(ret == 0 &&
-	     strstr(buf, "/tmp/mcos/mcos0_sys") == NULL,
-	     "ihk_os_destroy_pseudofs (3)\n");
 
 	sprintf(cmd, "rmmod %s/kmod/ihk-smp-%s.ko",
 		QUOTE(MCK_DIR), QUOTE(ARCH));

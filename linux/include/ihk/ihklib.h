@@ -5,7 +5,6 @@
 #include <bfd.h>
 #define PATH_SYS_NODE "/sys/devices/system/node"
 #define PATH_DEV "/dev"
-#define SBINDIR "@CMAKE_INSTALL_FULL_SBINDIR@"
 
 #include <ihk/affinity.h> 
 #include <ihk/ihk_rusage.h>
@@ -92,8 +91,6 @@ int ihk_os_kargs(int index, char* kargs);
 int ihk_os_boot(int index);
 int ihk_os_shutdown(int index);
 int ihk_os_get_status(int index);
-int ihk_os_create_pseudofs(int index, pid_t nspid, int namespaces);
-int ihk_os_destroy_pseudofs(int index, pid_t nspid, int namespaces);
 int ihk_os_get_kmsg_size(int index);
 int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg);
 int ihk_os_clear_kmsg(int index);
