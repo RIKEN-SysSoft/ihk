@@ -4,10 +4,6 @@ if (NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type: Debug Release..." FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
-# C flags need to be set before enabling language?
-set(CMAKE_C_FLAGS_DEBUG "-g -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare" CACHE STRING "Debug compiler flags")
-set(CMAKE_C_FLAGS_RELEAES "-Wall" CACHE STRING "Release compiler flags")
-
 enable_language(C)
 
 project(ihk C)
@@ -25,6 +21,10 @@ else()
 endif()
 
 # build options
+# C flags need to be set before enabling language?
+set(CFLAGS_WARNING "-Wall" "-Wextra" "-Wno-unused-parameter" "-Wno-sign-compare" "-Wno-unused-function" CACHE STRING "Warning flags")
+add_compile_options(${CFLAGS_WARNING})
+
 option(ENABLE_WERROR "Enable -Werror" OFF)
 if (ENABLE_WERROR)
 	add_compile_options("-Werror")
