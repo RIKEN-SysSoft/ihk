@@ -343,7 +343,7 @@ int ihk_ikc_connect(ihk_os_t os, struct ihk_ikc_connect_param *p)
 		return -EINVAL;
 	}
 
-	dkprintf("%s: connecting channel %p\n", __FUNCTION__, c);
+	dkprintf("%s: connecting channel\n", __func__);
 	c = ihk_ikc_create_channel(os, p->port, p->pkt_size, p->queue_size,
 	                           &rq, &sq, 0);
 	if (!c) {
