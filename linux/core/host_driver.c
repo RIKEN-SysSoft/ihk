@@ -2470,6 +2470,16 @@ int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
 	return os->kernel_handlers->write_cpu_register(ihk_os, cpu, desc);
 }
 
+/*
+ *  Returns LWK OS instance and CPU number of the system call offload
+ *  origin.
+ *  Arguments:
+ *    ihk_os (OUTPUT):	LWK OS instance of system call offload origin
+ *    cpu (OUTPUT):	CPU number of the system call offload origin
+ *  Return value:
+ *    0:		Caller is performing system call offload
+ *    -EINVAL:		Caller isn't performing system call offload
+ */
 int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
 {
 	struct ihk_host_linux_os_data *os;
@@ -2484,7 +2494,8 @@ int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
 	 */
 	os = (struct ihk_host_linux_os_data *)ihk_host_find_os(0, NULL);
 	if (!os) {
-		printk("%s: ERROR: no OS found for index 0\n", __FUNCTION__);
+		dprintf("%s: not on system call offloading path\n",
+			__func__);
 		return -EINVAL;
 	}
 
