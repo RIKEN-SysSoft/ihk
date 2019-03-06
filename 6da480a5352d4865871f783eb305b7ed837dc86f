@@ -1,0 +1,9 @@
+Code-Review+2: Dominique Martinet <asmadeus@codewreck.org>
+Verified+1: Dominique Martinet <asmadeus@codewreck.org>
+Verified+1: riken-syssoft-gerrit <syssoft-gerrit@ml.riken.jp>
+Test-x86+1: riken-syssoft-gerrit <syssoft-gerrit@ml.riken.jp>
+Submitted-by: Masamichi Takagi <masamichi.takagi@riken.jp>
+Submitted-at: Wed, 06 Mar 2019 05:50:08 +0000
+Reviewed-on: https://review.gerrithub.io/c/RIKEN-SysSoft/ihk/+/446206
+Project: RIKEN-SysSoft/ihk
+Branch: refs/heads/development
