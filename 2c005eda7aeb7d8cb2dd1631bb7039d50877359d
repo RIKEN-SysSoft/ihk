@@ -37,6 +37,24 @@
     },
     {
       "key": {
+        "uuid": "e3acb09e_e8af55b1",
+        "filename": "linux/core/mikc.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 316,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-03-06T07:11:16Z",
+      "side": 1,
+      "message": "kmalloc already warns if it fails, so checkpatch was correct to ask you to not add a print statement.\n\nsee warn_alloc_failed() it will look like \"[comm]: page allocation failure: order:x, mode:0xy\" followed by a full backtrace",
+      "parentUuid": "9701d9de_11467c53",
+      "revId": "2c005eda7aeb7d8cb2dd1631bb7039d50877359d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "c1e1f125_9d33c38b",
         "filename": "linux/core/mikc.c",
         "patchSetId": 1
