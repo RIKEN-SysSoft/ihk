@@ -298,18 +298,33 @@ void ihk_ikc_linux_init_work_data(ihk_os_t ihk_os,
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
 
-	INIT_WORK(&os->ikc_work, f);
+	os->work_function = f;
 }
+
+struct ikc_work_struct {
+	struct work_struct work;
+	ihk_os_t os;
+};
 
 /** \brief Schedule the work thread (Called from IHK-IKC) */
 void ihk_ikc_linux_schedule_work(ihk_os_t ihk_os)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
-	schedule_work_on(smp_processor_id(), &os->ikc_work);
+	struct ikc_work_struct *work;
+
+	work = kmalloc(sizeof(struct ikc_work_struct), GFP_ATOMIC);
+	if (work == NULL) {
+		return;
+	}
+	INIT_WORK(&work->work, os->work_function);
+	work->os = ihk_os;
+	schedule_work_on(smp_processor_id(), &work->work);
 }
 
 /** \brief Get ihk_os_t from the work struct */
 ihk_os_t ihk_ikc_linux_get_os_from_work(struct work_struct *work)
 {
-	return container_of(work, struct ihk_host_linux_os_data, ikc_work);
+	struct ikc_work_struct *ikc_work = (struct ikc_work_struct *)work;
+
+	return ikc_work->os;
 }
