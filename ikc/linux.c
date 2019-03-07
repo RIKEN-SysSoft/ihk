@@ -73,6 +73,7 @@ static void ikc_work_func(struct work_struct *work)
 {
 	ihk_os_t os = ihk_ikc_linux_get_os_from_work(work);
 	__ihk_ikc_reception_handler(os);
+	kfree(work);
 }
 
 /** \brief IKC interrupt handler (interrupt context) */
