@@ -16,6 +16,41 @@
       "revId": "8c7bacda31bad920f7d96935e174b14a0e165d9c",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3401bbad_9aad9220",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 369,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-03-08T05:42:06Z",
+      "side": 1,
+      "message": "Let\u0027s also check LINUX_CODE_VERSION with 4.3.0 when the function was renamed",
+      "parentUuid": "3e8bf649_055228e3",
+      "revId": "8c7bacda31bad920f7d96935e174b14a0e165d9c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "88f19907_af5dea50",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 374,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-03-08T05:42:06Z",
+      "side": 1,
+      "message": "I\u0027m not sure what difference there is between rdtsc and rdtscll but the function before rdtsc existed, it was just named native_read_tsc.\n\nI think we can just #define rdtsc native_read_tsc and be done with it... probably...\n(actually it looks likke rdtscll was a define to native_read_tsc at the time, I don\u0027t have such an old centos around to check though)",
+      "revId": "8c7bacda31bad920f7d96935e174b14a0e165d9c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
