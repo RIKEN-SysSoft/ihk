@@ -365,6 +365,17 @@ static int ikc_array2str(char *str, ssize_t len, int num_cpus,
 	return ret;
 }
 
+/* Compatibility for rdtsc()/rdtscll(). see arch/x86/include/asm/msr.h */
+#if (defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE <= RHEL_RELEASE_VERSION(7, 2))
+unsigned long long rdtsc(void)
+{
+	unsigned long long val;
+
+	rdtscll(val);
+	return val;
+}
+#endif
+
 /** \brief Boot a kernel. */
 static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
