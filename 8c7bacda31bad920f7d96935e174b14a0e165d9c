@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3e8bf649_055228e3",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 369,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-08T05:30:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+#if (defined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003c\u003d RHEL_RELEASE_VERSION(7, 2))",
+      "revId": "8c7bacda31bad920f7d96935e174b14a0e165d9c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
