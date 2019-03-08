@@ -365,6 +365,19 @@ static int ikc_array2str(char *str, ssize_t len, int num_cpus,
 	return ret;
 }
 
+/* Kernels including that of CentOS-7.2 defines rdtscll instead of
+ * rdtsc. see arch/x86/include/asm/msr.h
+ */
+#ifndef rdtsc
+unsigned long long rdtsc(void)
+{
+	unsigned long long val;
+
+	rdtscll(val);
+	return val;
+}
+#endif
+
 /** \brief Boot a kernel. */
 static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
