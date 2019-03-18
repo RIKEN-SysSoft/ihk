@@ -320,10 +320,17 @@ int ikc_str2req(char *_ikc_list, int num_cpus, struct ihk_ikc_req *req)
 }
 
 
+#define IHK_SMP_MEM_ALL	(-1UL)
 static size_t ihk_memparse(char *token)
 {
 	size_t ret;
 	char *endp = token + strlen(token) - 1;
+
+	/* "all" or "ALL" indicates best effort allocation */
+	if (!strcmp("all", token) || !strcmp("ALL", token)) {
+		ret = IHK_SMP_MEM_ALL;
+		goto out;
+	}
 
 	ret = atol(token);
 
@@ -351,6 +358,7 @@ static size_t ihk_memparse(char *token)
 		break;
 	}
 
+out:
 	return ret;
 }
 
