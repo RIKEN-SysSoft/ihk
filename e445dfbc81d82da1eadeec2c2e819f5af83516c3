@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "b08d931c_f56a7157",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 369,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-22T05:07:26Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003c KERNEL_VERSION(4, 3, 0) || \\",
+      "revId": "e445dfbc81d82da1eadeec2c2e819f5af83516c3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8c7c7378_0ecfb6f7",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 370,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-22T05:07:26Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t(defined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003c RHEL_RELEASE_VERSION(7, 3))",
+      "revId": "e445dfbc81d82da1eadeec2c2e819f5af83516c3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
