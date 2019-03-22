@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "441ed540_4fd0d9a0",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 369,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-22T05:14:28Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+#if (!defined(RHEL_RELEASE_CODE) \u0026\u0026 LINUX_VERSION_CODE \u003c KERNEL_VERSION(4, 3, 0)) || \\",
+      "revId": "75d6d2a1c3036fbdf6711ed1fe331d0e62b6ba83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1158be01_36707676",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 370,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-03-22T05:14:28Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t(defined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003c RHEL_RELEASE_VERSION(7, 3))",
+      "revId": "75d6d2a1c3036fbdf6711ed1fe331d0e62b6ba83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
