@@ -209,6 +209,10 @@ int ihk_mc_get_vector(enum ihk_mc_gv_type type)
 	case IHK_GV_QUERY_FREE_MEM:
 		return 200;
 	default:
+		if ((type >= IHK_TLB_FLUSH_IRQ_VECTOR_START) &&
+		   (type < IHK_TLB_FLUSH_IRQ_VECTOR_END)) {
+			return type;
+		}
 		return -ENOENT;
 	}
 }
