@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f9cebff1_c3be600f",
+        "filename": "cokernel/smp/x86_64/setup.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 213,
+      "author": {
+        "id": 1003556
+      },
+      "writtenOn": "2019-03-27T02:25:43Z",
+      "side": 1,
+      "message": "I don\u0027t care which indentation you use but it\u0027s probably a mistake to have different indentations on both sides for the same code...",
+      "revId": "c998a1050f7181c6d7c14de266f744c723fd07a2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
