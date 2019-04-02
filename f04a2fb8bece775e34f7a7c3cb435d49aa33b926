@@ -1,0 +1,191 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f734b538_c3e66812",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: externs should be avoided in .c files\n+extern int num_processors;",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e83b29c5_c4042146",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tuint64_t phys \u003d (uint64_t)boot_param-\u003eihk_ikc_cpu_raised_list[i];",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "221d814a_fa387047",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t__func__, i, boot_param-\u003eihk_ikc_cpu_raised_list[i], phys);",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5acf3d29_0f8055f6",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 333,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: function definition argument \u0027struct linux_irq_work *\u0027 should also have an identifier name\n+\tvoid (*func)(struct linux_irq_work *);",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d971afe8_0da98fd7",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 336,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "ERROR: do not initialise globals to NULL\n+struct linux_irq_work *per_cpu_irq_work \u003d NULL;",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e38873de_3d7827e5",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 351,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: Block comments use a trailing */ on a separate line\n+\t * virtual to physical mapping as in Linux */",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d19d2d14_b2ace96a",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 355,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: Prefer kmalloc_array over kmalloc with multiply\n+\t\tper_cpu_irq_work \u003d (struct linux_irq_work *)kmalloc(\n+\t\t\t\tsizeof(struct linux_irq_work) * num_processors,\n+\t\t\t\tIHK_MC_AP_NOWAIT);",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "27babeba_1b6f9bde",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 355,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: unnecessary cast may hide bugs, see http://c-faq.com/malloc/mallocnocast.html\n+\t\tper_cpu_irq_work \u003d (struct linux_irq_work *)kmalloc(",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "63b6fb89_4a595280",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 377,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: Block comments use a trailing */ on a separate line\n+\t * if Linux has not yet processed the previous IRQ. */",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "38a18c45_d1bb27be",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 395,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tihk__raised_list \u003d (struct llist_head *) kallsyms_lookup_name(\"raised_list\");",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "67784d90_9e8b3d95",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 398,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-02T14:19:01Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"IHK-SMP: using SGIs for Linux IRQs.\\n\");",
+      "revId": "f04a2fb8bece775e34f7a7c3cb435d49aa33b926",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
