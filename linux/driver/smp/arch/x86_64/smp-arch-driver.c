@@ -23,6 +23,9 @@
 #include <linux/kallsyms.h>
 #include <linux/mc146818rtc.h>
 #include <asm/tlbflush.h>
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+#include <asm/irq_vectors.h>
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
 #include <asm/smpboot_hooks.h>
 #endif
@@ -68,8 +71,10 @@ static void *trampoline_va;
 static int ident_npages_order = 0;
 static unsigned long *ident_page_table_virt;
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 static int ihk_smp_irq = 0;
 static int ihk_smp_irq_apicid = 0;
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 extern const char ihk_smp_trampoline_end[], ihk_smp_trampoline_data[];
 #define IHK_SMP_TRAMPOLINE_SIZE \
@@ -366,10 +371,21 @@ void smp_ihk_setup_trampoline(void *priv)
 	struct smp_os_data *os = priv;
 	struct ihk_smp_trampoline_header *header;
 
-	os->param->ihk_ikc_irq = ihk_smp_irq;
 	for (i = 0; i < nr_cpu_ids; i++) {
 		os->param->ihk_ikc_irq_apicids[i] = per_cpu(x86_bios_cpu_apicid, i);
+
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+		/* IRQ work per-CPU raised_list head physical addresses */
+		os->param->ihk_ikc_cpu_raised_list[i] =
+			(void *)virt_to_phys(per_cpu_ptr(ihk__raised_list, i));
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 	}
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+	os->param->ikc_irq_work_func = (void *)smp_ihk_ikc_irq_work_func;
+	os->param->ihk_ikc_irq = IRQ_WORK_VECTOR;
+#else
+	os->param->ihk_ikc_irq = ihk_smp_irq;
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
 	os->param->linux_kernel_pgt_phys = __pa(&_init_level4_pgt[0]);
 	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n", __func__,
@@ -824,6 +840,7 @@ int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 	return 0;
 }
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 static irqreturn_t smp_ihk_irq_handler(int irq, void *dev_id)
 {
 	ack_APIC_irq();
@@ -856,7 +873,8 @@ static void ihk_smp_irq_flow_handler(unsigned int irq, struct irq_desc *desc)
 
 	raw_spin_unlock(&desc->lock);
 }
-#endif
+#endif // CONFIG_SPARSE_IRQ
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 static int smp_ihk_init_ident_page_table(void)
 {
@@ -929,6 +947,7 @@ static int smp_ihk_init_ident_page_table(void)
 	return 0;
 }
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 static struct irq_chip ihk_irq_chip = {
 	.name = "ihk_irq",
 };
@@ -1008,11 +1027,13 @@ release_vector(int vector, int core) {
 	vectors[vector] = -1;
 #endif
 }
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 static int collect_topology(void);
 int smp_ihk_arch_init(void)
 {
 	int error = 0;
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
 	int vector = ISA_IRQ_VECTOR(15) + 2;
 #else
@@ -1020,6 +1041,7 @@ int smp_ihk_arch_init(void)
 #endif
 	int i = 0;
 	int is_used = 0;
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 	if (ihk_trampoline) {
 		printk("IHK-SMP: preallocated trampoline phys: 0x%lx\n",
@@ -1075,6 +1097,11 @@ retry_trampoline:
 		printk(KERN_INFO "IHK-SMP: trampoline_page phys: 0x%lx\n", trampoline_phys);
 	}
 
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+	/* Use Linux work IRQ for IKC IPI */
+	printk("IHK-SMP: using Linux work IRQ (%d) for IKC IPI\n",
+			IRQ_WORK_VECTOR);
+#else
 	/* Find a suitable IRQ vector */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
 	for (vector = ihk_start_irq ? ihk_start_irq : (ISA_IRQ_VECTOR(14) + 2);
@@ -1187,6 +1214,7 @@ retry_trampoline:
 
 	irq_set_chip(vector, &ihk_irq_chip);
 	irq_set_chip_data(vector, NULL);
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
 	error = smp_ihk_init_ident_page_table();
 	if (error) {
@@ -1204,6 +1232,7 @@ retry_trampoline:
 
 error_free_irq:
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 	free_irq(ihk_smp_irq, NULL);
 
 error_free_trampoline:
@@ -1214,6 +1243,7 @@ error_free_trampoline:
 		if (!using_linux_trampoline)
 			iounmap(trampoline_va);
 	}
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 	return error;
 }
@@ -1565,6 +1595,7 @@ int ihk_smp_reset_cpu(int phys_apicid)
 
 void smp_ihk_arch_exit(void)
 {
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 	int i = 0;
 #ifdef CONFIG_SPARSE_IRQ
 	struct irq_desc *desc;
@@ -1591,6 +1622,7 @@ void smp_ihk_arch_exit(void)
 #ifdef CONFIG_SPARSE_IRQ
 	irq_free_descs(ihk_smp_irq, 1);
 #endif
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 	if (trampoline_page) {
 		free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(trampoline_page)),
 		           1);
