@@ -10,6 +10,8 @@
 #include <irq.h>
 #include "bootparam.h"
 #include <kmsg.h>
+#include <llist.h>
+#include <kmalloc.h>
 
 /* BUILTIN Setup.c */
 unsigned long boot_param_pa;
@@ -18,6 +20,7 @@ int boot_param_size;
 
 unsigned long bootstrap_mem_end;
 
+extern int num_processors;
 extern void main(void);
 extern void setup_arm64(void);
 extern struct ihk_kmsg_buf *kmsg_buf;
@@ -100,6 +103,22 @@ static void build_ihk_cpu_info(void)
 	}
 
 	ihk_cpu_info->ncpus = boot_param->nr_cpus;
+
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+	/* Map Linux IRQ work raised_list list heads */
+	for (i = 0; i < boot_param->nr_linux_cpus; ++i) {
+		uint64_t phys = (uint64_t)boot_param->ihk_ikc_cpu_raised_list[i];
+
+		boot_param->ihk_ikc_cpu_raised_list[i] =
+			map_fixed_area(phys, PAGE_SIZE, 0);
+		if (!boot_param->ihk_ikc_cpu_raised_list[i]) {
+			kprintf("error: mapping Linux IRQ raised list head\n");
+			panic("");
+		}
+		dkprintf("%s: CPU %d, raised_list: 0x%lx -> 0x%lx\n",
+			__func__, i, boot_param->ihk_ikc_cpu_raised_list[i], phys);
+	}
+#endif // IHK_IKC_USE_SGI_TO_HOST
 }
 
 static void build_spi_table(void)
@@ -302,10 +321,76 @@ static int ihk_mc_get_irq(int linux_core_id)
 	return spi_table[linux_core_id];
 }
 
+/* Use SGIs to host (Linux) interrupts */
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+#define IRQ_WORK_PENDING	1UL
+#define IRQ_WORK_BUSY		2UL
+#define IRQ_WORK_FLAGS		3UL
+
+struct linux_irq_work {
+	unsigned long flags;
+	struct llist_node llnode;
+	void (*func)(struct linux_irq_work *);
+};
+
+struct linux_irq_work *per_cpu_irq_work = NULL;
+#endif // IHK_IKC_USE_SGI_TO_HOST
+
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+extern void (*arm64_issue_host_ipi)(int, int);
+#else
 extern void (*arm64_issue_ipi)(int, int);
+#endif // IHK_IKC_USE_SGI_TO_HOST
+
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+	struct linux_irq_work *work;
+
+	/* This needs to be malloc()'d so that it has the same
+	 * virtual to physical mapping as in Linux */
+	if (!per_cpu_irq_work) {
+		int cpu;
+
+		per_cpu_irq_work = (struct linux_irq_work *)kmalloc(
+				sizeof(struct linux_irq_work) * num_processors,
+				IHK_MC_AP_NOWAIT);
+
+		if (!per_cpu_irq_work) {
+			kprintf("%s: error: allocating IKC Linux IRQ work\n",
+				__func__);
+			return -ENOMEM;
+		}
+
+		for (cpu = 0; cpu < num_processors; ++cpu) {
+			per_cpu_irq_work[cpu].func =
+				boot_param->ikc_irq_work_func;
+			per_cpu_irq_work[cpu].flags = 0;
+		}
+
+		kprintf("Using SGIs for Linux IRQs.\n");
+	}
+
+	/* Each McKernel CPU has it's own dedicated Linux IRQ work
+	 * structure that is used every time a Linux CPU is interrupted
+	 * for IKC processing. The IRQ_WORK_BUSY flag indicates
+	 * if Linux has not yet processed the previous IRQ. */
+	work = &per_cpu_irq_work[ihk_mc_get_processor_id()];
+	while (work->flags & IRQ_WORK_BUSY) {
+		cpu_pause();
+	}
+
+	dkprintf("%s: McKernel CPU %d -> Linux CPU %d\n",
+		__func__, ihk_mc_get_processor_id(), cpu);
+	/* Linux will clear this */
+	work->flags = IRQ_WORK_BUSY;
+	llist_add(&work->llnode,
+		(struct llist_head *)boot_param->ihk_ikc_cpu_raised_list[cpu]);
+
+	(*arm64_issue_host_ipi)(cpu, 5);
+#else
 	(*arm64_issue_ipi)(ihk_mc_get_apicid(cpu), ihk_mc_get_irq(cpu));
+#endif // IHK_IKC_USE_SGI_TO_HOST
 	return 0;
 }
 
