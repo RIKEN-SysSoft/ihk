@@ -11,6 +11,9 @@
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
 #include <linux/list.h>
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+#include <linux/irq_work.h>
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -68,12 +71,14 @@ static void *trampoline_va;
 static int ident_npages_order = 0;
 static unsigned long *ident_page_table_virt;
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 struct ihk_smp_irq_table {
 	int irq;
 	int hwirq;
 	char irq_name[16];
 };
 static struct ihk_smp_irq_table ihk_smp_irq[SMP_MAX_IRQS];
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 extern const char ihk_smp_trampoline_end[], ihk_smp_trampoline_data[];
 #define IHK_SMP_TRAMPOLINE_SIZE ((unsigned long)(ihk_smp_trampoline_end - ihk_smp_trampoline_data))
@@ -282,7 +287,6 @@ enum ppi_nr *ihk_arch_timer_uses_ppi;
 u32 *ihk_arch_timer_rate;
 
 void (*ihk___flush_dcache_area)(void *addr, size_t len);
-
 
 /* There are two symbols with the same name, but thanksfully only one is
  * actually used, and the other will contain 0s by definition.
@@ -955,13 +959,24 @@ void smp_ihk_setup_trampoline(void *priv)
 	int nr_irqs;
 	int i = 0;
 
+	for (i = 0; i < nr_cpu_ids; i++) {
+		os->param->ihk_ikc_cpu_hwids[i] = ihk_smp_get_hw_id(i);
+
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+		/* IRQ work per-CPU raised_list head physical addresses */
+		os->param->ihk_ikc_cpu_raised_list[i] =
+			(void *)virt_to_phys(per_cpu_ptr(ihk__raised_list, i));
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
+	}
+
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+	os->param->ikc_irq_work_func = (void *)smp_ihk_ikc_irq_work_func;
+	os->param->ihk_ikc_irq = 5; // TODO: look up dynamically
+#else
 	for (i = 0; i < SMP_MAX_IRQS; i++) {
 		os->param->ihk_ikc_irqs[i] = ihk_smp_irq[i].hwirq;
 	}
-
-	for (i = 0; i < nr_cpu_ids; i++) {
-		os->param->ihk_ikc_cpu_hwids[i] = ihk_smp_get_hw_id(i);
-	}
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
 	/* Prepare trampoline code */
 	memcpy(trampoline_va, ihk_smp_trampoline_data,
@@ -1371,6 +1386,7 @@ int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 	return 0;
 }
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 static irqreturn_t smp_ihk_irq_handler(int irq, void *dev_id)
 {
 	smp_ihk_irq_call_handlers(irq, NULL);
@@ -1571,6 +1587,7 @@ static void ihk_smp_release_irq(struct ihk_smp_irq_table *smp_irq)
 #endif /* CONFIG_SPARSE_IRQ */
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
 }
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 int ihk_pwr_mck_request(void** handle)
 {
@@ -1733,8 +1750,11 @@ EXPORT_SYMBOL(ihk_pwr_ipi_write_register);
 static int collect_topology(void);
 int smp_ihk_arch_init(void)
 {
-	int error, i;
+	int error;
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
+	int i;
 	unsigned int start_irq = ihk_start_irq;
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 	/* psci_method check */
 	if (ihk_invoke_psci_fn) {
@@ -1807,6 +1827,9 @@ retry_trampoline:
 		}
 	}
 
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+	/* Uses Linux IRQ work SGI interrupts from LWK */
+#else
 	/* check module_param ihk_nr_irq */
 	if (SMP_MAX_IRQS < ihk_nr_irq) {
 		printk("%s: Since ihk_nr_irq is larger than %d,\n",
@@ -1829,6 +1852,7 @@ retry_trampoline:
 		}
 		start_irq = ihk_smp_irq[i].hwirq + 1;
 	}
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
 	error = collect_topology();
 	if (error) {
@@ -1844,9 +1868,11 @@ error_free_irq:
 	}
 #endif
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 	for (i = 0; i < ihk_nr_irq; i++) {
 		ihk_smp_release_irq(&ihk_smp_irq[i]);
 	}
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 	return error;
 }
 
@@ -2168,6 +2194,9 @@ out:
 
 int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os)
 {
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+	return 0;
+#else
 	int i = 0, j = 0, cpu_count = 0, ret = 0, min = INT_MAX;
 	uint8_t checkers[SMP_MAX_CPUS];
 
@@ -2210,6 +2239,7 @@ int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os)
 			__func__);
 	}
 	return ret;
+#endif
 }
 
 int ihk_smp_reset_cpu(int hw_id)
@@ -2257,7 +2287,9 @@ int ihk_smp_reset_cpu(int hw_id)
 
 void smp_ihk_arch_exit(void)
 {
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 	int i = 0;
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
@@ -2265,9 +2297,11 @@ void smp_ihk_arch_exit(void)
 	}
 #endif
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 	for (i = 0; i < ihk_nr_irq; i++) {
 		ihk_smp_release_irq(&ihk_smp_irq[i]);
 	}
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 	if (trampoline_page) {
 		int order = get_order(IHK_SMP_TRAMPOLINE_SIZE);

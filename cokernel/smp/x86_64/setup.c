@@ -86,6 +86,24 @@ static void build_ihk_cpu_info(void)
 	}
 
 	ihk_cpu_info->ncpus = boot_param->nr_cpus;
+
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+	/* Map Linux IRQ work raised_list list heads */
+	for (i = 0; i < boot_param->nr_linux_cpus; ++i) {
+		uint64_t phys =
+			(uint64_t)boot_param->ihk_ikc_cpu_raised_list[i];
+
+		boot_param->ihk_ikc_cpu_raised_list[i] =
+			map_fixed_area(phys, PAGE_SIZE, 0);
+		if (!boot_param->ihk_ikc_cpu_raised_list[i]) {
+			kprintf("error: mapping Linux IRQ raised list head\n");
+			panic("");
+		}
+		dkprintf("%s: CPU %d, raised_list: 0x%lx -> 0x%lx\n",
+				__func__, i,
+				boot_param->ihk_ikc_cpu_raised_list[i], phys);
+	}
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 }
 
 int ihk_mc_get_numa_id(void)
@@ -193,12 +211,19 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 }
 
 extern void (*x86_issue_ipi)(int, int);
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+int ihk_mc_ikc_arch_issue_host_ipi(int cpu, int vector)
+{
+	x86_issue_ipi(ihk_mc_get_apicid(cpu), vector);
+	return 0;
+}
+#else
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
-	//kprintf("%s: cpu=%d(%d),irq#=%d,vector=%d\n", __FUNCTION__, cpu, ihk_mc_get_apicid(cpu), ihk_ikc_irq, vector);
 	x86_issue_ipi(ihk_mc_get_apicid(cpu), ihk_ikc_irq);
 	return 0;
 }
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
 int ihk_mc_get_vector(enum ihk_mc_gv_type type)
 {

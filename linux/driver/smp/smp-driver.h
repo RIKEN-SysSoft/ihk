@@ -160,4 +160,9 @@ extern struct list_head node_topology_list;
 
 extern struct rb_root *ihk_vmap_area_root;
 
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+void smp_ihk_ikc_irq_work_func(struct irq_work *work);
+extern struct llist_head *ihk__raised_list;
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
+
 #endif /* HEADER_SMP_SMP_DRIVER_H */

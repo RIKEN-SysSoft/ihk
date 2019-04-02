@@ -118,6 +118,10 @@ struct smp_boot_param {
 	unsigned long boot_tsc;
 	unsigned long boot_sec;
 	unsigned long boot_nsec;
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+	void *ihk_ikc_cpu_raised_list[SMP_MAX_CPUS];
+	void *ikc_irq_work_func;
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 	unsigned int ihk_ikc_irq;
 	unsigned int ihk_ikc_irq_apicids[SMP_MAX_CPUS];
 	char kernel_args[256];
@@ -147,5 +151,7 @@ struct smp_boot_param {
 	int	ereg_idx[PERF_EXTRA_REG_MAX];
 #endif // ENABLE_PERF
 };
+
+extern struct smp_boot_param *boot_param;
 
 #endif
