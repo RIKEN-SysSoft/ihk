@@ -11,6 +11,9 @@
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
 #include <linux/list.h>
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+#include <linux/irq_work.h>
+#endif // IHK_IKC_USE_SGI_TO_HOST
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -283,6 +286,9 @@ u32 *ihk_arch_timer_rate;
 
 void (*ihk___flush_dcache_area)(void *addr, size_t len);
 
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+static struct llist_head *ihk__raised_list;
+#endif // IHK_IKC_USE_SGI_TO_HOST
 
 /* There are two symbols with the same name, but thanksfully only one is
  * actually used, and the other will contain 0s by definition.
@@ -384,6 +390,13 @@ int ihk_smp_arch_symbols_init(void)
 		(void *) kallsyms_lookup_name("__flush_dcache_area");
 	if (WARN_ON(!ihk___flush_dcache_area))
 		return -EFAULT;
+
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+	ihk__raised_list = (struct llist_head *) kallsyms_lookup_name("raised_list");
+	if (WARN_ON(!ihk__raised_list))
+		return -EFAULT;
+	printk("IHK-SMP: using SGIs for Linux IRQs.\n");
+#endif // IHK_IKC_USE_SGI_TO_HOST
 
 	return 0;
 }
@@ -947,6 +960,16 @@ void ihk_pwr_clear_retention_state_flag_address(void)
 }
 EXPORT_SYMBOL(ihk_pwr_clear_retention_state_flag_address);
 
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+/*
+ * IHK IKC IRQ work function called from Linux IRQ work.
+ */
+void smp_ihk_ikc_irq_work_func(struct irq_work *work)
+{
+	smp_ihk_irq_call_handlers(0, NULL);
+}
+#endif // IHK_IKC_USE_SGI_TO_HOST
+
 void smp_ihk_setup_trampoline(void *priv)
 {
 	struct smp_os_data *os = priv;
@@ -961,7 +984,16 @@ void smp_ihk_setup_trampoline(void *priv)
 
 	for (i = 0; i < nr_cpu_ids; i++) {
 		os->param->ihk_ikc_cpu_hwids[i] = ihk_smp_get_hw_id(i);
+
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+		/* IRQ work per-CPU raised_list head physical addresses */
+		os->param->ihk_ikc_cpu_raised_list[i] =
+			(void *)virt_to_phys(per_cpu_ptr(ihk__raised_list, i));
+#endif // IHK_IKC_USE_SGI_TO_HOST
 	}
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+	os->param->ikc_irq_work_func = (void *)smp_ihk_ikc_irq_work_func;
+#endif // IHK_IKC_USE_SGI_TO_HOST
 
 	/* Prepare trampoline code */
 	memcpy(trampoline_va, ihk_smp_trampoline_data,
@@ -1371,6 +1403,7 @@ int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 	return 0;
 }
 
+#ifndef IHK_IKC_USE_SGI_TO_HOST
 static irqreturn_t smp_ihk_irq_handler(int irq, void *dev_id)
 {
 	smp_ihk_irq_call_handlers(irq, NULL);
@@ -1571,6 +1604,7 @@ static void ihk_smp_release_irq(struct ihk_smp_irq_table *smp_irq)
 #endif /* CONFIG_SPARSE_IRQ */
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0) */
 }
+#endif // !IHK_IKC_USE_SGI_TO_HOST
 
 int ihk_pwr_mck_request(void** handle)
 {
@@ -1733,8 +1767,11 @@ EXPORT_SYMBOL(ihk_pwr_ipi_write_register);
 static int collect_topology(void);
 int smp_ihk_arch_init(void)
 {
-	int error, i;
+	int error;
+#ifndef IHK_IKC_USE_SGI_TO_HOST
+	int i;
 	unsigned int start_irq = ihk_start_irq;
+#endif // !IHK_IKC_USE_SGI_TO_HOST
 
 	/* psci_method check */
 	if (ihk_invoke_psci_fn) {
@@ -1807,6 +1844,9 @@ retry_trampoline:
 		}
 	}
 
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+	/* Uses Linux IRQ work SGI interrupts from LWK */
+#else
 	/* check module_param ihk_nr_irq */
 	if (SMP_MAX_IRQS < ihk_nr_irq) {
 		printk("%s: Since ihk_nr_irq is larger than %d,\n",
@@ -1829,6 +1869,7 @@ retry_trampoline:
 		}
 		start_irq = ihk_smp_irq[i].hwirq + 1;
 	}
+#endif // IHK_IKC_USE_SGI_TO_HOST
 
 	error = collect_topology();
 	if (error) {
@@ -1844,9 +1885,11 @@ error_free_irq:
 	}
 #endif
 
+#ifndef IHK_IKC_USE_SGI_TO_HOST
 	for (i = 0; i < ihk_nr_irq; i++) {
 		ihk_smp_release_irq(&ihk_smp_irq[i]);
 	}
+#endif // !IHK_IKC_USE_SGI_TO_HOST
 	return error;
 }
 
@@ -2257,7 +2300,9 @@ int ihk_smp_reset_cpu(int hw_id)
 
 void smp_ihk_arch_exit(void)
 {
+#ifndef IHK_IKC_USE_SGI_TO_HOST
 	int i = 0;
+#endif // !IHK_IKC_USE_SGI_TO_HOST
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 3, 0)
 	if (this_module_put) {
@@ -2265,9 +2310,11 @@ void smp_ihk_arch_exit(void)
 	}
 #endif
 
+#ifndef IHK_IKC_USE_SGI_TO_HOST
 	for (i = 0; i < ihk_nr_irq; i++) {
 		ihk_smp_release_irq(&ihk_smp_irq[i]);
 	}
+#endif // !IHK_IKC_USE_SGI_TO_HOST
 
 	if (trampoline_page) {
 		int order = get_order(IHK_SMP_TRAMPOLINE_SIZE);

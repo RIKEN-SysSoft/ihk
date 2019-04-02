@@ -116,6 +116,10 @@ struct smp_boot_param {
 	unsigned long boot_nsec;
 	unsigned int ihk_ikc_irqs[SMP_MAX_IRQS];
 	unsigned int ihk_ikc_cpu_hwids[SMP_MAX_CPUS];
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+	void *ihk_ikc_cpu_raised_list[SMP_MAX_CPUS];
+	void *ikc_irq_work_func;
+#endif // IHK_IKC_USE_SGI_TO_HOST
 	char kernel_args[256];
 	int nr_linux_cpus;
 	int nr_cpus;
