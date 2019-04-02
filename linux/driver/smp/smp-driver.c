@@ -1855,7 +1855,6 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		pr_warn("%s: failed to build ikc_map string\n", __func__);
 	}
 
-	pr_info("%s: ikc mapping: %s\n", __func__, req_string);
 	for (i = 0; i < req.num_cpus; i++) {
 		int src_cpu = req_src_cpus[i];
 		int dst_cpu = req_dst_cpus[i];
@@ -1883,6 +1882,15 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	/* Mapping has been requested */
 	if (smp_ihk_os_check_ikc_map(ihk_os) == 0) {
 		os->cpu_ikc_mapped = 1;
+	}
+
+	for (i = 0; i < SMP_MAX_CPUS; i++) {
+		if ((ihk_smp_cpus[i].status != IHK_SMP_CPU_ASSIGNED) ||
+				(ihk_smp_cpus[i].os != ihk_os)) {
+			continue;
+		}
+		pr_info("%s: IKC IRQ routing: %d -> %d\n",
+				__func__, i, ihk_smp_cpus[i].ikc_map_cpu);
 	}
 
 out:
@@ -4165,6 +4173,17 @@ out:
 	return hw_id;
 } /* smp_ihk_linux_cpu_to_hw_id() */
 
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+/*
+ * IHK IKC IRQ work function called from Linux IRQ work.
+ */
+void smp_ihk_ikc_irq_work_func(struct irq_work *work)
+{
+	smp_ihk_irq_call_handlers(0, NULL);
+}
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
+
+
 static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 {
 	int ret;
@@ -4263,6 +4282,10 @@ static struct ihk_register_device_data builtin_dev_reg_data = {
 	.ops = &smp_ihk_device_ops,
 };
 
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+struct llist_head *ihk__raised_list;
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
+
 static int ihk_smp_symbols_init(void)
 {
 	int ret = -EFAULT;
@@ -4288,6 +4311,17 @@ static int ihk_smp_symbols_init(void)
 	ihk___free_vmap_area = (void *)kallsyms_lookup_name("__free_vmap_area");
 	if (WARN_ON(!ihk___free_vmap_area))
 		goto err;
+
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+#ifndef CONFIG_IRQ_WORK
+#error "error: can't use Linux work IRQ without Linux kernel CONFIG_IRQ_WORK"
+#endif
+	ihk__raised_list =
+		(struct llist_head *)kallsyms_lookup_name("raised_list");
+	if (WARN_ON(!ihk__raised_list))
+		return -EFAULT;
+	printk("IHK-SMP: using Linux work IRQ for IKC IPI\n");
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
 	ret = 0;
 err:

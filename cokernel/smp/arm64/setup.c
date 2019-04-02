@@ -10,6 +10,8 @@
 #include <irq.h>
 #include "bootparam.h"
 #include <kmsg.h>
+#include <llist.h>
+#include <kmalloc.h>
 
 /* BUILTIN Setup.c */
 unsigned long boot_param_pa;
@@ -18,6 +20,7 @@ int boot_param_size;
 
 unsigned long bootstrap_mem_end;
 
+extern int num_processors;
 extern void main(void);
 extern void setup_arm64(void);
 extern struct ihk_kmsg_buf *kmsg_buf;
@@ -27,8 +30,10 @@ unsigned long arm64_kernel_phys_base = 0;
 unsigned long arm64_st_phys_base = 0;
 unsigned long arm64_st_phys_size = 0;
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 int spi_table[SMP_MAX_CPUS];
 int nr_spi_table = 0;
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 struct ihk_dump_page * dump_page;
 
@@ -100,8 +105,25 @@ static void build_ihk_cpu_info(void)
 	}
 
 	ihk_cpu_info->ncpus = boot_param->nr_cpus;
+
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+	/* Map Linux IRQ work raised_list list heads */
+	for (i = 0; i < boot_param->nr_linux_cpus; ++i) {
+		uint64_t phys = (uint64_t)boot_param->ihk_ikc_cpu_raised_list[i];
+
+		boot_param->ihk_ikc_cpu_raised_list[i] =
+			map_fixed_area(phys, PAGE_SIZE, 0);
+		if (!boot_param->ihk_ikc_cpu_raised_list[i]) {
+			kprintf("error: mapping Linux IRQ raised list head\n");
+			panic("");
+		}
+		dkprintf("%s: CPU %d, raised_list: 0x%lx -> 0x%lx\n",
+			__func__, i, boot_param->ihk_ikc_cpu_raised_list[i], phys);
+	}
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 }
 
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 static void build_spi_table(void)
 {
 	int checkers[SMP_MAX_CPUS];
@@ -174,6 +196,7 @@ static void build_spi_table(void)
 		}
 	}
 }
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 int ihk_mc_get_numa_id(void)
 {
@@ -211,7 +234,9 @@ void arch_init(void)
 	/* Map boot parameter structure with the non-bootstrap map */
 	boot_param = map_fixed_area(boot_param_pa, boot_param_size, 0);
 	build_ihk_cpu_info();
+#ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 	build_spi_table();
+#endif // !IHK_IKC_USE_LINUX_WORK_IRQ
 
 	setup_arm64();
 
@@ -297,6 +322,14 @@ void __reserve_arch_pages(unsigned long start, unsigned long end,
 	/* No hole */
 }
 
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+extern void (*arm64_issue_host_ipi)(int, int);
+int ihk_mc_ikc_arch_issue_host_ipi(int cpu, int vector)
+{
+	arm64_issue_host_ipi(cpu, vector);
+	return 0;
+}
+#else
 static int ihk_mc_get_irq(int linux_core_id)
 {
 	return spi_table[linux_core_id];
@@ -305,9 +338,10 @@ static int ihk_mc_get_irq(int linux_core_id)
 extern void (*arm64_issue_ipi)(int, int);
 int ihk_mc_interrupt_host(int cpu, int vector)
 {
-	(*arm64_issue_ipi)(ihk_mc_get_apicid(cpu), ihk_mc_get_irq(cpu));
+	arm64_issue_ipi(ihk_mc_get_apicid(cpu), ihk_mc_get_irq(cpu));
 	return 0;
 }
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
 int ihk_mc_get_vector(enum ihk_mc_gv_type type)
 {
