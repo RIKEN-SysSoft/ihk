@@ -2211,6 +2211,9 @@ out:
 
 int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os)
 {
+#ifdef IHK_IKC_USE_SGI_TO_HOST
+	return 0;
+#else
 	int i = 0, j = 0, cpu_count = 0, ret = 0, min = INT_MAX;
 	uint8_t checkers[SMP_MAX_CPUS];
 
@@ -2253,6 +2256,7 @@ int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os)
 			__func__);
 	}
 	return ret;
+#endif
 }
 
 int ihk_smp_reset_cpu(int hw_id)
