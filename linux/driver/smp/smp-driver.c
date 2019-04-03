@@ -1855,7 +1855,6 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		pr_warn("%s: failed to build ikc_map string\n", __func__);
 	}
 
-	pr_info("%s: ikc mapping: %s\n", __func__, req_string);
 	for (i = 0; i < req.num_cpus; i++) {
 		int src_cpu = req_src_cpus[i];
 		int dst_cpu = req_dst_cpus[i];
@@ -1883,6 +1882,11 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	/* Mapping has been requested */
 	if (smp_ihk_os_check_ikc_map(ihk_os) == 0) {
 		os->cpu_ikc_mapped = 1;
+	}
+
+	for (i = 0; i < req.num_cpus; i++) {
+		pr_info("%s: IKC IRQ routing: %d -> %d\n",
+			__func__, i, ihk_smp_cpus[i].ikc_map_cpu);
 	}
 
 out:
