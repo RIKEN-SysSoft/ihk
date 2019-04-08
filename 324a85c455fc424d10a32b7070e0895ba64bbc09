@@ -16,6 +16,24 @@
       "revId": "324a85c455fc424d10a32b7070e0895ba64bbc09",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "22a210f8_5bce53fa",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2214,
+      "author": {
+        "id": 1015205
+      },
+      "writtenOn": "2019-04-08T01:28:54Z",
+      "side": 1,
+      "message": "This check does nothing on x86 either and by the time it is called the original IKC map code is already set up. The extra check is needed for Fujitsu\u0027s multi-IRQ implementation only..",
+      "parentUuid": "b465ccc9_0f48fb24",
+      "revId": "324a85c455fc424d10a32b7070e0895ba64bbc09",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
