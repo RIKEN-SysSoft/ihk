@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "e9fdd31a_3f8fc3c4",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-08T13:15:12Z",
+      "side": 1,
+      "message": "WARNING: externs should be avoided in .c files\n+extern int num_processors;",
+      "revId": "9e23ff4c6e0a67edb5f24f643e46a413086ac81a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "791ea1b0_c95a26da",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 112,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-08T13:15:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tuint64_t phys \u003d (uint64_t)boot_param-\u003eihk_ikc_cpu_raised_list[i];",
+      "revId": "9e23ff4c6e0a67edb5f24f643e46a413086ac81a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f52c9759_f3d64385",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 121,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-08T13:15:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t__func__, i, boot_param-\u003eihk_ikc_cpu_raised_list[i], phys);",
+      "revId": "9e23ff4c6e0a67edb5f24f643e46a413086ac81a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cec3e462_a7229341",
+        "filename": "cokernel/smp/ikc.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-08T13:15:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer kmalloc_array over kmalloc with multiply\n+\t\tper_cpu_irq_work \u003d kmalloc(\n+\t\t\t\tsizeof(struct linux_irq_work) * num_processors,\n+\t\t\t\tIHK_MC_AP_NOWAIT);",
+      "revId": "9e23ff4c6e0a67edb5f24f643e46a413086ac81a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d8aa1d6a_f6a71c35",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 4323,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-08T13:15:12Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"IHK-SMP: using Linux work IRQ for IKC IPI\\n\");",
+      "revId": "9e23ff4c6e0a67edb5f24f643e46a413086ac81a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
