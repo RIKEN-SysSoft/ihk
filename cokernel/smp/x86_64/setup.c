@@ -597,6 +597,11 @@ unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
 
 	return val;
 }
+
+unsigned long ihk_mc_raw_event_map(unsigned long raw_event)
+{
+	return raw_event;
+}
 #else // ENABLE_PERF
 int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
 {
@@ -629,6 +634,11 @@ unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
 }
 
 unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
+{
+	return 0;
+}
+
+unsigned long ihk_mc_raw_event_map(unsigned long raw_event)
 {
 	return 0;
 }

@@ -2,6 +2,6 @@
 #ifndef ARCH_PERF_EVENT_H
 #define ARCH_PERF_EVENT_H
 
-#include <linux/perf_event.h>
+#include <arch-perfctr.h>
 
 #endif

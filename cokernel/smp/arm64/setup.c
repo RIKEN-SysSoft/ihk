@@ -13,6 +13,7 @@
 #include <kmsg.h>
 #include <llist.h>
 #include <kmalloc.h>
+#include "perf_event.h"
 
 /* BUILTIN Setup.c */
 unsigned long boot_param_pa;
@@ -581,24 +582,6 @@ void ihk_mc_dma_init(void)
 	builtin_mc_dma_init(boot_param->dma_address);
 }
 
-static unsigned int perf_map_nehalem[] = 
-{
-	[APT_TYPE_INSTRUCTIONS]  = CVAL(0xc0, 0x00),
-	[APT_TYPE_L1D_REQUEST]   = CVAL(0x43, 0x01),
-	[APT_TYPE_L1I_REQUEST]   = CVAL(0x80, 0x03),
-	[APT_TYPE_L1D_MISS]      = CVAL(0x51, 0x01),
-	[APT_TYPE_L1I_MISS]      = CVAL(0x80, 0x02),
-	[APT_TYPE_L2_MISS]       = CVAL(0x24, 0xaa),
-	[APT_TYPE_LLC_MISS]      = CVAL(0x2e, 0x41),
-	[APT_TYPE_DTLB_MISS]     = CVAL(0x49, 0x01),
-	[APT_TYPE_ITLB_MISS]     = CVAL(0x85, 0x01),
-	[APT_TYPE_STALL]         = CVAL2(0x0e, 0x01, 1, 1),
-	[APT_TYPE_CYCLE]         = CVAL(0x3c, 0x00),
-	[PERFCTR_MAX_TYPE] = -1,
-};
-
-unsigned int *arm64_march_perfmap = perf_map_nehalem;
-
 void ihk_mc_set_dump_level(unsigned int level)
 {
 	boot_param->dump_level = level;
@@ -621,26 +604,31 @@ struct ihk_dump_page *ihk_mc_get_dump_page(void)
 }
 
 #ifdef ENABLE_PERF
-int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
+
+unsigned long ihk_mc_hw_event_map(unsigned long hw_event)
 {
-	return 0;
+	const struct arm_pmu *pmu = get_cpu_pmu();
+	int val = pmu->map_hw_event(hw_event);
+
+	return (val <= 0) ? 0 : val;
 }
 
-int ihk_mc_get_extra_reg_idx(int id)
+unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
 {
-	return 0;
+	const struct arm_pmu *pmu = get_cpu_pmu();
+	int val = pmu->map_cache_event(hw_cache_event);
+
+	return (val <= 0) ? 0 : val;
 }
 
-unsigned int ihk_mc_get_extra_reg_msr(int id)
+unsigned long ihk_mc_raw_event_map(unsigned long  raw_event)
 {
-	return 0;
-}
+	const struct arm_pmu *pmu = get_cpu_pmu();
+	int val = pmu->map_raw_event(raw_event);
 
-unsigned long ihk_mc_get_extra_reg_event(int id)
-{
-	return 0;
+	return (val <= 0) ? 0 : val;
 }
-
+#else /* ENABLE_PERF */
 unsigned long ihk_mc_hw_event_map(unsigned long  hw_event)
 {
 	return get_cpu_pmu() ?
@@ -653,43 +641,38 @@ unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
 		get_cpu_pmu()->map_event(PERF_TYPE_HW_CACHE, hw_cache_event) : 0;
 }
 
-unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
+unsigned long ihk_mc_raw_event_map(unsigned long  raw_event)
 {
 	return 0;
 }
-#else /* ENABLE_PERF */
+#endif /* ENABLE_PERF */
+
 int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
 {
-	return 0;
+	/* Nothing to do. */
+	return -1;
 }
 
 int ihk_mc_get_extra_reg_idx(int id)
 {
+	/* Nothing to do. */
 	return 0;
 }
 
 unsigned int ihk_mc_get_extra_reg_msr(int id)
 {
+	/* Nothing to do. */
 	return 0;
 }
 
 unsigned long ihk_mc_get_extra_reg_event(int id)
 {
-	return 0;
-}
-
-unsigned long ihk_mc_hw_event_map(unsigned long  hw_event)
-{
-	return 0;
-}
-
-unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
-{
+	/* Nothing to do. */
 	return 0;
 }
 
 unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
 {
+	/* Nothing to do. */
 	return 0;
 }
-#endif /* ENABLE_PERF */
