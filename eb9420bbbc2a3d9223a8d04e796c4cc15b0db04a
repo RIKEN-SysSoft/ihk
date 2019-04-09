@@ -1,0 +1,123 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "aeb60643_5afa3768",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-09T01:19:26Z",
+      "side": 1,
+      "message": "WARNING: externs should be avoided in .c files\n+extern int num_processors;",
+      "revId": "eb9420bbbc2a3d9223a8d04e796c4cc15b0db04a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aa0f98db_6f9ab6a0",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 112,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-09T01:19:26Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tuint64_t phys \u003d (uint64_t)boot_param-\u003eihk_ikc_cpu_raised_list[i];",
+      "revId": "eb9420bbbc2a3d9223a8d04e796c4cc15b0db04a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c662c464_556ee754",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 121,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-09T01:19:26Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t__func__, i, boot_param-\u003eihk_ikc_cpu_raised_list[i], phys);",
+      "revId": "eb9420bbbc2a3d9223a8d04e796c4cc15b0db04a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "086a09d5_0521b9e3",
+        "filename": "cokernel/smp/ikc.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-09T01:19:26Z",
+      "side": 1,
+      "message": "WARNING: Prefer kmalloc_array over kmalloc with multiply\n+\t\tper_cpu_irq_work \u003d kmalloc(\n+\t\t\t\tsizeof(struct linux_irq_work) * num_processors,\n+\t\t\t\tIHK_MC_AP_NOWAIT);",
+      "revId": "eb9420bbbc2a3d9223a8d04e796c4cc15b0db04a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f4c1909e_e4151f90",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1852,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-09T01:19:26Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"IHK-SMP: error: couldn\u0027t find Linux work IRQ\\n\");",
+      "revId": "eb9420bbbc2a3d9223a8d04e796c4cc15b0db04a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8af24ff7_a27ec24b",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1855,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-09T01:19:26Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"IHK-SMP: using Linux work IRQ (%d) for IKC IPI\\n\",",
+      "revId": "eb9420bbbc2a3d9223a8d04e796c4cc15b0db04a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bd847a80_f3b2e204",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 1102,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-09T01:19:26Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(\"IHK-SMP: using Linux work IRQ (%d) for IKC IPI\\n\",",
+      "revId": "eb9420bbbc2a3d9223a8d04e796c4cc15b0db04a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
