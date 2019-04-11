@@ -3010,7 +3010,7 @@ retry:
 
 		pg = __alloc_pages_nodemask(
 				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
-				__GFP_NORETRY,
+				__GFP_NORETRY | __GFP_THISNODE,
 				//| __GFP_REPEAT,
 				order,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
@@ -3024,8 +3024,9 @@ retry:
 		/* Try movable pages if supported */
 		if (!pg && __movable_node_enabled && *__movable_node_enabled) {
 			pg = __alloc_pages_nodemask(
-					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
-					__GFP_NORETRY,
+					__GFP_MOVABLE | __GFP_HIGHMEM |
+					__GFP_COMP | __GFP_NOWARN |
+					__GFP_NORETRY | __GFP_THISNODE,
 					//| __GFP_REPEAT,
 					order,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
