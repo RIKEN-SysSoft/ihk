@@ -433,7 +433,12 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 			continue;
 
 		++nr_memory_chunks;
-		buffer_size += ((((os_mem_chunk->size + (PAGE_SIZE * 63)) >> 18) *  sizeof(unsigned long)) + sizeof(struct ihk_dump_page));
+		buffer_size +=
+			((((os_mem_chunk->size +
+			    PAGE_SIZE * BITS_PER_LONG - 1) /
+			   (PAGE_SIZE * BITS_PER_LONG)) *
+			  sizeof(unsigned long)) +
+			 sizeof(struct ihk_dump_page));
 	}
 
 	param_size += (nr_memory_chunks *
@@ -647,9 +652,10 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 				dump_page->start = os_mem_chunk->addr;
 				dump_page->map_count =
-					((csize + ((PAGE_SIZE * 64) - 1))
-							>> (PAGE_SHIFT + 6));
-				map_end = (csize >> PAGE_SHIFT);
+					((csize + PAGE_SIZE * BITS_PER_LONG - 1) /
+					 (PAGE_SIZE * BITS_PER_LONG));
+				map_end = ((csize + PAGE_SIZE - 1) >>
+					   PAGE_SHIFT);
 
 				for (index = 0; index < map_end; index++) {
 					if(MAP_INDEX(index) >= dump_page->map_count) {
