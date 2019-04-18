@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "c59fb8d0_efa4deac",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 655,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-04-18T03:57:44Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t((csize + PAGE_SIZE * BITS_PER_LONG - 1) /",
+      "revId": "8a79e825d989adf4a49397864c549cbe52463917",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
