@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <registers.h>
 #include <arch-memory.h>
+#include <arch-perfctr.h>
 #include <arch/cpu.h>
 #include <irq.h>
 #include "bootparam.h"
@@ -229,10 +230,17 @@ void arch_init(void)
 
 	init_page_table();
 
-	kprintf("boot_param_size: %lu\n", boot_param_size);
-
 	/* Map boot parameter structure with the non-bootstrap map */
 	boot_param = map_fixed_area(boot_param_pa, boot_param_size, 0);
+
+	/* Map kmsg_buf, which is out of kernel image, with the
+	 * non-bootstrap map. */
+	ihk_get_kmsg_buf(&msg_buffer, &msg_buffer_size);
+	kmsg_buf = (struct ihk_kmsg_buf *)
+		map_fixed_area(msg_buffer, msg_buffer_size, 0);
+	kmsg_init();
+	kprintf("boot_param_size: %lu\n", boot_param_size);
+
 	build_ihk_cpu_info();
 #ifndef IHK_IKC_USE_LINUX_WORK_IRQ
 	build_spi_table();
@@ -257,10 +265,6 @@ void arch_init(void)
 
 	dump_page = (struct ihk_dump_page *)map_fixed_area(boot_param->dump_page_set.phy_page, boot_param->dump_page_set.page_size, 0);
 
-	/* Map kmsg_buf, which is out of kernel image, with the non-bootstrap map. */
-	ihk_get_kmsg_buf(&msg_buffer, &msg_buffer_size);
-	kmsg_buf = (struct ihk_kmsg_buf *)map_fixed_area(msg_buffer, msg_buffer_size, 0);
-	kmsg_init();
 	kputs("IHK/McKernel started.\n");
 
 	kprintf("ns_per_tsc: %lu\n", boot_param->ns_per_tsc);
@@ -634,12 +638,14 @@ unsigned long ihk_mc_get_extra_reg_event(int id)
 
 unsigned long ihk_mc_hw_event_map(unsigned long  hw_event)
 {
-	return 0;
+	return get_cpu_pmu() ?
+		get_cpu_pmu()->map_event(PERF_TYPE_HARDWARE, hw_event) : 0;
 }
 
 unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
 {
-	return 0;
+	return get_cpu_pmu() ?
+		get_cpu_pmu()->map_event(PERF_TYPE_HW_CACHE, hw_cache_event) : 0;
 }
 
 unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
