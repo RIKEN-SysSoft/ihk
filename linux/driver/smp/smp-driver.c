@@ -24,6 +24,7 @@
 #include <linux/swap.h>
 #include <linux/slub_def.h>
 #include <linux/time.h>
+#include <linux/hugetlb.h>
 #include <asm/hw_irq.h>
 #include <asm/pgtable.h>
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
@@ -113,6 +114,8 @@ extern int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
                                 unsigned long size);
 
 extern int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode);
+struct hstate *smp_ihk_hstates;
+unsigned int *smp_ihk_default_hstate_idx;
 
 /* ----------------------------------------------- */
 
@@ -471,7 +474,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	os->param->nr_numa_nodes = nr_numa_nodes;
 	os->param->nr_memory_chunks = nr_memory_chunks;
 	os->param->osnum = ihk_host_os_get_index(ihk_os);
-
+	os->param->linux_default_huge_page_shift =
+		huge_page_order(&smp_ihk_hstates[*smp_ihk_default_hstate_idx])
+		+ PAGE_SHIFT;
 	os->nr_numa_nodes = nr_numa_nodes;
 
 	ret = smp_ihk_arch_get_perf_event_map(os->param);
@@ -4328,6 +4333,16 @@ static int ihk_smp_symbols_init(void)
 	if (WARN_ON(!ihk__raised_list))
 		return -EFAULT;
 #endif // IHK_IKC_USE_LINUX_WORK_IRQ
+
+	smp_ihk_hstates = (struct hstate *)kallsyms_lookup_name("hstates");
+	if (WARN_ON(!smp_ihk_hstates))
+		goto err;
+
+	smp_ihk_default_hstate_idx = (unsigned int *)
+		kallsyms_lookup_name("default_hstate_idx");
+	if (WARN_ON(!smp_ihk_default_hstate_idx))
+		goto err;
+
 
 	ret = 0;
 err:

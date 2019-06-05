@@ -361,6 +361,11 @@ int ihk_mc_get_nr_memory_chunks(void)
 	return boot_param->nr_memory_chunks;
 }
 
+int ihk_mc_get_linux_default_huge_page_shift(void)
+{
+	return boot_param->linux_default_huge_page_shift;
+}
+
 int ihk_mc_get_memory_chunk(int id,
 		unsigned long *start,
 		unsigned long *end,

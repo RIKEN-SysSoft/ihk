@@ -131,6 +131,7 @@ struct smp_boot_param {
 	int nr_memory_chunks;
 	int osnum;
 	unsigned int dump_level;
+	int linux_default_huge_page_shift;
 	struct ihk_dump_page_set dump_page_set;
 
 #ifdef ENABLE_PERF

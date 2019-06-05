@@ -130,6 +130,7 @@ struct smp_boot_param {
 	int osnum;
 	unsigned int dump_level;
 	struct ihk_dump_page_set dump_page_set;
+	int linux_default_huge_page_shift;
 };
 
 extern struct smp_boot_param *boot_param;
