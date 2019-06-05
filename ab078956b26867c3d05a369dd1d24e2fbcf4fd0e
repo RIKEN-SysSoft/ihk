@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "a1c2a163_b1d0e019",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 237,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-06-05T05:22:51Z",
+      "side": 1,
+      "message": "WARNING: Block comments use a trailing */ on a separate line\n+\t * non-bootstrap map. */",
+      "revId": "ab078956b26867c3d05a369dd1d24e2fbcf4fd0e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0717b30f_416e2b28",
+        "filename": "cokernel/smp/arm64/setup.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 648,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-06-05T05:22:51Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tget_cpu_pmu()-\u003emap_event(PERF_TYPE_HW_CACHE, hw_cache_event) : 0;",
+      "revId": "ab078956b26867c3d05a369dd1d24e2fbcf4fd0e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
