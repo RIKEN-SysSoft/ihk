@@ -67,9 +67,4 @@ struct ihk_os_rusage {
 	int max_num_threads;
 };
 
-static inline int pgsize_to_pgshift(size_t pgsize)
-{
-	return 63 - __builtin_clzl(pgsize);
-}
-
 #endif
