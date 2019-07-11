@@ -610,7 +610,7 @@ unsigned long ihk_mc_hw_event_map(unsigned long hw_event)
 	const struct arm_pmu *pmu = get_cpu_pmu();
 	int val = pmu->map_hw_event(hw_event);
 
-	return (val <= 0) ? 0 : val;
+	return (val < 0) ? ULONG_MAX : val;
 }
 
 unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
@@ -618,7 +618,7 @@ unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
 	const struct arm_pmu *pmu = get_cpu_pmu();
 	int val = pmu->map_cache_event(hw_cache_event);
 
-	return (val <= 0) ? 0 : val;
+	return (val < 0) ? ULONG_MAX : val;
 }
 
 unsigned long ihk_mc_raw_event_map(unsigned long  raw_event)
@@ -626,7 +626,12 @@ unsigned long ihk_mc_raw_event_map(unsigned long  raw_event)
 	const struct arm_pmu *pmu = get_cpu_pmu();
 	int val = pmu->map_raw_event(raw_event);
 
-	return (val <= 0) ? 0 : val;
+	return (val < 0) ? ULONG_MAX : val;
+}
+
+int ihk_mc_validate_event(unsigned long hw_config)
+{
+	return (hw_config != ULONG_MAX);
 }
 #else /* ENABLE_PERF */
 unsigned long ihk_mc_hw_event_map(unsigned long  hw_event)
@@ -642,6 +647,11 @@ unsigned long ihk_mc_hw_cache_event_map(unsigned long hw_cache_event)
 }
 
 unsigned long ihk_mc_raw_event_map(unsigned long  raw_event)
+{
+	return 0;
+}
+
+int ihk_mc_validate_event(unsigned long hw_config)
 {
 	return 0;
 }

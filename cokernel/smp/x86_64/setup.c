@@ -602,6 +602,11 @@ unsigned long ihk_mc_raw_event_map(unsigned long raw_event)
 {
 	return raw_event;
 }
+
+int ihk_mc_validate_event(unsigned long hw_config)
+{
+	return (hw_config <= 0);
+}
 #else // ENABLE_PERF
 int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
 {
@@ -639,6 +644,11 @@ unsigned long ihk_mc_hw_cache_extra_reg_map(unsigned long hw_cache_event)
 }
 
 unsigned long ihk_mc_raw_event_map(unsigned long raw_event)
+{
+	return 0;
+}
+
+int ihk_mc_validate_event(unsigned long hw_config)
 {
 	return 0;
 }
