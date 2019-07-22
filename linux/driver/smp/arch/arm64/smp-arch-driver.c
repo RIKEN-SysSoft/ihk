@@ -1850,6 +1850,7 @@ retry_trampoline:
 
 	if (ihk_smp_irq == -1) {
 		printk("IHK-SMP: error: couldn't find Linux work IRQ\n");
+		error = -EFAULT;
 		goto error_free_irq;
 	}
 	printk("IHK-SMP: using Linux work IRQ (%d) for IKC IPI\n",
