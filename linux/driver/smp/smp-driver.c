@@ -928,11 +928,10 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 	fput(file);
 	ihk_smp_unmap_virtual(elf64);
-	
+
 	if ((ret = smp_ihk_os_map_lwk(phys))) {
-		pr_info("%s: ERROR: smp_ihk_os_map_lwk failed (%d)\n",
+		pr_info("%s: WARNING: smp_ihk_os_map_lwk failed: %d\n",
 			__func__, ret);
-		return ret;
 	}
 
 	if ((ret = smp_ihk_os_setup_startup(os, phys, entry))) {
