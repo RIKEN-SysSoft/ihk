@@ -113,6 +113,7 @@ int ihk_ikc_read_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
 retry:
 	r = q->read_off;
 	m = q->max_read_off;
+	barrier();
 
 	/* Is the queue empty? */
 	if (r == m) {
@@ -120,7 +121,7 @@ retry:
 	}
 
 	/* Try to advance the queue, but see if someone else has done it already */
-	if (!__sync_bool_compare_and_swap(&q->read_off, r, r + 1)) {
+	if (cmpxchg(&q->read_off, r, r + 1) != r) {
 		goto retry;
 	}
 	dkprintf("%s: queue %p r: %llu, m: %llu\n",
@@ -150,7 +151,7 @@ retry:
 	}
 
 	/* Try to advance the queue, but see if someone else has done it already */
-	if (!__sync_bool_compare_and_swap(&q->read_off, r, r + 1)) {
+	if (cmpxchg(&q->read_off, r, r + 1) != r) {
 		goto retry;
 	}
 	dkprintf("%s: queue %p r: %llu, m: %llu\n",
@@ -190,7 +191,7 @@ retry:
 	}
 
 	/* Try to advance the queue, but see if someone else has done it already */
-	if (!__sync_bool_compare_and_swap(&q->write_off, w, w + 1)) {
+	if (cmpxchg(&q->write_off, w, w + 1) != w) {
 		goto retry;
 	}
 	dkprintf("%s: queue %p r: %llu, w: %llu\n",
@@ -205,7 +206,7 @@ retry:
 	 * by another request which would then end up waiting for this hence
 	 * IRQs are disabled during queue operations.
 	 */
-	while (!__sync_bool_compare_and_swap(&q->max_read_off, w, w + 1)) {}
+	while (cmpxchg(&q->max_read_off, w, w + 1) != w) {}
 
 	return 0;
 }
