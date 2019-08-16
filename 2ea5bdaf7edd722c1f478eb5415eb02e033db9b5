@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "a4151115_15d3fe2a",
+        "filename": "ikc/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 209,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-08-16T04:56:33Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\twhile (cmpxchg(\u0026q-\u003emax_read_off, w, w + 1) !\u003d w) {}",
+      "revId": "2ea5bdaf7edd722c1f478eb5415eb02e033db9b5",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
