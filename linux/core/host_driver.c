@@ -71,7 +71,7 @@ static struct ihk_host_linux_os_data *os_data[OS_MAX_MINOR];
 static int os_max_minor = 0;
 
 static struct list_head ihk_os_notifiers;
-static spinlock_t ihk_os_notifiers_lock;
+DEFINE_SEMAPHORE(ihk_os_notifiers_lock);
 
 static struct list_head ihk_kmsg_bufs;
 static spinlock_t ihk_kmsg_bufs_lock;
@@ -299,6 +299,14 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 		return -EINVAL;
 	}
 
+	/*
+	 * Take OS notifiers lock here so that we can safely
+	 * return on a signal..
+	 */
+	if (down_interruptible(&ihk_os_notifiers_lock)) {
+		return -ERESTARTSYS;
+	}
+
 	if (data->ops->boot) {
 		ret = data->ops->boot(data, data->priv, flag);
 		if (ret == 0) {
@@ -308,15 +316,14 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 		/* Call OS notifiers */
 		if (ret == 0) {
 			struct ihk_os_notifier *_ion;
-			spin_lock(&ihk_os_notifiers_lock);
 			list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
 				if (_ion->ops && _ion->ops->boot)
 					_ion->ops->boot(index);
 			}
-			spin_unlock(&ihk_os_notifiers_lock);
 		}
 	}
 
+	up(&ihk_os_notifiers_lock);
 	return ret;
 }
 
@@ -357,14 +364,17 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 	int index = ihk_host_os_get_index(data);
 
 	/* Call OS notifiers */
+	if (down_interruptible(&ihk_os_notifiers_lock)) {
+		return -ERESTARTSYS;
+	}
+
 	if (index != -1) {
-		spin_lock(&ihk_os_notifiers_lock);
 		list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
 			if (_ion->ops && _ion->ops->shutdown)
 				_ion->ops->shutdown(index);
 		}
-		spin_unlock(&ihk_os_notifiers_lock);
 	}
+	up(&ihk_os_notifiers_lock);
 
 	ikc_master_finalize(data);
 
@@ -1984,7 +1994,6 @@ static int __init ihk_host_driver_init(void)
 	}
 
 	INIT_LIST_HEAD(&ihk_os_notifiers);
-	spin_lock_init(&ihk_os_notifiers_lock);
 
 	atomic_notifier_chain_register(&panic_notifier_list, &ihk_panic_block);
 
@@ -2581,7 +2590,9 @@ int ihk_host_register_os_notifier(struct ihk_os_notifier *ion)
 	struct ihk_os_notifier *_ion;
 
 	/* Check if registered already and add if not */
-	spin_lock(&ihk_os_notifiers_lock);
+	if (down_interruptible(&ihk_os_notifiers_lock)) {
+		return -ERESTARTSYS;
+	}
 
 	list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
 		if (_ion == ion) {
@@ -2595,7 +2606,7 @@ int ihk_host_register_os_notifier(struct ihk_os_notifier *ion)
 		printk("IHK: OS notifier added\n");
 	}
 
-	spin_unlock(&ihk_os_notifiers_lock);
+	up(&ihk_os_notifiers_lock);
 	return 0;
 }
 
@@ -2605,7 +2616,9 @@ int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion)
 	struct ihk_os_notifier *_ion;
 
 	/* Check if registered already and remove if yes */
-	spin_lock(&ihk_os_notifiers_lock);
+	if (down_interruptible(&ihk_os_notifiers_lock)) {
+		return -ERESTARTSYS;
+	}
 
 	list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
 		if (_ion == ion) {
@@ -2619,7 +2632,7 @@ int ihk_host_deregister_os_notifier(struct ihk_os_notifier *ion)
 		printk("IHK: OS notifier removed\n");
 	}
 
-	spin_unlock(&ihk_os_notifiers_lock);
+	up(&ihk_os_notifiers_lock);
 	return 0;
 }
 
