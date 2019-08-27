@@ -32,6 +32,7 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_RUSAGE = 5,
 	IHK_SPADDR_NMI_MODE = 6,
 	IHK_SPADDR_MCKERNEL_DO_FUTEX = 7,
+	IHK_SPADDR_MULTI_INTR_MODE = 8,
 };
 
 /** \brief Type of an IHK device */
@@ -199,11 +200,19 @@ struct ihk_os_ops {
 	 **/
 	int (*issue_interrupt)(ihk_os_t, void *, int cpu, int vector);
 
+	/** \brief Send interrupt to a kernel
+	 *
+	 *  \param mode   0 : reserved
+	 *                1 : freeze
+	 *                2 : thaw
+	 **/
+	int (*send_multi_intr)(ihk_os_t ihk_os, void *priv, int mode);
+
 	/** \brief Send NMI to a kernel
 	 *
 	 *  \param mode   0 : dump
-	 *                1 : freeze
-	 *                2 : thaw
+	 *                1 : reserved
+	 *                2 : reserved
 	 *                3 : force shutdown      
 	 **/
 	int (*send_nmi)(ihk_os_t, void *, int mode);

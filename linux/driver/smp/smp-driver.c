@@ -1342,6 +1342,31 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 	return 0;
 }
 
+int ihk_smp_set_multi_intr_mode(ihk_os_t ihk_os, void *priv, int mode)
+{
+	unsigned long rpa;
+	unsigned long size;
+	int *multi_intr_mode;
+	unsigned long pa;
+	unsigned long psize;
+
+	if (smp_ihk_os_get_special_addr(ihk_os, priv,
+					IHK_SPADDR_MULTI_INTR_MODE,
+					&rpa, &size)) {
+		return -EINVAL;
+	}
+
+	psize = PAGE_SIZE;
+	pa = smp_ihk_os_map_memory(ihk_os, priv, rpa, psize);
+	multi_intr_mode = smp_ihk_map_virtual(ihk_os, priv, pa, psize,
+					  NULL, 0);
+	*multi_intr_mode = mode;
+	smp_ihk_unmap_virtual(ihk_os, priv, multi_intr_mode, psize);
+	smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
+
+	return 0;
+}
+
 int ihk_smp_set_nmi_mode(ihk_os_t ihk_os, void *priv, int mode)
 {
 	unsigned long rpa;
@@ -1433,6 +1458,13 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 		if (os->param->rusage) {
 			*addr = os->param->rusage;
 			*size = os->param->rusage_size;
+			return 0;
+		}
+		break;
+	case IHK_SPADDR_MULTI_INTR_MODE:
+		if (os->param->multi_intr_mode_addr) {
+			*addr = os->param->multi_intr_mode_addr;
+			*size = sizeof(int);
 			return 0;
 		}
 		break;
@@ -2464,13 +2496,13 @@ out:
 
 static int smp_ihk_os_freeze(ihk_os_t ihk_os, void *priv)
 {
-	smp_ihk_os_send_nmi(ihk_os, priv, 1);
+	smp_ihk_os_send_multi_intr(ihk_os, priv, 1);
 	return 0;
 }
 
 static int smp_ihk_os_thaw(ihk_os_t ihk_os, void *priv)
 {
-	smp_ihk_os_send_nmi(ihk_os, priv, 2);
+	smp_ihk_os_send_multi_intr(ihk_os, priv, 2);
 	return 0;
 }
 
@@ -2529,6 +2561,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.set_kargs = smp_ihk_os_set_kargs,
 	.dump = smp_ihk_os_dump,
 	.issue_interrupt = smp_ihk_os_issue_interrupt,
+	.send_multi_intr = smp_ihk_os_send_multi_intr,
 	.send_nmi = smp_ihk_os_send_nmi,
 	.map_memory = smp_ihk_os_map_memory,
 	.unmap_memory = smp_ihk_os_unmap_memory,

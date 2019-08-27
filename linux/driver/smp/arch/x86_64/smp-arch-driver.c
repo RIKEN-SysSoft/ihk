@@ -534,6 +534,18 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 	return 0;
 }
 
+int smp_ihk_os_send_multi_intr(ihk_os_t ihk_os, void *priv, int mode)
+{
+	struct smp_os_data *os = priv;
+	int i, ret;
+
+	ret = ihk_smp_set_multi_intr_mode(ihk_os, priv, mode);
+	if (ret) {
+		return ret;
+	}
+	return -EIO;
+}
+
 static long get_dump_num_mem_areas(struct smp_os_data *os)
 {
 	struct ihk_dump_page *dump_page = NULL;
