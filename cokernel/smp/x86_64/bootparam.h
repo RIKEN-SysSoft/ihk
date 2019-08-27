@@ -1,3 +1,4 @@
+/* bootparam.h COPYRIGHT FUJITSU LIMITED 2019 */
 #ifndef HEADER_BUILTIN_BOOTPARAM_H
 #define HEADER_BUILTIN_BOOTPARAM_H
 
@@ -109,6 +110,7 @@ struct smp_boot_param {
 	unsigned long rusage_size;
 
 	unsigned long nmi_mode_addr;
+	unsigned long multi_intr_mode_addr;
 	unsigned long mckernel_do_futex;
 	unsigned long linux_kernel_pgt_phys;
 

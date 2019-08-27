@@ -1,4 +1,4 @@
-/* smp-driver.h COPYRIGHT FUJITSU LIMITED 2015 */
+/* smp-driver.h COPYRIGHT FUJITSU LIMITED 2015-2019 */
 /**
  * \file smp-x86-driver.c
  * \brief
@@ -144,6 +144,7 @@ extern unsigned long ident_page_table;
 
 void *ihk_smp_map_virtual(unsigned long phys, unsigned long size);
 void ihk_smp_unmap_virtual(void *virt);
+int ihk_smp_set_multi_intr_mode(ihk_os_t ihk_os, void *priv, int mode);
 int ihk_smp_set_nmi_mode(ihk_os_t ihk_os, void *priv, int mode);
 irqreturn_t smp_ihk_irq_call_handlers(int irq, void *data);
 int ihk_smp_map_kernel(pgd_t *pt, unsigned long vaddr, phys_addr_t paddr);

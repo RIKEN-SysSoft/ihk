@@ -1,3 +1,4 @@
+/* setup.c COPYRIGHT FUJITSU LIMITED 2019 */
 #include <ihk/debug.h>
 #include <ihk/mm.h>
 #include <ihk/cpu.h>
@@ -281,6 +282,13 @@ int ihk_set_rusage(unsigned long addr, unsigned long size)
 	boot_param->rusage = addr;
 	boot_param->rusage_size = size;
 	
+	return 0;
+}
+
+int ihk_set_multi_intr_mode_addr(unsigned long addr)
+{
+	boot_param->multi_intr_mode_addr = addr;
+
 	return 0;
 }
 

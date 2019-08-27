@@ -1,4 +1,4 @@
-/* smp-arch-driver.c COPYRIGHT FUJITSU LIMITED 2015-2016 */
+/* smp-arch-driver.c COPYRIGHT FUJITSU LIMITED 2015-2019 */
 /**
  * \file smp-x86-driver.c
  * \brief
@@ -531,6 +531,44 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 #endif
 		}
 	}
+	return 0;
+}
+
+int smp_ihk_os_send_multi_intr(ihk_os_t ihk_os, void *priv, int mode)
+{
+	const int MULT_INTR_VECTOR = 242;
+	struct smp_os_data *os = priv;
+	int i, ret;
+	unsigned long flags;
+
+	ret = ihk_smp_set_multi_intr_mode(ihk_os, priv, mode);
+	if (ret) {
+		return ret;
+	}
+
+	local_irq_save(flags);
+	for (i = 0; i < os->cpu_info.n_cpus; i++) {
+#ifdef CONFIG_X86_X2APIC
+		if (x2apic_is_enabled()) {
+			native_x2apic_icr_write(MULT_INTR_VECTOR,
+						os->cpu_info.hw_ids[i]);
+		}
+		else
+#endif
+		{
+#if KERNEL_VERSION(4, 6, 0) <= LINUX_VERSION_CODE
+			___default_send_IPI_dest_field(os->cpu_info.hw_ids[i],
+							MULT_INTR_VECTOR,
+							APIC_DEST_PHYSICAL);
+#else
+			__default_send_IPI_dest_field(os->cpu_info.hw_ids[i],
+							MULT_INTR_VECTOR,
+							APIC_DEST_PHYSICAL);
+#endif
+		}
+	}
+	local_irq_restore(flags);
+
 	return 0;
 }
 
