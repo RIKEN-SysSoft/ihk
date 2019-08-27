@@ -406,6 +406,13 @@ int ihk_set_rusage(unsigned long addr, unsigned long size)
 	return 0;
 }
 
+int ihk_set_multi_intr_mode_addr(unsigned long addr)
+{
+	boot_param->multi_intr_mode_addr = addr;
+
+	return 0;
+}
+
 int ihk_set_nmi_mode_addr(unsigned long addr)
 {
 	boot_param->nmi_mode_addr = addr;

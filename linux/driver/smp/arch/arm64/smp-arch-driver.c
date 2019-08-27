@@ -97,6 +97,7 @@ static phys_addr_t ihk_smp_gic_rdist_pa[NR_CPUS];
  * mckernel/arch/arm64/kernel/include/irq.h::INTRID_xxx
  */
 #define INTRID_CPU_STOP	3
+#define INTRID_MULTI_INTR	6
 #define INTRID_MULTI_NMI	7
 
 /* ----------------------------------------------- */
@@ -1133,7 +1134,6 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 	}
 
 	/* mode == 0,    for MEMDUMP NMI */
-	/* mode == 1or2, for FREEZER NMI */
 	for (i = 0; i < os->cpu_info.n_cpus; ++i) {
 		int hwid = os->cpu_info.hw_ids[i];
 
@@ -1143,6 +1143,30 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 		ihk___smp_cross_call(&cpumask_of_cpu(hwid), INTRID_MULTI_NMI);
 #endif
 		dprintk("send to NMI CPU:%d\n", hwid);
+	}
+	return 0;
+}
+
+int smp_ihk_os_send_multi_intr(ihk_os_t ihk_os, void *priv, int mode)
+{
+	struct smp_os_data *os = priv;
+	int i, ret;
+
+	ret = ihk_smp_set_multi_intr_mode(ihk_os, priv, mode);
+	if (ret) {
+		return ret;
+	}
+
+	/* mode == 1or2, for FREEZER INTR */
+	for (i = 0; i < os->cpu_info.n_cpus; ++i) {
+		int hwid = os->cpu_info.hw_ids[i];
+
+#if KERNEL_VERSION(4, 1, 0) <= LINUX_VERSION_CODE
+		ihk___smp_cross_call(cpumask_of(hwid), INTRID_MULTI_INTR);
+#else
+		ihk___smp_cross_call(&cpumask_of_cpu(hwid), INTRID_MULTI_INTR);
+#endif
+		dprintk("send to INTR CPU:%d\n", hwid);
 	}
 	return 0;
 }
