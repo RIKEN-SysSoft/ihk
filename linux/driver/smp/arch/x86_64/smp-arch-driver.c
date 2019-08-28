@@ -348,12 +348,34 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 	}
 }
 
-#ifdef POSTK_DEBUG_ARCH_DEP_29
 unsigned long calc_ns_per_tsc(void)
 {
-	return 1000000000L / tsc_khz;
+	unsigned long msr, ret;
+	unsigned int ratio;
+	uint64_t op;
+	uint64_t eax;
+	uint64_t ebx;
+	uint64_t ecx;
+	uint64_t edx;
+
+	op = 0x80000007;
+	asm volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx),
+			"=d"(edx) : "a" (op));
+
+	if (edx & (1 << 8)) {
+		/* Invariant TSC supported */
+		/* ratio (100MHz) */
+		rdmsrl(MSR_PLATFORM_INFO, msr);
+		ratio = (msr >> 8) & 0xFF;
+
+		ret = 10000 / ratio;
+	}
+	else {
+		ret = 1000000000L / tsc_khz;
+	}
+
+	return ret;
 }
-#endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 
 unsigned long x2apic_is_enabled(void)
 {

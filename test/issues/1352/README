@@ -1,0 +1,37 @@
+【Issue#1352 動作確認】
+□ テスト内容
+1. ns_per_tscを用いるfutexの既存処理に影響しないことを確認
+	以下のLTPがPASSすることを確認
+	 - futex_wait01
+	 - futex_wait02
+	 - futex_wait03
+	 - futex_wait04
+	 - futex_wait_bitset01
+	 - futex_wait_bitset02
+	 - futex_wake01
+	 - futex_wake02
+	 - futex_wake03
+
+2. MSR_PLATFORM_INFO から取得したratioの確認 (x86_64アーキテクチャのみで実施)
+	MSR_PLATFORM_INFOから取得したratioと、kernelが保持している
+	tsc_khz の値を比較し、誤差が±0.01%の範囲内であることを確認する
+	また、ratioから算出されたns_per_tscが、tsc_khzから算出された
+	tscと一致することを確認する
+
+□ 実行手順
+1. 下記の手順でテストを実行する
+$ cd <ihk>
+$ patch -p0 < test/issues/1352/comp_ratio_to_tsc_khz.patch
+(build mckernel)
+$ cd test/issues/1352
+$ make test
+
+McKernelのインストール先や、OSTEST, LTPの配置場所は、
+$HOME/.mck_test_config を参照している
+.mck_test_config は、McKernelをビルドした際に生成されるmck_test_config.sample ファイルを
+$HOMEにコピーし、適宜編集する
+
+□ 実行結果
+x86_64_result.log aarch64_result.log 参照
+すべての項目をPASSしていることを確認。
+
