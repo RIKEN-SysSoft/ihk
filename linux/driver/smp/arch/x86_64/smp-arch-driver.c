@@ -348,12 +348,18 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 	}
 }
 
-#ifdef POSTK_DEBUG_ARCH_DEP_29
 unsigned long calc_ns_per_tsc(void)
 {
-	return 1000000000L / tsc_khz;
+	unsigned long msr;
+	unsigned int ratio;
+
+	rdmsrl(MSR_PLATFORM_INFO, msr);
+
+	/* ratio (100MHz) */
+	ratio = (msr >> 8) & 0xFF;
+
+	return 10000 / ratio;
 }
-#endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 
 unsigned long x2apic_is_enabled(void)
 {
