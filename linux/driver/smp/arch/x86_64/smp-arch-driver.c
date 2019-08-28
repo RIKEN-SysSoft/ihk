@@ -348,12 +348,10 @@ int smp_wakeup_secondary_cpu(int apicid, unsigned long start_eip)
 	}
 }
 
-#ifdef POSTK_DEBUG_ARCH_DEP_29
 unsigned long calc_ns_per_tsc(void)
 {
 	return 1000000000L / tsc_khz;
 }
-#endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 
 unsigned long x2apic_is_enabled(void)
 {
