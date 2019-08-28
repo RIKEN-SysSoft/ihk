@@ -1,0 +1,29 @@
+diff --git linux/driver/smp/arch/x86_64/smp-arch-driver.c linux/driver/smp/arch/x86_64/smp-arch-driver.c
+index 6838980..a3001eb 100644
+--- linux/driver/smp/arch/x86_64/smp-arch-driver.c
++++ linux/driver/smp/arch/x86_64/smp-arch-driver.c
+@@ -369,6 +369,24 @@ unsigned long calc_ns_per_tsc(void)
+ 		ratio = (msr >> 8) & 0xFF;
+ 
+ 		ret = 10000 / ratio;
++
++		/* THIS IS TEST-CODE FOR ISSUE_1352 */
++		/* check if ratio is nearly equal tsc_khz */
++		unsigned long ratio_khz = ratio * 100000;
++		unsigned long expect_tsc = 1000000000L / tsc_khz; // calc by tsc_khz
++		if ((ratio_khz > tsc_khz * 0.9999) && (ratio_khz < tsc_khz * 1.0001)) {
++			printk("TSC_OK: ratio is nearly equal to tsc_khz\n");
++		}
++		else {
++			printk("TSC_NG: ratio is NOT correct\n");
++		}
++		if (expect_tsc == ret) {
++			printk("TSC_OK: ns_per_tsc value is as expected\n");
++		}
++		else {
++			printk("TSC_NG: ns_per_tsc value is NOT as expected\n");
++		}
++
+ 	}
+ 	else {
+ 		ret = 1000000000L / tsc_khz;

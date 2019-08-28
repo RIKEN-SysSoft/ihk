@@ -884,7 +884,6 @@ int smp_wakeup_secondary_cpu(int hw_id, unsigned long start_eip)
 	return ihk_psci_ops->cpu_on(affi, start_eip);
 }
 
-#ifdef POSTK_DEBUG_ARCH_DEP_29
 unsigned long calc_ns_per_tsc(void)
 {
 	unsigned int freq;
@@ -897,7 +896,6 @@ unsigned long calc_ns_per_tsc(void)
 
 	return 1000000000000L / freq;
 }
-#endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 
 #ifdef CONFIG_ARM64_SVE
 unsigned long get_sve_default_vl(void)

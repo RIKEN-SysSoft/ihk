@@ -602,11 +602,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	os->param->msg_buffer_size = sizeof(struct ihk_kmsg_buf); /* Note that it's used for map_fixed_area */
 	dprintk("%s: msg_buffer=%lx,size=%ld\n", __FUNCTION__, os->param->msg_buffer, os->param->msg_buffer_size);
 
-#ifdef POSTK_DEBUG_ARCH_DEP_29
 	os->param->ns_per_tsc = calc_ns_per_tsc();
-#else	/* POSTK_DEBUG_ARCH_DEP_29 */
-	os->param->ns_per_tsc = 1000000000L / tsc_khz;
-#endif	/* POSTK_DEBUG_ARCH_DEP_29 */
 	getnstimeofday(&now);
 	os->param->boot_tsc = rdtsc();
 	os->param->boot_sec = now.tv_sec;
