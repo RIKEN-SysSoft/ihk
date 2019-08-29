@@ -133,6 +133,7 @@ struct smp_boot_param {
 	unsigned int dump_level;
 	int linux_default_huge_page_shift;
 	struct ihk_dump_page_set dump_page_set;
+	size_t thread_size;
 
 #ifdef ENABLE_PERF
 #define PERF_EXTRA_REG_MAX 10

@@ -366,6 +366,11 @@ int ihk_mc_get_linux_default_huge_page_shift(void)
 	return boot_param->linux_default_huge_page_shift;
 }
 
+size_t ihk_mc_get_thread_size(void)
+{
+	return boot_param->thread_size;
+}
+
 int ihk_mc_get_memory_chunk(int id,
 		unsigned long *start,
 		unsigned long *end,

@@ -27,6 +27,12 @@
 #include <linux/hugetlb.h>
 #include <asm/hw_irq.h>
 #include <asm/pgtable.h>
+#if defined(__aarch64__)
+#include <asm/memory.h> /* for THREAD_SIZE in arm64 */
+#endif
+#if defined(__x86_64__)
+#include <asm/page_types.h> /* for THREAD_SIZE in x86 */
+#endif
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
 #include <linux/autoconf.h>
 #endif
@@ -477,6 +483,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	os->param->linux_default_huge_page_shift =
 		huge_page_order(&smp_ihk_hstates[*smp_ihk_default_hstate_idx])
 		+ PAGE_SHIFT;
+	os->param->thread_size = THREAD_SIZE;
 	os->nr_numa_nodes = nr_numa_nodes;
 
 	ret = smp_ihk_arch_get_perf_event_map(os->param);
