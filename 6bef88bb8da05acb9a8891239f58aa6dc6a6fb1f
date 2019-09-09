@@ -1,0 +1,73 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f7ad8a92_6972a282",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 351,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-09-09T06:50:28Z",
+      "side": 1,
+      "message": "invariant tscを持たないモデルの場合も、このコードでいいのか教えて下さい。",
+      "range": {
+        "startLine": 351,
+        "startChar": 14,
+        "endLine": 351,
+        "endChar": 29
+      },
+      "revId": "6bef88bb8da05acb9a8891239f58aa6dc6a6fb1f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "39f130ca_f0d4788a",
+        "filename": "test/issues/1352/README",
+        "patchSetId": 2
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-09-09T06:50:28Z",
+      "side": 1,
+      "message": "calc_ns_per_tsc()の返り値をプリントアウトして、期待と同一か確認するテストを実施してください。",
+      "range": {
+        "startLine": 2,
+        "startChar": 0,
+        "endLine": 2,
+        "endChar": 7
+      },
+      "revId": "6bef88bb8da05acb9a8891239f58aa6dc6a6fb1f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0166f01c_f35698c8",
+        "filename": "test/issues/1352/README",
+        "patchSetId": 2
+      },
+      "lineNbr": 28,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-09-09T06:50:28Z",
+      "side": 1,
+      "message": "apolloでテストを実施してください。",
+      "range": {
+        "startLine": 28,
+        "startChar": 0,
+        "endLine": 28,
+        "endChar": 44
+      },
+      "revId": "6bef88bb8da05acb9a8891239f58aa6dc6a6fb1f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
