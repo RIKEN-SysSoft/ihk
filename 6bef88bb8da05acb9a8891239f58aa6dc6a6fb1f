@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "d390dffc_8e1d8522",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 351,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2019-09-09T07:38:05Z",
+      "side": 1,
+      "message": "op \u003d 0x80000007;\nasm volatile(\"cpuid\" : \"\u003da\"(eax),\"\u003db\"(ebx),\"\u003dc\"(ecx),\"\u003dd\"(edx) : \"a\" (op));\nif (edx \u0026 (1 \u003c\u003c 8)) {\n   rdmsrl(...);\n    ...\n} else {\n    return 1000000000L / tsc_khz\n}",
+      "parentUuid": "f7ad8a92_6972a282",
+      "range": {
+        "startLine": 351,
+        "startChar": 14,
+        "endLine": 351,
+        "endChar": 29
+      },
+      "revId": "6bef88bb8da05acb9a8891239f58aa6dc6a6fb1f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "39f130ca_f0d4788a",
         "filename": "test/issues/1352/README",
         "patchSetId": 2
