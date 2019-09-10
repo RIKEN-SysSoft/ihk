@@ -111,6 +111,7 @@ struct smp_boot_param {
 	unsigned long nmi_mode_addr;
 	unsigned long mckernel_do_futex;
 	unsigned long linux_kernel_pgt_phys;
+	unsigned long page_offset_base;
 
 	unsigned long dma_address;
 	unsigned long ident_table;

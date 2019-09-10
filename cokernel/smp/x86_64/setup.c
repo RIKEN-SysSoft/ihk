@@ -25,6 +25,7 @@ extern void init_boot_processor_local(void);
 extern struct ihk_kmsg_buf *kmsg_buf;
 extern int no_turbo;
 
+unsigned long linux_page_offset_base;
 unsigned long x86_kernel_phys_base;
 unsigned long ap_trampoline = 0;
 unsigned int ihk_ikc_irq = 0;
@@ -48,6 +49,7 @@ void arch_start(unsigned long param_addr, unsigned long phys_address,
 	ihk_ikc_irq = boot_param->ihk_ikc_irq;
 	bootstrap_mem_end = boot_param->bootstrap_mem_end;
 	boot_param_size = boot_param->param_size;
+	linux_page_offset_base = boot_param->page_offset_base;
 
 	/* Set up initial (temporary) stack */
 	asm volatile("movq %0, %%rsp" : : "r" (stack + sizeof(stack)));
