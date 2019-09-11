@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "011323c9_47389e88",
+        "filename": "test/issues/1359/1359.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:15:05Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define _OKNG(verb, cond, fmt, args...) do {                     \\\n+\tif (cond) {                                              \\\n+\t\tif (verb)                                        \\\n+\t\t\tprintf(\"[OK] \" fmt \"\\n\", ##args);        \\\n+\t} else {                                                 \\\n+\t\tprintf(\"[NG] \" fmt \": %d\\n\", ##args, ret);       \\\n+\t\tgoto out;\t\t\t\t\t \\\n+\t}                                                        \\\n+} while (0)",
+      "revId": "bbc4ddedfec16e91027ef05d9c86d35283b72ba4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a6d52e94_6ef04475",
+        "filename": "test/issues/1359/1359.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:15:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tsprintf(cmd, \"taskset -c 0 insmod %s/kmod/ihk-smp-arm64.ko ihk_ikc_irq_core\u003d0\", prefix);",
+      "revId": "bbc4ddedfec16e91027ef05d9c86d35283b72ba4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
