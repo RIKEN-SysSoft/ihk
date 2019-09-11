@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3c5a1169_b6842c2e",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 908,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:05:10Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tquery_mem_chunks \u003d calloc(num_mem_chunks, sizeof(struct ihk_mem_chunk));",
+      "revId": "83da3d8365c6a4284dc960606784ba8bff27c450",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "25a79ccd_744f1e06",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 909,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:05:10Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tCHKANDJUMP(query_mem_chunks \u003d\u003d NULL, -ENOMEM, \"failed to allocate query_mem_chunks\\n\");",
+      "revId": "83da3d8365c6a4284dc960606784ba8bff27c450",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "69c92c7b_edfe6075",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1489,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:05:10Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tquery_mem_chunks \u003d calloc(num_mem_chunks, sizeof(struct ihk_mem_chunk));",
+      "revId": "83da3d8365c6a4284dc960606784ba8bff27c450",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fbead607_06256bef",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1490,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:05:10Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tCHKANDJUMP(query_mem_chunks \u003d\u003d NULL, -ENOMEM, \"failed to allocate query_mem_chunks\\n\");",
+      "revId": "83da3d8365c6a4284dc960606784ba8bff27c450",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
