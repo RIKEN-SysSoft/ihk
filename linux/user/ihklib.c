@@ -898,13 +898,6 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
 		"too many memory chunks specified\n");
 
-	if ((fd = ihklib_device_open(index)) < 0) {
-		eprintf("%s: error: ihklib_device_open\n",
-			__func__);
-		ret = fd;
-		goto out;
-	}
-
 	CHKANDJUMP(!mem_chunks || !num_mem_chunks, -EINVAL,
 		"invalid format\n");
 
@@ -925,10 +918,27 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 	}
 
 	for (i = 0; i < num_mem_chunks; i++) {
-		req.sizes[i] = (size_t)mem_chunks[i].size;
+		if (mem_chunks[i].size == -1UL) {
+			/* Special case for releasing all memory */
+			struct ihk_mem_chunk query_mem_chunks[1] = {
+				[0].numa_node_number = mem_chunks[i].numa_node_number
+			};
+
+			ihk_query_mem(index, query_mem_chunks, 1);
+			req.sizes[i] = (size_t)query_mem_chunks[0].size;
+		} else {
+			req.sizes[i] = (size_t)mem_chunks[i].size;
+		}
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;
+
+	if ((fd = ihklib_device_open(index)) < 0) {
+		eprintf("%s: error: ihklib_device_open\n",
+			__func__);
+		ret = fd;
+		goto out;
+	}
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RELEASE_MEM, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
@@ -1468,13 +1478,6 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
 		"too many memory chunks specified\n");
 
-	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
-			__func__);
-		ret = fd;
-		goto out;
-	}
-
 	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
 	if (!req.sizes) {
 		eprintf("%s: error: allocating request sizes\n",
@@ -1492,10 +1495,28 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	}
 
 	for (i = 0; i < num_mem_chunks; i++) {
-		req.sizes[i] = (size_t)mem_chunks[i].size;
+		if (mem_chunks[i].size == -1UL) {
+			/* Special case for releasing all memory */
+			struct ihk_mem_chunk query_mem_chunks[1] = {
+				[0].numa_node_number = mem_chunks[i].numa_node_number
+			};
+
+			printf("%s: size: %ld\n", __func__, query_mem_chunks[0].size);
+			ihk_os_query_mem(index, query_mem_chunks, 1);
+			req.sizes[i] = (size_t)query_mem_chunks[i].size;
+		} else {
+			req.sizes[i] = (size_t)mem_chunks[i].size;
+		}
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;
+
+	if ((fd = ihklib_os_open(index)) < 0) {
+		eprintf("%s: error: ihklib_os_open\n",
+			__func__);
+		ret = fd;
+		goto out;
+	}
 
 	ret_ioctl = ioctl(fd, IHK_OS_RELEASE_MEM, &req);
 	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
