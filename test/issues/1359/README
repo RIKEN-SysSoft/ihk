@@ -1,0 +1,9 @@
+===========
+How to test
+===========
+(1) Make sure the following line in $HOME/.mck_test_config points to
+    the correct directory
+
+    MCK_DIR=<mckernel_install_path>
+
+(2) make test
