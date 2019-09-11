@@ -1,0 +1,106 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7f899bee_11e5b76d",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 908,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:11:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tquery_mem_chunks \u003d calloc(num_mem_chunks, sizeof(struct ihk_mem_chunk));",
+      "revId": "26bc22e69fe12334a78d1a9bd0ec50f99ccc0170",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "59ea6e01_d776b42e",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 909,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:11:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tCHKANDJUMP(query_mem_chunks \u003d\u003d NULL, -ENOMEM, \"failed to allocate query_mem_chunks\\n\");",
+      "revId": "26bc22e69fe12334a78d1a9bd0ec50f99ccc0170",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b9791489_e926dfe3",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1489,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:11:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tquery_mem_chunks \u003d calloc(num_mem_chunks, sizeof(struct ihk_mem_chunk));",
+      "revId": "26bc22e69fe12334a78d1a9bd0ec50f99ccc0170",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0ac4572d_5521ca5b",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1490,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:11:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tCHKANDJUMP(query_mem_chunks \u003d\u003d NULL, -ENOMEM, \"failed to allocate query_mem_chunks\\n\");",
+      "revId": "26bc22e69fe12334a78d1a9bd0ec50f99ccc0170",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "202462be_4502f984",
+        "filename": "test/issues/1359/1359.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:11:16Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define _OKNG(verb, cond, fmt, args...) do {                     \\\n+\tif (cond) {                                              \\\n+\t\tif (verb)                                        \\\n+\t\t\tprintf(\"[OK] \" fmt \"\\n\", ##args);        \\\n+\t} else {                                                 \\\n+\t\tprintf(\"[NG] \" fmt \": %d\\n\", ##args, ret);       \\\n+\t\tgoto out;\t\t\t\t\t \\\n+\t}                                                        \\\n+} while (0)",
+      "revId": "26bc22e69fe12334a78d1a9bd0ec50f99ccc0170",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "061ea423_d4a23504",
+        "filename": "test/issues/1359/1359.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-11T04:11:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tsprintf(cmd, \"taskset -c 0 insmod %s/kmod/ihk-smp-arm64.ko ihk_ikc_irq_core\u003d0\", prefix);",
+      "revId": "26bc22e69fe12334a78d1a9bd0ec50f99ccc0170",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
