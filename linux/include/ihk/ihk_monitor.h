@@ -21,6 +21,7 @@ struct ihk_os_cpu_monitor {
 #define IHK_OS_MONITOR_KERNEL_FROZEN 9
 #define IHK_OS_MONITOR_KERNEL_THAW 10
 #define IHK_OS_MONITOR_PANIC 99
+#define IHK_OS_MONITOR_ALLOW_THAW_REQUEST (1 << 31)
 	int status_bak;
 	unsigned long counter;
 	unsigned long ocounter;
