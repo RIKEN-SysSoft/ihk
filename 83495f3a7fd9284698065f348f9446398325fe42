@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "217d7dc9_9bae8e93",
+        "filename": "test/issues/1359/1359.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-26T04:21:05Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define _OKNG(verb, cond, fmt, args...) do {                     \\\n+\tif (cond) {                                              \\\n+\t\tif (verb)                                        \\\n+\t\t\tprintf(\"[OK] \" fmt \"\\n\", ##args);        \\\n+\t} else {                                                 \\\n+\t\tprintf(\"[NG] \" fmt \": %d\\n\", ##args, ret);       \\\n+\t\tgoto out;\t\t\t\t\t \\\n+\t}                                                        \\\n+} while (0)",
+      "revId": "83495f3a7fd9284698065f348f9446398325fe42",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c1ac059f_2a10451b",
+        "filename": "test/issues/1359/1359.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 53,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-26T04:21:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tsprintf(cmd, \"taskset -c 0 insmod %s/ihk-smp-arm64.ko ihk_ikc_irq_core\u003d0\", prefix_modules);",
+      "revId": "83495f3a7fd9284698065f348f9446398325fe42",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "de82a7fc_790bd941",
+        "filename": "test/issues/1359/1359.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 109,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-26T04:21:05Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I$",
+      "revId": "83495f3a7fd9284698065f348f9446398325fe42",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8647b886_cd10b0f1",
+        "filename": "test/issues/1359/Makefile",
+        "patchSetId": 5
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-09-26T04:21:05Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+CPPFLAGS \u003d -I$(PREFIX_USR)/include -DPREFIX_USR\u003d$(PREFIX_USR) -DPREFIX_MODULES\u003d$(PREFIX_MODULES) -DPREFIX_IMAGES\u003d$(PREFIX_IMAGES) $",
+      "revId": "83495f3a7fd9284698065f348f9446398325fe42",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
