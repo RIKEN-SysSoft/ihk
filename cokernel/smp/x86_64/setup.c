@@ -613,7 +613,7 @@ unsigned long ihk_mc_raw_event_map(unsigned long raw_event)
 
 int ihk_mc_validate_event(unsigned long hw_config)
 {
-	return (hw_config <= 0);
+	return (hw_config != 0);
 }
 #else // ENABLE_PERF
 int ihk_mc_get_extra_reg_id(unsigned long hw_config, unsigned long hw_config_ext)
