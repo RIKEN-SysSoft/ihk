@@ -42,8 +42,27 @@ int loglevel = IHKLIB_LOGLEVEL_ERR;
 #define dprintf(fmt, args...) do {	\
 	printf(fmt, ##args);		\
 } while (0)
+
+#define dprintk(fmt, args...) do {					\
+	char contents[4096 - 256];					\
+	int fd;								\
+	ssize_t len;							\
+	ssize_t offset = 0;						\
+	if (geteuid()) {						\
+		break;							\
+	}								\
+	sprintf(contents, fmt, ##args);					\
+	fd = open("/dev/kmsg", O_WRONLY);				\
+	len = strlen(contents) + 1;					\
+	while (offset < len) {						\
+		offset += write(fd, contents + offset, len - offset);	\
+	}								\
+	close(fd);							\
+} while (0)
+
 #else
 #define dprintf(fmt, args...) do {  } while (0)
+#define dprintk(fmt, args...) do {  } while (0)
 #endif
 
 #define eprintf(fmt, args...) do {		\
@@ -51,6 +70,7 @@ int loglevel = IHKLIB_LOGLEVEL_ERR;
 		fprintf(stderr, fmt, ##args);	\
 	}					\
 } while (0)
+
 
 #define PHYSMEM_NAME_SIZE 32
 
@@ -630,6 +650,7 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL, "too many cpus requested\n");
 
 	if ((fd = ihklib_device_open(index)) < 0) {
@@ -657,6 +678,7 @@ int ihk_get_num_reserved_cpus(int index)
 	int ret = 0;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
 		eprintf("%s: error: ihklib_device_open\n",
 			__func__);
@@ -680,6 +702,7 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if (num_cpus > IHK_MAX_NUM_CPUS) {
 		eprintf("%s: error: too many cpus (%d) requested\n",
 			__func__, num_cpus);
@@ -733,6 +756,7 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
 		"too many cpus specified\n");
 
@@ -764,6 +788,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL, "too many memory chunks requested\n");
 
 	if ((fd = ihklib_device_open(index)) < 0) {
@@ -815,6 +840,7 @@ int ihk_get_num_reserved_mem_chunks(int index)
 	int fd = -1;
 	struct ihk_ioctl_mem_desc req = { 0 };
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
 		eprintf("%s: error: ihklib_device_open\n",
 			__func__);
@@ -843,6 +869,7 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 	int i;
 	struct ihk_ioctl_mem_desc req = { 0 };
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
 		eprintf("%s: error: ihklib_device_open\n",
 			__func__);
@@ -896,6 +923,7 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 	int fd = -1;
 	struct ihk_mem_chunk *query_mem_chunks = NULL;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
 		"too many memory chunks specified\n");
 
@@ -964,6 +992,7 @@ int ihk_create_os(int index)
 	int ret = 0, ret_ioctl;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
 		eprintf("%s: error: ihklib_device_open\n",
 			__func__);
@@ -990,6 +1019,7 @@ int ihk_get_num_os_instances(int index)
 	int num_os_instances = 0;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
 		eprintf("%s: error: ihklib_device_open\n",
 			__func__);
@@ -1025,6 +1055,7 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 	struct dirent *direp;
 	int num_os_instances = 0;
 
+	dprintk("%s: enter\n", __func__);
 	dir = opendir(PATH_DEV);
 	CHKANDJUMP(dir == NULL, -EINVAL, "opendir failed\n");
 
@@ -1054,6 +1085,8 @@ int ihk_destroy_os(int dev_index, int os_index)
 {
 	int ret = 0, ret_ioctl;
 	int fd = -1;
+
+	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_device_open(dev_index)) == -1) {
 		eprintf("%s: error: ihklib_device_open\n",
@@ -1103,6 +1136,7 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
 		"too many cpus requested\n");
 
@@ -1133,6 +1167,7 @@ int ihk_os_get_num_assigned_cpus(int index)
 	int ret = 0;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1156,6 +1191,7 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if (num_cpus > IHK_MAX_NUM_CPUS) {
 		eprintf("%s: error: too many cpus (%d) requested\n",
 			__func__, num_cpus);
@@ -1209,6 +1245,7 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
 		"too many cpus specified\n");
 
@@ -1240,6 +1277,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	struct ihk_ioctl_ikc_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
 		"too many cpus specified\n");
 
@@ -1290,6 +1328,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	struct ihk_ioctl_ikc_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
 		"too many cpus specified\n");
 
@@ -1347,6 +1386,7 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL, "too many memory chunks requested\n");
 
 	if ((fd = ihklib_os_open(index)) < 0) {
@@ -1399,6 +1439,7 @@ int ihk_os_get_num_assigned_mem_chunks(int index)
 	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1426,6 +1467,7 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_c
 	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1482,6 +1524,7 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	int fd = -1;
 	struct ihk_mem_chunk *query_mem_chunks = NULL;
 
+	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
 		"too many memory chunks specified\n");
 
@@ -1547,6 +1590,7 @@ int ihk_os_get_eventfd(int index, int type)
 	int ret = 0, ret_ioctl;
 	struct ihk_os_ioctl_eventfd_desc desc;
 
+	dprintk("%s: enter\n", __func__);
 	memset(&desc, 0, sizeof(desc));
 
 	if ((fd = ihklib_os_open(index)) < 0) {
@@ -1575,6 +1619,7 @@ int ihk_os_get_eventfd(int index, int type)
 	if (fd != -1) {
 		close(fd);
 	}
+	dprintk("%s: returning %d\n", __func__, ret);
 	return ret;
 }
 
@@ -1583,6 +1628,7 @@ int ihk_os_load(int index, char* fn)
 	int ret = 0, ret_ioctl;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1606,6 +1652,7 @@ int ihk_os_kargs(int index, char* kargs)
 	int ret = 0, ret_ioctl;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1629,6 +1676,7 @@ int ihk_os_boot(int index)
 	int i;
 	char query_result[1024];
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1685,6 +1733,8 @@ int ihk_os_shutdown(int index)
 	int ret = 0, ret_ioctl;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
+
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1693,13 +1743,14 @@ int ihk_os_shutdown(int index)
 	}
 
 	ret_ioctl = ioctl(fd, IHK_OS_SHUTDOWN, 0);
-    CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
  out:
 	if (fd != -1) {
 		close(fd);
 	}
 	return ret;
+
 }
 
 int ihk_os_get_status(int index)
@@ -1707,6 +1758,8 @@ int ihk_os_get_status(int index)
 	int ret = IHK_STATUS_INACTIVE, ret_ioctl;
 	int fd = -1;
 	char query_result[1024];
+
+	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -1757,6 +1810,7 @@ int ihk_os_get_status(int index)
 	if (fd != -1) {
 		close(fd);
 	}
+	dprintk("%s: returning %d\n", __func__, ret);
 	return ret;
 }
 
@@ -1764,6 +1818,8 @@ int ihk_os_get_kmsg_size(int index)
 {
 	int ret = 0;
 	int fd = -1;
+
+	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -1785,6 +1841,8 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 {
 	int ret = 0;
 	int fd = -1;
+
+	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -1810,6 +1868,8 @@ int ihk_os_clear_kmsg(int index)
 	int ret = 0, ret_ioctl;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
+
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1831,6 +1891,8 @@ int ihk_os_get_num_numa_nodes(int index)
 {
 	int ret = 0, ret_ioctl;
 	int fd = -1;
+
+	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -1867,6 +1929,8 @@ int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,
 	int len = 0;
 	struct stat sb;
 	FILE *fp = NULL;
+
+	dprintk("%s: enter\n", __func__);
 
 	memset(result, 0, sz_result);
 
@@ -1936,6 +2000,8 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
 	int num_mem_chunks = num_numa_nodes;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
+
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1974,6 +2040,7 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
 int ihk_os_query_total_mem(int index, unsigned long *result,
 			   int num_numa_nodes)
 {
+	dprintk("%s: enter\n", __func__);
 	return ihklib_os_query_mem(index, result, num_numa_nodes,
 				   IHKLIB_OS_QUERY_MEM_TOTAL);
 }
@@ -1981,6 +2048,7 @@ int ihk_os_query_total_mem(int index, unsigned long *result,
 int ihk_os_query_free_mem(int index, unsigned long *result,
 		      int num_numa_nodes)
 {
+	dprintk("%s: enter\n", __func__);
 	return ihklib_os_query_mem(index, result, num_numa_nodes,
 				   IHKLIB_OS_QUERY_MEM_FREE);
 }
@@ -1989,6 +2057,8 @@ int ihk_os_get_num_pagesizes(int index)
 {
 	int ret = 0;
 	int fd = -1;
+
+	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -2003,6 +2073,7 @@ int ihk_os_get_num_pagesizes(int index)
 	if (fd != -1) {
 		close(fd);
 	}
+	dprintk("%s: returning %d\n", __func__, ret);
 	return ret;
 }
 
@@ -2011,6 +2082,8 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 	int ret = 0;
 	int i;
 	int fd = -1;
+
+	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -2032,6 +2105,7 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 	if (fd != -1) {
 		close(fd);
 	}
+	dprintk("%s: returning %d\n", __func__, ret);
 	return ret;
 }
 
@@ -2039,12 +2113,15 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
 		     size_t size_rusage)
 {
+	dprintk("%s: enter\n", __func__);
 	int ret = 0, ret_ioctl;
 	struct mcctrl_ioctl_getrusage_desc desc = {
 		.rusage = rusage,
 		.size_rusage = size_rusage,
 	};
 	int fd = -1;
+
+	dprintf("%s: 1\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -2060,13 +2137,14 @@ int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
 	if (fd != -1) {
 		close(fd);
 	}
+	dprintk("%s: returning %d\n", __func__, ret);
 	return ret;
 }
 #else
 int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
 		     size_t size_rusage)
 {
-	eprintf("Specify --enable-rusage when configuring.\n");
+	dprintf("Specify --enable-rusage when configuring.\n");
 	return -ENOSYS;
 }
 #endif
@@ -2075,6 +2153,8 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 {
 	int ret = 0, ret_ioctl;
 	int fd = -1;
+
+	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -2094,6 +2174,7 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 	if (fd != -1) {
 		close(fd);
 	}
+	dprintk("%s: returning %d\n", __func__, ret);
 	return ret;
 }
 
@@ -2102,6 +2183,7 @@ int ihk_os_perfctl(int index, int comm)
 	int ret = 0, ret_ioctl;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -2129,6 +2211,7 @@ int ihk_os_perfctl(int index, int comm)
 	if (fd != -1) {
 		close(fd);
 	}
+	dprintk("%s: returning %d\n", __func__, ret);
 	return ret;
 }
 
@@ -2137,6 +2220,7 @@ int ihk_os_getperfevent(int index, unsigned long *counter, int n)
 	int ret = 0, ret_ioctl;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -2160,6 +2244,7 @@ int ihk_os_freeze(unsigned long *os_set, int n)
 	int index;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	for (index = 0; index < n; index++) {
 		if (*(os_set + index / 64) & (1ULL << (index % 64))) {
 			if ((fd = ihklib_os_open(index)) < 0) {
@@ -2189,6 +2274,7 @@ int ihk_os_thaw(unsigned long *os_set, int n)
 	int index;
 	int fd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	for (index = 0; index < n; index++) {
 		if (*(os_set + index / 64) & (1ULL << (index % 64))) {
 			if ((fd = ihklib_os_open(index)) < 0) {
@@ -2243,6 +2329,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	char physmem_name[PHYSMEM_NAME_SIZE];
 	int osfd = -1;
 
+	dprintk("%s: enter\n", __func__);
 	dprintf("%s: index=%d,dump_file=%s,dump_level=%d,interactive=%d\n",
 		__func__, index, dump_file, dump_level, interactive);
 
@@ -2468,6 +2555,7 @@ out:
 #else /* ENABLE_MEMDUMP */
 int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interactive)
 {
+	dprintk("%s: enter\n", __func__);
 	fprintf(stderr, "dump is not supported.\n");
 	return -ENOSYS;
 }
@@ -2479,6 +2567,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
  */
 int ihk_set_loglevel(enum IHKLIB_LOGLEVEL level)
 {
+	dprintk("%s: enter\n", __func__);
 	loglevel = level;
 	return 0;
 }
