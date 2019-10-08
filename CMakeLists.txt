@@ -42,6 +42,24 @@ elseif (BUILD_TARGET STREQUAL "smp-arm64")
 		set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DPOSTK_DEBUG_ARCH_DEP_${i} -DPOSTK_DEBUG_TEMP_FIX_${i}")
 	endforeach()
 	set(ARCH "arm64")
+
+	# for NMI
+	execute_process(COMMAND awk -F= "$1 == \"CONFIG_ARM_GIC_V3\" { print $2; exit; }" "${KERNEL_DIR}/.config"
+			OUTPUT_VARIABLE CONFIG_ARM_GIC_V3 OUTPUT_STRIP_TRAILING_WHITESPACE)
+	execute_process(COMMAND bash -c "gawk '/CPU implementer/ { print \$4; exit; }' /proc/cpuinfo"
+			OUTPUT_VARIABLE CPU_IMPLEMENTER OUTPUT_STRIP_TRAILING_WHITESPACE)
+	execute_process(COMMAND bash -c "gawk '/CPU architecture/ { print \$3; exit; }' /proc/cpuinfo"
+			OUTPUT_VARIABLE CPU_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+	if(CONFIG_ARM_GIC_V3 STREQUAL "y")
+		if(CPU_IMPLEMENTER STREQUAL "0x46" AND CPU_ARCH STREQUAL "8")
+			add_definitions(-DCONFIG_HAS_NMI=y)
+			message("CONFIG_HAS_NMI is defined")
+		endif()
+	else(CONFIG_ARM_GIC_V3 STREQUAL "y")
+		message(FATAL_ERROR "Host kernel must have GIC v3 enabled")
+	endif(CONFIG_ARM_GIC_V3 STREQUAL "y")
+
 endif()
 
 set(ENABLE_MEMDUMP AUTO CACHE STRING "Enable memory dump support")
