@@ -55,7 +55,7 @@ int smp_ihk_unmap_memory(ihk_device_t ihk_dev, void *priv,
 int smp_ihk_arch_init(void);
 int ihk_smp_arch_symbols_init(void);
 int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os);
-int ihk_smp_reset_cpu(int hw_id);
+int ihk_smp_reset_cpu(ihk_os_t ihk_os, void *priv, int hw_id);
 void smp_ihk_arch_exit(void);
 int smp_ihk_arch_vmap_area_taken(void);
 int smp_ihk_os_send_multi_intr(ihk_os_t ihk_os, void *priv, int mode);
