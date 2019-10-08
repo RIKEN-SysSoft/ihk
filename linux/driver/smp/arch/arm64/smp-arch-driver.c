@@ -2290,7 +2290,7 @@ int smp_ihk_os_check_ikc_map(ihk_os_t ihk_os)
 #endif
 }
 
-int ihk_smp_reset_cpu(int hw_id)
+int ihk_smp_reset_cpu(ihk_os_t ihk_os, void *priv, int hw_id)
 {
 	int ret = 0;
 	int i;
@@ -2319,12 +2319,24 @@ int ihk_smp_reset_cpu(int hw_id)
 
 		ret = ihk_psci_ops->affinity_info(affi, 0);
 		if (ret == PSCI_0_2_AFFINITY_LEVEL_ON) {
+#ifdef CONFIG_HAS_NMI
+			ret = ihk_smp_set_nmi_mode(ihk_os, priv, 3);
+			if (ret) {
+				return ret;
+			}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+			ihk___smp_cross_call(cpumask_of(hwid), INTRID_MULTI_NMI);
+#else
+			ihk___smp_cross_call(&cpumask_of_cpu(hwid), INTRID_MULTI_NMI);
+#endif
+#else
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
 			ihk___smp_cross_call(cpumask_of(hw_id), INTRID_CPU_STOP);
 #else
 			ihk___smp_cross_call(&cpumask_of_cpu(hw_id), INTRID_CPU_STOP);
 #endif
 		}
+#endif
 
 		ret = ihk_smp_cpu_kill(hw_id, affi);
 		break;

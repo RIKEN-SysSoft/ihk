@@ -1112,7 +1112,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		if (ihk_smp_cpus[i].os != ihk_os)
 			continue;
 
-		ret = ihk_smp_reset_cpu(ihk_smp_cpus[i].hw_id);
+		ret = ihk_smp_reset_cpu(ihk_os, priv, ihk_smp_cpus[i].hw_id);
 		ihk_smp_cpus[i].status = IHK_SMP_CPU_AVAILABLE;
 		ihk_smp_cpus[i].os = (ihk_os_t)0;
 
@@ -1727,7 +1727,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 #endif
 		int lwk_cpu;
 
-		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
+		ret = ihk_smp_reset_cpu(ihk_os, priv, ihk_smp_cpus[cpu].hw_id);
 		CORE_CLR(ihk_smp_cpus[cpu].hw_id, os->cpu_hw_ids_map);
 
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
@@ -3478,7 +3478,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		ihk_smp_cpus[cpu].status = IHK_SMP_CPU_OFFLINED;
 		ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 		
-		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
+		//ret = ihk_smp_reset_cpu(NULL, NULL, ihk_smp_cpus[cpu].hw_id);
 
 		dprintk(KERN_INFO "IHK-SMP: CPU %d offlined successfully, HWID: %d\n",
 		       ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
@@ -4268,7 +4268,7 @@ static int smp_ihk_exit(ihk_device_t ihk_dev, void *priv)
 			continue;
 		}
 
-		ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
+		ret = ihk_smp_reset_cpu(NULL, NULL, ihk_smp_cpus[cpu].hw_id);
 
 		if (smp_ihk_online_cpu(cpu) != 0) {
 			continue;
