@@ -362,18 +362,27 @@ unsigned long calc_ns_per_tsc(void)
 	asm volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx),
 			"=d"(edx) : "a" (op));
 
-	if (edx & (1 << 8)) {
-		/* Invariant TSC supported */
-		/* ratio (100MHz) */
-		rdmsrl(MSR_PLATFORM_INFO, msr);
-		ratio = (msr >> 8) & 0xFF;
-
-		ret = 10000 / ratio;
-	}
-	else {
-		ret = 1000000000L / tsc_khz;
+	/* Is Invariant TSC supported? */
+	if (!(edx & (1 << 8))) {
+		goto not_found;
 	}
 
+	rdmsrl(MSR_PLATFORM_INFO, msr);
+	ratio = (msr >> 8) & 0xFF;
+
+	/* Zero is returned for some virtual machines */
+	if (ratio == 0) {
+		goto not_found;
+	}
+
+	/* Unit of ratio is 100MHz */
+	ret = 10000 / ratio;
+
+	goto out;
+
+not_found:
+	ret = 1000000000L / tsc_khz;
+out:
 	return ret;
 }
 
