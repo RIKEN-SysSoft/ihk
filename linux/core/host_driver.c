@@ -1012,6 +1012,26 @@ static int __ihk_os_get_cpu_usage(struct ihk_host_linux_os_data *data, unsigned 
 	return 0;
 }
 
+static int __ihk_os_read_kaddr(struct ihk_host_linux_os_data *data, void __user *arg)
+{
+	struct ihk_os_read_kaddr_desc desc;
+	unsigned long phys;
+
+	if (copy_from_user(&desc, arg, sizeof(desc))) {
+		return -EFAULT;
+	}
+
+	if (data->ops->vtop(data, data->priv, desc.kaddr, &phys) != 0) {
+		return -EFAULT;
+	}
+
+	if (copy_to_user(desc.ubuf, phys_to_virt(phys), desc.len)) {
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 /** \brief Handles ioctl calls with the additional request number */
 static long __ihk_os_ioctl_call_aux(struct ihk_host_linux_os_data *os,
                                     unsigned int request, unsigned long arg,
@@ -1056,6 +1076,7 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_GET_USAGE:
 	case IHK_OS_GET_CPU_USAGE:
 	case IHK_OS_GET_NUM_CPUS:
+	case IHK_OS_READ_KADDR:
 		break;
 	default:
 		if (request >= IHK_OS_DEBUG_START && 
@@ -1238,6 +1259,10 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 	case IHK_OS_GET_CPU_USAGE:
 		ret = __ihk_os_get_cpu_usage(data, arg);
 		dkprintf("__ihk_os_get_cpu_usage  (ret=%d)\n",ret);
+		break;
+
+	case IHK_OS_READ_KADDR:
+		ret = __ihk_os_read_kaddr(data, (void __user *)arg);
 		break;
 
 	default:

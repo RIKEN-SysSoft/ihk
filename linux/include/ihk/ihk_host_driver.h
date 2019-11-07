@@ -358,6 +358,10 @@ struct ihk_os_ops {
 	/** \brief panic notifier
 	 **/
 	void (*panic_notifier)(ihk_os_t ihk_os, void *priv);
+
+	/** \brief Virtual to physical translation
+	 **/
+	int (*vtop)(ihk_os_t, void *priv, unsigned long virt, unsigned long *phys);
 };
 
 struct ihk_register_os_data;
