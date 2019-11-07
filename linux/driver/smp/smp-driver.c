@@ -764,6 +764,29 @@ static int smp_ihk_os_map_lwk(unsigned long phys)
 	return 0;
 }
 
+static int smp_ihk_os_vtop(ihk_os_t ihk_os,
+	void *priv, unsigned long virt, unsigned long *phys)
+{
+	struct smp_os_data *os = priv;
+
+	/* Part of LWK kernel image? (E.g., global variables) */
+	if (virt > IHK_SMP_MAP_KERNEL_START && virt < MODULES_END) {
+		unsigned long base_phys = (os->bootstrap_mem_start +
+				IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+
+		*phys = base_phys + (virt - IHK_SMP_MAP_KERNEL_START);
+		dprintf("%s: 0x%lx -> 0x%lx (IHK_SMP_MAP_KERNEL_START)\n",
+			__func__, virt, *phys);
+	}
+	else {
+		*phys = virt_to_phys((void *)virt);
+		dprintf("%s: 0x%lx -> 0x%lx (dynamic)\n",
+			__func__, virt, *phys);
+	}
+
+	return 0;
+}
+
 static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
 	int ret;
@@ -2723,6 +2746,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.freeze = smp_ihk_os_freeze,
 	.thaw = smp_ihk_os_thaw,
 	.panic_notifier = smp_ihk_os_panic_notifier,
+	.vtop = smp_ihk_os_vtop,
 };
 
 static struct ihk_register_os_data builtin_os_reg_data = {
