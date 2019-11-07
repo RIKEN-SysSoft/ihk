@@ -67,6 +67,7 @@
 #define IHK_OS_DETECT_HUNGUP          0x112a36
 #define IHK_OS_GET_BUILDID            0x112a37
 #define IHK_OS_GET_NUM_CPUS           0x112a38
+#define IHK_OS_READ_KADDR             0x112a39
 
 #define IHK_OS_DEBUG_START            0x122a00
 #define IHK_OS_DEBUG_END              0x122aff
@@ -159,6 +160,13 @@ struct ihk_ikc_req {
 struct ihk_os_ioctl_eventfd_desc {
 	int fd;
 	enum ihk_os_eventfd_type type;
+};
+
+/* Used by mcinspect */
+struct ihk_os_read_kaddr_desc {
+	unsigned long kaddr;
+	unsigned long len;
+	void *ubuf;
 };
 
 /* Used by IHK-core and ihklib */
