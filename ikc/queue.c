@@ -271,6 +271,7 @@ struct ihk_ikc_free_packet *ihk_ikc_alloc_packet(
 		list_del(&p->list);
 		break;
 	}
+	ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
 
 	/* No packet? Allocate new */
 	if (!p) {
@@ -288,7 +289,6 @@ retry_alloc:
 			__FUNCTION__, p, c, c == c->master ? "(master)" : "");
 	}
 
-	ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
 	return p;
 }
 
