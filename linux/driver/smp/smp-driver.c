@@ -10,6 +10,9 @@
  * Code partially based on IHK Builtin driver written by
  * Taku SHIMOSAWA <shimosawa@is.s.u-tokyo.ac.jp>
  */
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/elf.h>
 #include <linux/file.h>
