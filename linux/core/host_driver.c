@@ -18,6 +18,7 @@
  */
 #include <linux/sched.h>
 #include <linux/mm.h>
+#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/module.h>
