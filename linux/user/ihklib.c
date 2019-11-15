@@ -96,6 +96,8 @@ struct namespace_file namespace_files[] = {
 	{ .nstype = 0, .name = NULL, .fd = -1 }
 };
 
+struct ihklib_reserve_mem_conf reserve_mem_conf;
+
 static int snprintf_realloc(char **str, size_t *size,
 		size_t offset, const char *format, ...)
 {
@@ -782,21 +784,42 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 	return ret;
 }
 
-int ihk_reserve_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks)
+int ihk_reserve_mem_conf(int index, int key, unsigned int value)
+{
+	if (key == IHK_RESERVE_MEM_TOTAL) {
+		reserve_mem_conf.total = 1;
+		reserve_mem_conf.variance_limit = value;
+	}
+	return 0;
+}
+
+int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
+		    int num_mem_chunks/*, int flags*/)
 {
 	int ret = 0, ret_ioctl, i;
 	struct ihk_ioctl_mem_desc req = { 0 };
 	int fd = -1;
 
-	dprintk("%s: enter\n", __func__);
-	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL, "too many memory chunks requested\n");
+	size_t total_requested = 0;
+	int num_mem_chunks_reserved;
+	struct ihk_mem_chunk *mem_chunks_reserved = NULL;
+	size_t *reserved = NULL;
+	int num_numa_nodes = 0;
+	int num_numa_nodes_compensate = 0;
+	int num_numa_nodes_release = 0;
+	size_t ave_requested;
+	size_t total_missing = 0, total_excess = 0;
+	size_t ave_compensate;
+	size_t total_missing2 = 0, total_excess2 = 0;
+	size_t ave_compensate2;
+	unsigned long min = (unsigned long)-1;
+	unsigned long max = 0;
+	unsigned long variance_limit;
 
-	if ((fd = ihklib_device_open(index)) < 0) {
-		eprintf("%s: error: ihklib_device_open\n",
-			__func__);
-		ret = fd;
-		goto out;
-	}
+	dprintk("%s: reserve_mem_conf.total=%d\n",
+		__func__, reserve_mem_conf.total);
+	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
+		   "too many memory chunks requested\n");
 
 	CHKANDJUMP(!mem_chunks || !num_mem_chunks, -EINVAL, "invalid format\n");
 
@@ -817,20 +840,204 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 	}
 
 	for (i = 0; i < num_mem_chunks; i++) {
-		req.sizes[i] = (size_t)mem_chunks[i].size;
+		if (reserve_mem_conf.total) {
+			req.sizes[i] = (size_t)IHK_SMP_MEM_ALL;
+			total_requested += (size_t)mem_chunks[i].size;
+		} else {
+			req.sizes[i] = (size_t)mem_chunks[i].size;
+		}
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;
 
+	fd = ihklib_device_open(index);
+	CHKANDJUMP(fd < 0, fd, "ihklib_device_open failed\n");
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RESERVE_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
+	CHKANDJUMP(ret_ioctl != 0, -errno,
+		   "ioctl IHK_DEVICE_RESERVE_MEM failed");
+	close(fd);
 
- out:
-	if (fd != -1) {
+	if (reserve_mem_conf.total) {
+		dprintk("%s: total requested: %ld\n",
+			__func__, total_requested);
+
+		num_mem_chunks_reserved =
+			ihk_get_num_reserved_mem_chunks(index);
+		mem_chunks_reserved = calloc(num_mem_chunks_reserved,
+					  sizeof(struct ihk_mem_chunk));
+		CHKANDJUMP(mem_chunks_reserved == NULL, -ENOMEM,
+			   "failed to allocate mem_chunks_reserved\n");
+
+		ret = ihk_query_mem(index, mem_chunks_reserved,
+				    num_mem_chunks_reserved);
+		CHKANDJUMP(ret, -EINVAL, "ihk_query_mem failed\n");
+
+		reserved = calloc(IHK_MAX_NUM_NUMA_NODES, sizeof(size_t));
+		CHKANDJUMP(reserved == NULL, -ENOMEM,
+			   "failed to allocate reserved\n");
+
+		for (i = 0; i < num_mem_chunks_reserved; i++) {
+			reserved[mem_chunks_reserved[i].numa_node_number] +=
+				mem_chunks_reserved[i].size;
+		}
+
+		for (i = 0; i < IHK_MAX_NUM_NUMA_NODES; i++) {
+			if (reserved[i] == 0) {
+				continue;
+			}
+			num_numa_nodes++;
+		}
+
+/* align reserve/release amount */
+#define IHKLIB_RESERVE_AMOUNT_ALIGN (1UL << 20)
+
+		/* round up not to release too much */
+		ave_requested = ((total_requested / num_numa_nodes +
+				  IHKLIB_RESERVE_AMOUNT_ALIGN - 1) /
+				 IHKLIB_RESERVE_AMOUNT_ALIGN) *
+			IHKLIB_RESERVE_AMOUNT_ALIGN;
+		dprintk("%s: ave requested: %ld\n",
+			__func__, ave_requested);
+
+		/* Fill below-average-of-requested nodes upto the average */
+		for (i = 0; i < IHK_MAX_NUM_NUMA_NODES; i++) {
+			if (reserved[i] == 0) {
+				continue;
+			}
+			dprintk("%s: node id: %d, reserved: %ld\n",
+				__func__, i, reserved[i]);
+			if (reserved[i] > ave_requested) {
+				num_numa_nodes_compensate++;
+				total_excess += reserved[i] - ave_requested;
+			} else {
+				total_missing += ave_requested - reserved[i];
+			}
+		}
+
+		CHKANDJUMP(total_missing > total_excess, -ENOMEM,
+			   "out of memory\n");
+
+		dprintk("%s: total missing: %ld\n",
+			__func__, total_missing);
+
+		req.sizes = calloc(IHK_MAX_NUM_NUMA_NODES, sizeof(size_t));
+		CHKANDJUMP(req.sizes == NULL, -ENOMEM,
+			   "failed to allocate torelease\n");
+
+		req.numa_ids = calloc(IHK_MAX_NUM_NUMA_NODES, sizeof(int));
+		CHKANDJUMP(req.numa_ids == NULL, -ENOMEM,
+			   "failed to allocate torelease\n");
+
+		/* round up not to release too much */
+		ave_compensate = ((total_missing / num_numa_nodes_compensate +
+				   IHKLIB_RESERVE_AMOUNT_ALIGN - 1) /
+				  IHKLIB_RESERVE_AMOUNT_ALIGN) *
+			IHKLIB_RESERVE_AMOUNT_ALIGN;
+		dprintk("%s: ave compensate: %ld\n",
+			__func__, ave_compensate);
+
+		/* Fill below ave(requested + compensation),
+		 * compensating nodes upto the average
+		 */
+		for (i = 0; i < IHK_MAX_NUM_NUMA_NODES; i++) {
+			if (reserved[i] <= ave_requested) {
+				continue;
+			}
+
+			if (reserved[i] > ave_requested + ave_compensate) {
+				num_numa_nodes_release++;
+				total_excess2 += reserved[i] - ave_requested -
+					ave_compensate;
+				dprintk("%s: above-ave-req+comp: node id: %d, reserved: %ld, ave requested: %ld, ave compensate: %ld, compensate2+=%ld\n",
+					__func__, i, reserved[i],
+					ave_requested, ave_compensate,
+					reserved[i] - ave_requested -
+					ave_compensate);
+			} else {
+				total_missing2 += ave_requested +
+					ave_compensate - reserved[i];
+				dprintk("%s: below-ave-req+comp: node id: %d, reserved: %ld, ave requested: %ld, ave compensate: %ld, missing2+=%ld\n",
+					__func__, i, reserved[i],
+					ave_requested, ave_compensate,
+					ave_requested + ave_compensate -
+					reserved[i]);
+			}
+		}
+
+		dprintk("%s: total excess2: %ld, total missing2: %ld\n",
+			__func__, total_excess2, total_missing2);
+
+		/* round up not to release too much */
+		ave_compensate2 =
+			((total_missing2 / num_numa_nodes_release +
+			  IHKLIB_RESERVE_AMOUNT_ALIGN - 1) /
+			 IHKLIB_RESERVE_AMOUNT_ALIGN) *
+			IHKLIB_RESERVE_AMOUNT_ALIGN;
+		dprintk("%s: ave compensate2: %ld\n",
+			__func__, ave_compensate2);
+
+		/* above-average-of-requested-plus-compensation nodes
+		 * can release the excess amount
+		 */
+		for (i = 0; i < IHK_MAX_NUM_NUMA_NODES; i++) {
+			req.numa_ids[i] = i;
+
+			if (reserved[i] > ave_requested +
+			    ave_compensate + ave_compensate2) {
+				req.sizes[i] = reserved[i] - ave_requested -
+					ave_compensate - ave_compensate2;
+				CHKANDJUMP(reserved[i] < ave_requested +
+					   ave_compensate + ave_compensate2,
+					   -EINVAL, "negative release size\n");
+			} else {
+				req.sizes[i] = 0;
+			}
+
+			if (req.sizes[i] != 0) {
+				dprintk("%s: node id: %d, to-release: %ld\n",
+					__func__, i, req.sizes[i]);
+			}
+
+			if (reserved[i] > 0 &&
+			    reserved[i] - req.sizes[i] < min) {
+				min = reserved[i] - req.sizes[i];
+			}
+			if (reserved[i] > 0 &&
+			    reserved[i] - req.sizes[i] > max) {
+				max = reserved[i] - req.sizes[i];
+			}
+		}
+
+		variance_limit = ave_requested *
+			reserve_mem_conf.variance_limit / 100;
+		dprintk("%s: min: %ld, max: %ld, variance_limit: %ld\n",
+			__func__, min, max, variance_limit);
+		if (max - ave_requested > variance_limit ||
+		    ave_requested - min > variance_limit) {
+			fprintf(stderr, "%s: variance > limit (%ld)\n",
+				__func__, variance_limit);
+			ret = -ENOMEM;
+		}
+
+		req.num_chunks = IHK_MAX_NUM_NUMA_NODES;
+
+		fd = ihklib_device_open(index);
+		CHKANDJUMP(fd < 0, fd, "ihklib_device_open failed\n");
+		ret_ioctl = ioctl(fd, IHK_DEVICE_RELEASE_MEM_PARTIALLY, &req);
+		CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
+		close(fd);
+	}
+
+out:
+	if (fd >= 0) {
 		close(fd);
 	}
 	free(req.sizes);
 	free(req.numa_ids);
+	if (reserve_mem_conf.total) {
+		free(mem_chunks_reserved);
+		free(reserved);
+	}
 	return ret;
 }
 
