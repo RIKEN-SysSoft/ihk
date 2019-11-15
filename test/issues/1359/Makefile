@@ -5,6 +5,9 @@ CC = gcc
 
 LOCAL_INSTALL=YES
 
+# Please modify this!
+AMT_NODE_LIST="4096 0 4096 1"
+
 ifeq ($(LOCAL_INSTALL), YES)
 include $(HOME)/.mck_test_config.mk
 PREFIX_USR=$(MCK_DIR)
@@ -27,7 +30,7 @@ OBJS = $(SRCS:.c=.o)
 all: $(EXES)
 
 test: $(EXES)
-	sudo ./1359
+	sudo ./1359 $(AMT_NODE_LIST)
 
 %: %.o
 	$(CC) -o $@ $^ $(LDFLAGS)

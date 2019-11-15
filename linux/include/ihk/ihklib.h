@@ -18,6 +18,7 @@ enum ihk_os_eventfd_type {
 	/* Raise an event when kmsg buffer is full. The kmsg taker is expected to take the kmsg. */
 };
 #endif
+
 struct ihk_mem_chunk {
 	unsigned long size;
 	int numa_node_number;
@@ -60,12 +61,17 @@ enum IHKLIB_LOGLEVEL {
 	IHKLIB_LOGLEVEL_ERR
 };
 
+enum ihk_reserve_mem_conf_keys {
+	IHK_RESERVE_MEM_TOTAL
+};
+
 extern int loglevel;
 
 int ihk_reserve_cpu(int index, int* cpus, int num_cpus);
 int ihk_get_num_reserved_cpus(int index);
 int ihk_query_cpu(int index, int* cpus, int _num_cpus);
 int ihk_release_cpu(int index, int* cpus, int num_cpus);
+int ihk_reserve_mem_conf(int index, int key, unsigned int value);
 int ihk_reserve_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks);
 int ihk_get_num_reserved_mem_chunks(int index);
 int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks);

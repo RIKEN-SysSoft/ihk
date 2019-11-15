@@ -3245,6 +3245,10 @@ pre_out:
 		allocated += max;
 	}
 
+	pr_info("%s: want: %ld, allocated: %ld\n",
+	       __func__, want, allocated);
+
+
 	ret = 0;
 
 out:
@@ -3254,68 +3258,216 @@ out:
 	return ret;
 }
 
+static void __ihk_smp_release_chunk(struct chunk *mem_chunk)
+{
+	unsigned long size_left;
+	unsigned long va;
+	unsigned long pa = mem_chunk->addr;
+
+	va = (unsigned long)phys_to_virt(pa);
+	size_left = mem_chunk->size;
+	while (size_left > 0) {
+		int order;
+		size_t order_size;
+		struct page *page = virt_to_page(va);
+
+		if (!PageCompound(page) || !PageHead(page)) {
+			dprintk(KERN_ERR "%s: WARNING: page is not compound or not head"
+				", freeing single page\n",
+				__func__);
+			free_page(va);
+			size_left -= PAGE_SIZE;
+			va += PAGE_SIZE;
+			continue;
+		}
+
+		order = compound_order(page);
+		order_size = (PAGE_SIZE << order);
+
+		free_pages(va, order);
+		pr_debug("0x%lx, page order: %d freed\n", va, order);
+		/* A compound page may stretch over the size of this chunk */
+		if (order_size <= size_left) {
+			size_left -= order_size;
+			va += order_size;
+		}
+		else {
+			dprintk("%s: order_size - size_left: %lu\n",
+				__func__, order_size - size_left);
+			size_left = 0;
+		}
+	}
+}
+
 static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 {
 	int ret = -1;
 	struct chunk *mem_chunk;
 	struct chunk *mem_chunk_next;
-	unsigned long size_left;
-	unsigned long va;
 
 	list_for_each_entry_safe(mem_chunk,
 			mem_chunk_next, &ihk_mem_free_chunks, chain) {
-		unsigned long pa = mem_chunk->addr;
-
 		if(mem_chunk->size != ihk_mem || mem_chunk->numa_id != numa_id) {
 			continue;
 		}
 
 		list_del(&mem_chunk->chain);
-
-		va = (unsigned long)phys_to_virt(pa);
-		size_left = mem_chunk->size;
-		while (size_left > 0) {
-			int order;
-			size_t order_size;
-			struct page *page = virt_to_page(va);
-
-			if (!PageCompound(page) || !PageHead(page)) {
-				dprintk(KERN_ERR "%s: WARNING: page is not compound or not head"
-						", freeing single page\n",
-						__FUNCTION__);
-				free_page(va);
-				size_left -= PAGE_SIZE;
-				va += PAGE_SIZE;
-				continue;
-			}
-
-			order = compound_order(page);
-			order_size = (PAGE_SIZE << order);
-
-			free_pages(va, order);
-			pr_debug("0x%lx, page order: %d freed\n", va, order);
-			/* A compound page may stretch over the size of this chunk */
-			if (order_size <= size_left) {
-				size_left -= order_size;
-				va += order_size;
-			}
-			else {
-				dprintk("%s: order_size - size_left: %lu\n",
-					__FUNCTION__, order_size - size_left);
-				size_left = 0;
-			}
-		}
-
-		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
-				" (len: %lu) @ NUMA node: %d is released\n",
-			   mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
-			   mem_chunk->size, mem_chunk->numa_id);
+		__ihk_smp_release_chunk(mem_chunk);
+		pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
+			" (len: %lu) @ NUMA node: %d is released\n",
+			mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+			mem_chunk->size, mem_chunk->numa_id);
 
 		ret = 0;
 		goto fn_exit;
 	}
 
  fn_exit:
+	return ret;
+}
+
+/* We want to balance the amounts of memory reserved across NUMA-nodes
+ * while the total amount exceeds the specified by the resource manager (RM).
+ * The steps are as follows.
+ * (1) RM tries to reserve all (actually up to 95% for NUMA#0 and
+ *     98% for others)
+ * (2) RM calculates the amount to trim for each node
+ * (3) RM calls the following function to do the trim
+ */
+static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
+{
+	int ret = -1;
+	struct chunk *mem_chunk;
+	size_t size_left = ihk_mem;
+	unsigned long va;
+	struct rb_root tmp_chunks = RB_ROOT;
+
+	pr_info("IHK-SMP: partial release size: %ld, numa_id: %d\n",
+		ihk_mem, numa_id);
+
+	list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
+		__mem_chunk_insert(&tmp_chunks, mem_chunk);
+	}
+
+	/* Release the smallest */
+	while (1) {
+		struct rb_node *node;
+		unsigned long min = (unsigned long)-1;
+		size_t size_taken;
+
+		mem_chunk = NULL;
+
+		for (node = rb_first(&tmp_chunks); node; node = rb_next(node)) {
+			struct chunk *q = container_of(node, struct chunk,
+						       node);
+
+			if (q->numa_id != numa_id)
+				continue;
+
+			if (q->size < min) {
+				mem_chunk = q;
+				min = mem_chunk->size;
+			}
+		}
+
+		if (!mem_chunk)
+			break;
+
+		rb_erase(&mem_chunk->node, &tmp_chunks);
+
+		/* Release the whole chunk */
+		if (mem_chunk->size <= size_left) {
+			list_del(&mem_chunk->chain);
+			__ihk_smp_release_chunk(mem_chunk);
+			size_left -= mem_chunk->size;
+			pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
+				" (len: %ld) @ NUMA node: %d is released\n",
+				mem_chunk->addr,
+				mem_chunk->addr + mem_chunk->size,
+				mem_chunk->size, mem_chunk->numa_id);
+			goto next_chunk;
+		}
+
+		dprintk("%s: size_left: %ld\n", __func__, size_left);
+		pr_info("IHK-SMP: shrinking chunk 0x%lx - 0x%lx"
+			" (len: %ld) @ NUMA node: %d...\n",
+			mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+			mem_chunk->size, mem_chunk->numa_id);
+
+
+		/* Release from the top. Alignment is improved by
+		 * by early-termination.
+		 */
+		va = (unsigned long)phys_to_virt(mem_chunk->addr);
+		size_taken = 0;
+		while (1) {
+			int order;
+			size_t order_size;
+			struct page *page = virt_to_page(va);
+
+			if (!PageCompound(page) || !PageHead(page)) {
+				dprintk("IHK-SMP: WARNING: page is not compound or not head"
+					", freeing single page\n");
+				free_page(va);
+				size_taken += PAGE_SIZE;
+				size_left -= PAGE_SIZE;
+				va += PAGE_SIZE;
+				goto next_compound;
+			}
+
+			order = compound_order(page);
+			order_size = (PAGE_SIZE << order);
+
+			dprintk(KERN_INFO "%s: order_size: %ld, size_left: %ld\n",
+			       __func__, order_size, size_left);
+
+			/* Don't split compound pages */
+			if (size_left < order_size) {
+				pr_info("IHK-SMP: skip %ld bytes not to split compound pages, order_size: %ld\n",
+					size_left, order_size);
+				size_left = 0;
+				goto next_compound;
+			}
+
+#define IHK_RELEASE_MEM_PARTIALLY_ALIGN (1UL << 25)
+
+			/* Improve alignment */
+			if (size_left < IHK_RELEASE_MEM_PARTIALLY_ALIGN &&
+			    (va & (IHK_RELEASE_MEM_PARTIALLY_ALIGN - 1)) == 0) {
+				pr_info("IHK-SMP: skip %ld bytes for better alignment\n",
+					size_left);
+				size_left = 0;
+				goto next_compound;
+			}
+
+			free_pages(va, order);
+
+			size_taken += order_size;
+			size_left -= order_size;
+			va += order_size;
+
+next_compound:
+			if (size_left <= 0) {
+				mem_chunk->addr += size_taken;
+				mem_chunk->size -= size_taken;
+				pr_info("IHK-SMP: chunk is shrunk to 0x%lx - 0x%lx"
+				       " (len: %ld, NUMA node: %d)\n",
+				       mem_chunk->addr,
+					mem_chunk->addr + mem_chunk->size,
+				       mem_chunk->size, mem_chunk->numa_id);
+				break;
+			}
+		}
+
+next_chunk:
+		if (size_left <= 0) {
+			ret = 0;
+			goto out;
+		}
+	}
+
+out:
+
 	return ret;
 }
 
@@ -3814,6 +3966,79 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	return ret;
 }
 
+static int smp_ihk_release_mem_partially(ihk_device_t ihk_dev,
+					 unsigned long arg)
+{
+	int ret, i;
+	struct ihk_mem_req req;
+	size_t *req_sizes = NULL;
+	int *req_numa_ids = NULL;
+
+	ret = copy_from_user(&req, (void *)arg, sizeof(req));
+	if (ret) {
+		pr_err("%s: copy_from_user struct ihk_mem_req\n", __func__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (req.num_chunks < 0) {
+		pr_err("%s: invalid number of chunks (%d)\n",
+		       __func__, req.num_chunks);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
+	if (!req_sizes) {
+		pr_err("%s: allocating req_sizes\n", __func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req_numa_ids = kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);
+	if (!req_numa_ids) {
+		pr_err("%s: allocating req_num_ids\n", __func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = copy_from_user(req_sizes, req.sizes,
+			     sizeof(size_t) * req.num_chunks);
+	if (ret) {
+		pr_err("%s: copy_from_user req_sizes\n", __func__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	ret = copy_from_user(req_numa_ids, req.numa_ids,
+			     sizeof(int) * req.num_chunks);
+	if (ret) {
+		pr_err("%s: copy_from_user req_numa_ids\n", __func__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	/* Do release */
+	for (i = 0; i < req.num_chunks; i++) {
+		if (req_sizes[i] > 0) {
+			ret = __ihk_smp_release_mem_partially(req_sizes[i],
+							      req_numa_ids[i]);
+			if (ret) {
+				pr_err("%s: __ihk_smp_release_mem_partially returned %d\n",
+				       __func__, ret);
+				ret = -EINVAL;
+				goto out;
+			}
+		}
+	}
+
+	ret = 0;
+out:
+	kfree(req_sizes);
+	kfree(req_numa_ids);
+	return ret;
+}
+
 static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int ret, num_chunks = 0, idx = 0;
@@ -4301,6 +4526,7 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.release_cpu = smp_ihk_release_cpu,
 	.reserve_mem = smp_ihk_reserve_mem,
 	.release_mem = smp_ihk_release_mem,
+	.release_mem_partially = smp_ihk_release_mem_partially,
 	.get_num_cpus = smp_ihk_get_num_cpus,
 	.query_cpu = smp_ihk_query_cpu,
 	.query_mem = smp_ihk_query_mem,
