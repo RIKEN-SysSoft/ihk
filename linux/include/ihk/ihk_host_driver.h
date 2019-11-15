@@ -446,6 +446,8 @@ struct ihk_device_ops {
 	 */
 	int (*release_mem)(ihk_device_t, unsigned long arg);
 
+	int (*release_mem_partially)(ihk_device_t ihk_dev, unsigned long arg);
+
 	/**
 	 * \brief Get number of CPU cores
 	 *
