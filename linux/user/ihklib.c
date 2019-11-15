@@ -96,7 +96,14 @@ struct namespace_file namespace_files[] = {
 	{ .nstype = 0, .name = NULL, .fd = -1 }
 };
 
-struct ihklib_reserve_mem_conf reserve_mem_conf;
+struct ihklib_reserve_mem_conf reserve_mem_conf = {
+#ifdef FORCE_RESERVE_MEM_TOTAL
+	.total = 1,
+	.variance_limit = 10
+#else
+	.total = 0
+#endif
+};
 
 static int snprintf_realloc(char **str, size_t *size,
 		size_t offset, const char *format, ...)
@@ -1623,7 +1630,13 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 	}
 
 	for (i = 0; i < num_mem_chunks; i++) {
+#ifdef FORCE_RESERVE_MEM_TOTAL
+		req.sizes[i] = (size_t)IHK_SMP_MEM_ALL;
+		dprintk("%s: size is changed to %ld@%d\n",
+			__func__, req.sizes[i], mem_chunks[i].numa_node_number);
+#else
 		req.sizes[i] = (size_t)mem_chunks[i].size;
+#endif
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;
