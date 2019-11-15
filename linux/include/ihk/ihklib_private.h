@@ -51,6 +51,20 @@ const char *ihklib_os_query_mem_type_str[] = {
 	[IHKLIB_OS_QUERY_MEM_FREE] = "MemFree"
 };
 
+struct ihklib_reserve_mem_conf {
+	/* 1: Try to reserve the sum of the requested per-NUMA-node
+	 *    amounts in a balanced way. It reports an error when the
+	 *    variance of the reserved amounts of the NUMA-nodes
+	 *    exceeds the "variance_limit" below.
+	 */
+	int total;
+
+	/* MAX(max - ave, ave - min) must be less than or equal to
+	 * ave * variance_limit / 100
+	 */
+	unsigned long variance_limit;
+};
+
 int ihklib_device_open(int index);
 int ihklib_os_open(int index);
 int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,

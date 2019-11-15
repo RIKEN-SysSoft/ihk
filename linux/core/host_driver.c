@@ -1696,6 +1696,16 @@ static int __ihk_device_release_mem(struct ihk_host_linux_device_data *data,
 	return data->ops->release_mem(data, arg);
 }
 
+/** \brief Release memory */
+static int __ihk_device_release_mem_partially(struct ihk_host_linux_device_data *data,
+					      unsigned long arg)
+{
+	if (!data->ops || !data->ops->release_mem_partially)
+		return -1;
+
+	return data->ops->release_mem_partially(data, arg);
+}
+
 /** \brief Query number of CPU cores */
 static int __ihk_device_get_num_cpus(struct ihk_host_linux_device_data *data)
 {
@@ -1766,6 +1776,10 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 
 	case IHK_DEVICE_RELEASE_MEM:
 		ret = __ihk_device_release_mem(data, arg);
+		break;
+
+	case IHK_DEVICE_RELEASE_MEM_PARTIALLY:
+		ret = __ihk_device_release_mem_partially(data, arg);
 		break;
 
 	case IHK_DEVICE_GET_NUM_CPUS:

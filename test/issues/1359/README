@@ -6,4 +6,7 @@ How to test
 
     MCK_DIR=<mckernel_install_path>
 
-(2) make test
+(2) Execute the following command.
+        make test AMT_NODE_LIST="<size> <numa-id> [<size> <numa-id> ...]"
+    Example:
+        make test AMT_NODE_LIST="$((4*1024)) 0 $((4*1024)) 1"
