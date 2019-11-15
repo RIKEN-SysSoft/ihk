@@ -54,12 +54,15 @@ int main(int argc, char **argv)
 	status = system(cmd);
 	NG(status == 0, "insmod ihk-smp-arm64.ko");
 
-	// reserve mem 1G@4,1G@5
-	num_mem_chunks = 2;
-	mem_chunks[0].size = (1UL << 30);
-	mem_chunks[0].numa_node_number = 4;
-	mem_chunks[1].size = (1UL << 30);
-	mem_chunks[1].numa_node_number = 5;
+	ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_TOTAL, 10);
+	OKNG(ret == 0, "ihk_reserve_mem_conf");
+
+	// reserve mem
+	num_mem_chunks = 4;
+	for (i = 0; i < num_mem_chunks; i++) {
+		mem_chunks[i].size = (1UL << 20) * atoi(argv[1 + i * 2]);
+		mem_chunks[i].numa_node_number = atoi(argv[1 + i * 2 + 1]);
+	}
 	ret = ihk_reserve_mem(0, mem_chunks, num_mem_chunks);
 	OKNG(ret == 0, "ihk_reserve_mem");
 
@@ -80,6 +83,11 @@ int main(int argc, char **argv)
 	OKNG(ret == 0, "ihk_os_assign_cpu");
 
 	// assign mem
+	num_mem_chunks = 4;
+	for (i = 0; i < num_mem_chunks; i++) {
+		mem_chunks[i].size = (unsigned long)-1;
+		mem_chunks[i].numa_node_number = atoi(argv[1 + i * 2 + 1]);
+	}
 	ret = ihk_os_assign_mem(0, mem_chunks, num_mem_chunks);
 	OKNG(ret == 0, "ihk_os_assign_mem");
 
