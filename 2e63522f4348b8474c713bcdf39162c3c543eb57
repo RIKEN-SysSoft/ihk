@@ -1,0 +1,140 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "520ade14_b2db2c20",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1700,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-11-27T03:19:59Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int __ihk_device_release_mem_partially(struct ihk_host_linux_device_data *data,",
+      "revId": "2e63522f4348b8474c713bcdf39162c3c543eb57",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c0c48131_8e8c33f7",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3275,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-11-27T03:19:59Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintk(KERN_ERR \"%s: WARNING: page is not compound or not head\"",
+      "revId": "2e63522f4348b8474c713bcdf39162c3c543eb57",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3c753670_d6e51c32",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3409,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-11-27T03:19:59Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintk(\"IHK-SMP: WARNING: page is not compound or not head\"",
+      "revId": "2e63522f4348b8474c713bcdf39162c3c543eb57",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cf51d990_80d12d09",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3421,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-11-27T03:19:59Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintk(KERN_INFO \"%s: order_size: %ld, size_left: %ld\\n\",",
+      "revId": "2e63522f4348b8474c713bcdf39162c3c543eb57",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f2d60adf_64b437a7",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3992,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-11-27T03:19:59Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_sizes) {\n+\t\tpr_err(\"%s: allocating req_sizes\\n\", __func__);",
+      "revId": "2e63522f4348b8474c713bcdf39162c3c543eb57",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "46c817e0_b3a5063d",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3999,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-11-27T03:19:59Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (!req_numa_ids) {\n+\t\tpr_err(\"%s: allocating req_num_ids\\n\", __func__);",
+      "revId": "2e63522f4348b8474c713bcdf39162c3c543eb57",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d69daac0_1bd2d887",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 951,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-11-27T03:19:59Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintk(\"%s: above-ave-req+comp: node id: %d, reserved: %ld, ave requested: %ld, ave compensate: %ld, compensate2+\u003d%ld\\n\",",
+      "revId": "2e63522f4348b8474c713bcdf39162c3c543eb57",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "928798ae_758694ba",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 959,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2019-11-27T03:19:59Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintk(\"%s: below-ave-req+comp: node id: %d, reserved: %ld, ave requested: %ld, ave compensate: %ld, missing2+\u003d%ld\\n\",",
+      "revId": "2e63522f4348b8474c713bcdf39162c3c543eb57",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
