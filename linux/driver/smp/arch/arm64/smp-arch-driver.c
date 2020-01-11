@@ -263,6 +263,7 @@ static struct psci_operations *ihk_psci_ops;
 
 static size_t ihk___cpu_logical_map_size = NR_CPUS;
 static u64 *ihk___cpu_logical_map;
+static uint64_t *ihk___memstart_addr;
 
 static uintptr_t *ihk_invoke_psci_fn;
 static uintptr_t ihk___invoke_psci_fn_hvc;
@@ -401,6 +402,11 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!ihk__ipi_types))
 		return -EFAULT;
 #endif // IHK_IKC_USE_LINUX_WORK_IRQ
+
+	ihk___memstart_addr =
+		(uint64_t *) kallsyms_lookup_name("memstart_addr");
+	if (WARN_ON(!ihk___memstart_addr))
+		return -EFAULT;
 
 	return 0;
 }
@@ -1349,6 +1355,14 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 	case DUMP_QUERY_ALL:
 		args->start = os->mem_start;
 		args->size = os->mem_end - os->mem_start;
+		break;
+
+	case DUMP_QUERY_PHYS_START:
+		if (copy_to_user(args->buf, ihk___memstart_addr,
+					sizeof(uint64_t))) {
+			return -EFAULT;
+		}
+
 		break;
 
 	case DUMP_READ_ALL:

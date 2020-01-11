@@ -107,6 +107,7 @@ typedef struct dumpargs_s {
 #define DUMP_SET_LEVEL 6
 #define DUMP_QUERY_NUM_MEM_AREAS 7
 #define DUMP_QUERY_MEM_AREAS 8
+#define DUMP_QUERY_PHYS_START 9
 	unsigned int level;
 #define DUMP_LEVEL_ALL 0
 #define DUMP_LEVEL_USER_UNUSED_EXCLUDE 24
