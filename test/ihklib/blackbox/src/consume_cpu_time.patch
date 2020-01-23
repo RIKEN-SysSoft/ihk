@@ -1,0 +1,55 @@
+diff --git a/arch/arm64/kernel/include/syscall_list.h b/arch/arm64/kernel/include/syscall_list.h
+index 850d3635..763a4556 100644
+--- a/arch/arm64/kernel/include/syscall_list.h
++++ b/arch/arm64/kernel/include/syscall_list.h
+@@ -143,3 +143,4 @@ SYSCALL_DELEGATED(1049, stat)
+ SYSCALL_DELEGATED(1060, getpgrp)
+ SYSCALL_HANDLED(1062, time)
+ SYSCALL_DELEGATED(1069, epoll_wait)
++SYSCALL_HANDLED(2003, consume_cputime)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index 81af5337..e474ad9f 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -9982,6 +9982,41 @@ SYSCALL_DECLARE(util_register_desc)
+ 	return 0;
+ }
+ 
++SYSCALL_DECLARE(consume_cputime)
++{
++	struct timespec *tv = (struct timespec *)ihk_mc_syscall_arg0(ctx);
++	struct timespec _tv;
++	int ret = 0;
++	unsigned long nanosecs;
++	unsigned long tscs;
++
++	unsigned long ts = rdtsc();
++
++	if (copy_from_user(&_tv, tv, sizeof(struct timespec))) {
++		ret = -EFAULT;
++		return ret;
++	}
++
++	if (_tv.tv_sec < 0 || _tv.tv_nsec >= NS_PER_SEC) {
++		ret = -EINVAL;
++		return ret;
++	}
++
++	nanosecs = _tv.tv_sec * NS_PER_SEC + _tv.tv_nsec;
++	tscs = nanosecs * 1000 / ihk_mc_get_ns_per_tsc();
++
++	while (rdtsc() - ts < tscs) {
++		int i = 0;
++		do {
++			asm volatile("nop");
++			i++;
++		} while (i < 1000000);
++	}
++
++	ret = 0;
++	return ret;
++}
++
+ void
+ reset_cputime()
+ {
