@@ -1,0 +1,19 @@
+#!/usr/bin/bash
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+patch_and_build delay_with_interrupt_disabled_mckernel || exit $?
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_shutdown09 -u $(id -u) -g $(id -g)
+ret=$?
+
+exit $ret

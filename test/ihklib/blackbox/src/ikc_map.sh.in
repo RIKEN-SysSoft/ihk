@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+
+ncpu=$1
+
+for i in $(seq 0 $((ncpu - 1))); do
+    taskset --cpu-list $i @CMAKE_INSTALL_PREFIX@/bin/ikc_map
+done
