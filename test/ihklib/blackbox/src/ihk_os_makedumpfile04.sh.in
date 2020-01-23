@@ -1,0 +1,48 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+sudo rm -f ${WORKDIR}/dump
+sudo chattr -i ${WORKDIR}/inaccessible
+sudo rm -rf ${WORKDIR}/inaccessible
+sudo mkdir ${WORKDIR}/inaccessible
+sudo chattr +i ${WORKDIR}/inaccessible
+
+for i in {0..3}; do
+    case $i in
+	0)
+	    fn=NULL
+	    ;;
+	1)
+	    fn=${WORKDIR}/dump
+	    ;;
+	2)
+	    fn=${WORKDIR}/no_such_dir/dump
+	    ;;
+	3)
+	    fn=${WORKDIR}/inaccessible/dump
+	    ;;
+    esac
+
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile04 -u $(id -u) -g $(id -g) -i $i -f $fn
+    ret=$?
+
+    sudo rm -f ${WORKDIR}/dump
+
+    if [ $ret -ne 0 ]; then
+	break;
+    fi
+done
+
+sudo chattr -i ${WORKDIR}/inaccessible
+sudo rm -rf ${WORKDIR}/inaccessible
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi
