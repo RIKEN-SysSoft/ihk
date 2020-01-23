@@ -1,0 +1,23 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+fi
+
+# insmod as root
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_set_ikc_map06 -u $(id -u) -g $(id -g) -i
+sudo chmod 666 /dev/mcos0
+num_assigned_cpus=$?
+
+# try to reserve memory as non-root
+@CMAKE_INSTALL_PREFIX@/bin/ihk_os_set_ikc_map06 -u $(id -u) -g $(id -g) -n ${num_assigned_cpus}
+
+# rmmod as root
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_set_ikc_map06 -u $(id -u) -g $(id -g) -r
+ret=$?
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi
