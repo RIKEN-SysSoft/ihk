@@ -1,0 +1,15 @@
+#!/usr/bin/bash
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_set_ikc_map02 -u $(id -u) -g $(id -g)
+ret=$?
+
+exit $ret
