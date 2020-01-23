@@ -1,0 +1,26 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+fi
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+init_oom_killer
+
+sudo timeout 300 @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem13 -u $(id -u) -g $(id -g)
+ret=$?
+
+if [ "$ret" == "124" ]; then
+    echo "[  NG  ] reservation time"
+elif [ "$ret" == "0" ]; then
+    echo "[  OK  ] reservation time"
+fi
+
+fini_oom_killer
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi
