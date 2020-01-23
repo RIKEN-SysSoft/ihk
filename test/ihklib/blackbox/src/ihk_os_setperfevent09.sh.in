@@ -1,0 +1,33 @@
+#!/usr/bin/sh
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+sudo mkfifo -m 0666 ${WORKDIR}/fifo_in
+sudo mkfifo -m 0666 ${WORKDIR}/fifo_out
+
+for i in {0..0}; do
+    patch_and_build str
+    ret=$?
+
+    if [ $ret -ne 0 ]; then
+	break
+    fi
+
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_setperfevent09 -u $(id -u) -g $(id -g) -i ${WORKDIR}/fifo_in -o ${WORKDIR}/fifo_out
+    ret=$?
+done
+
+sudo rm -f ${WORKDIR}/fifo_in
+sudo rm -f ${WORKDIR}/fifo_out
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi

@@ -1,0 +1,42 @@
+diff --git a/arch/arm64/kernel/include/syscall_list.h b/arch/arm64/kernel/include/syscall_list.h
+index 19f286c6..daab153c 100644
+--- a/arch/arm64/kernel/include/syscall_list.h
++++ b/arch/arm64/kernel/include/syscall_list.h
+@@ -142,3 +142,5 @@ SYSCALL_HANDLED(1045, signalfd)
+ SYSCALL_DELEGATED(1049, stat)
+ SYSCALL_DELEGATED(1060, getpgrp)
+ SYSCALL_HANDLED(1062, time)
++
++SYSCALL_HANDLED(2003, delay_with_interrupt_disabled)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index e677e3f0..75b8c1ca 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -9847,6 +9847,17 @@ SYSCALL_DECLARE(util_register_desc)
+ 	return 0;
+ }
+ 
++SYSCALL_DECLARE(delay_with_interrupt_disabled)
++{
++	unsigned long flags;
++
++	flags = cpu_disable_interrupt_save();
++	ihk_mc_delay_us(10 * 1000000);
++	cpu_restore_interrupt(flags);
++
++	return 0;
++}
++
+ void
+ reset_cputime()
+ {
+diff --git a/arch/x86_64/kernel/include/syscall_list.h b/arch/x86_64/kernel/include/syscall_list.h
+index b6bf4d55..3d2ca10e 100644
+--- a/arch/x86_64/kernel/include/syscall_list.h
++++ b/arch/x86_64/kernel/include/syscall_list.h
+@@ -180,3 +180,5 @@ SYSCALL_HANDLED(803, suspend_threads)
+ SYSCALL_HANDLED(804, resume_threads)
+ SYSCALL_HANDLED(811, linux_spawn)
+ /**** End of File ****/
++
++SYSCALL_HANDLED(2003, delay_with_interrupt_disabled)
