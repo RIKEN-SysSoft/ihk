@@ -1,0 +1,21 @@
+#!/usr/bin/bash
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+init_oom_killer
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_query_mem02 -u $(id -u) -g $(id -g)
+ret=$?
+
+fini_oom_killer
+
+exit $ret

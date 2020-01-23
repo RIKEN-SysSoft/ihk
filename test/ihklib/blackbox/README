@@ -1,0 +1,5 @@
+* How to integrate with autotest
+
+/work/mcktest/bin/autobuild.sh
+cd ../ && mkdir build && cd build
+/work/mcktest/tools/bin/cmake ../blackbox/ -DCMAKE_INSTALL_PREFIX=/work/mcktest/ihklib/install -DWITH_MCK=/work/mcktest/work/mck -DWITH_MCK_SRC=/work/mcktest/work/src -DCMAKE_INSTALL_PREFIX_SCRIPTS=/work/mcktest/data/scripts
