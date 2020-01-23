@@ -1,0 +1,16 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile01 -u $(id -u) -g $(id -g) -f ${WORKDIR}/dump
+ret=$?
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi
