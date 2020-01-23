@@ -1,0 +1,20 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+fi
+
+sudo mkfifo -m 0666 ${WORKDIR}/fifo_in
+sudo mkfifo -m 0666 ${WORKDIR}/fifo_out
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_getrusage06 -u $(id -u) -g $(id -g) -i ${WORKDIR}/fifo_in -o ${WORKDIR}/fifo_out
+ret=$?
+
+sudo rm -f ${WORKDIR}/fifo_in
+sudo rm -f ${WORKDIR}/fifo_out
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi

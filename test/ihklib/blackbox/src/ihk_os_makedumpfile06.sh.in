@@ -1,0 +1,34 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+for i in {0..1}; do
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile06 -u $(id -u) -g $(id -g) -i $i -f ${WORKDIR}/dump
+    ret=$?
+
+    if [ $ret -ne 0 ]; then
+	break;
+    fi
+
+    check_dump ${WORKDIR}/dump $i
+    if [ $ret -ne 0 ]; then
+	break;
+    fi
+
+    sudo rm -f ${WORKDIR}/dump
+
+    # clean up
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile06 -u $(id -u) -g $(id -g) -i $i -f ${WORKDIR}/dump -c
+done
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi

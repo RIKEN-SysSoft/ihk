@@ -1,0 +1,43 @@
+diff --git a/arch/arm64/kernel/include/syscall_list.h b/arch/arm64/kernel/include/syscall_list.h
+index 19f286c6..de9144c5 100644
+--- a/arch/arm64/kernel/include/syscall_list.h
++++ b/arch/arm64/kernel/include/syscall_list.h
+@@ -143,3 +143,5 @@ SYSCALL_DELEGATED(1049, stat)
+ SYSCALL_DELEGATED(1060, getpgrp)
+ SYSCALL_HANDLED(1062, time)
+ SYSCALL_DELEGATED(1069, epoll_wait)
++SYSCALL_HANDLED(2003, km_alloc)
++SYSCALL_HANDLED(2004, km_free)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index e677e3f0..844f3664 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -9847,6 +9847,28 @@ SYSCALL_DECLARE(util_register_desc)
+ 	return 0;
+ }
+
++SYSCALL_DECLARE(km_alloc)
++{
++	size_t size = ihk_mc_syscall_arg0(ctx);
++	intptr_t addr = (uintptr_t)kmalloc(size, IHK_MC_AP_NOWAIT);
++	if (!addr) {
++		kprintf("%s: allocate memory in kernel-mode failed\n", __func__);
++		return -1;
++	}
++
++	memset((char *)addr, 0xff, size);
++
++	return addr;
++}
++
++SYSCALL_DECLARE(km_free)
++{
++	void *addr = (void *)ihk_mc_syscall_arg0(ctx);
++
++	kfree(addr);
++	return 0;
++}
++
+ void
+ reset_cputime()
+ {
