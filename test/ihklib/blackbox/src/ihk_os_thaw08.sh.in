@@ -1,0 +1,27 @@
+#!/usr/bin/sh
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+patch_and_build status_mckernel status_ihk
+ret=$?
+
+if [ $ret -eq 0 ]; then
+    sudo mkfifo -m 0666 ${WORKDIR}/fifo_count
+
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_thaw08 -u $(id -u) -g $(id -g) -f ${WORKDIR}/fifo_count
+    ret=$?
+
+    sudo rm -f ${WORKDIR}/fifo_count
+fi
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi

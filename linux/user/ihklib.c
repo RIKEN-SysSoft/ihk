@@ -770,7 +770,6 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
-	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL, "invalid format\n");
 
 	if ((ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, &req))) {
 		int errno_save = errno;
