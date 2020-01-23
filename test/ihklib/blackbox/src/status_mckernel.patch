@@ -1,0 +1,60 @@
+commit 7a99885355cb0a3c5b3b6830c576f5161386b14c
+Author: Masamichi Takagi <masamichi.takagi@riken.jp>
+Date:   Sun Feb 16 07:08:12 2020 +0000
+
+    test: ihklib: patch for ihk_os_shutdown
+    
+    Change-Id: Ia56a9501e419f16fa02426fcc15d97f31e254def
+
+diff --git a/arch/arm64/kernel/include/syscall_list.h b/arch/arm64/kernel/include/syscall_list.h
+index 19f286c6..c3b3fa0b 100644
+--- a/arch/arm64/kernel/include/syscall_list.h
++++ b/arch/arm64/kernel/include/syscall_list.h
+@@ -142,3 +142,6 @@ SYSCALL_HANDLED(1045, signalfd)
+ SYSCALL_DELEGATED(1049, stat)
+ SYSCALL_DELEGATED(1060, getpgrp)
+ SYSCALL_HANDLED(1062, time)
++
++SYSCALL_HANDLED(2001, panic)
++SYSCALL_HANDLED(2002, hungup)
+diff --git a/kernel/freeze.c b/kernel/freeze.c
+index 677fca5b..0717fcac 100644
+--- a/kernel/freeze.c
++++ b/kernel/freeze.c
+@@ -20,6 +20,11 @@ freeze()
+ 	if (monitor->status_bak & IHK_OS_MONITOR_ALLOW_THAW_REQUEST) {
+ 		return;
+ 	}
++
++	if (ihk_mc_get_processor_id() != 0) {
++		ihk_mc_delay_us(1000000);
++	}
++
+ 	monitor->status_bak = monitor->status
+ 				| IHK_OS_MONITOR_ALLOW_THAW_REQUEST;
+ 	monitor->status = IHK_OS_MONITOR_KERNEL_FROZEN;
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index e677e3f0..ecf595c3 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -9847,6 +9847,20 @@ SYSCALL_DECLARE(util_register_desc)
+ 	return 0;
+ }
+ 
++SYSCALL_DECLARE(panic)
++{
++	panic("sys_panic: transition to panic state for IHK IF test");
++	return 0;
++}
++
++SYSCALL_DECLARE(hungup)
++{
++	kprintf("%s: enter\n",
++		__func__);
++	ihk_mc_delay_us(2000000);
++	return 0;
++}
++
+ void
+ reset_cputime()
+ {

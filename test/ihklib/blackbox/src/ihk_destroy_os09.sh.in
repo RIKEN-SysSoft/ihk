@@ -1,0 +1,25 @@
+#!/usr/bin/sh
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+fi
+
+for i in {0..0}; do
+    patch_and_build status_mckernel status_ihk
+    ret=$?
+
+    if [ $ret -ne 0 ]; then
+	break;
+    fi
+
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_destroy_os09 -u $(id -u) -g $(id -g)
+    ret=$?
+done
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi
