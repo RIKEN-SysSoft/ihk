@@ -1,0 +1,14 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+fi
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_perfctl02 -u $(id -u) -g $(id -g)
+ret=$?
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi
