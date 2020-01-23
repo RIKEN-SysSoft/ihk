@@ -1,0 +1,22 @@
+#!/usr/bin/bash
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+# insmod as root
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_assign_mem06 -u $(id -u) -g $(id -g) -i || exit $?
+sudo chmod 666 /dev/mcos0
+
+# try to reserve memory as non-root
+@CMAKE_INSTALL_PREFIX@/bin/ihk_os_assign_mem06 -u $(id -u) -g $(id -g) || exit $?
+
+# rmmod as root
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_assign_mem06 -u $(id -u) -g $(id -g) -r || exit $?
+
+exit 0

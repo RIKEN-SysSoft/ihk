@@ -1,0 +1,21 @@
+#!/usr/bin/bash
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+sudo mkfifo -m 0666 ${WORKDIR}/fifo_in
+sudo mkfifo -m 0666 ${WORKDIR}/fifo_out
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_getrusage03 -u $(id -u) -g $(id -g) -i ${WORKDIR}/fifo_in -o ${WORKDIR}/fifo_out
+ret=$?
+
+sudo rm -f ${WORKDIR}/fifo_in
+sudo rm -f ${WORKDIR}/fifo_out
+
+exit $ret
