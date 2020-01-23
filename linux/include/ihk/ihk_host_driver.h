@@ -31,7 +31,7 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_MONITOR = 4,
 	IHK_SPADDR_RUSAGE = 5,
 	IHK_SPADDR_NMI_MODE = 6,
-	IHK_SPADDR_MCKERNEL_DO_FUTEX = 7,
+	IHK_SPADDR_MCKERNEL_UTI_FUTEX = 7,
 };
 
 /** \brief Type of an IHK device */
@@ -686,6 +686,8 @@ struct ihk_cpu_info {
 	int *hw_ids;
 	int *ikc_map;
 	int ikc_mapped;
+	/** \brief Map Linux CPU id to clv index in McKernel */
+	int clv_index[NR_CPUS];
 };
 
 /** \brief Get information of memory which the OS kernel uses */

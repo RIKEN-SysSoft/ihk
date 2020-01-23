@@ -115,7 +115,7 @@ struct smp_os_data {
 	int cpu_ikc_map[SMP_MAX_CPUS];
 	int cpu_ikc_mapped;
 	int nr_cpus;
-
+	
 	/** \brief Boot parameter for the kernel
 	 *
 	 * This structure is directly accessed (read and written)

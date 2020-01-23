@@ -230,6 +230,9 @@ static void set_dev_status(struct builtin_device_data *dev, int status)
  * via IHK functions. */
 static void __build_os_info(struct smp_os_data *os)
 {
+	int clv_index;
+	int i;
+
 	os->mem_info.n_mappable = os->mem_info.n_available = 1;
 	os->mem_info.n_fixed = 0;
 	os->mem_info.available = os->mem_info.mappable = &os->mem_region;
@@ -245,6 +248,12 @@ static void __build_os_info(struct smp_os_data *os)
 	os->cpu_info.hw_ids = os->cpu_hw_ids;
 	os->cpu_info.ikc_map = os->cpu_ikc_map;
 	os->cpu_info.ikc_mapped = os->cpu_ikc_mapped;
+
+	/* Map Linux CPU id to clv index in McKernel */
+	clv_index = os->nr_cpus;
+	for_each_cpu(i, cpu_active_mask) {
+		os->cpu_info.clv_index[i] = clv_index++;
+	}
 }
 
 /*
@@ -401,6 +410,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	int i, j;
 	unsigned long buffer_size, map_end, index;
 	struct ihk_dump_page *dump_page;
+	int nr_linux_cpus;
 	int ret;
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
@@ -476,7 +486,14 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 			param_size, 1UL << param_pages_order);
 
 	os->param->nr_cpus = os->nr_cpus;
-	os->param->nr_linux_cpus = nr_cpu_ids;
+
+	nr_linux_cpus = 0;
+	for_each_cpu(i, cpu_active_mask) {
+		nr_linux_cpus++;
+	}
+	os->param->nr_linux_cpus = nr_linux_cpus;
+	pr_info("%s: nr_linux_cpus: %d\n", __func__, nr_linux_cpus);
+	
 	os->param->nr_numa_nodes = nr_numa_nodes;
 	os->param->nr_memory_chunks = nr_memory_chunks;
 	os->param->osnum = ihk_host_os_get_index(ihk_os);
@@ -618,7 +635,6 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	os->param->boot_tsc = rdtsc();
 	os->param->boot_sec = now.tv_sec;
 	os->param->boot_nsec = now.tv_nsec;
-
 
 	dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
 	        os->boot_cpu, os->mem_start, os->mem_end, os->cpu_hw_ids_map.set[0],
@@ -1451,9 +1467,9 @@ static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
 			return 0;
 		}
 		break;
-	case IHK_SPADDR_MCKERNEL_DO_FUTEX:
-		if (os->param->mckernel_do_futex) {
-			*addr = os->param->mckernel_do_futex;
+	case IHK_SPADDR_MCKERNEL_UTI_FUTEX:
+		if (os->param->mckernel_uti_futex) {
+			*addr = os->param->mckernel_uti_futex;
 			return 0;
 		}
 		break;
@@ -3682,6 +3698,12 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 	size_t *req_sizes = NULL;
 	int *req_numa_ids = NULL;
 
+	pr_info("%s: sizeof(req): %ld\n",
+		__func__, sizeof(req));
+#if 0
+	pr_info("%s: arg->num_chunks: %d\n",
+		__func__, ((struct ihk_mem_req *)arg)->num_chunks);
+#endif	
 	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
 		printk("%s: error: copying request\n", __FUNCTION__);
 		return -EFAULT;

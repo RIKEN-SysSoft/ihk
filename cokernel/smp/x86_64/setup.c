@@ -291,9 +291,9 @@ int ihk_set_nmi_mode_addr(unsigned long addr)
 	return 0;
 }
 
-int ihk_set_mckernel_do_futex(unsigned long addr)
+int ihk_set_mckernel_uti_futex(unsigned long addr)
 {
-	boot_param->mckernel_do_futex = addr; /* Pass virtual address */
+	boot_param->mckernel_uti_futex = addr; /* Pass virtual address */
 	return 0;
 }
 
