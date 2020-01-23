@@ -1,0 +1,42 @@
+diff --git a/arch/arm64/kernel/include/syscall_list.h b/arch/arm64/kernel/include/syscall_list.h
+index 850d3635..3565d29e 100644
+--- a/arch/arm64/kernel/include/syscall_list.h
++++ b/arch/arm64/kernel/include/syscall_list.h
+@@ -143,3 +143,5 @@ SYSCALL_DELEGATED(1049, stat)
+ SYSCALL_DELEGATED(1060, getpgrp)
+ SYSCALL_HANDLED(1062, time)
+ SYSCALL_DELEGATED(1069, epoll_wait)
++SYSCALL_HANDLED(2001, test_kmalloc)
++SYSCALL_HANDLED(2002, test_str)
+diff --git a/kernel/syscall.c b/kernel/syscall.c
+index 81af5337..1dc148ae 100644
+--- a/kernel/syscall.c
++++ b/kernel/syscall.c
+@@ -9982,6 +9982,27 @@ SYSCALL_DECLARE(util_register_desc)
+ 	return 0;
+ }
+ 
++#define TEST_SZARRAY (1UL << (28 + 1))
++long *test_array;
++
++SYSCALL_DECLARE(test_kmalloc)
++{
++	test_array = kmalloc(TEST_SZARRAY, IHK_MC_AP_NOWAIT);
++	memset((void *)test_array, 0xaa, TEST_SZARRAY);
++	return 0;
++}
++
++SYSCALL_DECLARE(test_str)
++{
++	int i;
++
++	for (i = 0; i < TEST_SZARRAY / sizeof(long); i++) {
++		test_array[i] = (1UL << 63) - 1;
++	}
++
++	return 0;
++}
++
+ void
+ reset_cputime()
+ {

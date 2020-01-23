@@ -1,0 +1,4 @@
+#!/bin/sh
+
+sudo insmod ${CMAKE_INSTALL_PREFIX}/kmod/test_driver.ko
+sudo chmod 666 /dev/test_rusage
