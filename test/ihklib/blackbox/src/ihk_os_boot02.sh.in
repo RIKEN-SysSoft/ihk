@@ -1,0 +1,20 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+fi
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+init_oom_killer
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_boot02 -u $(id -u) -g $(id -g)
+ret=$?
+
+fini_oom_killer
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi
