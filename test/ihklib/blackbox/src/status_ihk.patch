@@ -1,0 +1,33 @@
+commit 02e97be2bb3a370fbb2d6bab2058459b652fb0dd
+Author: Masamichi Takagi <masamichi.takagi@riken.jp>
+Date:   Mon Feb 17 00:18:09 2020 +0000
+
+    test: ihklib: patch for ihk_os_shutdown
+    
+    Change-Id: I744a3a40782811aa1c8a2ccd2fff2aae7e04c263
+
+diff --git a/cokernel/smp/arm64/setup.c b/cokernel/smp/arm64/setup.c
+index 00e18ef..8a37a1b 100644
+--- a/cokernel/smp/arm64/setup.c
++++ b/cokernel/smp/arm64/setup.c
+@@ -280,6 +280,8 @@ void arch_ready(void)
+ 
+ void done_init(void)
+ {
++	ihk_mc_delay_us(1000000UL);
++
+ 	/* Make it running */
+ 	boot_param->status = 3;
+ 	barrier();
+diff --git a/linux/driver/smp/smp-driver.c b/linux/driver/smp/smp-driver.c
+index 8de22ff..7691e64 100644
+--- a/linux/driver/smp/smp-driver.c
++++ b/linux/driver/smp/smp-driver.c
+@@ -1106,6 +1106,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
+ 		return 0;
+ 	}
+ 	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
++	mdelay(1000);
+ 
+ 	/* Reset CPU cores used by this OS */
+ 	for (i = 0; i < SMP_MAX_CPUS; ++i) {

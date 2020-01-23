@@ -1,0 +1,20 @@
+#!/usr/bin/sh
+
+# define WORKDIR
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+fi
+
+sudo timeout 300 @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem10 -u $(id -u) -g $(id -g)
+ret=$?
+
+if [ "$ret" == "124" ]; then
+    echo "[  NG  ] reservation time"
+elif [ "$ret" == "0" ]; then
+    echo "[  OK  ] reservation time"
+fi
+
+if [ "${AUTOTEST_HOME}" != "" ]; then
+    # Pass OK/NG to runtestlist.sh
+    echo $ret > $WORKDIR/result.log
+fi
