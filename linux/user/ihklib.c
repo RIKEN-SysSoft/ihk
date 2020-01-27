@@ -96,7 +96,12 @@ struct namespace_file namespace_files[] = {
 	{ .nstype = 0, .name = NULL, .fd = -1 }
 };
 
-struct ihklib_reserve_mem_conf reserve_mem_conf;
+struct ihklib_reserve_mem_conf reserve_mem_conf = {
+	.total = 0,
+	.variance_limit = 0,
+	.all_size_limit = 100,
+	.timeout = 30,
+};
 
 static int snprintf_realloc(char **str, size_t *size,
 		size_t offset, const char *format, ...)
@@ -784,17 +789,27 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 	return ret;
 }
 
-int ihk_reserve_mem_conf(int index, int key, unsigned int value)
+int ihk_reserve_mem_conf(int index, int key, void *value)
 {
-	if (key == IHK_RESERVE_MEM_TOTAL) {
+	switch (key) {
+	case IHK_RESERVE_MEM_TOTAL:
 		reserve_mem_conf.total = 1;
-		reserve_mem_conf.variance_limit = value;
+		reserve_mem_conf.variance_limit = *((int *)value);
+		break;
+	case IHK_RESERVE_MEM_ALL_SIZE_LIMIT:
+		reserve_mem_conf.all_size_limit = *((int *)value);
+		break;
+	case IHK_RESERVE_MEM_TIMEOUT:
+		reserve_mem_conf.timeout = *((int *)value);
+		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
 
 int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
-		    int num_mem_chunks/*, int flags*/)
+		    int num_mem_chunks)
 {
 	int ret = 0, ret_ioctl, i;
 	struct ihk_ioctl_mem_desc req = { 0 };
@@ -849,6 +864,8 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;
+	req.all_size_limit = reserve_mem_conf.all_size_limit;
+	req.timeout = reserve_mem_conf.timeout;
 
 	fd = ihklib_device_open(index);
 	CHKANDJUMP(fd < 0, fd, "ihklib_device_open failed\n");

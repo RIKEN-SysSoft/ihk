@@ -2893,10 +2893,10 @@ static void sort_pagelists(struct zone *zone)
 }
 
 #define RESERVE_MEM_FAILED_ATTEMPTS 1
-#define RESERVE_MEM_TIMEOUT 30
 //#define USE_TRY_TO_FREE_PAGES
 
-static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
+static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
+				 int all_size_limit, int timeout)
 {
 	int order = get_order(IHK_SMP_CHUNK_BASE_SIZE);
 	size_t want = ihk_mem;
@@ -3039,8 +3039,8 @@ retry:
 		 * to avoid Linux crashing...
 		 */
 		if ((numa_id == 0 && allocated > (available * 95 / 100)) ||
-				(want == IHK_SMP_MEM_ALL &&
-				 allocated > (available * 98 / 100))) {
+		    (want == IHK_SMP_MEM_ALL &&
+		     allocated > (available * all_size_limit / 100))) {
 			printk("%s: 95%% of NUMA %d taken, breaking allocation"
 					" loop (current order: %d)..\n",
 					__FUNCTION__, numa_id, order);
@@ -3121,9 +3121,10 @@ retry:
 				failed_free_attempts = 0;
 				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
 
-				/* Do not spend more than RESERVE_MEM_TIMEOUT
-				 * secs on reservation */
-				if ((get_seconds() - res_start) < RESERVE_MEM_TIMEOUT) {
+				/* Do not spend more than timeout secs on
+				 * reservation
+				 */
+				if ((get_seconds() - res_start) < timeout) {
 					goto retry;
 				}
 			}
@@ -3912,7 +3913,8 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 		mem_size = req_sizes[i];
 		numa_id = req_numa_ids[i];
 
-		ret = __ihk_smp_reserve_mem(mem_size, numa_id);
+		ret = __ihk_smp_reserve_mem(mem_size, numa_id,
+					    req.all_size_limit, req.timeout);
 		if (ret != 0) {
 			printk("IHK-SMP: reserve_mem: error: reserving memory\n");
 			break;
