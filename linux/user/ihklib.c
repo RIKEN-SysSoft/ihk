@@ -96,7 +96,13 @@ struct namespace_file namespace_files[] = {
 	{ .nstype = 0, .name = NULL, .fd = -1 }
 };
 
-struct ihklib_reserve_mem_conf reserve_mem_conf;
+struct ihklib_reserve_mem_conf reserve_mem_conf = {
+	.total = 0,
+	.variance_limit = 0,
+	.min_chunk_size = PAGE_SIZE,
+	.max_size_ratio_all = 100,
+	.timeout = 30,
+};
 
 static int snprintf_realloc(char **str, size_t *size,
 		size_t offset, const char *format, ...)
@@ -784,20 +790,33 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 	return ret;
 }
 
-int ihk_reserve_mem_conf(int index, int key, unsigned int value)
+int ihk_reserve_mem_conf(int index, int key, void *value)
 {
-	if (key == IHK_RESERVE_MEM_TOTAL) {
+	switch (key) {
+	case IHK_RESERVE_MEM_TOTAL:
 		reserve_mem_conf.total = 1;
-		reserve_mem_conf.variance_limit = value;
+		reserve_mem_conf.variance_limit = *((int *)value);
+		break;
+	case IHK_RESERVE_MEM_MIN_CHUNK_SIZE:
+		reserve_mem_conf.min_chunk_size = *((int *)value);
+		break;
+	case IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL:
+		reserve_mem_conf.max_size_ratio_all = *((int *)value);
+		break;
+	case IHK_RESERVE_MEM_TIMEOUT:
+		reserve_mem_conf.timeout = *((int *)value);
+		break;
+	default:
+		return -EINVAL;
 	}
 	return 0;
 }
 
 int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
-		    int num_mem_chunks/*, int flags*/)
+		    int num_mem_chunks)
 {
 	int ret = 0, ret_ioctl, i;
-	struct ihk_ioctl_mem_desc req = { 0 };
+	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 
 	size_t total_requested = 0;
@@ -849,6 +868,9 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;
+	req.min_chunk_size = reserve_mem_conf.min_chunk_size;
+	req.max_size_ratio_all = reserve_mem_conf.max_size_ratio_all;
+	req.timeout = reserve_mem_conf.timeout;
 
 	fd = ihklib_device_open(index);
 	CHKANDJUMP(fd < 0, fd, "ihklib_device_open failed\n");
@@ -1045,7 +1067,7 @@ int ihk_get_num_reserved_mem_chunks(int index)
 {
 	int ret = 0, ret_ioctl;
 	int fd = -1;
-	struct ihk_ioctl_mem_desc req = { 0 };
+	struct ihk_mem_req req = { 0 };
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
@@ -1074,7 +1096,7 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 	int ret = 0, ret_ioctl;
 	int fd = -1;
 	int i;
-	struct ihk_ioctl_mem_desc req = { 0 };
+	struct ihk_mem_req req = { 0 };
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
@@ -1126,7 +1148,7 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks)
 {
 	int ret = 0, i, ret_ioctl;
-	struct ihk_ioctl_mem_desc req = { 0 };
+	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 	struct ihk_mem_chunk *query_mem_chunks = NULL;
 
@@ -1590,7 +1612,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_chunks)
 {
 	int ret = 0, ret_ioctl, i;
-	struct ihk_ioctl_mem_desc req = { 0 };
+	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -1643,7 +1665,7 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 int ihk_os_get_num_assigned_mem_chunks(int index)
 {
 	int ret = 0, ret_ioctl;
-	struct ihk_ioctl_mem_desc req = { 0 };
+	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -1671,7 +1693,7 @@ int ihk_os_get_num_assigned_mem_chunks(int index)
 int ihk_os_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks)
 {
 	int ret = 0, ret_ioctl, i;
-	struct ihk_ioctl_mem_desc req = { 0 };
+	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -1727,7 +1749,7 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		int num_mem_chunks)
 {
 	int ret = 0, i, ret_ioctl;
-	struct ihk_ioctl_mem_desc req = { 0 };
+	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 	struct ihk_mem_chunk *query_mem_chunks = NULL;
 
