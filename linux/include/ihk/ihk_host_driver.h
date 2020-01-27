@@ -903,6 +903,7 @@ struct ihk_os_cpu_register {
 	unsigned long addr;
 	unsigned long val;
 	unsigned long addr_ext;
+	atomic_t sync;
 };
 
 /** \brief Kernel space callbacks for an OS implementation */
