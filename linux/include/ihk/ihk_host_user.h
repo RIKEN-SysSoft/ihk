@@ -127,6 +127,22 @@ struct ihk_mem_req {
 	size_t *sizes;
 	int *numa_ids;
 	int num_chunks;
+
+	/* Limit of alloc_pages order when reserving.
+	 * Use PAGE_SIZE for a system with system memory isolated,
+	 * 1 MiB otherwise.
+	 */
+	int min_chunk_size;
+
+	/* Stop gathering chunks for "all" request after accumulating
+	 * this percentage
+	 */
+	int max_size_ratio_all;
+
+	/* Give up proceeding to the smaller order when it took longer
+	 * than this seconds for the current order
+	 */
+	int timeout;
 };
 
 struct ihk_ikc_req {
