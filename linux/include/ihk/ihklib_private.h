@@ -62,8 +62,20 @@ struct ihklib_reserve_mem_conf {
 	/* MAX(max - ave, ave - min) must be less than or equal to
 	 * ave * variance_limit / 100
 	 */
-	unsigned long variance_limit;
+	int variance_limit;
+
+	/* Stop gathering chunks for "all" request after accumulating
+	 * this percentage
+	 */
+	int all_size_limit;
+
+	/* Give up proceeding to the smaller order when it took longer
+	 * than this seconds for the current order
+	 */
+	int timeout;
 };
+
+extern struct ihklib_reserve_mem_conf reserve_mem_conf;
 
 int ihklib_device_open(int index);
 int ihklib_os_open(int index);

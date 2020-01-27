@@ -127,6 +127,16 @@ struct ihk_mem_req {
 	size_t *sizes;
 	int *numa_ids;
 	int num_chunks;
+
+	/* Stop gathering chunks for "all" request after accumulating
+	 * this percentage
+	 */
+	int all_size_limit;
+
+	/* Give up proceeding to the smaller order when it took longer
+	 * than this seconds for the current order
+	 */
+	int timeout;
 };
 
 struct ihk_ikc_req {
