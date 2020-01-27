@@ -5,7 +5,9 @@ include_directories(
 	"${PROJECT_BINARY_DIR}"
 )
 
+execute_process(COMMAND getconf PAGE_SIZE OUTPUT_VARIABLE PAGE_SIZE OUTPUT_STRIP_TRAILING_WHITESPACE)
 add_library(ihklib SHARED ihklib.c)
+target_compile_definitions(ihklib PRIVATE -DPAGE_SIZE=${PAGE_SIZE})
 SET_TARGET_PROPERTIES(ihklib PROPERTIES OUTPUT_NAME ihk)
 target_link_libraries(ihklib ${LIBBFD})
 
