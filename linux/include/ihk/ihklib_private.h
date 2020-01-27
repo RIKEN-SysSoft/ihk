@@ -18,12 +18,6 @@ struct ihk_ioctl_cpu_desc {
 	int num_cpus;
 };
 
-struct ihk_ioctl_mem_desc {
-	size_t *sizes;
-	int *numa_ids;
-	int num_chunks;
-};
-
 struct ihk_ioctl_ikc_desc {
 	int *src_cpus;	/* LWC CPUs as IKC source */
 	int *dst_cpus;	/* Linux CPUs as IKC destination */
@@ -62,8 +56,20 @@ struct ihklib_reserve_mem_conf {
 	/* MAX(max - ave, ave - min) must be less than or equal to
 	 * ave * variance_limit / 100
 	 */
-	unsigned long variance_limit;
+	int variance_limit;
+
+	/* Stop gathering chunks for "all" request after accumulating
+	 * this percentage
+	 */
+	int all_size_limit;
+
+	/* Give up proceeding to the smaller order when it took longer
+	 * than this seconds for the current order
+	 */
+	int timeout;
 };
+
+extern struct ihklib_reserve_mem_conf reserve_mem_conf;
 
 int ihklib_device_open(int index);
 int ihklib_os_open(int index);
