@@ -275,6 +275,9 @@ static int do_reserve(int fd)
 		IHKCONFIG_CHKANDJUMP(ret < 0,
 				"parse provided memlist string", -1);
 
+		req_mem.all_size_limit = reserve_mem_conf.all_size_limit;
+		req_mem.timeout = reserve_mem_conf.timeout;
+
 		ret = ioctl(fd, IHK_DEVICE_RESERVE_MEM, &req_mem);
 		if (ret != 0) {
 			fprintf(stderr, "error: reserving memory: %s\n", __argv[4]);

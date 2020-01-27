@@ -62,7 +62,9 @@ enum IHKLIB_LOGLEVEL {
 };
 
 enum ihk_reserve_mem_conf_keys {
-	IHK_RESERVE_MEM_TOTAL
+	IHK_RESERVE_MEM_TOTAL,
+	IHK_RESERVE_MEM_ALL_SIZE_LIMIT,
+	IHK_RESERVE_MEM_TIMEOUT,
 };
 
 extern int loglevel;
