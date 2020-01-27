@@ -5,7 +5,21 @@ include_directories(
 	"${PROJECT_BINARY_DIR}"
 )
 
+execute_process(COMMAND awk -F= "$1 == \"CONFIG_ARM64_64K_PAGES\" { print $2; exit; }" "${KERNEL_DIR}/.config"
+	OUTPUT_VARIABLE CONFIG_ARM64_64K_PAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+	if(CONFIG_ARM64_64K_PAGES STREQUAL "y")
+		set(PAGE_SIZE "65536")
+	else()
+		set(PAGE_SIZE "4096")
+	endif()
+else()
+		set(PAGE_SIZE "4096")
+endif()
+message("PAGE_SIZE: ${PAGE_SIZE}")
+
 add_library(ihklib SHARED ihklib.c)
+target_compile_definitions(ihklib PRIVATE -DPAGE_SIZE=${PAGE_SIZE})
 SET_TARGET_PROPERTIES(ihklib PROPERTIES OUTPUT_NAME ihk)
 target_link_libraries(ihklib ${LIBBFD})
 
