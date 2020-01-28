@@ -874,7 +874,15 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
 		   "too many memory chunks requested\n");
 
-	CHKANDJUMP(!mem_chunks || !num_mem_chunks, -EINVAL, "invalid format\n");
+	if (num_mem_chunks != 0 && mem_chunks == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (num_mem_chunks == 0) {
+		ret = 0;
+		goto out;
+	};
 
 	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
 	if (!req.sizes) {
