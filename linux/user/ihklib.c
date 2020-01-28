@@ -662,17 +662,34 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL, "too many cpus requested\n");
 
 	if ((fd = ihklib_device_open(index)) < 0) {
-		eprintf("%s: error: ihklib_device_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_device_open returned %d\n",
+			__func__, fd);
 		ret = fd;
+		goto out;
+	}
+
+	if (num_cpus != 0 && cpus == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (num_cpus == 0) {
+		ret = 0;
 		goto out;
 	}
 
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
 
-	ret_ioctl = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, string=%s\n", cpu_list);
+	ret = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req);
+	if (ret != 0) {
+		int errno_save = errno;
+
+		dprintf("%s: error: ioctl returned %d\n",
+			__func__, ret);
+		ret = -errno_save;
+		goto out;
+	}
 
  out:
 	if (fd != -1) {
