@@ -3148,7 +3148,7 @@ pre_out:
 
 			printk(KERN_ERR "IHK-SMP: error: __alloc_pages_node() failed\n");
 
-			ret = -1;
+			ret = -ENOMEM;
 			goto out;
 		}
 
@@ -3888,13 +3888,13 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 	req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
 	if (!req_sizes) {
 		pr_err("%s: error: allocating request sizes\n", __func__);
-		return -EINVAL;
+		return -ENOMEM;
 	}
 
 	req_numa_ids = kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);
 	if (!req_numa_ids) {
 		pr_err("%s: error: allocating request numa_ids\n", __func__);
-		return -EINVAL;
+		return -ENOMEM;
 	}
 
 	if (copy_from_user(req_sizes, req.sizes,
