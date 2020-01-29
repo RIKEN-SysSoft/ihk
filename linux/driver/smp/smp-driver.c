@@ -3197,8 +3197,8 @@ pre_out:
 			if (PageCompound(leftover_page) && !PageHead(leftover_page)) {
 				struct page *head = compound_head(leftover_page);
 				leftover = (struct chunk *)
-					phys_to_virt(page_to_phys(head)) +
-					(PAGE_SIZE << compound_order(head));
+					(phys_to_virt(page_to_phys(head)) +
+					 (PAGE_SIZE << compound_order(head)));
 
 				printk("%s: adjusted leftover chunk to compound "
 						"page border: 0x%llx:%lu\n",
