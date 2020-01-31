@@ -3918,7 +3918,7 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 				mem_size % (1024 * 1024 * 4) != 0) {
 			printk("%s: error: mem_size must be in multiples of %d bytes\n",
 					__FUNCTION__, 1024 * 1024 * 4);
-			ret = -1;
+			ret = -EINVAL;
 			break;
 		}
 	}
