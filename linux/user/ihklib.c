@@ -76,8 +76,8 @@ int loglevel = IHKLIB_LOGLEVEL_ERR;
 
 #define CHKANDJUMP(cond, err, fmt, args...) do {	\
 	if (cond) {					\
-		eprintf(fmt, ##args);			\
 		ret = err;				\
+		dprintf(fmt, ##args);			\
 		goto out;				\
 	}						\
 } while(0)
@@ -654,7 +654,6 @@ int ihklib_device_open(int index)
 int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 {
 	int ret = 0, ret_ioctl;
-	char cpu_list[IHK_MAX_NUM_CPUS];
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
@@ -672,7 +671,7 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	req.num_cpus = num_cpus;
 
 	ret_ioctl = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed, string=%s\n", cpu_list);
+	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
 
  out:
 	if (fd != -1) {
