@@ -76,8 +76,8 @@ int loglevel = IHKLIB_LOGLEVEL_ERR;
 
 #define CHKANDJUMP(cond, err, fmt, args...) do {	\
 	if (cond) {					\
-		eprintf(fmt, ##args);			\
 		ret = err;				\
+		dprintf(fmt, ##args);			\
 		goto out;				\
 	}						\
 } while(0)
