@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d1dc18bd_4cb9eac1",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3750,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-01-31T07:39:11Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\tprintk(\"IHK-SMP: error: CPU %d is online\\n\",",
+      "revId": "b96efcf7b062b79bf6d6739cc4eaa3cbe4258286",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
