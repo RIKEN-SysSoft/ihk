@@ -776,13 +776,17 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 
 int ihk_release_cpu(int index, int* cpus, int num_cpus)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
-	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
-		"too many cpus specified\n");
+	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+		dprintf("%s: invalid num_cpus: %d\n",
+			__func__, num_cpus);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	if ((fd = ihklib_device_open(index)) < 0) {
 		eprintf("%s: error: ihklib_device_open\n",
@@ -791,14 +795,28 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 		goto out;
 	}
 
+	if (num_cpus != 0 && cpus == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (num_cpus == 0) {
+		ret = 0;
+		goto out;
+	}
+
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
-	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL,
-		"invalid format\n");
 
-	ret_ioctl = ioctl(fd, IHK_DEVICE_RELEASE_CPU, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_DEVICE_RELEASE_CPU, &req);
+	if (ret) {
+		int errno_save = errno;
 
+		dprintf("%s: IHK_DEVICE_RELEASE_CPU returned %d\n",
+			__func__, ret);
+		ret = -errno_save;
+		goto out;
+	}
  out:
 	if (fd != -1) {
 		close(fd);
