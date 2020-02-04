@@ -1628,6 +1628,13 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	memset(&cpus_to_assign, 0, sizeof(cpus_to_assign));
 
 	for (i = 0; i < req.num_cpus; i++) {
+		if (req_cpus[i] < 0 || req_cpus[i] >= nr_cpu_ids) {
+			pr_info("%s: error: CPU %d is out of range\n",
+				__func__, req_cpus[i]);
+
+			ret = -EINVAL;
+			goto out;
+		}
 		cpumask_set_cpu(req_cpus[i], &cpus_to_assign);
 	}
 
@@ -1704,6 +1711,13 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	memset(&cpus_to_release, 0, sizeof(cpus_to_release));
 
 	for (i = 0; i < req.num_cpus; i++) {
+		if (req_cpus[i] < 0 || req_cpus[i] >= nr_cpu_ids) {
+			pr_info("%s: error: CPU %d is out of range\n",
+				__func__, req_cpus[i]);
+
+			ret = -EINVAL;
+			goto out;
+		}
 		cpumask_set_cpu(req_cpus[i], &cpus_to_release);
 	}
 
@@ -3563,6 +3577,13 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	memset(&cpus_to_offline, 0, sizeof(cpus_to_offline));
 
 	for (i = 0; i < req.num_cpus; i++) {
+		if (req_cpus[i] < 0 || req_cpus[i] >= nr_cpu_ids) {
+			pr_info("%s: error: CPU %d is out of range\n",
+				__func__, req_cpus[i]);
+
+			ret = -EINVAL;
+			goto out;
+		}
 		cpumask_set_cpu(req_cpus[i], &cpus_to_offline);
 	}
 
