@@ -2115,6 +2115,17 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 	if (ret != 0) {
 		int errno_save = errno;
 
+	if ((fd = ihklib_os_open(index)) < 0) {
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
+		ret = fd;
+		goto out;
+	}
+
+	ret = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
+	if (ret != 0) {
+		int errno_save = errno;
+
 		dprintf("%s: IHK_OS_ASSIGN_MEM returned %d\n",
 			__func__, errno_save);
 		ret = -errno_save;
@@ -2734,6 +2745,7 @@ int ihk_os_clear_kmsg(int index)
 		goto out;
 	}
 
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -3058,16 +3070,6 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 
 	ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
 	if (ret) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_AUX_PERF_NUM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
-		goto out;
-	}
-
-	ret = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
-	if (ret < 0) {
 		int errno_save = errno;
 
 		dprintf("%s: error: IHK_OS_AUX_PERF_NUM returned %d\n",
