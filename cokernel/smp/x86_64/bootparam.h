@@ -60,15 +60,17 @@ struct ihk_dump_page {
 	unsigned long map[0];
 };
 
-#define IHK_DUMP_PAGE_SET_INCOMPLETE 0
-#define IHK_DUMP_PAGE_SET_COMPLETED  1
-
 struct ihk_dump_page_set {
 	volatile unsigned int completion_flag;
 	unsigned int count;
 	unsigned long page_size;
 	unsigned long phy_page;
 };
+
+#define IHK_DUMP_PAGE_SET_INCOMPLETE 0
+#define IHK_DUMP_PAGE_SET_COMPLETED  1
+#define DUMP_LEVEL_ALL 0
+#define DUMP_LEVEL_USER_UNUSED_EXCLUDE 24
 
 /*
  * smp_boot_param holds various boot time arguments.

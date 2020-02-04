@@ -1250,6 +1250,13 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		}
 		break;
 
+	case DUMP_NMI_CONT:
+		if (os->param->dump_page_set.completion_flag ==
+				IHK_DUMP_PAGE_SET_COMPLETED) {
+			smp_ihk_os_send_nmi(ihk_os, priv, 4);
+		}
+		break;
+
 	case DUMP_QUERY_NUM_MEM_AREAS:
 		args->size = get_dump_num_mem_areas(os);
 		break;
