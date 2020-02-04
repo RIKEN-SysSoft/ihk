@@ -2734,6 +2734,7 @@ int ihk_os_clear_kmsg(int index)
 		goto out;
 	}
 
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -3058,16 +3059,6 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 
 	ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
 	if (ret) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_AUX_PERF_NUM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
-		goto out;
-	}
-
-	ret = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
-	if (ret < 0) {
 		int errno_save = errno;
 
 		dprintf("%s: error: IHK_OS_AUX_PERF_NUM returned %d\n",
