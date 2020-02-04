@@ -263,6 +263,7 @@ static struct psci_operations *ihk_psci_ops;
 
 static size_t ihk___cpu_logical_map_size = NR_CPUS;
 static u64 *ihk___cpu_logical_map;
+static uint64_t *ihk___memstart_addr;
 
 static uintptr_t *ihk_invoke_psci_fn;
 static uintptr_t ihk___invoke_psci_fn_hvc;
@@ -401,6 +402,11 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!ihk__ipi_types))
 		return -EFAULT;
 #endif // IHK_IKC_USE_LINUX_WORK_IRQ
+
+	ihk___memstart_addr =
+		(uint64_t *) kallsyms_lookup_name("memstart_addr");
+	if (WARN_ON(!ihk___memstart_addr))
+		return -EFAULT;
 
 	return 0;
 }
@@ -1272,6 +1278,7 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		/* See load_file() for the calculation below */
 		mem_chunks->kernel_base =
 			(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+		mem_chunks->phys_start = *ihk___memstart_addr;
 
 		if (copy_to_user(args->buf, mem_chunks, mem_size)) {
 			printk("%s: copy_to_user failed.\n", __FUNCTION__);
@@ -1329,6 +1336,7 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 		/* See load_file() for the calculation below */
 		mem_chunks->kernel_base =
 			(os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+		mem_chunks->phys_start = *ihk___memstart_addr;
 
 		if (copy_to_user(args->buf, mem_chunks, mem_size)) {
 			printk("%s: copy_to_user failed.\n", __FUNCTION__);
@@ -1349,6 +1357,14 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 	case DUMP_QUERY_ALL:
 		args->start = os->mem_start;
 		args->size = os->mem_end - os->mem_start;
+		break;
+
+	case DUMP_QUERY_PHYS_START:
+		if (copy_to_user(args->buf, ihk___memstart_addr,
+					sizeof(uint64_t))) {
+			return -EFAULT;
+		}
+
 		break;
 
 	case DUMP_READ_ALL:
