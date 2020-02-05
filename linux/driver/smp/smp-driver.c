@@ -2286,6 +2286,7 @@ out:
 	return ret;
 }
 
+static void _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id);
 static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	struct smp_os_data *os = priv;
@@ -2294,6 +2295,7 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	struct ihk_mem_req req;
 	size_t *req_sizes = NULL;
 	int *req_numa_ids = NULL;
+	int failed_index = 0;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -2344,27 +2346,64 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 				req_numa_ids[i]);
 		if (ret != 0) {
 			printk("IHK-SMP: os_assign_mem: error: assigning memory chunk\n");
+			failed_index = i;
 			goto out;
 		}
 	}
 
 out:
+	/* Release all when failed */
+	for (i = 0; i < failed_index; i++) {
+		_smp_ihk_os_release_mem(ihk_os, req_sizes[i], req_numa_ids[i]);
+	}
+
 	kfree(req_sizes);
 	kfree(req_numa_ids);
 	return ret;
+}
+
+static void _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
+{
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	struct ihk_os_mem_chunk *next_chunk = NULL;
+	struct chunk *mem_chunk;
+
+	list_for_each_entry_safe(os_mem_chunk, next_chunk,
+				 &ihk_mem_used_chunks, list) {
+
+		if (os_mem_chunk->os != ihk_os
+		    || os_mem_chunk->size != size
+		    || os_mem_chunk->numa_id != numa_id) {
+			continue;
+		}
+
+		list_del(&os_mem_chunk->list);
+
+		mem_chunk = (struct chunk *)phys_to_virt(os_mem_chunk->addr);
+		mem_chunk->addr = os_mem_chunk->addr;
+		mem_chunk->size = os_mem_chunk->size;
+		mem_chunk->numa_id = os_mem_chunk->numa_id;
+		INIT_LIST_HEAD(&mem_chunk->chain);
+
+		pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
+		       " (len: %lu) @ NUMA node: %d is returned to IHK\n",
+		       mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+		       mem_chunk->size, mem_chunk->numa_id);
+
+		add_free_mem_chunk(mem_chunk);
+
+		kfree(os_mem_chunk);
+	}
 }
 
 static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	struct smp_os_data *os = priv;
 	unsigned long flags;
-	int ret = -EINVAL, i, ret_internal;
+	int ret = -EINVAL, i;
 	struct ihk_mem_req req;
 	size_t *req_sizes = NULL;
 	int *req_numa_ids = NULL;
-	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
-	struct ihk_os_mem_chunk *next_chunk = NULL;
-	struct chunk *mem_chunk;
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -2373,63 +2412,60 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
-	ret_internal = copy_from_user(&req, (void *)arg, sizeof(req));
-	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
+	ret = copy_from_user(&req, (void *)arg, sizeof(req));
+	if (ret) {
+		pr_err("%s: error: copy_from_user request\n",
+		       __func__);
+		goto out;
+	}
 
-	ARCHDRV_CHKANDJUMP(req.num_chunks == 0, "invalid request length",
-			-EINVAL);
+	if (req.num_chunks == 0) {
+		ret = 0;
+		goto out;
+	}
 
 	req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
-	ARCHDRV_CHKANDJUMP(req_sizes == NULL, "kmalloc failed", -EINVAL);
+	if (req_sizes == NULL) {
+		pr_err("%s: error: allocating sizes\n",
+		       __func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	req_numa_ids = kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);
-	ARCHDRV_CHKANDJUMP(req_numa_ids == NULL, "kmalloc failed", -EINVAL);
+	if (req_numa_ids == NULL) {
+		pr_err("%s: error: allocating NUMA ids\n",
+		       __func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	ret_internal = copy_from_user(req_sizes, req.sizes,
+	ret = copy_from_user(req_sizes, req.sizes,
 			sizeof(size_t) * req.num_chunks);
-	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
+	if (ret) {
+		pr_err("%s: error: copy_from_user sizes\n",
+		       __func__);
+		goto out;
+	}
 
-	ret_internal = copy_from_user(req_numa_ids, req.numa_ids,
+	ret = copy_from_user(req_numa_ids, req.numa_ids,
 			sizeof(int) * req.num_chunks);
-	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
+	if (ret) {
+		pr_err("%s: error: copy_from_user NUMA ids\n",
+		       __func__);
+		goto out;
+	}
 
 	/* Drop specified memory chunks */
 	for (i = 0; i < req.num_chunks; i++) {
-		list_for_each_entry_safe(os_mem_chunk, next_chunk,
-								 &ihk_mem_used_chunks, list) {
-			
-			if (os_mem_chunk->os != ihk_os
-				|| os_mem_chunk->size != req_sizes[i]
-				|| os_mem_chunk->numa_id != req_numa_ids[i]) {
-				continue;
-			}
-			
-			list_del(&os_mem_chunk->list);
-			
-			mem_chunk = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
-			mem_chunk->addr = os_mem_chunk->addr;
-			mem_chunk->size = os_mem_chunk->size;
-			mem_chunk->numa_id = os_mem_chunk->numa_id;
-			INIT_LIST_HEAD(&mem_chunk->chain);
-			
-			printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
-				   " (len: %lu) @ NUMA node: %d is returned to IHK\n",
-				   mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
-				   mem_chunk->size, mem_chunk->numa_id);
-			
-			add_free_mem_chunk(mem_chunk);
-			
-			kfree(os_mem_chunk);
-			ret = 0;
-		}
+		_smp_ihk_os_release_mem(ihk_os, req_sizes[i], req_numa_ids[i]);
 	}
 
- fn_exit:
+	ret = 0;
+ out:
 	kfree(req_sizes);
 	kfree(req_numa_ids);
 	return ret;
- fn_fail:
-	goto fn_exit;
 }
 
 static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
