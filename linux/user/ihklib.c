@@ -945,7 +945,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		int errno_save = errno;
 
 		dprintf("%s: IHK_DEVICE_RESERVE_MEM returned %d\n",
-			errno_save);
+			__func__, errno_save);
 		ret = -errno_save;
 		goto out;
 	}
@@ -1119,7 +1119,8 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		fd = ihklib_device_open(index);
 		if (fd < 0) {
 			ret = fd;
-			dprintf("%s: ihklib_device_open returned %d\n", fd);
+			dprintf("%s: ihklib_device_open returned %d\n",
+				__func__, fd);
 		}
 
 		ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM_PARTIALLY, &req);
@@ -1127,7 +1128,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			int errno_save = errno;
 
 			dprintf("%s: IHK_DEVICE_RESERVE_MEM returned %d\n",
-				errno_save);
+				__func__, errno_save);
 			ret = -errno_save;
 			goto out;
 		}
@@ -1381,7 +1382,8 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 			num_os_instances++;
 			if (num_os_instances > _num_os_instances) {
 				dprintf("%s: Actual # of OS instances (%d) is different than requested (%d)\n",
-					__func__, num_os_instances, _num_os_instances);
+					__func__, num_os_instances,
+					_num_os_instances);
 				ret = -EINVAL;
 				goto out;
 			}
@@ -1810,7 +1812,7 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 		int errno_save = errno;
 
 		dprintf("%s: IHK_OS_ASSIGN_MEM returned %d\n",
-			errno_save);
+			__func__, errno_save);
 		ret = -errno_save;
 		goto out;
 	}
@@ -1852,17 +1854,35 @@ int ihk_os_get_num_assigned_mem_chunks(int index)
 	return ret;
 }
 
-int ihk_os_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks)
+int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
+		     int _num_mem_chunks)
 {
-	int ret = 0, ret_ioctl, i;
+	int ret = 0, i;
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
+		goto out;
+	}
+
+	req.num_chunks = 0;   /* means only get num_chunks */
+
+	ret = ioctl(fd, IHK_OS_QUERY_MEM, &req);
+	if (ret) {
+		dprintf("%s: error: IHK_OS_QUERY_MEM returned %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	if (_num_mem_chunks != req.num_chunks) {
+		dprintf("%s: error: actual number of chunks (%d) doesn't"
+			" match requested (%d)\n",
+			__func__, req.num_chunks, _num_mem_chunks);
+		ret = -EINVAL;
 		goto out;
 	}
 
@@ -1884,12 +1904,15 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_c
 
 	req.num_chunks = _num_mem_chunks;
 
-	ret_ioctl = ioctl(fd, IHK_OS_QUERY_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_OS_QUERY_MEM, &req);
+	if (ret) {
+		int errno_save = errno;
 
-	CHKANDJUMP(req.num_chunks != _num_mem_chunks, -EINVAL,
-		   "actual number of memory chunks (%d) is different than requested (%d)\n",
-		   req.num_chunks, _num_mem_chunks);
+		dprintf("%s: error: IHK_OS_QUERY_MEM returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
 
 	for (i = 0; i < _num_mem_chunks; i++) {
 		mem_chunks[i].size = req.sizes[i];
