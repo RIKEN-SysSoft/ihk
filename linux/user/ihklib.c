@@ -1933,32 +1933,55 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		int num_mem_chunks)
 {
-	int ret = 0, i, ret_ioctl;
+	int ret = 0, i;
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 	struct ihk_mem_chunk *query_mem_chunks = NULL;
 
 	dprintk("%s: enter\n", __func__);
-	CHKANDJUMP(num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS, -EINVAL,
-		"too many memory chunks specified\n");
+	if (num_mem_chunks < 0 || num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
+		dprintf("%s: error: invalid # of chunks (%d)\n",
+			__func__, num_mem_chunks);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (num_mem_chunks != 0 && mem_chunks == NULL) {
+
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (num_mem_chunks == 0) {
+		ret = 0;
+		goto out;
+	};
 
 	if (mem_chunks[0].size == IHK_SMP_MEM_ALL) {
 		/* Special case for releasing all memory */
 		num_mem_chunks = ihk_os_get_num_assigned_mem_chunks(index);
 		query_mem_chunks = calloc(num_mem_chunks,
 					  sizeof(struct ihk_mem_chunk));
-		CHKANDJUMP(query_mem_chunks == NULL, -ENOMEM,
-			   "failed to allocate query_mem_chunks\n");
+		if (query_mem_chunks == NULL) {
+			dprintf("%s: error: allocating memory chunks\n",
+				__func__);
+			ret = -ENOMEM;
+			goto out;
+		}
 
 		ret = ihk_os_query_mem(index, query_mem_chunks, num_mem_chunks);
-		CHKANDJUMP(ret, -EINVAL, "ihk_os_query_mem failed\n");
+		if (ret) {
+			dprintf("%s: error: ihk_os_query_mem returned %d\n",
+				__func__, ret);
+			goto out;
+		}
 
 		mem_chunks = query_mem_chunks;
 	}
 
 	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
 	if (!req.sizes) {
-		eprintf("%s: error: allocating request sizes\n",
+		dprintf("%s: error: allocating request sizes\n",
 			__func__);
 		ret = -ENOMEM;
 		goto out;
@@ -1985,8 +2008,14 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_RELEASE_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed");
+	ret = ioctl(fd, IHK_OS_RELEASE_MEM, &req);
+	if (ret) {
+		int errno_save = errno;
+
+		dprintf("%s: error: IHK_OS_RELEASE_MEM returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+	}
 
  out:
 	if (fd != -1) {
