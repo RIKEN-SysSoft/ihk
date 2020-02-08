@@ -2265,7 +2265,7 @@ out:
 	return ret;
 }
 
-static void _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id);
+static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id);
 static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	struct smp_os_data *os = priv;
@@ -2341,8 +2341,9 @@ out:
 	return ret;
 }
 
-static void _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
+static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
 {
+	int ret;
 	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 	struct ihk_os_mem_chunk *next_chunk = NULL;
 	struct chunk *mem_chunk;
@@ -2372,7 +2373,14 @@ static void _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
 		add_free_mem_chunk(mem_chunk);
 
 		kfree(os_mem_chunk);
+
+		ret = 0;
+		goto out;
 	}
+
+	ret = -EINVAL;
+ out:
+	return ret;
 }
 
 static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
@@ -2437,7 +2445,14 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 
 	/* Drop specified memory chunks */
 	for (i = 0; i < req.num_chunks; i++) {
-		_smp_ihk_os_release_mem(ihk_os, req_sizes[i], req_numa_ids[i]);
+		ret = _smp_ihk_os_release_mem(ihk_os, req_sizes[i],
+					      req_numa_ids[i]);
+		if (ret) {
+			pr_err("%s: error: _smp_ihk_os_release_mem"
+			       " returned %d\n",
+			       __func__, ret);
+			goto out;
+		}
 	}
 
 	ret = 0;
