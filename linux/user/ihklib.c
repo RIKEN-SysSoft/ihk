@@ -1305,21 +1305,26 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 /* Create OS and return OS index */
 int ihk_create_os(int index)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
-		eprintf("%s: error: ihklib_device_open\n",
+		dprintf("%s: error: ihklib_device_open\n",
 			__func__);
 		ret = fd;
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_DEVICE_CREATE_OS, 0);
-	CHKANDJUMP(ret_ioctl < 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_DEVICE_CREATE_OS, 0);
+	if (ret < 0) {
+		int errno_save = errno;
 
-	ret = ret_ioctl;
+		dprintf("%s: error: IHK_DEVICE_CREATE_OS returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
  out:
 	if (fd != -1) {
 		close(fd);
