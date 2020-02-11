@@ -670,13 +670,6 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL, "too many cpus requested\n");
 
-	if ((fd = ihklib_device_open(index)) < 0) {
-		dprintf("%s: error: ihklib_device_open returned %d\n",
-			__func__, fd);
-		ret = fd;
-		goto out;
-	}
-
 	if (num_cpus != 0 && cpus == NULL) {
 		ret = -EFAULT;
 		goto out;
@@ -689,6 +682,13 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
+
+	if ((fd = ihklib_device_open(index)) < 0) {
+		dprintf("%s: error: ihklib_device_open returned %d\n",
+			__func__, fd);
+		ret = fd;
+		goto out;
+	}
 
 	ret = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req);
 	if (ret != 0) {
@@ -801,13 +801,6 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 		goto out;
 	}
 
-	if ((fd = ihklib_device_open(index)) < 0) {
-		dprintf("%s: error: ihklib_device_open\n",
-			__func__);
-		ret = fd;
-		goto out;
-	}
-
 	if (num_cpus != 0 && cpus == NULL) {
 		ret = -EFAULT;
 		goto out;
@@ -820,6 +813,13 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
+
+	if ((fd = ihklib_device_open(index)) < 0) {
+		dprintf("%s: error: ihklib_device_open\n",
+			__func__);
+		ret = fd;
+		goto out;
+	}
 
 	ret = ioctl(fd, IHK_DEVICE_RELEASE_CPU, &req);
 	if (ret) {
@@ -1396,7 +1396,7 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 		direp = readdir(dir);
 	}
 	CHKANDJUMP(num_os_instances != _num_os_instances, -EINVAL, "Actual # of OS instances (%d) is different than requested (%d)\n", num_os_instances, _num_os_instances);
-	
+
  out:
 	if (dir) {
 		closedir(dir);
@@ -1406,21 +1406,28 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 
 int ihk_destroy_os(int dev_index, int os_index)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
 
-	if ((fd = ihklib_device_open(dev_index)) == -1) {
-		eprintf("%s: error: ihklib_device_open\n",
-			__func__);
+	fd = ihklib_device_open(dev_index);
+	if (fd < 0) {
+		dprintf("%s: error: ihklib_device_open returned %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_DEVICE_DESTROY_OS, os_index);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_DEVICE_DESTROY_OS, os_index);
+	if (ret) {
+		int errno_save = errno;
 
+		dprintf("%s: error: IHK_DEVICE_DESTROY_OS returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
  out:
 	if (fd != -1) {
 		close(fd);
@@ -1472,13 +1479,6 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 		goto out;
 	}
 
-	if ((fd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open returned %d\n",
-			__func__, fd);
-		ret = fd;
-		goto out;
-	}
-
 	if (num_cpus != 0 && cpus == NULL) {
 		ret = -EFAULT;
 		goto out;
@@ -1491,6 +1491,14 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
+
+	if ((fd = ihklib_os_open(index)) < 0) {
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
+		ret = fd;
+		goto out;
+	}
+
 	ret = ioctl(fd, IHK_OS_ASSIGN_CPU, &req);
 	if (ret) {
 		int errno_save = errno;
@@ -1608,13 +1616,6 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
-	if ((fd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open returned %d\n",
-			__func__, fd);
-		ret = fd;
-		goto out;
-	}
-
 	if (num_cpus != 0 && cpus == NULL) {
 		ret = -EFAULT;
 		goto out;
@@ -1626,6 +1627,13 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 	}
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
+
+	if ((fd = ihklib_os_open(index)) < 0) {
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
+		ret = fd;
+		goto out;
+	}
 
 	ret = ioctl(fd, IHK_OS_RELEASE_CPU, &req);
 	if (ret) {
@@ -1657,11 +1665,18 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 		ret = -EINVAL;
 		goto out;
 	}
-	
-	if ((fd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open\n",
-			__func__);
-		ret = fd;
+
+	if (num_cpus != 0 && map == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	ret = ihk_os_get_num_assigned_cpus(index);
+	if (ret != num_cpus) {
+		dprintf("%s: error: actual number of CPUs (%d) is"
+			" different than requested (%d)\n",
+			__func__, ret, num_cpus);
+		ret = -EINVAL;
 		goto out;
 	}
 
@@ -1687,16 +1702,23 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	}
 	req.num_cpus = num_cpus;
 
+	if ((fd = ihklib_os_open(index)) < 0) {
+		dprintf("%s: error: ihklib_os_open\n",
+			__func__);
+		ret = fd;
+		goto out;
+	}
+
 	ret = ioctl(fd, IHK_OS_SET_IKC_MAP, &req);
 	if (ret) {
 		int errno_save = errno;
-		
+
 		dprintf("%s: error IHK_OS_SET_IKC_MAP returned %d\n",
 			__func__, errno_save);
 		ret = -errno_save;
 		goto out;
 	}
-		
+
  out:
 	if (fd != -1) {
 		close(fd);
@@ -1708,18 +1730,29 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
 int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
-	int ret = 0, i, ret_ioctl;
+	int ret = 0, i;
 	struct ihk_ioctl_ikc_desc req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
-	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL,
-		"too many cpus specified\n");
+	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+		dprintf("%s: error: invalid # of cpus (%d)\n",
+			__func__, num_cpus);
+		ret = -EINVAL;
+		goto out;
+	}
 
-	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
-			__func__);
-		ret = fd;
+	if (num_cpus != 0 && map == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	ret = ihk_os_get_num_assigned_cpus(index);
+	if (ret != num_cpus) {
+		dprintf("%s: error: actual number of CPUs (%d) is"
+			" different than requested (%d)\n",
+			__func__, ret, num_cpus);
+		ret = -EINVAL;
 		goto out;
 	}
 
@@ -1741,12 +1774,22 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
 	req.num_cpus = num_cpus;
 
-	ret_ioctl = ioctl(fd, IHK_OS_GET_IKC_MAP, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	if ((fd = ihklib_os_open(index)) < 0) {
+		eprintf("%s: error: ihklib_os_open\n",
+			__func__);
+		ret = fd;
+		goto out;
+	}
 
-	CHKANDJUMP(req.num_cpus != num_cpus, -EINVAL,
-		   "actual number of ikc_maps (%d) is different than requested (%d)\n",
-		   req.num_cpus, num_cpus);
+	ret = ioctl(fd, IHK_OS_GET_IKC_MAP, &req);
+	if (ret) {
+		int errno_save = errno;
+
+		dprintf("%s: error: IHK_OS_GET_IKC_MAP returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
 
 	for (i = 0; i < req.num_cpus; i++) {
 		map[i].src_cpu = req.src_cpus[i];
@@ -1775,13 +1818,6 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 		dprintf("%s: error: invalid # of chunks (%d)\n",
 			__func__, num_mem_chunks);
 		ret = -EINVAL;
-		goto out;
-	}
-
-	if ((fd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open returned %d\n",
-			__func__, fd);
-		ret = fd;
 		goto out;
 	}
 
@@ -1822,6 +1858,13 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;
+
+	if ((fd = ihklib_os_open(index)) < 0) {
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
+		ret = fd;
+		goto out;
+	}
 
 	ret = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
 	if (ret != 0) {
@@ -1963,7 +2006,6 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	}
 
 	if (num_mem_chunks != 0 && mem_chunks == NULL) {
-
 		ret = -EFAULT;
 		goto out;
 	}
@@ -2927,7 +2969,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		else {
 			ok = bfd_set_section_size(abfd, scn, mem_chunks->chunks[i].size);
 		}
-	
+
 		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_size failed: %s\n", bfd_errmsg(bfd_get_error()));
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
