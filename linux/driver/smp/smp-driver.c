@@ -3403,7 +3403,7 @@ static void __ihk_smp_release_chunk(struct chunk *mem_chunk)
 
 static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 {
-	int ret = -1;
+	int ret;
 	struct chunk *mem_chunk;
 	struct chunk *mem_chunk_next;
 
@@ -3421,10 +3421,11 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 			mem_chunk->size, mem_chunk->numa_id);
 
 		ret = 0;
-		goto fn_exit;
+		goto out;
 	}
 
- fn_exit:
+	ret = -EINVAL;
+ out:
 	return ret;
 }
 
@@ -4076,10 +4077,13 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 
 	/* Do release */
 	for (i = 0; i < req.num_chunks; i++) {
-		ret_internal = __ihk_smp_release_mem(req_sizes[i],
-				req_numa_ids[i]);
-		ARCHDRV_CHKANDJUMP(ret_internal != 0,
-				"__ihk_smp_release_mem failed", -EINVAL);
+		ret = __ihk_smp_release_mem(req_sizes[i],
+					    req_numa_ids[i]);
+		if (ret) {
+			pr_err("%s: error: __ihk_smp_release_mem returned %d\n",
+			       __func__, ret);
+			goto fn_fail;
+		}
 	}
 
  fn_fail:
