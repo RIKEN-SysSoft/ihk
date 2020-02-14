@@ -1190,6 +1190,8 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		free_pages((unsigned long)os->param, os->param_pages_order);
 	}
 
+	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+
 	//kfree(os); /* done in destroy */
 
 	return ret;
