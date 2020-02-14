@@ -3782,55 +3782,16 @@ out:
 	return ret;
 }
 
-static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
+static int _smp_ihk_release_cpu(cpumask_t *cpus_to_online)
 {
 	int ret;
 	int cpu;
-	int i;
-	cpumask_t cpus_to_online;
-	struct ihk_cpu_req req;
-	int *req_cpus = NULL;
-
-	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
-		printk("%s: error: copying request\n", __FUNCTION__);
-		return -EFAULT;
-	}
-
-	if (req.num_cpus == 0) {
-		printk("%s: invalid request length\n", __FUNCTION__);
-		return -EINVAL;
-	}
-
-	req_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
-	if (!req_cpus) {
-		printk("%s: error: allocating request string\n", __FUNCTION__);
-		return -EINVAL;
-	}
-
-	if (copy_from_user(req_cpus, req.cpus, sizeof(int) * req.num_cpus)) {
-		printk("%s: error: copying request string\n", __FUNCTION__);
-		ret = -EFAULT;
-		goto out;
-	}
-
-	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
-
-	for (i = 0; i < req.num_cpus; i++) {
-		if (req_cpus[i] < 0 || req_cpus[i] >= nr_cpu_ids) {
-			pr_info("%s: error: CPU %d is out of range\n",
-				__func__, req_cpus[i]);
-
-			ret = -EINVAL;
-			goto out;
-		}
-		cpumask_set_cpu(req_cpus[i], &cpus_to_online);
-	}
 
 	/* Collect cores to be onlined */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
-	for_each_cpu(cpu, &cpus_to_online) {
+	for_each_cpu(cpu, cpus_to_online) {
 #else
-	for_each_cpu_mask(cpu, cpus_to_online) {
+	for_each_cpu_mask(cpu, *cpus_to_online) {
 #endif
 		if (cpu > SMP_MAX_CPUS) {
 			printk("IHK-SMP: error: CPU %d is out of limit\n",
@@ -3847,10 +3808,9 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		}
 
 		if (cpu_online(cpu)) {
-			printk("IHK-SMP: error: CPU %d is online\n",
+			pr_warn("IHK-SMP: warning: CPU %d is online\n",
 			       cpu);
-			ret = -EINVAL;
-			goto err;
+			continue;
 		}
 
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
@@ -3898,6 +3858,60 @@ err:
 	}
 
 out:
+	return ret;
+}
+
+static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
+{
+	int ret;
+	int i;
+	cpumask_t cpus_to_online;
+	struct ihk_cpu_req req;
+	int *req_cpus = NULL;
+
+	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+		pr_err("%s: error: copying request\n", __func__);
+		return -EFAULT;
+	}
+
+	if (req.num_cpus == 0) {
+		pr_err("%s: invalid request length\n", __func__);
+		return -EINVAL;
+	}
+
+	req_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
+	if (!req_cpus) {
+		pr_err("%s: error: allocating request string\n", __func__);
+		return -EINVAL;
+	}
+
+	if (copy_from_user(req_cpus, req.cpus, sizeof(int) * req.num_cpus)) {
+		pr_err("%s: error: copying request string\n", __func__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
+
+	for (i = 0; i < req.num_cpus; i++) {
+		if (req_cpus[i] < 0 || req_cpus[i] >= nr_cpu_ids) {
+			pr_info("%s: error: CPU %d is out of range\n",
+				__func__, req_cpus[i]);
+
+			ret = -EINVAL;
+			goto out;
+		}
+		cpumask_set_cpu(req_cpus[i], &cpus_to_online);
+	}
+
+	ret = _smp_ihk_release_cpu(&cpus_to_online);
+	if (ret) {
+		pr_err("%s: error: _smp_ihk_release_cpu returned %d\n",
+		       __func__, ret);
+		goto out;
+	}
+
+ out:
 	kfree(req_cpus);
 	return ret;
 }
@@ -4758,7 +4772,36 @@ static int __init smp_module_init(void)
 
 static void __exit smp_module_exit(void)
 {
+	int i;
+	cpumask_t cpus_to_online;
+	struct chunk *mem_chunk;
+	struct chunk *mem_chunk_next;
+
 	printk(KERN_INFO "IHK-SMP: finalizing...\n");
+
+	/* release reserved CPUs (available --> online) */
+	memset(&cpus_to_online, 0, sizeof(cpus_to_online));
+
+	for (i = 0; i < SMP_MAX_CPUS; ++i) {
+		if (ihk_smp_cpus[i].status != IHK_SMP_CPU_AVAILABLE)
+			continue;
+
+		cpumask_set_cpu(i, &cpus_to_online);
+	}
+
+	_smp_ihk_release_cpu(&cpus_to_online);
+
+	/* release reserved memory chunks */
+	list_for_each_entry_safe(mem_chunk,
+			mem_chunk_next, &ihk_mem_free_chunks, chain) {
+		list_del(&mem_chunk->chain);
+		__ihk_smp_release_chunk(mem_chunk);
+		pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
+			" (len: %lu) @ NUMA node: %d is released\n",
+			mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+			mem_chunk->size, mem_chunk->numa_id);
+	}
+
 	ihk_unregister_device(builtin_data.ihk_dev);
 }
 
