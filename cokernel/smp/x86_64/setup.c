@@ -162,6 +162,8 @@ void arch_ready(void)
 
 void done_init(void)
 {
+	ihk_mc_delay_us(1000000UL);
+
 	/* Make it running */
 	boot_param->status = 3;
 	barrier();
