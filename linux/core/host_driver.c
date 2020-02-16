@@ -909,13 +909,35 @@ static int __ihk_os_dump(struct ihk_host_linux_os_data *data, void __user *uargs
 
 static int __ihk_os_freeze(struct ihk_host_linux_os_data *data)
 {
-	int error = 0;
+	int ret = 0;
 
-	if (data->ops->freeze) {
-		error = (*data->ops->freeze)(data, data->priv);
+	enum ihk_os_status status = __ihk_os_status(data);
+
+	switch (status) {
+	case IHK_OS_STATUS_NOT_BOOTED:
+	case IHK_OS_STATUS_BOOTING:
+	case IHK_OS_STATUS_BOOTED:
+	case IHK_OS_STATUS_READY:
+	case IHK_OS_STATUS_SHUTDOWN:
+	case IHK_OS_STATUS_FAILED:
+	case IHK_OS_STATUS_HUNGUP:
+		pr_err("%s: error: invalid os status: %d\n",
+		       __func__, status);
+		ret = -EINVAL;
+		goto out;
+	case IHK_OS_STATUS_FREEZING:
+	case IHK_OS_STATUS_FROZEN:
+	case IHK_OS_STATUS_RUNNING:
+	default:
+		break;
 	}
 
-	return error;
+	if (data->ops->freeze) {
+		ret = (*data->ops->freeze)(data, data->priv);
+	}
+
+ out:
+	return ret;
 }
 
 static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
