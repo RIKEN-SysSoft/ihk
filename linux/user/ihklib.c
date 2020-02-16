@@ -2347,22 +2347,26 @@ int ihk_os_shutdown(int index)
 
 int ihk_os_get_status(int index)
 {
-	int ret = IHK_STATUS_INACTIVE, ret_ioctl;
+	int ret = IHK_STATUS_INACTIVE;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_STATUS);
-	CHKANDJUMP(ret_ioctl < 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_OS_STATUS);
+	if (ret < 0) {
+		dprintf("%s: error: IHK_OS_STATUS: %d\n",
+			__func__, ret);
+		goto out;
+	}
 
-	switch (ret_ioctl) {
+	switch (ret) {
 	case IHK_OS_STATUS_NOT_BOOTED: /* before smp_ihk_os_boot or
 					* after smp_ihk_destroy_os
 					*/
@@ -2394,8 +2398,10 @@ int ihk_os_get_status(int index)
 		ret = IHK_STATUS_FROZEN;
 		break;
 	default:
-		CHKANDJUMP(1, -EINVAL, "unknown os status=%d\n", ret);
-		break;
+		dprintf("%s: error: unknown os status: %d\n",
+			__func__, ret);
+		ret = -EINVAL;
+		goto out;
 	}
 
  out:
