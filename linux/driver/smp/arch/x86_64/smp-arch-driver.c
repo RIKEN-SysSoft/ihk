@@ -42,6 +42,10 @@
 #include "smp-driver.h"
 #include "smp-arch-driver.h"
 #include "smp-defines-driver.h"
+#include "host_linux.h"
+
+/* Allocate monitor */
+void setup_monitor(struct ihk_host_linux_os_data *data);
 
 /* ----------------------------------------------- */
 
@@ -818,35 +822,104 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 
 enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 {
+	int n;
+	int i;
+	int freezing;
+	int ret;
 	struct smp_os_data *os = priv;
+	struct ihk_host_linux_os_data *data = ihk_os;
 	int status;
 
 	status = os->status;
+	pr_info("%s: builtin os status: %d, param status: %ld\n",
+		__func__, status, os->param->status);
 
 	switch (status) {
 	case BUILTIN_OS_STATUS_BOOTING:
 		if (os->param->status == 1) {
-			return IHK_OS_STATUS_BOOTED;
+			ret = IHK_OS_STATUS_BOOTED;
 		} else if(os->param->status == 2) {
 			/* Restore Linux trampoline once ready */
 			if (using_linux_trampoline) {
 				memcpy(trampoline_va, linux_trampoline_backup, 
 						IHK_SMP_TRAMPOLINE_SIZE);
 			}
-			return IHK_OS_STATUS_READY;
+			ret = IHK_OS_STATUS_READY;
 		} else if(os->param->status == 3) {
-			return IHK_OS_STATUS_RUNNING;
+			ret = IHK_OS_STATUS_RUNNING;
 		} else {
-			return IHK_OS_STATUS_BOOTING;
+			ret = IHK_OS_STATUS_BOOTING;
 		}
 		break;
 	case BUILTIN_OS_STATUS_HUNGUP:
-		return IHK_OS_STATUS_HUNGUP;
+		ret = IHK_OS_STATUS_HUNGUP;
+		break;
 	case BUILTIN_OS_STATUS_SHUTDOWN:
-		return IHK_OS_STATUS_SHUTDOWN;
+		ret = IHK_OS_STATUS_SHUTDOWN;
+		break;
 	default:
-		return IHK_OS_STATUS_NOT_BOOTED;
+		ret = IHK_OS_STATUS_NOT_BOOTED;
+		break;
 	}
+
+	pr_info("%s: status before checking monitor info: %d\n",
+		__func__, ret);
+
+	if (ret != IHK_OS_STATUS_READY && ret != IHK_OS_STATUS_RUNNING)
+		goto out;
+
+	setup_monitor(data);
+	if (data->monitor == NULL) {
+		ret = -ENOSYS;
+		goto out;
+	}
+
+	n = data->monitor->num_processors;
+	for (i = 0; i < n; i++) {
+		if (data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC) {
+			pr_info("%s: cpu[%d].status==%d\n",
+				__func__, i, data->monitor->cpu[i].status);
+			ret = IHK_OS_STATUS_FAILED;
+			goto out;
+		}
+
+	}
+
+	freezing = data->monitor->cpu[0].status;
+	if (freezing == IHK_OS_MONITOR_KERNEL_FREEZING) {
+		ret = IHK_OS_STATUS_FREEZING;
+		goto out;
+	}
+
+	for (i = 1; i < n; i++) {
+		switch (data->monitor->cpu[i].status) {
+		    case IHK_OS_MONITOR_KERNEL_FREEZING:
+			ret = IHK_OS_STATUS_FREEZING;
+			goto out;
+		    case IHK_OS_MONITOR_KERNEL_FROZEN:
+			if (freezing != IHK_OS_MONITOR_KERNEL_FROZEN) {
+				ret = IHK_OS_STATUS_FREEZING;
+				goto out;
+			}
+			break;
+		    default:
+			if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN) {
+				ret = IHK_OS_STATUS_FREEZING;
+				goto out;
+			}
+			break;
+		}
+	}
+	if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN) {
+		ret = IHK_OS_STATUS_FROZEN;
+		goto out;
+	}
+
+ out:
+	pr_info("%s: status after checking monitor info: %d",
+		__func__, ret);
+
+	return ret;
 }
 
 int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
