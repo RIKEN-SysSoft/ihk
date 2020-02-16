@@ -2257,7 +2257,6 @@ int ihk_os_boot(int index)
 	int ret = 0;
 	int fd = -1;
 	int i;
-	char query_result[1024];
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
@@ -2276,7 +2275,7 @@ int ihk_os_boot(int index)
 	}
 
 	for (i = 0; i < 100; i++) { /* 10 second */
-		ret = ioctl(fd, IHK_OS_STATUS, query_result);
+		ret = ioctl(fd, IHK_OS_STATUS);
 
 		switch (ret) {
 		case IHK_OS_STATUS_BOOTING:
@@ -2317,7 +2316,7 @@ booted_or_error:
 
 int ihk_os_shutdown(int index)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2329,9 +2328,15 @@ int ihk_os_shutdown(int index)
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_SHUTDOWN, 0);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_OS_SHUTDOWN, 0);
+	if (ret) {
+		int errno_save = errno;
 
+		dprintf("%s: error: IHK_OS_SHUTDOWN: errno: %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2344,7 +2349,6 @@ int ihk_os_get_status(int index)
 {
 	int ret = IHK_STATUS_INACTIVE, ret_ioctl;
 	int fd = -1;
-	char query_result[1024];
 
 	dprintk("%s: enter\n", __func__);
 
@@ -2355,25 +2359,26 @@ int ihk_os_get_status(int index)
 		goto out;
 	}
 
-	memset(query_result, 0, sizeof(query_result));
-
-	ret_ioctl = ioctl(fd, IHK_OS_STATUS, query_result);
+	ret_ioctl = ioctl(fd, IHK_OS_STATUS);
 	CHKANDJUMP(ret_ioctl < 0, -errno, "ioctl failed\n");
 
 	switch (ret_ioctl) {
-	case IHK_OS_STATUS_NOT_BOOTED:
+	case IHK_OS_STATUS_NOT_BOOTED: /* before smp_ihk_os_boot or
+					* after smp_ihk_destroy_os
+					*/
 		ret = IHK_STATUS_INACTIVE;
 		break;
-	case IHK_OS_STATUS_BOOTING:
-	case IHK_OS_STATUS_BOOTED:
-	case IHK_OS_STATUS_READY:
+	case IHK_OS_STATUS_BOOTING:	/* smp_ihk_os_boot -- arch_init */
+	case IHK_OS_STATUS_BOOTED:	/* arch_init -- arch_ready */
+	case IHK_OS_STATUS_READY:	/* arch_ready -- done_init */
 		ret = IHK_STATUS_BOOTING;
 		break;
-	case IHK_OS_STATUS_RUNNING:
+	case IHK_OS_STATUS_RUNNING:	/* after done_init */
 		ret = IHK_STATUS_RUNNING;
 		break;
-	case IHK_OS_STATUS_SHUTDOWN:
-	case IHK_OS_STATUS_STOPPED:
+	case IHK_OS_STATUS_SHUTDOWN:	/* smp_ihk_os_shutdown --
+					 * smp_ihk_destroy_os
+					 */
 		ret = IHK_STATUS_SHUTDOWN;
 		break;
 	case IHK_OS_STATUS_FAILED:
