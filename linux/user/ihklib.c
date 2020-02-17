@@ -2110,7 +2110,6 @@ int ihk_os_get_status(int index)
 		ret = IHK_STATUS_RUNNING;
 		break;
 	case IHK_OS_STATUS_SHUTDOWN:
-	case IHK_OS_STATUS_STOPPED:
 		ret = IHK_STATUS_SHUTDOWN;
 		break;
 	case IHK_OS_STATUS_FAILED:
