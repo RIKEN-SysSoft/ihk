@@ -803,7 +803,7 @@ static int __ihk_os_status(struct ihk_host_linux_os_data *data)
 	pr_info("%s: __ihk_os_query_status returned %d\n",
 		__func__, ret);
 
-	return status;
+	return ret;
 }
 
 /** \brief Clear the kernel message buffer. */
