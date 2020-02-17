@@ -1263,7 +1263,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 		break;
 
 	case IHK_OS_STATUS:
-		ret = __ihk_os_status(data, (char * __user)arg);
+		ret = __ihk_os_status(data);
 		dkprintf("%s: __ihk_os_status returned %d\n", __FUNCTION__, ret);
 		break;
 
