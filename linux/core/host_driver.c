@@ -789,61 +789,77 @@ static int detect_hungup(struct ihk_host_linux_os_data *data)
 	return ret;
 }
 
-static int __ihk_os_status(struct ihk_host_linux_os_data *data,
-		char __user *buf)
+static int __ihk_os_status(struct ihk_host_linux_os_data *data)
 {
 	int n;
 	int i;
-	int status;
+	int ret;
 	int freezing;
 
-	status = __ihk_os_query_status(data);
+	ret = __ihk_os_query_status(data);
+	pr_info("%s: status before checking monitor info: %d",
+		__func__, ret);
 
 	/* (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
 	   (2) LWK initializes IHK_SPADDR_MONITOR
 	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready()
 	   (4) LWK sets boot_param->status to 3 (__ihk_os_query_status returns IHK_OS_STATUS_RUNNING) in done_init() */
-	if (status != IHK_OS_STATUS_READY && status != IHK_OS_STATUS_RUNNING)
-		return status;
+	if (ret != IHK_OS_STATUS_READY && ret != IHK_OS_STATUS_RUNNING)
+		goto out;
 
 	setup_monitor(data);
 	if (data->monitor == NULL) {
-		return -ENOSYS;
+		ret = -ENOSYS;
+		goto out;
 	}
 
 	n = data->monitor->num_processors;
 	for (i = 0; i < n; i++) {
 		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC){
 			dkprintf("%s: cpu[%d].status==%d\n", __FUNCTION__, i, data->monitor->cpu[i].status);
-			return IHK_OS_STATUS_FAILED;
+			ret = IHK_OS_STATUS_FAILED;
+			goto out;
 		}
 
 	}
 
 	freezing = data->monitor->cpu[0].status;
-	if (freezing == IHK_OS_MONITOR_KERNEL_FREEZING)
-		return IHK_OS_STATUS_FREEZING;
+	if (freezing == IHK_OS_MONITOR_KERNEL_FREEZING) {
+		ret = IHK_OS_STATUS_FREEZING;
+		goto out;
+	}
+
 	for (i = 1; i < n; i++) {
+		pr_info("%s: i: %d, status: %d\n",
+			__func__, i, data->monitor->cpu[i].status);
 		switch (data->monitor->cpu[i].status) {
 		    case IHK_OS_MONITOR_KERNEL_FREEZING:
-			return IHK_OS_STATUS_FREEZING;
-			break;
+			ret = IHK_OS_STATUS_FREEZING;
+			goto out;
 		    case IHK_OS_MONITOR_KERNEL_FROZEN:
 			if (freezing != IHK_OS_MONITOR_KERNEL_FROZEN) {
-				return IHK_OS_STATUS_FREEZING;
+				ret = IHK_OS_STATUS_FREEZING;
+				goto out;
 			}
 			break;
 		    default:
 			if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN) {
-				return IHK_OS_STATUS_FREEZING;
+				ret = IHK_OS_STATUS_FREEZING;
+				goto out;
 			}
 			break;
 		}
 	}
-	if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN)
-		return IHK_OS_STATUS_FROZEN;
+	if (freezing == IHK_OS_MONITOR_KERNEL_FROZEN) {
+		ret = IHK_OS_STATUS_FROZEN;
+		goto out;
+	}
+		
+ out:
+	pr_info("%s: status after checking monitor info: %d",
+		__func__, ret);
 
-	return status;
+	return ret;
 }
 
 /** \brief Clear the kernel message buffer. */
