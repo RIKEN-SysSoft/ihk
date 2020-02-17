@@ -688,6 +688,11 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	dprintk("%s: enter\n", __func__);
 	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL, "too many cpus requested\n");
 
+	ret = ihklib_device_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	if (num_cpus != 0 && cpus == NULL) {
 		ret = -EFAULT;
 		goto out;
@@ -755,6 +760,12 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
+
+	ret = ihklib_device_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: invalid number of cpus (%d)\n",
 			__func__, num_cpus);
@@ -812,6 +823,12 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
+
+	ret = ihklib_device_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: invalid num_cpus: %d\n",
 			__func__, num_cpus);
@@ -903,6 +920,12 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 	dprintk("%s: reserve_mem_conf.total=%d\n",
 		__func__, reserve_mem_conf.total);
+
+	ret = ihklib_device_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	if (num_mem_chunks < 0 || num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
 		dprintf("%s: error: invalid # of chunks (%d)\n",
 			__func__, num_mem_chunks);
@@ -1541,6 +1564,11 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 
 	dprintk("%s: enter\n", __func__);
 
+	ret = ihklib_os_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: error: invalid # of cpus (%d)\n",
 			__func__, num_cpus);
@@ -1678,6 +1706,11 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 
 	dprintk("%s: enter\n", __func__);
 
+	ret = ihklib_os_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: error: invalid # of cpus (%d)\n",
 			__func__, num_cpus);
@@ -1728,6 +1761,12 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
+
+	ret = ihklib_os_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: error: invalid # of cpus (%d)\n",
 			__func__, num_cpus);
@@ -1804,6 +1843,12 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
+
+	ret = ihklib_os_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: error: invalid # of cpus (%d)\n",
 			__func__, num_cpus);
