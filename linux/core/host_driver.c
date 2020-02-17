@@ -742,7 +742,9 @@ static int detect_hungup(struct ihk_host_linux_os_data *data)
 	int i;
 
 	ret = __ihk_os_query_status(data);
-	dkprintf("%s: __ihk_os_query_status returned %d", __FUNCTION__, ret);
+	pr_debug("%s: status before checking monitor info: %d",
+		__func__, ret);
+
 
 	/* Guard objects referenced here
 	   (1) LWK sets boot_param->status to 1 (__ihk_os_query_status returns IHK_OS_STATUS_BOOTED) in arch_init()
@@ -781,11 +783,18 @@ static int detect_hungup(struct ihk_host_linux_os_data *data)
 				ihk_os_eventfd((ihk_os_t)data, IHK_OS_EVENTFD_TYPE_STATUS);
 			}
 		}
+		pr_debug("%s: i: %d, status: %d, ocounter: %ld, counter: %ld\n",
+			__func__, i,
+			data->monitor->cpu[i].status,
+			data->monitor->cpu[i].ocounter,
+			data->monitor->cpu[i].counter);
+
 		data->monitor->cpu[i].ocounter = data->monitor->cpu[i].counter;
 	}
 
  out:
-	dkprintf("%s: returning %d\n", __FUNCTION__, ret);
+	pr_debug("%s: status after checking monitor info: %d\n",
+		__func__, ret);
 	return ret;
 }
 
