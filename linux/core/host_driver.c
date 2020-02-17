@@ -357,12 +357,66 @@ static int release_kmsg_buf(struct ihk_kmsg_buf_container* cont) {
 	return 0;
 }
 
+static int __ihk_os_status(struct ihk_host_linux_os_data *data);
+static int __ihk_os_thaw(struct ihk_host_linux_os_data *data);
+
 /** \brief Shutdown the kernel related to the OS file */
 static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 {
 	int ret = -EINVAL;
 	struct ihk_os_notifier *_ion;
 	int index = ihk_host_os_get_index(data);
+	enum ihk_os_status status = __ihk_os_status(data);
+
+	switch (status) {
+	case IHK_OS_STATUS_NOT_BOOTED:
+		pr_err("%s: error: invalid os status: %d\n",
+		       __func__, status);
+		ret = -EINVAL;
+		goto out;
+	case IHK_OS_STATUS_SHUTDOWN:
+		pr_err("%s: error: invalid os status: %d\n",
+		       __func__, status);
+		ret = -EBUSY;
+		goto out;
+	case IHK_OS_STATUS_FREEZING:
+		/* wait 10 sec for frozen */
+		pr_info("%s: waiting for frozen...\n", __func__);
+		if (ihk_os_wait_for_status((ihk_os_t)data, IHK_OS_STATUS_FROZEN,
+					   0, 100) != 0) {
+			pr_info("%s: warning: wait for frozen timeouted\n",
+			       __func__);
+		}
+	case IHK_OS_STATUS_FROZEN:
+		pr_info("%s: trying to thaw...\n", __func__);
+		ret = __ihk_os_thaw(data);
+		if (ret) {
+			pr_err("%s: error: __ihk_os_thaw: %d\n",
+			       __func__, ret);
+		}
+		/* fall through */
+	case IHK_OS_STATUS_BOOTING:
+	case IHK_OS_STATUS_BOOTED:
+	case IHK_OS_STATUS_READY:
+		/* wait 20 sec for running */
+		pr_info("%s: waiting for running...\n", __func__);
+		if (ihk_os_wait_for_status((ihk_os_t)data, IHK_OS_STATUS_RUNNING,
+					   0, 200) != 0) {
+			pr_info("%s: warning: wait for running timeouted, "
+			       "trying to shutdown with nmi...\n",
+			       __func__);
+
+			/* send nmi to force shutdown */
+			ihk_os_send_nmi((ihk_os_t)data, 3);
+			mdelay(200);
+		}
+		break;
+	case IHK_OS_STATUS_RUNNING:
+	case IHK_OS_STATUS_FAILED:
+	case IHK_OS_STATUS_HUNGUP:
+	default:
+		break;
+	}
 
 	/* Call OS notifiers */
 	if (down_interruptible(&ihk_os_notifiers_lock)) {
@@ -381,19 +435,29 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 
 	if (data->ops->shutdown) {
 		ret = data->ops->shutdown(data, data->priv, flag);
+		if (ret) {
+			pr_err("%s: error: shutdown returned %d\n",
+			       __func__, ret);
+			goto out;
+		}
 	}
 
 	/* Release kmsg_buf */
 	if (data->kmsg_buf_container) {
-		struct ihk_kmsg_buf_container *cont = data->kmsg_buf_container;
+		struct ihk_kmsg_buf_container *cont =
+			data->kmsg_buf_container;
 		data->kmsg_buf_container = NULL;
-		if (release_kmsg_buf(cont)) {
-			return -EINVAL;
+		ret = release_kmsg_buf(cont);
+		if (ret) {
+			dprintf("%s: error: release_kmsg_buf returned %d\n",
+				__func__, ret);
+			goto out;
 		}
 	}
 
 	printk("IHK: OS shutdown OK\n"); 
-
+	ret = 0;
+ out:
 	return ret;
 }
 
