@@ -1704,6 +1704,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
 		spin_unlock_irqrestore(&os->lock, flags);
+		pr_err("%s: error: os status: %d\n",
+		       __func__, os->status);
 		return -EBUSY;
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
