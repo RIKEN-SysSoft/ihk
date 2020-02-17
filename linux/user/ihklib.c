@@ -1647,15 +1647,9 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
-	if (num_cpus > IHK_MAX_NUM_CPUS) {
-		eprintf("%s: error: too many cpus (%d) requested\n",
-			__func__, num_cpus);
-		ret = -EINVAL;
-		goto out;
-	}
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
@@ -1678,9 +1672,20 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
+	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+		dprintf("%s: error: invalid # of cpus (%d)\n",
+			__func__, num_cpus);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (num_cpus != 0 && cpus == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
-	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL, "invalid format\n");
 
 	if ((ret = ioctl(fd, IHK_OS_QUERY_CPU, &req))) {
 		int errno_save = errno;
