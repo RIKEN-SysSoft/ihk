@@ -978,13 +978,42 @@ static int __ihk_os_freeze(struct ihk_host_linux_os_data *data)
 
 static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
 {
-	int error = 0;
+	int ret = 0;
+	enum ihk_os_status status = __ihk_os_status(data);
 
-	if (data->ops->thaw) {
-		error = (*data->ops->thaw)(data, data->priv);
+	switch (status) {
+	case IHK_OS_STATUS_NOT_BOOTED:
+	case IHK_OS_STATUS_BOOTING:
+	case IHK_OS_STATUS_BOOTED:
+	case IHK_OS_STATUS_READY:
+	case IHK_OS_STATUS_RUNNING:
+	case IHK_OS_STATUS_SHUTDOWN:
+	case IHK_OS_STATUS_FAILED:
+	case IHK_OS_STATUS_HUNGUP:
+		pr_err("%s: error: invalid os status: %d\n",
+		       __func__, status);
+		ret = -EINVAL;
+		goto out;
+	case IHK_OS_STATUS_FREEZING:
+		/* wait 10 sec for frozen */
+		pr_info("%s: waiting for frozen...\n", __func__);
+		if (ihk_os_wait_for_status((ihk_os_t)data, IHK_OS_STATUS_FROZEN,
+					   0, 100) != 0) {
+			pr_info("%s: warning: wait for frozen timeouted\n",
+			       __func__);
+		}
+		break;
+	case IHK_OS_STATUS_FROZEN:
+	default:
+		break;
 	}
 
-	return error;
+	if (data->ops->thaw) {
+		ret = (*data->ops->thaw)(data, data->priv);
+	}
+
+ out:
+	return ret;
 }
 
 static int __ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
