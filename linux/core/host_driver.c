@@ -369,11 +369,6 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 	enum ihk_os_status status = __ihk_os_status(data);
 
 	switch (status) {
-	case IHK_OS_STATUS_NOT_BOOTED:
-		pr_err("%s: error: invalid os status: %d\n",
-		       __func__, status);
-		ret = -EINVAL;
-		goto out;
 	case IHK_OS_STATUS_SHUTDOWN:
 		pr_err("%s: error: invalid os status: %d\n",
 		       __func__, status);
@@ -411,6 +406,7 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 			mdelay(200);
 		}
 		break;
+	case IHK_OS_STATUS_NOT_BOOTED:
 	case IHK_OS_STATUS_RUNNING:
 	case IHK_OS_STATUS_FAILED:
 	case IHK_OS_STATUS_HUNGUP:
