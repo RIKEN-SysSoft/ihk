@@ -1077,7 +1077,6 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 	case IHK_OS_STATUS:
 	case IHK_OS_GET_USAGE:
 	case IHK_OS_GET_CPU_USAGE:
-	case IHK_OS_REGISTER_EVENT:
 	case IHK_OS_GET_NUM_CPUS:
 	case IHK_OS_READ_KADDR:
 		break;
