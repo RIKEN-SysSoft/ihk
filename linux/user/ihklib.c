@@ -2220,14 +2220,14 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 int ihk_os_get_eventfd(int index, int type)
 {
 	int fd = -1;
-	int ret = 0, ret_ioctl;
+	int ret;
 	struct ihk_os_ioctl_eventfd_desc desc;
 
 	dprintk("%s: enter\n", __func__);
 	memset(&desc, 0, sizeof(desc));
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
@@ -2239,13 +2239,24 @@ int ihk_os_get_eventfd(int index, int type)
 	case IHK_OS_EVENTFD_TYPE_KMSG:
 		break;
 	default:
-		CHKANDJUMP(1, -EINVAL, "unknown type=%d\n", type);
+		dprintf("%s: error: unknown type: %d\n",
+			__func__, type);
+		ret = -EINVAL;
+		goto out;
 	}
 
 	desc.fd = eventfd(0, 0);
 	desc.type = type;
-	ret_ioctl = ioctl(fd, IHK_OS_REGISTER_EVENT, &desc);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+
+	ret = ioctl(fd, IHK_OS_REGISTER_EVENT, &desc);
+	if (ret) {
+		int errno_save = errno;
+
+		dprintf("%s: error: IHK_OS_REGISTER_EVENT returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
 
 	ret = desc.fd;
  out:
