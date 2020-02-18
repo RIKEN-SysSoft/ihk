@@ -874,6 +874,13 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 
 int ihk_reserve_mem_conf(int index, int key, void *value)
 {
+	int ret;
+
+	ret = ihklib_device_readable(index);
+	if (ret) {
+		goto out;
+	}
+
 	switch (key) {
 	case IHK_RESERVE_MEM_TOTAL:
 		reserve_mem_conf.total = 1;
@@ -889,9 +896,13 @@ int ihk_reserve_mem_conf(int index, int key, void *value)
 		reserve_mem_conf.timeout = *((int *)value);
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
-	return 0;
+
+	ret = 0;
+ out:
+	return ret;
 }
 
 int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
