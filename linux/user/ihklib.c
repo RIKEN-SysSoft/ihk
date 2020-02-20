@@ -790,8 +790,7 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 	}
 
 	if (ret != num_cpus) {
-		fprintf(stderr,
-			"%s: error: actual number of CPUs (%d) is different than requested (%d)\n",
+		dprintf("%s: error: actual # of cpus (%d) != requested (%d)\n",
 			__func__, ret, num_cpus);
 		ret = -EINVAL;
 		goto out;
@@ -1676,8 +1675,7 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 	}
 
 	if (ret != num_cpus) {
-		fprintf(stderr,
-			"%s: error: actual number of CPUs (%d) is different than requested (%d)\n",
+		dprintf("%s: error: actual # of CPUs (%d) != requested (%d)\n",
 			__func__, ret, num_cpus);
 		ret = -EINVAL;
 		goto out;
