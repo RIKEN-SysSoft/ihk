@@ -1809,12 +1809,10 @@ out:
 	return ret;
 }
 
-#define MAX_QUERY_RESULT 8192
-
 static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
 	int i, ret;
-	int idx = 0;
+	int idx;
 	struct ihk_cpu_req req;
 	struct ihk_cpu_req *res = (struct ihk_cpu_req *)arg;
 	int *res_cpus = NULL;
@@ -1825,14 +1823,14 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_cpus > os->nr_cpus) {
-		pr_err("%s: error: query_space is not large enough\n",
-			__func__);
+	if (req.num_cpus != os->nr_cpus) {
+		pr_err("%s: error: #cpu requested (%d) != actual (%d)\n",
+		       __func__, req.num_cpus, os->nr_cpus);
 		ret = -EINVAL;
 		goto out;
 	}
 
-	if (!(res_cpus = kmalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+	if (!(res_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL))) {
 		pr_err("%s: error: allocating res_cpus\n", __func__);
 		ret = -ENOMEM;
 		goto out;
@@ -1840,20 +1838,22 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 	/* Respect the order of cpus specified when assigining them
 	   e.g. 0,2,1,3 */
-	for(i = 0; i < os->nr_cpus; ++i) {
+	for (i = 0, idx = 0; i < os->nr_cpus; ++i) {
 		res_cpus[idx] = os->cpu_mapping[i];
 		idx++;
 	}
 
-	if (idx > 0) {
-		if (copy_to_user(req.cpus, res_cpus, sizeof(int) * idx)) {
+	if (req.num_cpus > 0) {
+		if (copy_to_user(req.cpus, res_cpus,
+				 sizeof(int) * req.num_cpus)) {
 			pr_err("%s: error: copying CPU array to user-space\n",
 			       __func__);
 			ret = -EFAULT;
 			goto out;
 		}
 	}
-	if (copy_to_user(&res->num_cpus, &idx, sizeof(int))) {
+
+	if (copy_to_user(&res->num_cpus, &req.num_cpus, sizeof(int))) {
 		pr_err("%s: error: copying numer of CPUs  to user-space\n",
 		       __func__);
 		ret = -EFAULT;
@@ -3938,7 +3938,7 @@ static int smp_ihk_get_num_cpus(ihk_device_t ihk_dev)
 static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 {
 	int ret;
-	int idx = 0;
+	int idx;
 	struct ihk_cpu_req req;
 	struct ihk_cpu_req *res = (struct ihk_cpu_req *)arg;
 	int cpu;
@@ -3946,16 +3946,30 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 
 	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
 		pr_err("%s: error: copying request\n", __func__);
-		return -EFAULT;
+		ret = -EFAULT;
+		goto out;
 	}
 
-	if (!(res_cpus = kmalloc(MAX_QUERY_RESULT, GFP_KERNEL))) {
+	for (cpu = 0, idx = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
+			continue;
+		idx++;
+	}
+
+	if (idx != req.num_cpus) {
+		pr_err("%s: error: #cpu requested (%d) != actual (%d)\n",
+		       __func__, req.num_cpus, idx);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (!(res_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL))) {
 		pr_err("%s: error: allocating res_cpus\n", __func__);
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
+	for (cpu = 0, idx = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
 			continue;
 
@@ -3963,15 +3977,17 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		idx++;
 	}
 
-	if (idx > 0) {
-		if (copy_to_user(req.cpus, res_cpus, sizeof(int) * idx)) {
+	if (req.num_cpus > 0) {
+		if (copy_to_user(req.cpus, res_cpus,
+				 sizeof(int) * req.num_cpus)) {
 			pr_err("%s: error: copying CPU array to user-space\n",
 			       __func__);
 			ret = -EFAULT;
 			goto out;
 		}
 	}
-	if (copy_to_user(&res->num_cpus, &idx, sizeof(int))) {
+
+	if (copy_to_user(&res->num_cpus, &req.num_cpus, sizeof(int))) {
 		pr_err("%s: error: copying numer of CPUs  to user-space\n",
 		       __func__);
 		ret = -EFAULT;
