@@ -2100,51 +2100,69 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		     int _num_mem_chunks)
 {
 	int ret = 0, i;
+	int num_mem_chunks;
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
+	ret = ihklib_os_readable(index);
+	if (ret) {
+		goto out;
+	}
+
+	if (_num_mem_chunks < 0 || _num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
+		dprintf("%s: error: invalid # of chunks (%d)\n",
+			__func__, _num_mem_chunks);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (_num_mem_chunks != 0 && mem_chunks == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	ret = ihk_os_get_num_assigned_mem_chunks(index);
+	if (ret < 0) {
+		dprintf("%s: error: ihk_os_get_num_assigned_mem_chunks"
+			" returned %d\n",
+			__func__, ret);
+		goto out;
+	}
+	num_mem_chunks = ret;
+
+	if (_num_mem_chunks != num_mem_chunks) {
+		dprintf("%s: error: actual # of chunks (%d) !="
+			" requested (%d)\n",
+			__func__, num_mem_chunks, _num_mem_chunks);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
+	if (!req.sizes) {
+		dprintf("%s: error: allocating request sizes\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.numa_ids = calloc(num_mem_chunks, sizeof(int));
+	if (!req.numa_ids) {
+		dprintf("%s: error: allocating request numa_ids\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	req.num_chunks = num_mem_chunks;
+
 	if ((fd = ihklib_os_open(index)) < 0) {
 		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
 	}
-
-	req.num_chunks = 0;   /* means only get num_chunks */
-
-	ret = ioctl(fd, IHK_OS_QUERY_MEM, &req);
-	if (ret) {
-		dprintf("%s: error: IHK_OS_QUERY_MEM returned %d\n",
-			__func__, ret);
-		goto out;
-	}
-
-	if (_num_mem_chunks != req.num_chunks) {
-		dprintf("%s: error: actual number of chunks (%d) doesn't"
-			" match requested (%d)\n",
-			__func__, req.num_chunks, _num_mem_chunks);
-		ret = -EINVAL;
-		goto out;
-	}
-
-	req.sizes = calloc(_num_mem_chunks, sizeof(size_t));
-	if (!req.sizes) {
-		eprintf("%s: error: allocating request sizes\n",
-			__func__);
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	req.numa_ids = calloc(_num_mem_chunks, sizeof(int));
-	if (!req.numa_ids) {
-		eprintf("%s: error: allocating request numa_ids\n",
-			__func__);
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	req.num_chunks = _num_mem_chunks;
 
 	ret = ioctl(fd, IHK_OS_QUERY_MEM, &req);
 	if (ret) {
@@ -2156,7 +2174,7 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		goto out;
 	}
 
-	for (i = 0; i < _num_mem_chunks; i++) {
+	for (i = 0; i < num_mem_chunks; i++) {
 		mem_chunks[i].size = req.sizes[i];
 		mem_chunks[i].numa_node_number = req.numa_ids[i];
 	}
