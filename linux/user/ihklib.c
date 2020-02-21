@@ -1703,6 +1703,23 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 
 	dprintk("%s: enter\n", __func__);
 
+	ret = ihklib_os_readable(index);
+	if (ret) {
+		goto out;
+	}
+
+	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+		dprintf("%s: error: invalid # of cpus (%d)\n",
+			__func__, num_cpus);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (num_cpus != 0 && cpus == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
 	if ((fd = ihklib_os_open(index)) < 0) {
 		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
@@ -1725,19 +1742,6 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 		ret = -EINVAL;
 		goto out;
 	}
-
-	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
-		dprintf("%s: error: invalid # of cpus (%d)\n",
-			__func__, num_cpus);
-		ret = -EINVAL;
-		goto out;
-	}
-
-	if (num_cpus != 0 && cpus == NULL) {
-		ret = -EFAULT;
-		goto out;
-	}
-
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
 
