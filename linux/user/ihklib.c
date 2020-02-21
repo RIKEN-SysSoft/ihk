@@ -1231,20 +1231,48 @@ int ihk_get_num_reserved_mem_chunks(int index)
 
 int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	int fd = -1;
 	int i;
+	int num_mem_chunks;
 	struct ihk_mem_req req = { 0 };
 
 	dprintk("%s: enter\n", __func__);
-	if ((fd = ihklib_device_open(index)) < 0) {
-		dprintf("%s: error: ihklib_device_open returned %d\n",
-			__func__, fd);
-		ret = fd;
+	ret = ihklib_device_readable(index);
+	if (ret) {
 		goto out;
 	}
 
-	req.sizes = calloc(_num_mem_chunks, sizeof(size_t));
+	if (_num_mem_chunks < 0 || _num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
+		dprintf("%s: error: invalid # of chunks (%d)\n",
+			__func__, _num_mem_chunks);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (_num_mem_chunks != 0 && mem_chunks == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	ret = ihk_get_num_reserved_mem_chunks(index);
+	if (ret < 0) {
+		dprintf("%s: error: ihk_get_num_reserved_mem_chunks"
+			" returned %d\n",
+			__func__, ret);
+		goto out;
+	}
+	num_mem_chunks = ret;
+
+	if (_num_mem_chunks != num_mem_chunks) {
+		dprintf("%s: error: actual # of chunks (%d) !="
+			" requested (%d)\n",
+			__func__, num_mem_chunks, _num_mem_chunks);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
 	if (!req.sizes) {
 		dprintf("%s: error: allocating request sizes\n",
 			__func__);
@@ -1252,7 +1280,7 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 		goto out;
 	}
 
-	req.numa_ids = calloc(_num_mem_chunks, sizeof(int));
+	req.numa_ids = calloc(num_mem_chunks, sizeof(int));
 	if (!req.numa_ids) {
 		dprintf("%s: error: allocating request numa_ids\n",
 			__func__);
@@ -1260,16 +1288,26 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 		goto out;
 	}
 
-	req.num_chunks = _num_mem_chunks;
+	req.num_chunks = num_mem_chunks;
 
-	ret_ioctl = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	if ((fd = ihklib_device_open(index)) < 0) {
+		dprintf("%s: error: ihklib_device_open returned %d\n",
+			__func__, fd);
+		ret = fd;
+		goto out;
+	}
 
-	CHKANDJUMP(req.num_chunks != _num_mem_chunks, -EINVAL,
-		   "actual number of memory chunks (%d) is different than requested (%d)\n",
-		   req.num_chunks, _num_mem_chunks);
+	ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req);
+	if (ret) {
+		int errno_save = errno;
 
-	for (i = 0; i < _num_mem_chunks; i++) {
+		dprintf("%s: error: IHK_DEVICE_QUERY_MEM returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
+	for (i = 0; i < num_mem_chunks; i++) {
 		mem_chunks[i].size = req.sizes[i];
 		mem_chunks[i].numa_node_number = req.numa_ids[i];
 	}
