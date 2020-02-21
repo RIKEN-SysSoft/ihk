@@ -1203,7 +1203,7 @@ out:
 
 int ihk_get_num_reserved_mem_chunks(int index)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	int fd = -1;
 	struct ihk_mem_req req = { 0 };
 
@@ -1217,8 +1217,15 @@ int ihk_get_num_reserved_mem_chunks(int index)
 
 	req.num_chunks = 0;   /* means only get num_reserved_mem_chunks */
 
-	ret_ioctl = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req);
+	if (ret) {
+		int errno_save = errno;
+
+		dprintf("%s: IHK_DEVICE_QUERY_MEM returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
 
 	ret = req.num_chunks;
 
