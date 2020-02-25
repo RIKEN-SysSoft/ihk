@@ -13,3 +13,6 @@ kmod(ihk
 	INSTALL_DEST
 		${KMODDIR}
 )
+
+install(FILES "../include/ihk/ihk_host_driver.h"
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ihk")
