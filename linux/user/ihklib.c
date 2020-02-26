@@ -1470,21 +1470,26 @@ int ihk_get_num_os_instances(int index)
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
-		eprintf("%s: error: ihklib_device_open\n",
+		dprintf("%s: error: ihklib_device_open\n",
 			__func__);
 		ret = fd;
 		goto out;
 	}
 
 	dir = opendir(PATH_DEV);
-	CHKANDJUMP(dir == NULL, -EINVAL, "opendir failed\n");
+	if (dir == NULL) {
+		int errno_save = errno;
 
-	direp = readdir(dir);
-	while (direp) {
+		dprintf("%s: error: opendir returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
+	while ((direp = readdir(dir))) {
 		if ((strncmp(direp->d_name,"mcos",4) == 0)) {
 			num_os_instances++;
 		}
-		direp = readdir(dir);
 	}
 	ret = num_os_instances;
  out:
@@ -1503,28 +1508,50 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 	DIR *dir = NULL;
 	struct dirent *direp;
 	int num_os_instances = 0;
+	int num_mcos = 0;
 
 	dprintk("%s: enter\n", __func__);
-	dir = opendir(PATH_DEV);
-	CHKANDJUMP(dir == NULL, -EINVAL, "opendir failed\n");
-
-	direp = readdir(dir);
-	while (direp) {
-		if ((strncmp(direp->d_name, "mcos", 4) == 0)) {
-			indices[num_os_instances] = atoi(direp->d_name + 4);
-			num_os_instances++;
-			if (num_os_instances > _num_os_instances) {
-				dprintf("%s: Actual # of OS instances (%d) is different than requested (%d)\n",
-					__func__, num_os_instances,
-					_num_os_instances);
-				ret = -EINVAL;
-				goto out;
-			}
-		}
-		direp = readdir(dir);
+	ret = ihklib_device_readable(index);
+	if (ret) {
+		dprintf("%s: error: ihklib_device_readable returned %d\n",
+			__func__, ret);
+		goto out;
 	}
-	CHKANDJUMP(num_os_instances != _num_os_instances, -EINVAL, "Actual # of OS instances (%d) is different than requested (%d)\n", num_os_instances, _num_os_instances);
 
+	ret = ihk_get_num_os_instances(index);
+	if (ret < 0) {
+		dprintf("%s: error: ihk_get_num_os_instances returned %d\n",
+			__func__, ret);
+		goto out;
+	}
+	num_os_instances = ret;
+
+	if (num_os_instances != _num_os_instances) {
+		dprintf("%s: Actual # of OS instances (%d) != "
+			"requested (%d)\n",
+			__func__, num_os_instances, _num_os_instances);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	dir = opendir(PATH_DEV);
+	if (dir == NULL) {
+		int errno_save = errno;
+
+		dprintf("%s: error: opendir returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
+	while ((direp = readdir(dir))) {
+		if ((strncmp(direp->d_name, "mcos", 4) == 0)) {
+			indices[num_mcos] = atoi(direp->d_name + 4);
+			num_mcos++;
+		}
+	}
+
+	ret = 0;
  out:
 	if (dir) {
 		closedir(dir);
