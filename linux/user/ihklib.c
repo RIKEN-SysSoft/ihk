@@ -1160,9 +1160,27 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			__func__, min, max, variance_limit);
 		if (max - ave_requested > variance_limit ||
 		    ave_requested - min > variance_limit) {
-			fprintf(stderr, "%s: variance > limit (%ld)\n",
-				__func__, variance_limit);
+			struct ihk_mem_chunk mem_chunks[1] = {
+				{ .size = -1UL, .numa_node_number = 0 }
+			};
+			unsigned long max_ave = max - ave_requested;
+			unsigned long ave_min = ave_requested - min;
+
+			dprintf("%s: error: variance > limit, "
+				"ave: %ld (%ld MiB), "
+				"max - ave: %ld (%ld MiB), "
+				"ave - min: %ld (%ld MiB), "
+				"limit: %ld (%ld MiB)\n",
+				__func__,
+				ave_requested, ave_requested >> 20,
+				max_ave, max_ave >> 20,
+				ave_min, ave_min >> 20,
+				variance_limit, variance_limit >> 20);
+
+			ihk_release_mem(index, mem_chunks, 1);
+
 			ret = -ENOMEM;
+			goto out;
 		}
 
 		req.num_chunks = IHK_MAX_NUM_NUMA_NODES;
