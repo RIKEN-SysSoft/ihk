@@ -815,7 +815,8 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	if (os_mem_chunk == NULL) {
 		printk("%s: couldn't find NUMA node to load kernel image\n",
 				__FUNCTION__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	printk("IHK-SMP: bootstrap addr: 0x%lx, chunk size: %lu @ NUMA: %d\n",
@@ -826,14 +827,17 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) ||
 			os->bootstrap_mem_end < os->bootstrap_mem_start) {
 		printk("%s: OS is not ready to boot\n", __FUNCTION__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
 		printk("builtin: OS status is not initial.\n");
 		spin_unlock_irqrestore(&os->lock, flags);
-		return -EBUSY;
+		ret = -EBUSY;
+		goto out;
+
 	}
 	os->status = BUILTIN_OS_STATUS_LOADING;
 	spin_unlock_irqrestore(&os->lock, flags);
@@ -841,13 +845,15 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	file = filp_open(fn, O_RDONLY, 0);
 	if (IS_ERR(file)) {
 		printk("open failed: %s\n", fn);
-		return -ENOENT;
+		ret = -ENOENT;
+		goto revert_state;
 	}
 
 	elf64 = ihk_smp_map_virtual(os->bootstrap_mem_end - PAGE_SIZE, PAGE_SIZE);
 	if (!elf64) {
 		printk("error: ioremap() returns NULL\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto revert_state;
 	}
 
 	printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n",
@@ -862,7 +868,8 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		pr_err("kernel_read failed: %ld\n", r);
 		ihk_smp_unmap_virtual(elf64);
 		fput(file);
-		return (int)r;
+		ret = r;
+		goto revert_state;
 	}
 	if(elf64->e_ident[0] != 0x7f ||
 	   elf64->e_ident[1] != 'E' ||
@@ -872,7 +879,8 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		printk("kernel: BAD ELF\n");
 		ihk_smp_unmap_virtual(elf64);
 		fput(file);
-		return (int)-EINVAL;
+		ret = -EINVAL;
+		goto revert_state;
 	}
 	entry = elf64->e_entry;
 	elf64p = (Elf64_Phdr *)(((char *)elf64) + elf64->e_phoff);
@@ -958,14 +966,17 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 	if ((ret = smp_ihk_os_setup_startup(os, phys, entry))) {
 		printk("%s: ERROR: smp_ihk_os_setup_startup failed (%d)\n", __FUNCTION__, ret);
-		return ret;
+		goto revert_state;
 	}
 
-	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 
 	dump_bootstrap_mem_start = os->bootstrap_mem_start;
+	ret = 0;
 
-	return 0;
+ revert_state:
+	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+ out:
+	return ret;
 }
 
 static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
