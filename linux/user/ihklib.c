@@ -2472,8 +2472,8 @@ int ihk_os_boot(int index)
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
@@ -2497,23 +2497,22 @@ int ihk_os_boot(int index)
 			usleep(100000);
 			continue;
 		default:
-			goto booted_or_error;
+			break;
 		}
 	}
-
-booted_or_error:
 
 	if (ret == -1) {
 		int errno_save = errno;
 
-		dprintf("%s: error: IHK_OS_STATUS\n",
-			__func__);
+		dprintf("%s: error: IHK_OS_STATUS returned %d\n",
+			__func__, errno_save);
 		ret = -errno_save;
 		goto out;
 	}
 
 	if (ret != IHK_OS_STATUS_RUNNING) {
-		eprintf("%s: error: Invalid status: %d\n",
+		dprintf("%s: error: "
+			"status didn't change to RUNNING (%d)\n",
 			__func__, ret);
 		ret = -EINVAL;
 		goto out;
