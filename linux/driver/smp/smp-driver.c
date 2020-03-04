@@ -387,6 +387,8 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	struct timespec now;
 	int param_size, param_pages_order = 0;
 	struct page *param_pages;
+	int dump_size, dump_pages_order = 0;
+	struct page *dump_pages;
 	struct ihk_os_mem_chunk *os_mem_chunk;
 	int nr_memory_chunks = 0;
 	int numa_id, linux_numa_id, nr_numa_nodes;
@@ -399,6 +401,23 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	unsigned long buffer_size, map_end, index;
 	struct ihk_dump_page *dump_page;
 	int ret;
+
+	spin_lock_irqsave(&dev->lock, flags);
+	if (dev->status != BUILTIN_DEV_STATUS_READY) {
+		pr_err("IHK-SMP: error: "
+		       "Device has already booted / is booting OS.\n");
+		ret = -EBUSY;
+		spin_unlock_irqrestore(&dev->lock, flags);
+		goto out;
+	}
+	spin_unlock_irqrestore(&dev->lock, flags);
+
+	if (os->status == BUILTIN_OS_STATUS_BOOTING) {
+		pr_err("IHK-SMP: error: "
+		       "Device has already booted / is booting OS.\n");
+		ret = -EBUSY;
+		goto out;
+	}
 
 	/* Compute size including CPUs, NUMA nodes and memory chunks */
 	param_size = (sizeof(*os->param));
@@ -413,8 +432,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	os->numa_mapping = kmalloc(nr_numa_nodes * sizeof(int), GFP_KERNEL);
 	if (!os->numa_mapping) {
-		printk("IHK-SMP: error allocating NUMA mapping\n");
-		return -1;
+		pr_err("IHK-SMP: error allocating NUMA mapping\n");
+		ret = -ENOMEM;
+		goto out;
 	}
 
 	/* Fill in LWK NUMA mapping */
@@ -461,9 +481,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	param_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, param_pages_order);
 	if (!param_pages) {
-		kfree(os);
-		printk("IHK-SMP: error: allocating boot parameter structure\n");
-		return -ENOMEM;
+		pr_err("IHK-SMP: error: allocating boot parameter structure\n");
+		ret = -ENOMEM;
+		goto free_numa_mapping;
 	}
 
 	os->param = pfn_to_kaddr(page_to_pfn(param_pages));
@@ -484,7 +504,9 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
 	ret = smp_ihk_arch_get_perf_event_map(os->param);
 	if (ret) {
-		return ret;
+		pr_err("IHK-SMP: error: smp_ihk_arch_get_perf_event_map "
+		       "returned %d", ret);
+		goto free_param_pages;
 	}
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
@@ -564,30 +586,15 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 		}
 	}
 
-	spin_lock_irqsave(&dev->lock, flags);
-#if 0
-	if (dev->status != BUILTIN_DEV_STATUS_READY) {
-		spin_unlock_irqrestore(&dev->lock, flags);
-		printk("builtin: Device is busy booting another OS.\n");
-		return -EINVAL;
-	}
-#endif
-	dev->status = BUILTIN_DEV_STATUS_BOOTING;
-	spin_unlock_irqrestore(&dev->lock, flags);
+	set_dev_status(dev, BUILTIN_DEV_STATUS_BOOTING);
 
 	__build_os_info(os);
 	if (os->cpu_info.n_cpus < 1) {
-		dprintf("builtin: There are no CPU to boot!\n");
-		set_dev_status(dev, BUILTIN_DEV_STATUS_READY);
-
-		return -EINVAL;
+		pr_err("IHK-SMP: error: There are no CPU to boot!\n");
+		ret = -EINVAL;
+		goto revert_dev_status;
 	}
 	os->boot_cpu = os->cpu_info.hw_ids[0];
-
-	if(os->status == BUILTIN_OS_STATUS_BOOTING) {
-		printk("IHK: Device is busy booting another OS.\n");
-		return -EBUSY;
-	}
 
 	set_os_status(os, BUILTIN_OS_STATUS_BOOTING);
 
@@ -619,19 +626,20 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 	smp_ihk_setup_trampoline(os);
 
-	param_size = (buffer_size + PAGE_SIZE - 1) & PAGE_MASK;
-	param_pages_order = 0;
-	while (((size_t)PAGE_SIZE << param_pages_order) < param_size)
-		++param_pages_order;
+	dump_size = (buffer_size + PAGE_SIZE - 1) & PAGE_MASK;
+	dump_pages_order = 0;
+	while (((size_t)PAGE_SIZE << dump_pages_order) < dump_size)
+		++dump_pages_order;
 
-	param_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, param_pages_order);
-	if (!param_pages) {
+	dump_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, dump_pages_order);
+	if (!dump_pages) {
 		kfree(os);
 		printk("IHK-SMP: error: allocating boot parameter structure\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto revert_os_status;
 	}
 
-	dump_page = pfn_to_kaddr(page_to_pfn(param_pages));
+	dump_page = pfn_to_kaddr(page_to_pfn(dump_pages));
 
 	if (dump_page) {
 
@@ -639,7 +647,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 		memset(dump_page,0,buffer_size);
 		os->param->dump_page_set.count = nr_memory_chunks;
-		os->param->dump_page_set.page_size = param_size;
+		os->param->dump_page_set.page_size = dump_size;
 		os->param->dump_page_set.phy_page = __pa(dump_page);
 
 		/* Perform initial setting of dump_page information */
@@ -691,6 +699,19 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 	linux_cpu_2_lwk_cpu(os, 0);
 	lwk_numa_2_linux_numa(os, 0);
 	lwk_cpu_2_linux_cpu(os, 0);
+
+	/* Error cases */
+ revert_os_status:
+	set_os_status(os, BUILTIN_OS_STATUS_LOADED);
+ revert_dev_status:
+	set_dev_status(dev, BUILTIN_DEV_STATUS_READY);
+ free_param_pages:
+	free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(param_pages)),
+		   param_pages_order);
+ free_numa_mapping:
+	kfree(os->numa_mapping);
+ out:
+	return ret;
 }
 
 
@@ -1133,6 +1154,7 @@ static int smp_ihk_os_unmap_lwk(void)
 static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 {
 	struct smp_os_data *os = priv;
+	struct builtin_device_data *dev = os->dev;
 	int i, ret = 0;
 	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 	struct ihk_os_mem_chunk *next_chunk = NULL;
@@ -1202,6 +1224,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	}
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+	set_dev_status(dev, BUILTIN_DEV_STATUS_READY);
 
 	//kfree(os); /* done in destroy */
 
