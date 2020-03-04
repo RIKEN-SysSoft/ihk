@@ -2472,7 +2472,7 @@ int ihk_os_boot(int index)
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
@@ -2481,7 +2481,8 @@ int ihk_os_boot(int index)
 	if ((ret = ioctl(fd, IHK_OS_BOOT, 0)) == -1) {
 		int errno_save = errno;
 
-		dprintf("error: ioctl failed\n");
+		dprintf("%s: error: IHK_OS_BOOT returned %d\n",
+			__func__, errno_save);
 		ret = -errno_save;
 		goto out;
 	}
