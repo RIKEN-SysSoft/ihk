@@ -586,7 +586,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 	if(os->status == BUILTIN_OS_STATUS_BOOTING) {
 		printk("IHK: Device is busy booting another OS.\n");
-		return -EINVAL;
+		return -EBUSY;
 	}
 
 	set_os_status(os, BUILTIN_OS_STATUS_BOOTING);
