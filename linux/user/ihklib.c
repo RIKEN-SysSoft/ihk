@@ -927,6 +927,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	unsigned long min = (unsigned long)-1;
 	unsigned long max = 0;
 	unsigned long variance_limit;
+	int release = 0;
 
 	dprintk("%s: reserve_mem_conf.total=%d\n",
 		__func__, reserve_mem_conf.total);
@@ -1060,8 +1061,17 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			}
 		}
 
-		CHKANDJUMP(total_missing > total_excess, -ENOMEM,
-			   "out of memory\n");
+		if (total_missing > total_excess) {
+			dprintf("%s: error: "
+				"sum of below-ave (%ld, %ld MiB) > "
+				"sum of above-ave (%ld, %ld MiB)\n",
+				__func__,
+				total_missing, total_missing >> 20,
+				total_excess, total_excess >> 20);
+			release = 1;
+			ret = -ENOMEM;
+			goto out;
+		}
 
 		dprintk("%s: total missing: %ld\n",
 			__func__, total_missing);
@@ -1160,9 +1170,6 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			__func__, min, max, variance_limit);
 		if (max - ave_requested > variance_limit ||
 		    ave_requested - min > variance_limit) {
-			struct ihk_mem_chunk mem_chunks[1] = {
-				{ .size = -1UL, .numa_node_number = 0 }
-			};
 			unsigned long max_ave = max - ave_requested;
 			unsigned long ave_min = ave_requested - min;
 
@@ -1176,9 +1183,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 				max_ave, max_ave >> 20,
 				ave_min, ave_min >> 20,
 				variance_limit, variance_limit >> 20);
-
-			ihk_release_mem(index, mem_chunks, 1);
-
+			release = 1;
 			ret = -ENOMEM;
 			goto out;
 		}
@@ -1207,6 +1212,14 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 	ret = 0;
 out:
+	if (release) {
+		struct ihk_mem_chunk mem_chunks[1] = {
+			{ .size = -1UL, .numa_node_number = 0 }
+		};
+
+		ihk_release_mem(index, mem_chunks, 1);
+	}
+
 	if (fd >= 0) {
 		close(fd);
 	}
