@@ -2732,7 +2732,7 @@ int ihk_os_clear_kmsg(int index)
 
 int ihk_os_get_num_numa_nodes(int index)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2744,10 +2744,16 @@ int ihk_os_get_num_numa_nodes(int index)
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_GET_NUM_NUMA_NODES);
-	CHKANDJUMP(ret_ioctl < 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_OS_GET_NUM_NUMA_NODES);
+	if (ret < 0) {
+		int errno_save = errno;
 
-	ret = ret_ioctl;
+		dprintf("%s: error: IHK_OS_GET_NUM_NUMA_NODES returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
  out:
 	if (fd != -1) {
 		close(fd);
