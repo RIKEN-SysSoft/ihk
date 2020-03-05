@@ -2941,6 +2941,11 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 		goto out;
 	}
 
+	if (!pgsizes) {
+		ret = -EINVAL;
+		goto out;
+	}
+
 	if (num_pgsizes != IHK_MAX_NUM_PGSIZES) {
 		ret = -EINVAL;
 		goto out;
