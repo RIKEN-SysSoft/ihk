@@ -952,7 +952,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	if (num_mem_chunks == 0) {
 		ret = 0;
 		goto out;
-	};
+	}
 
 	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
 	if (!req.sizes) {
@@ -2674,11 +2674,23 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 		goto out;
 	}
 
-	CHKANDJUMP(sz_kmsg > IHK_KMSG_SIZE, -EINVAL, "message size is too large\n");
+	if (sz_kmsg != IHK_KMSG_SIZE) {
+		dprintf("%s: error: invalid message size\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	ret = ioctl(fd, IHK_OS_READ_KMSG, (unsigned long)kmsg);
-    CHKANDJUMP(ret < 0, -errno, "ioctl failed\n");
+	if (ret < 0) {
+		int errno_save = errno;
 
+		dprintf("%s: error: IHK_OS_READ_KMSG returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
