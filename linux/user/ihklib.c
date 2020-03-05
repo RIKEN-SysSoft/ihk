@@ -2700,7 +2700,7 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 
 int ihk_os_clear_kmsg(int index)
 {
-	int ret = 0, ret_ioctl;
+	int ret = 0;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2712,9 +2712,17 @@ int ihk_os_clear_kmsg(int index)
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_CLEAR_KMSG, 0);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_OS_CLEAR_KMSG, 0);
+	if (ret) {
+		int errno_save = errno;
 
+		dprintf("%s: error: IHK_OS_CLEAR_KMSG returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
