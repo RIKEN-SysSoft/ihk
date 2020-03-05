@@ -2668,15 +2668,23 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
 
 	if (sz_kmsg != IHK_KMSG_SIZE) {
-		dprintf("%s: error: invalid message size\n", __func__);
+		dprintf("%s: error: invalid buffer size\n",
+			__func__);
 		ret = -EINVAL;
+		goto out;
+	}
+
+	if (kmsg == NULL) {
+		dprintf("%s: error: invalid buffer address\n",
+			__func__);
+		ret = -EFAULT;
 		goto out;
 	}
 
