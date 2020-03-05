@@ -2910,8 +2910,8 @@ int ihk_os_get_num_pagesizes(int index)
 	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
