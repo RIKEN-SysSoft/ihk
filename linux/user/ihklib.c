@@ -2108,17 +2108,6 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 	if (ret != 0) {
 		int errno_save = errno;
 
-	if ((fd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open returned %d\n",
-			__func__, fd);
-		ret = fd;
-		goto out;
-	}
-
-	ret = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
-	if (ret != 0) {
-		int errno_save = errno;
-
 		dprintf("%s: IHK_OS_ASSIGN_MEM returned %d\n",
 			__func__, errno_save);
 		ret = -errno_save;
@@ -2508,14 +2497,14 @@ int ihk_os_boot(int index)
 		goto out;
 	}
 
-	for (i = 0; i < 100; i++) { /* 10 second */
+	for (i = 0; i < 50; i++) { /* 10 second */
 		ret = ioctl(fd, IHK_OS_STATUS);
 
 		switch (ret) {
 		case IHK_OS_STATUS_BOOTING:
 		case IHK_OS_STATUS_BOOTED:
 		case IHK_OS_STATUS_READY:
-			usleep(100000);
+			usleep(200000);
 			continue;
 		default:
 			break;
