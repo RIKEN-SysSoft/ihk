@@ -3013,25 +3013,38 @@ int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
 
 int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 {
-	int ret = 0, ret_ioctl;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
+	if (ret) {
+		int errno_save = errno;
 
-	ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
-	CHKANDJUMP(ret_ioctl < 0, -errno, "ioctl failed\n");
+		dprintf("%s: error: IHK_OS_AUX_PERF_NUM returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
 
-	ret = ret_ioctl;
+	ret = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
+	if (ret < 0) {
+		int errno_save = errno;
+
+		dprintf("%s: error: IHK_OS_AUX_PERF_SET returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
  out:
 	if (fd != -1) {
 		close(fd);
