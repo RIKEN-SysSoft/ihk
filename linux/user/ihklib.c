@@ -2500,14 +2500,14 @@ int ihk_os_boot(int index)
 		goto out;
 	}
 
-	for (i = 0; i < 100; i++) { /* 10 second */
+	for (i = 0; i < 50; i++) { /* 10 second */
 		ret = ioctl(fd, IHK_OS_STATUS);
 
 		switch (ret) {
 		case IHK_OS_STATUS_BOOTING:
 		case IHK_OS_STATUS_BOOTED:
 		case IHK_OS_STATUS_READY:
-			usleep(100000);
+			usleep(200000);
 			continue;
 		default:
 			break;
