@@ -2943,14 +2943,14 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 	dprintk("%s: enter\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
 	}
 
 	if (!pgsizes) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
