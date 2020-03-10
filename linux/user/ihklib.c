@@ -2696,7 +2696,6 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
