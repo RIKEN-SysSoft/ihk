@@ -1993,7 +1993,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
 	req.src_cpus = calloc(num_cpus, sizeof(int));
 	if (!req.src_cpus) {
-		eprintf("%s: error: allocating request src_cpus\n",
+		dprintf("%s: error: allocating request src_cpus\n",
 			__func__);
 		ret = -ENOMEM;
 		goto out;
@@ -2001,7 +2001,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
 	req.dst_cpus = calloc(num_cpus, sizeof(int));
 	if (!req.dst_cpus) {
-		eprintf("%s: error: allocating request dst_cpuss\n",
+		dprintf("%s: error: allocating request dst_cpuss\n",
 			__func__);
 		ret = -ENOMEM;
 		goto out;
@@ -2010,7 +2010,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	req.num_cpus = num_cpus;
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
