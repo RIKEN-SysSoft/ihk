@@ -625,11 +625,6 @@ static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
 		goto out;
 	}
 
-	if (ret == 0) {
-		buf[0] = 0;
-		ret = 1;
-	}
-
 	if (copy_to_user(_buf, buf, ret)) {
 		dprintf("error: copying string to user-space\n");
 		ret = -EINVAL;
