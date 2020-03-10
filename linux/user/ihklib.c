@@ -2727,7 +2727,6 @@ int ihk_os_clear_kmsg(int index)
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
