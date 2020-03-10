@@ -3570,11 +3570,11 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
 				goto next_compound;
 			}
 
-#define IHK_RELEASE_MEM_PARTIALLY_ALIGN (1UL << 25)
+#define IHK_RESERVE_MEM_GRANULE (4UL << 20)
 
 			/* Improve alignment */
-			if (size_left < IHK_RELEASE_MEM_PARTIALLY_ALIGN &&
-			    (va & (IHK_RELEASE_MEM_PARTIALLY_ALIGN - 1)) == 0) {
+			if (size_left < IHK_RESERVE_MEM_GRANULE &&
+			    (va & (IHK_RESERVE_MEM_GRANULE - 1)) == 0) {
 				pr_info("IHK-SMP: skip %ld bytes for better alignment\n",
 					size_left);
 				size_left = 0;
@@ -4083,9 +4083,9 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 	for (i = 0; i < req.num_chunks; i++) {
 		mem_size = req_sizes[i];
 		if (mem_size != IHK_SMP_MEM_ALL &&
-				mem_size % (1024 * 1024 * 4) != 0) {
+				mem_size % IHK_RESERVE_MEM_GRANULE != 0) {
 			printk("%s: error: mem_size must be in multiples of %d bytes\n",
-					__FUNCTION__, 1024 * 1024 * 4);
+					__func__, IHK_RESERVE_MEM_GRANULE);
 			ret = -EINVAL;
 			break;
 		}
