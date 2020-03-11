@@ -4084,8 +4084,9 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 		mem_size = req_sizes[i];
 		if (mem_size != IHK_SMP_MEM_ALL &&
 				mem_size % IHK_RESERVE_MEM_GRANULE != 0) {
-			printk("%s: error: mem_size must be in multiples of %d bytes\n",
-					__func__, IHK_RESERVE_MEM_GRANULE);
+			pr_err("%s: error: mem_size must be in "
+			       "multiples of %ld bytes\n",
+			       __func__, IHK_RESERVE_MEM_GRANULE);
 			ret = -EINVAL;
 			break;
 		}
