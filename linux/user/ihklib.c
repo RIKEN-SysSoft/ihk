@@ -3114,7 +3114,7 @@ int ihk_os_getperfevent(int index, unsigned long *counter, int n)
 
 int ihk_os_freeze(unsigned long *os_set, int n)
 {
-	int ret = 0, ret_ioctl;
+	int ret;
 	int index;
 	int fd = -1;
 
@@ -3122,19 +3122,28 @@ int ihk_os_freeze(unsigned long *os_set, int n)
 	for (index = 0; index < n; index++) {
 		if (*(os_set + index / 64) & (1ULL << (index % 64))) {
 			if ((fd = ihklib_os_open(index)) < 0) {
-				eprintf("%s: error: ihklib_os_open\n",
+				dprintf("%s: error: ihklib_os_open\n",
 					__func__);
 				ret = fd;
 				goto out;
 			}
 
-			ret_ioctl = ioctl(fd, IHK_OS_FREEZE, 0);
-			CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+			ret = ioctl(fd, IHK_OS_FREEZE, 0);
+			if (ret) {
+				int errno_save = errno;
+
+				dprintf("%s: error: IHK_OS_FREEZE "
+					"returned %d\n",
+					__func__, errno_save);
+				ret = -errno_save;
+				goto out;
+			}
 
 			close(fd);
 			fd = -1;
 		}
-    }
+	}
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
