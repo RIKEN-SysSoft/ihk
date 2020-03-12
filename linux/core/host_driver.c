@@ -923,6 +923,8 @@ static int __ihk_os_freeze(struct ihk_host_linux_os_data *data)
 		goto out;
 	case IHK_OS_STATUS_FREEZING:
 	case IHK_OS_STATUS_FROZEN:
+		ret = -EBUSY;
+		goto out;
 	case IHK_OS_STATUS_RUNNING:
 	default:
 		break;
