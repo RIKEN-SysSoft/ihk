@@ -1974,20 +1974,36 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	for (i = 0; i < req.num_cpus; i++) {
 		int src_cpu = req_src_cpus[i];
 		int dst_cpu = req_dst_cpus[i];
-		int st = 0;
 
-		if (dst_cpu >= SMP_MAX_CPUS) {
-			pr_err("ikc_map included over SMP_MAX_CPUS(%d) number(%d).\n",
-				SMP_MAX_CPUS, dst_cpu);
+		pr_debug("%s: src: %d, dst: %d\n",
+			__func__, src_cpu, dst_cpu);
+
+		if (src_cpu < 0 || src_cpu >= SMP_MAX_CPUS) {
+			pr_err("%s: error: src cpu %d is out of range, "
+			       "SMP_MAX_CPUS: %d\n",
+			       __func__, src_cpu, SMP_MAX_CPUS);
 			ret = -EINVAL;
 			goto out;
 		}
 
-		st = ihk_smp_cpus[dst_cpu].status;
+		if (ihk_smp_cpus[src_cpu].status != IHK_SMP_CPU_ASSIGNED) {
+			pr_err("%s: error: src cpu %d is not assigned\n",
+			       __func__, src_cpu);
+			ret = -EINVAL;
+			goto out;
+		}
 
-		if (st == IHK_SMP_CPU_ASSIGNED) {
-			pr_err("ikc_map included McKernel-core number(%d).\n",
-				dst_cpu);
+		if (dst_cpu < 0 || dst_cpu >= SMP_MAX_CPUS) {
+			pr_err("%s: error: dst cpu %d is out of range, "
+			       "SMP_MAX_CPUS: %d\n",
+			       __func__, dst_cpu, SMP_MAX_CPUS);
+			ret = -EINVAL;
+			goto out;
+		}
+
+		if (ihk_smp_cpus[dst_cpu].status == IHK_SMP_CPU_ASSIGNED) {
+			pr_err("%s: error: dst cpu %d is assigned\n",
+			       __func__, dst_cpu);
 			ret = -EINVAL;
 			goto out;
 		} else {
