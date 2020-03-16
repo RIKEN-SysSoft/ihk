@@ -1054,7 +1054,7 @@ static long __ihk_os_ioctl_call_aux(struct ihk_host_linux_os_data *os,
 		}
 	}
 
-	return -ENOSYS;
+	return -EINVAL;
 }
 
 static int __ihk_os_ioctl_perm(unsigned int request)
