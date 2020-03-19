@@ -3153,27 +3153,43 @@ int ihk_os_freeze(unsigned long *os_set, int n)
 
 int ihk_os_thaw(unsigned long *os_set, int n)
 {
-	int ret = 0, ret_ioctl;
+	int ret;
 	int index;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
+
+	if (n <= 0) {
+		dprintf("%s: invalid length of os bitset(%d)\n", __func__, n);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	for (index = 0; index < n; index++) {
 		if (*(os_set + index / 64) & (1ULL << (index % 64))) {
 			if ((fd = ihklib_os_open(index)) < 0) {
-				eprintf("%s: error: ihklib_os_open\n",
+				dprintf("%s: error: ihklib_os_open\n",
 					__func__);
 				ret = fd;
 				goto out;
 			}
 
-			ret_ioctl = ioctl(fd, IHK_OS_THAW, 0);
-			CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+			ret = ioctl(fd, IHK_OS_THAW, 0);
+			if (ret) {
+				int errno_save = errno;
+
+				dprintf("%s: error: IHK_OS_THAW "
+					"returned %d\n",
+					__func__, errno_save);
+				ret = -errno_save;
+				goto out;
+			}
 
 			close(fd);
 			fd = -1;
 		}
 	}
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
