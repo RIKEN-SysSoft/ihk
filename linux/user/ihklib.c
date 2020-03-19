@@ -3024,6 +3024,13 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 		goto out;
 	}
 
+	if (n <= 0) {
+		dprintf("%s: invalid number(%d) of events\n",
+			__func__, n);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
 	if (ret) {
 		int errno_save = errno;
