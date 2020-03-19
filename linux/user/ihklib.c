@@ -3151,6 +3151,12 @@ int ihk_os_freeze(unsigned long *os_set, int n)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
+	if (n <= 0) {
+		dprintf("%s: invalid length of os bitset(%d)\n", __func__, n);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	for (index = 0; index < n; index++) {
 		if (*(os_set + index / 64) & (1ULL << (index % 64))) {
 			if ((fd = ihklib_os_open(index)) < 0) {
