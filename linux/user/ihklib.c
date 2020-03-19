@@ -2108,17 +2108,6 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 	if (ret != 0) {
 		int errno_save = errno;
 
-	if ((fd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open returned %d\n",
-			__func__, fd);
-		ret = fd;
-		goto out;
-	}
-
-	ret = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
-	if (ret != 0) {
-		int errno_save = errno;
-
 		dprintf("%s: IHK_OS_ASSIGN_MEM returned %d\n",
 			__func__, errno_save);
 		ret = -errno_save;
@@ -3162,6 +3151,12 @@ int ihk_os_freeze(unsigned long *os_set, int n)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
+	if (n <= 0) {
+		dprintf("%s: invalid length of os bitset(%d)\n", __func__, n);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	for (index = 0; index < n; index++) {
 		if (*(os_set + index / 64) & (1ULL << (index % 64))) {
 			if ((fd = ihklib_os_open(index)) < 0) {
