@@ -3108,24 +3108,39 @@ int ihk_os_perfctl(int index, int comm)
 
 int ihk_os_getperfevent(int index, unsigned long *counter, int n)
 {
-	int ret = 0, ret_ioctl;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_GET, counter);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	if (n <= 0) {
+		dprintf("%s: invalid number(%d) of events\n",
+			__func__, n);
+		ret = -EINVAL;
+		goto out;
+	}
 
+	ret = ioctl(fd, IHK_OS_AUX_PERF_GET, counter);
+	if (ret != 0) {
+		int errno_save = errno;
+
+		dprintf("%s: error: IHK_OS_AUX_PERF_GET returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
+	ret = 0;
  out:
-    if (fd != -1) {
-        close(fd);
-    }
+	if (fd != -1) {
+		close(fd);
+	}
 	return ret;
 }
 
