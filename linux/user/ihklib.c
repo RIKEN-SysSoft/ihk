@@ -3061,33 +3061,43 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 
 int ihk_os_perfctl(int index, int comm)
 {
-	int ret = 0, ret_ioctl;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
 
 	switch (comm) {
-	case PERF_EVENT_ENABLE : /* start PA event */
-		ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_ENABLE, 0);
+	case PERF_EVENT_ENABLE: /* start PA event */
+		ret = ioctl(fd, IHK_OS_AUX_PERF_ENABLE, 0);
 		break;
-	case PERF_EVENT_DISABLE : /* stop PA event */
-		ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_DISABLE, 0);
+	case PERF_EVENT_DISABLE: /* stop PA event */
+		ret = ioctl(fd, IHK_OS_AUX_PERF_DISABLE, 0);
 		break;
-	case PERF_EVENT_DESTROY : /* delete PA event */
-		ret_ioctl = ioctl(fd, IHK_OS_AUX_PERF_DESTROY, 0);
+	case PERF_EVENT_DESTROY: /* stop PA event and
+				  * reset # of counters
+				  */
+		ret = ioctl(fd, IHK_OS_AUX_PERF_DESTROY, 0);
 		break;
 	default:
 		ret = -EINVAL;
 		goto out;
 	}
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	if (ret != 0) {
+		int errno_save = errno;
 
+		dprintf("%s: error: ioctl returned %d\n",
+			__func__, errno_save);
+		ret = -errno_save;
+		goto out;
+	}
+
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
