@@ -3271,9 +3271,21 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		__func__, index, dump_file, dump_level, interactive);
 
 	if ((osfd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = osfd;
+		goto out;
+	}
+
+	ret = ihk_os_get_status(index);
+	if (ret < 0) {
+		dprintf("%s: ihk_os_get_status returned %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	if (ret == IHK_STATUS_INACTIVE) {
+		ret = -EINVAL;
 		goto out;
 	}
 
@@ -3396,7 +3408,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		CHKANDJUMP(!scn, -EINVAL, "bfd_make_section_anyway(physmem) failed: %s\n", bfd_errmsg(bfd_get_error()));
 
 		if (interactive) {
-			ok = bfd_set_section_size(abfd, scn, 4096);
+			ok = bfd_set_section_size(abfd, scn, PAGE_SIZE);
 		}
 		else {
 			ok = bfd_set_section_size(abfd, scn, mem_chunks->chunks[i].size);
@@ -3435,8 +3447,10 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_contents(physchunks) failed: %s\n", bfd_errmsg(bfd_get_error()));
 	}
 
-	if (interactive)
+	if (interactive) {
+		ret = 0;
 		goto out;
+	}
 
 	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
 
@@ -3472,7 +3486,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		}
 	}
 
-out:
+	ret = 0;
+ out:
 	if (abfd) {
 		ok = bfd_close(abfd);
 		if (!ok) {
