@@ -3265,6 +3265,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	char *physmem_name_buf = NULL;
 	char physmem_name[PHYSMEM_NAME_SIZE];
 	int osfd = -1;
+	char *token;
 
 	dprintk("%s: enter\n", __func__);
 	dprintf("%s: index=%d,dump_file=%s,dump_level=%d,interactive=%d\n",
@@ -3343,9 +3344,37 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 	bfd_init();
 
-	abfd = bfd_fopen(dump_file, NULL, "w", -1);
+	if (dump_file == NULL) {
+		ret = -EFAULT;
+		goto out;
+	}
 
-	CHKANDJUMP(abfd == NULL, -EINVAL, "bfd_fopen failed: %s\n", bfd_errmsg(bfd_get_error()));
+	token = strrchr(dump_file, '/');
+	if (token) {
+		token[0] = 0;
+		ret = access(dump_file, W_OK);
+		if (ret) {
+			int errno_save = errno;
+
+			dprintf("%s: %s is inaccessible: %d\n",
+				__func__, dump_file, errno_save);
+			token[0] = '/';
+			ret = -errno_save;
+			goto out;
+		}
+		token[0] = '/';
+	}
+
+	abfd = bfd_fopen(dump_file, NULL, "w", -1);
+	if (abfd == NULL) {
+		bfd_error_type bfd_errno = bfd_get_error();
+
+		dprintf("%s: bfd_fopen failed: %d: %s\n",
+			__func__, bfd_errno,
+			bfd_errmsg(bfd_errno));
+		ret = -bfd_errno;
+		goto out;
+	}
 
 	ok = bfd_set_format(abfd, bfd_object);
 	CHKANDJUMP(!ok, -EINVAL, "bfd_set_format failed: %s\n", bfd_errmsg(bfd_get_error()));
