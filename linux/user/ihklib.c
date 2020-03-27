@@ -3293,8 +3293,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		__func__, index, dump_file, dump_level, interactive);
 
 	if ((osfd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, osfd);
 		ret = osfd;
 		goto out;
 	}
@@ -3312,41 +3312,102 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	}
 
 	t = time(NULL);
-	CHKANDJUMP(t == (time_t)-1, -errno, "time failed: %s\n", strerror(errno));
+	if (t == (time_t)-1) {
+		int errno_save = -errno;
+
+		dprintf("%s: error: time returned %d\n",
+			__func__, errno);
+		ret = -errno_save;
+		goto out;
+	}
 
 	tm = localtime(&t);
-	CHKANDJUMP(tm == NULL, -EINVAL, "localtime failed\n");
+	if (!tm) {
+		dprintf("%s: error: localtime returned %d\n",
+			__func__, errno);
+		ret = -EINVAL;
+		goto out;
+	}
 
 	error = gethostname(hname, sizeof(hname));
-	CHKANDJUMP(error != 0, -errno, "gethostname failed\n");
+	if (error != 0) {
+		int errno_save = -errno;
 
+		dprintf("%s: error: gethostname returned %d\n",
+			__func__, errno);
+		ret = -errno_save;
+		goto out;
+	}
+
+	/* TODO: might be redundant */
 	pw = getpwuid(getuid());
-	CHKANDJUMP(pw == NULL, -errno, "getpwuid failed: %s\n", strerror(errno));
+	if (pw == NULL) {
+		int errno_save = -errno;
+
+		dprintf("%s: error: getpwuid returned %d\n",
+			__func__, errno);
+		ret = -errno_save;
+		goto out;
+	}
 
 	args.cmd = DUMP_SET_LEVEL;
 	args.level = dump_level;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
-	CHKANDJUMP(error != 0, -errno, "DUMP_SET_LEVEL failed\n");
+	if (error != 0) {
+		int errno_save = -errno;
+
+		dprintf("%s: error: DUMP_SET_LEVEL returned %d\n",
+			__func__, errno);
+		ret = errno_save;
+		goto out;
+	}
 
 	args.cmd = DUMP_NMI;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
-	CHKANDJUMP(error != 0, -errno, "DUMP_NMI failed\n");
+	if (error != 0) {
+		int errno_save = -errno;
+
+		dprintf("%s: error: DUMP_NMI returned %d\n",
+			__func__, errno);
+		ret = errno_save;
+		goto out;
+	}
 
 	args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
 	args.size = 0;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
-	CHKANDJUMP(error != 0, -errno, "DUMP_QUERY_NUM_MEM_AREAS failed\n");
+	if (error != 0) {
+		int errno_save = -errno;
+
+		dprintf("%s: error: "
+			"DUMP_QUERY_NUM_MEM_AREAS returned %d\n",
+			__func__, errno);
+		ret = errno_save;
+		goto out;
+	}
 
 	mem_size = args.size;
 	mem_chunks = malloc(mem_size);
-	CHKANDJUMP(mem_chunks == NULL, -ENOMEM, "malloc failed\n");
+	if (!mem_chunks) {
+		dprintf("%s: error: alloating mem_chunks\n",
+			__func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	memset(mem_chunks, 0, args.size);
 
 	args.cmd = DUMP_QUERY_MEM_AREAS;
 	args.buf = (void *)mem_chunks;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
-	CHKANDJUMP(error != 0, -errno, "DUMP_QUERY_MEM_AREAS failed\n");
+	if (error != 0) {
+		int errno_save = -errno;
+
+		dprintf("%s: error: DUMP_QUERY_MEM_AREAS returned %d\n",
+			__func__, errno);
+		ret = errno_save;
+		goto out;
+	}
 
 	phys_size = 0;
 	dprintf("%s: nr chunks: %d\n",
@@ -3361,7 +3422,11 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 	bsize = 0x100000;
 	buf = malloc(bsize);
-	CHKANDJUMP(buf == NULL, -ENOMEM, "malloc failed\n");
+	if (!buf) {
+		dprintf("%s: error: allocating buf\n", __func__);
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	bfd_init();
 
@@ -3387,65 +3452,139 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	}
 
 	abfd = bfd_fopen(dump_file, NULL, "w", -1);
-	if (abfd == NULL) {
-		bfd_error_type bfd_errno = bfd_get_error();
-
-		dprintf("%s: bfd_fopen failed: %d: %s\n",
-			__func__, bfd_errno,
-			bfd_errmsg(bfd_errno));
-		ret = -bfd_errno;
+	if (!abfd) {
+		dprintf("%s: bfd_fopen failed: %s\n",
+			__func__, bfd_errmsg(bfd_get_error()));
+		ret = -EINVAL;
 		goto out;
 	}
 
 	ok = bfd_set_format(abfd, bfd_object);
-	CHKANDJUMP(!ok, -EINVAL, "bfd_set_format failed: %s\n", bfd_errmsg(bfd_get_error()));
+	if (!ok) {
+		dprintf("%s: error: bfd_set_format: %s\n",
+			__func__, bfd_errmsg(bfd_get_error()));
+		ret = -EINVAL;
+		goto out;
+	}
 
 	date = asctime(tm);
 	if (date) {
 		cpsize = strlen(date) - 1;	/* exclude trailing '\n' */
 		scn = bfd_make_section_anyway(abfd, "date");
-		CHKANDJUMP(!scn, -EINVAL, "bfd_make_section_anyway(date) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!scn) {
+			dprintf("%s: error: "
+				"bfd_make_section_anyway(date): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		ok = bfd_set_section_size(abfd, scn, cpsize);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_size failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_size: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_setction_flags failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_flags: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 	error = gethostname(hname, sizeof(hname));
 	if (!error) {
 		cpsize = strlen(hname);
 		scn = bfd_make_section_anyway(abfd, "hostname");
-		CHKANDJUMP(!scn, -EINVAL, "bfd_make_section_anyway(hostname) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!scn) {
+			dprintf("%s: error: "
+				"bfd_make_section_anyway(hostname): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		ok = bfd_set_section_size(abfd, scn, cpsize);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_size failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_size: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_setction_flags failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_flags: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 	pw = getpwuid(getuid());
 	if (pw) {
 		cpsize = strlen(pw->pw_name);
 		scn = bfd_make_section_anyway(abfd, "user");
-		CHKANDJUMP(!scn, -EINVAL, "bfd_make_section_anyway(user) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!scn) {
+			dprintf("%s: error: "
+				"bfd_make_section_anyway(user): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		ok = bfd_set_section_size(abfd, scn, cpsize);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_size failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_size: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_setction_flags failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_flags: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 
 	/* Add section for physical memory chunks information */
 	scn = bfd_make_section_anyway(abfd, "physchunks");
-	CHKANDJUMP(!scn, -EINVAL, "bfd_make_section_anyway(physchunks) failed: %s\n", bfd_errmsg(bfd_get_error()));
+	if (!scn) {
+		dprintf("%s: error: "
+			"bfd_make_section_anyway(physchunks): %s\n",
+			__func__, bfd_errmsg(bfd_get_error()));
+		ret = -EINVAL;
+		goto out;
+	}
 
 	ok = bfd_set_section_size(abfd, scn, mem_size);
-	CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_size failed: %s\n", bfd_errmsg(bfd_get_error()));
+	if (!ok) {
+		dprintf("%s: error: "
+			"bfd_set_section_size: %s\n",
+			__func__, bfd_errmsg(bfd_get_error()));
+		ret = -EINVAL;
+		goto out;
+	}
 
 	ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
-	CHKANDJUMP(!ok, -EINVAL, "bfd_set_setction_flags failed: %s\n", bfd_errmsg(bfd_get_error()));
+	if (!ok) {
+		dprintf("%s: error: "
+			"bfd_set_section_flags: %s\n",
+			__func__, bfd_errmsg(bfd_get_error()));
+		ret = -EINVAL;
+		goto out;
+	}
 
 	for (i = 0; i < mem_chunks->nr_chunks; ++i) {
 
@@ -3455,7 +3594,13 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 		/* Physical memory contents section */
 		scn = bfd_make_section_anyway(abfd, physmem_name_buf);
-		CHKANDJUMP(!scn, -EINVAL, "bfd_make_section_anyway(physmem) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!scn) {
+			dprintf("%s: error: "
+				"bfd_make_section_anyway(physmem): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		if (interactive) {
 			ok = bfd_set_section_size(abfd, scn, PAGE_SIZE);
@@ -3463,38 +3608,72 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		else {
 			ok = bfd_set_section_size(abfd, scn, mem_chunks->chunks[i].size);
 		}
-
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_size failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_size: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_setction_flags failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_flags: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		scn->vma = mem_chunks->chunks[i].addr;
-
 	}
 
 	scn = bfd_get_section_by_name(abfd, "date");
 	if (scn) {
 		ok = bfd_set_section_contents(abfd, scn, date, 0, scn->size);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_contents(date) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_contents(date): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 
 	scn = bfd_get_section_by_name(abfd, "hostname");
 	if (scn) {
 		ok = bfd_set_section_contents(abfd, scn, hname, 0, scn->size);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_contents(hostname) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_contents(hostname): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 
 	scn = bfd_get_section_by_name(abfd, "user");
 	if (scn) {
 		ok = bfd_set_section_contents(abfd, scn, pw->pw_name, 0, scn->size);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_contents(user) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_contents(user): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 
 	scn = bfd_get_section_by_name(abfd, "physchunks");
 	if (scn) {
 		ok = bfd_set_section_contents(abfd, scn, mem_chunks, 0, mem_size);
-		CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_contents(physchunks) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!ok) {
+			dprintf("%s: error: "
+				"bfd_set_section_contents(physchunks): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 
 	if (interactive) {
@@ -3510,7 +3689,13 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		sprintf(physmem_name, "physmem%d",i);
 
 		scn = bfd_get_section_by_name(abfd, physmem_name);
-		CHKANDJUMP(!scn, -EINVAL, "err bfd_get_section_by_name(physmem_name) failed: %s\n", bfd_errmsg(bfd_get_error()));
+		if (!scn) {
+			dprintf("%s: error: "
+				"bfd_get_section_by_name(physmem_name): %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
+			ret = -EINVAL;
+			goto out;
+		}
 
 		for (addr = mem_chunks->chunks[i].addr;
 				addr < (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size);
@@ -3527,10 +3712,23 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 			args.buf = buf;
 
 			error = ioctl(osfd, IHK_OS_DUMP, &args);
-			CHKANDJUMP(error, -errno, "DUMP_READ failed\n");
+			if (error != 0) {
+				int errno_save = -errno;
+
+				dprintf("%s: error: DUMP_HEAD returned %d\n",
+					__func__, errno);
+				ret = errno_save;
+				goto out;
+			}
 
 			ok = bfd_set_section_contents(abfd, scn, buf, phys_offset, cpsize);
-			CHKANDJUMP(!ok, -EINVAL, "bfd_set_section_contents(physmem) failed: %s\n", bfd_errmsg(bfd_get_error()));
+			if (!ok) {
+				dprintf("%s: error: "
+					"bfd_set_section_contents(physmem): %s\n",
+					__func__, bfd_errmsg(bfd_get_error()));
+				ret = -EINVAL;
+				goto out;
+			}
 
 			phys_offset += cpsize;
 		}
@@ -3541,7 +3739,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	if (abfd) {
 		ok = bfd_close(abfd);
 		if (!ok) {
-			eprintf("bfd_close failed: %s\n", bfd_errmsg(bfd_get_error()));
+			dprintf("%s: error: bfd_close: %s\n",
+				__func__, bfd_errmsg(bfd_get_error()));
 			ret = -EINVAL;
 		}
 	}
@@ -3550,7 +3749,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		if (error) {
 			int errno_save = errno;
 
-			dprintf("close failed: %s\n", strerror(errno));
+			dprintf("%s: error: close: %s\n",
+				__func__, strerror(errno));
 			ret = -errno_save;
 		}
 	}
