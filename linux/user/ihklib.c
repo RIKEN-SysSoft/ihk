@@ -2974,25 +2974,46 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
 		     size_t size_rusage)
 {
+	int ret = 0;
+	int fd = -1;
+
 	dprintk("%s: enter\n", __func__);
-	int ret = 0, ret_ioctl;
+
+	if (!rusage) {
+		dprintf("%s: error: output buffer is NULL\n",
+			__func__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (size_rusage != sizeof(struct ihk_os_rusage)) {
+		dprintf("%s: error: size of output buffer is invalid\n",
+			__func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	struct mcctrl_ioctl_getrusage_desc desc = {
 		.rusage = rusage,
 		.size_rusage = size_rusage,
 	};
-	int fd = -1;
-
-	dprintf("%s: 1\n", __func__);
 
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
-			__func__);
+		dprintf("%s: error: ihklib_os_open returned %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
 
-	ret_ioctl = ioctl(fd, IHK_OS_GETRUSAGE, &desc);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed,ret=%d\n", ret);
+	ret = ioctl(fd, IHK_OS_GETRUSAGE, &desc);
+	if (ret != 0) {
+		int errno_save = -errno;
+
+		dprintf("%s: error: IHK_OS_GETRUSAGE returned %d\n",
+			__func__, ret);
+		ret = errno_save;
+		goto out;
+	}
 
  out:
 	if (fd != -1) {
