@@ -12,9 +12,6 @@
 /* whether rusage is enabled */
 #cmakedefine ENABLE_RUSAGE 1
 
-/* Force to reserve the sum of the per-NUMA-node requested amounts */
-#cmakedefine FORCE_RESERVE_MEM_TOTAL 1
-
 /* for non-RHEL kernels */
 #ifndef RHEL_RELEASE_VERSION
 #define RHEL_RELEASE_VERSION(a,b) (((a) << 8) + (b))

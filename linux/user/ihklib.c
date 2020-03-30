@@ -2089,13 +2089,7 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 	}
 
 	for (i = 0; i < num_mem_chunks; i++) {
-#ifdef FORCE_RESERVE_MEM_TOTAL
-		req.sizes[i] = (size_t)IHK_SMP_MEM_ALL;
-		dprintk("%s: size is changed to %ld@%d\n",
-			__func__, req.sizes[i], mem_chunks[i].numa_node_number);
-#else
 		req.sizes[i] = (size_t)mem_chunks[i].size;
-#endif
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;

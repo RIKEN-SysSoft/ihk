@@ -63,7 +63,6 @@ find_library(LIBUDEV udev)
 
 option(ENABLE_PERF "Enable perf support" ON)
 option(ENABLE_RUSAGE "Enable rusage support" ON)
-option(FORCE_RESERVE_MEM_TOTAL "Workaround: Compensate memory-shortage in some nodes by reserving more in others" ON)
 
 # actual build section - just subdirs
 add_subdirectory("linux/core")
