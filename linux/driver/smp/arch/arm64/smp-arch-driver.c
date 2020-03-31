@@ -1114,8 +1114,6 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 	int status;
 
 	status = os->status;
-	pr_info("%s: builtin os status: %d",
-		__func__, status);
 
 	switch (status) {
 	case BUILTIN_OS_STATUS_BOOTING:
@@ -1139,9 +1137,6 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		ret = IHK_OS_STATUS_NOT_BOOTED;
 		break;
 	}
-
-	pr_info("%s: status before checking monitor info: %d",
-		__func__, ret);
 
 	if (ret != IHK_OS_STATUS_READY && ret != IHK_OS_STATUS_RUNNING)
 		goto out;
@@ -1194,9 +1189,6 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 	}
 
  out:
-	pr_info("%s: status after checking monitor info: %d",
-		__func__, ret);
-
 	return ret;
 }
 
