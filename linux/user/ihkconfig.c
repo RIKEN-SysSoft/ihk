@@ -406,12 +406,12 @@ static int do_query(int fd)
 	}
 
 	if (!strcmp(__argv[3], "cpu")) {
-		cnt = ioctl(fd, IHK_DEVICE_GET_NUM_CPUS);
-		if (cnt < 0) {
+		req_cpu.num_cpus = ioctl(fd, IHK_DEVICE_GET_NUM_CPUS);
+		if (req_cpu.num_cpus < 0) {
 			fprintf(stderr, "error: querying num CPUs\n");
 		}
 
-		req_cpu.cpus = calloc(sizeof(int), cnt);
+		req_cpu.cpus = calloc(sizeof(int), req_cpu.num_cpus);
 		IHKCONFIG_CHKANDJUMP(!req_cpu.cpus,
 				"allocate request space", -1);
 
