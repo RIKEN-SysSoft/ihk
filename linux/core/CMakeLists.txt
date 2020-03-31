@@ -14,5 +14,18 @@ kmod(ihk
 		${KMODDIR}
 )
 
-install(FILES "../include/ihk/ihk_host_driver.h"
-	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ihk")
+install(FILES ../include/ihk/arch/${ARCH}/ihk/archdefs.h
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ihk")
+
+foreach(target IN ITEMS
+    status.h
+    ihk_monitor.h
+    ihk_debug.h
+    ihk_host_driver.h
+    )
+  install(FILES ../include/ihk/${target}
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ihk")
+endforeach()
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Module.symvers
+  DESTINATION "${KMODDIR}/ihk/linux/core")
