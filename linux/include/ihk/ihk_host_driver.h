@@ -10,6 +10,7 @@
 #ifndef __HEADER_IHK_HOST_DRIVER_H
 #define __HEADER_IHK_HOST_DRIVER_H
 
+#include <linux/list.h>
 #include <ihk/archdefs.h>
 #include <ihk/status.h>
 #include <ihk/ihk_monitor.h>
