@@ -2013,9 +2013,23 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 			       __func__, dst_cpu);
 			ret = -EINVAL;
 			goto out;
-		} else {
-			ihk_smp_cpus[src_cpu].ikc_map_cpu = dst_cpu;
 		}
+
+		if (!cpu_present(dst_cpu)) {
+			pr_err("%s: error: dst cpu %d isn't present\n",
+			       __func__, dst_cpu);
+			ret = -EINVAL;
+			goto out;
+		}
+
+		if (!cpu_online(dst_cpu)) {
+			pr_err("%s: error: dst cpu %d isn't online\n",
+			       __func__, dst_cpu);
+			ret = -EINVAL;
+			goto out;
+		}
+
+		ihk_smp_cpus[src_cpu].ikc_map_cpu = dst_cpu;
 	}
 
 	/* Mapping has been requested */
