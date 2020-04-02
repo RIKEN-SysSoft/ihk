@@ -2399,6 +2399,17 @@ int ihk_os_send_nmi(ihk_os_t os, int mode)
 	return __ihk_os_send_nmi(os, mode);
 }
 
+int ihk_os_get_topology_view(ihk_os_t os)
+{
+	struct ihk_host_linux_os_data *data = os;
+
+	if (data->ops && data->ops->get_topology_view) {
+		return data->ops->get_topology_view(data, data->priv);
+	}
+
+	return 0;
+}
+
 unsigned long ihk_device_map_memory(ihk_device_t dev, unsigned long pa,
                                     unsigned long size)
 {
@@ -2819,6 +2830,7 @@ EXPORT_SYMBOL(ihk_os_write_cpu_register);
 EXPORT_SYMBOL(ihk_os_clear_kernel_call_handlers);
 EXPORT_SYMBOL(ihk_os_get_memory_info);
 EXPORT_SYMBOL(ihk_os_get_cpu_info);
+EXPORT_SYMBOL(ihk_os_get_topology_view);
 EXPORT_SYMBOL(ihk_device_get_dma_channel);
 EXPORT_SYMBOL(ihk_device_get_dma_info);
 EXPORT_SYMBOL(ihk_dma_request);

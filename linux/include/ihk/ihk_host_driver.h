@@ -37,6 +37,17 @@ enum ihk_special_addr_type {
 	IHK_SPADDR_MULTI_INTR_MODE = 8,
 };
 
+/*
+ * Topology view of the LWK in terms of sysfs and user facing
+ * system calls (e.g., sched_set/get_affinity, NUMA calls, etc.)
+ *
+ * Two views are supported:
+ * IHK_TOPOLOGY_VIEW_LWK - LWK only view
+ * IHK_TOPOLOGY_VIEW_FULL - Full Linux view with Linux cores offline (for SMP)
+ */
+#define IHK_TOPOLOGY_VIEW_LWK	0
+#define IHK_TOPOLOGY_VIEW_FULL	1
+
 /** \brief Type of an IHK device */
 typedef void *ihk_device_t;
 /** \brief Type of an IHK kernel */
@@ -252,7 +263,9 @@ struct ihk_os_ops {
 	struct ihk_mem_info *(*get_memory_info)(ihk_os_t, void *);
 	/** \brief Retrieve processor information for the OS instance */
 	struct ihk_cpu_info *(*get_cpu_info)(ihk_os_t, void *);
-	
+	/** \brief Get topology view information */
+	int (*get_topology_view)(ihk_os_t, void *);
+
 	/**
 	 * \brief Get a special address of the OS instance
 	 *
@@ -711,6 +724,8 @@ struct ihk_mem_info *ihk_os_get_memory_info(ihk_os_t os);
 struct ihk_cpu_info *ihk_os_get_cpu_info(ihk_os_t os);
 /** \brief Get address of memory area to which OS-global rerouce usage is recorded */
 void *ihk_os_get_rusage(ihk_os_t os);
+/** \brief Get topology view information */
+int ihk_os_get_topology_view(ihk_os_t os);
 
 /** \brief Denote to allocate all the available cpus */
 #define IHK_RESOURCE_CPU_ALL  -1

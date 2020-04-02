@@ -499,6 +499,7 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 	printk("IHK-SMP: boot param size: %d, nr_pages: %lu\n",
 			param_size, 1UL << param_pages_order);
 
+	os->param->topology_view = os->topology_view;
 	os->param->nr_cpus = os->nr_cpus;
 	os->param->nr_linux_cpus = nr_cpu_ids;
 	os->param->nr_numa_nodes = nr_numa_nodes;
@@ -1617,6 +1618,13 @@ static struct ihk_cpu_info *smp_ihk_os_get_cpu_info(ihk_os_t ihk_os, void *priv)
 	return &os->cpu_info;
 }
 
+static int smp_ihk_os_get_topology_view(ihk_os_t ihk_os, void *priv)
+{
+	struct smp_os_data *os = priv;
+
+	return os->topology_view;
+}
+
 /*
  * Assign CPUs in the array
  * NOTE: The cpus and num_cpus must be valid.
@@ -2733,6 +2741,7 @@ static struct ihk_os_ops smp_ihk_os_ops = {
 	.debug_request = smp_ihk_os_debug_request,
 	.get_memory_info = smp_ihk_os_get_memory_info,
 	.get_cpu_info = smp_ihk_os_get_cpu_info,
+	.get_topology_view = smp_ihk_os_get_topology_view,
 	.assign_cpu = smp_ihk_os_assign_cpu,
 	.release_cpu = smp_ihk_os_release_cpu,
 	.set_ikc_map = smp_ihk_os_set_ikc_map,
@@ -2778,6 +2787,8 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 	 * use the designated NUMA node otherwise */
 	os->bootstrap_numa_id = -1;
 	os->boot_pt = NULL;
+	os->topology_view = IHK_TOPOLOGY_VIEW_FULL;
+	//os->topology_view = IHK_TOPOLOGY_VIEW_LWK;
 
 	return 0;
 }

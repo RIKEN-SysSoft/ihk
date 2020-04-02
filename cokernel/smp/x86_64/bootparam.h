@@ -130,6 +130,7 @@ struct smp_boot_param {
 	unsigned int ihk_ikc_irq;
 	unsigned int ihk_ikc_irq_apicids[SMP_MAX_CPUS];
 	char kernel_args[256];
+	int topology_view;
 	int nr_linux_cpus;
 	int nr_cpus;
 	int nr_numa_nodes;

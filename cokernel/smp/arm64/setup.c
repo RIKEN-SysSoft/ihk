@@ -82,6 +82,22 @@ void start_kernel(struct start_kernel_param *param)
 
 static struct ihk_mc_cpu_info *ihk_cpu_info = NULL;
 
+int ihk_mc_linux_cpu_2_mckernel_cpu(int cpu)
+{
+	if (cpu < 0 || cpu >= ihk_cpu_info->nlinux_cpus)
+		return -1;
+
+	return ihk_cpu_info->mckernel_cpu_ids[cpu];
+}
+
+int ihk_mc_mckernel_cpu_2_linux_cpu(int cpu)
+{
+	if (cpu < 0 || cpu >= ihk_cpu_info->ncpus)
+		return -1;
+
+	return ihk_cpu_info->linux_cpu_ids[cpu];
+}
+
 static void build_ihk_cpu_info(void)
 {
 	int i;
@@ -89,24 +105,39 @@ static void build_ihk_cpu_info(void)
 
 	ihk_cpu_info = early_alloc_pages((
 				(sizeof(*ihk_cpu_info) + boot_param->nr_cpus *
-				 (sizeof(ihk_cpu_info->hw_ids) + sizeof(ihk_cpu_info->nodes) + 
-                  sizeof(ihk_cpu_info->linux_cpu_ids) + sizeof(ihk_cpu_info->ikc_cpus)) +
-				PAGE_SIZE - 1) >> PAGE_SHIFT));
+				 (sizeof(ihk_cpu_info->hw_ids) +
+				  sizeof(ihk_cpu_info->nodes) +
+				  sizeof(ihk_cpu_info->linux_cpu_ids) +
+				  sizeof(ihk_cpu_info->ikc_cpus)) +
+				 (sizeof(ihk_cpu_info->mckernel_cpu_ids) *
+					boot_param->nr_linux_cpus) +
+				 PAGE_SIZE - 1) >> PAGE_SHIFT));
 	ihk_cpu_info->hw_ids = (int *)(ihk_cpu_info + 1);
-	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) + boot_param->nr_cpus;
-	ihk_cpu_info->linux_cpu_ids = (int *)(ihk_cpu_info->nodes) + boot_param->nr_cpus;
-	ihk_cpu_info->ikc_cpus = (int *)(ihk_cpu_info->linux_cpu_ids) + boot_param->nr_cpus;
+	ihk_cpu_info->nodes = (int *)(ihk_cpu_info + 1) +
+		boot_param->nr_cpus;
+	ihk_cpu_info->linux_cpu_ids = (int *)(ihk_cpu_info->nodes) +
+		boot_param->nr_cpus;
+	ihk_cpu_info->ikc_cpus = (int *)(ihk_cpu_info->linux_cpu_ids) +
+		boot_param->nr_cpus;
+	ihk_cpu_info->mckernel_cpu_ids = (int *)(ihk_cpu_info->ikc_cpus) +
+		boot_param->nr_cpus;
 
 	bp_cpu = (struct ihk_smp_boot_param_cpu *)(boot_param + 1);
+	for (i = 0; i < boot_param->nr_linux_cpus; ++i) {
+		ihk_cpu_info->mckernel_cpu_ids[i] = -1;
+	}
+
 	for (i = 0; i < boot_param->nr_cpus; ++i) {
 		ihk_cpu_info->hw_ids[i] = bp_cpu->hw_id;
 		ihk_cpu_info->nodes[i] = bp_cpu->numa_id;
 		ihk_cpu_info->linux_cpu_ids[i] = bp_cpu->linux_cpu_id;
 		ihk_cpu_info->ikc_cpus[i] = bp_cpu->ikc_cpu;
+		ihk_cpu_info->mckernel_cpu_ids[bp_cpu->linux_cpu_id] = i;
 		++bp_cpu;
 	}
 
 	ihk_cpu_info->ncpus = boot_param->nr_cpus;
+	ihk_cpu_info->nlinux_cpus = boot_param->nr_linux_cpus;
 
 #ifdef IHK_IKC_USE_LINUX_WORK_IRQ
 	/* Map Linux IRQ work raised_list list heads */
@@ -445,6 +476,11 @@ void ihk_mc_setup_dma(void)
 int ihk_mc_get_nr_numa_nodes(void)
 {
 	return boot_param->nr_numa_nodes;
+}
+
+int ihk_mc_get_topology_view(void)
+{
+	return boot_param->topology_view;
 }
 
 int ihk_mc_get_numa_node(int id, int *linux_numa_id, int *type)
