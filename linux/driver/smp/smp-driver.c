@@ -334,6 +334,13 @@ static int ikc_array2str(char *str, ssize_t len, int num_cpus,
 	}
 
 	for (i = 0; i < num_cpus; i++) {
+		if (dst_cpus[i] < 0 || dst_cpus[i] >= SMP_MAX_CPUS) {
+			pr_err("%s: error: dst cpu %d is out of range\n",
+				__func__, dst_cpus[i]);
+			ret = -EINVAL;
+			goto out;
+		}
+
 		num_ikc_src[dst_cpus[i]]++;
 
 		if (dst_cpus[i] > max_dst) {
