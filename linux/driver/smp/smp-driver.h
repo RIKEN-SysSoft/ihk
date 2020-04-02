@@ -105,6 +105,12 @@ struct smp_os_data {
 	 */
 	char kernel_args[256];
 
+	/*
+	 * Topology view of the LWK in terms of sysfs and user facing
+	 * system calls (e.g., sched_set/get_affinity, NUMA calls, etc.)
+	 */
+	int topology_view;
+
 	/* LWK NUMA id to Linux NUMA id mapping */
 	int *numa_mapping;
 	int nr_numa_nodes;
