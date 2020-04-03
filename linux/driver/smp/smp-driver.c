@@ -3774,14 +3774,23 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		}
 
 		if (!cpu_online(cpu)) {
-			if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_AVAILABLE)
-				printk("IHK-SMP: error: CPU %d was reserved already\n",
-				       cpu);
+			pr_err("%s: error: CPU %d was ", __func__, cpu);
 
-			if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_ASSIGNED)
-				printk("IHK-SMP: erro: CPU %d was assigned already\n",
-				       cpu);
-
+			switch (ihk_smp_cpus[cpu].status) {
+			case IHK_SMP_CPU_AVAILABLE:
+				pr_cont("reserved already\n");
+				break;
+			case IHK_SMP_CPU_ASSIGNED:
+				pr_cont("assigned already\n");
+				break;
+			case IHK_SMP_CPU_NONE:
+				pr_cont("offline\n");
+				break;
+			default:
+				pr_cont("in state of %d\n",
+					ihk_smp_cpus[cpu].status);
+				break;
+			}
 			ret = -EINVAL;
 			goto err_before_offline;
 		}
