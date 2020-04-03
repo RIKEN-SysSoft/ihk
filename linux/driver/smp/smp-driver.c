@@ -3890,7 +3890,8 @@ static int _smp_ihk_release_cpu(cpumask_t *cpus_to_online)
 		}
 
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
-			printk("IHK-SMP: error: CPU %d is in use\n", cpu);
+			pr_err("%s: error: CPU %d isn't reserved\n",
+			       __func__, cpu);
 			ret = -EINVAL;
 			goto err;
 		}
