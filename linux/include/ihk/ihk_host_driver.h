@@ -849,6 +849,8 @@ ihk_device_t ihk_host_find_dev(int index);
  */
 ihk_os_t ihk_host_find_os(int index, ihk_device_t dev);
 
+int ihk_host_validate_os(ihk_os_t os);
+
 void ihk_host_print_os_kmsg(ihk_os_t os);
 
 /**

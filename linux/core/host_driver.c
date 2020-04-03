@@ -2489,6 +2489,21 @@ ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
 	}
 }
 
+int ihk_host_validate_os(ihk_os_t os)
+{
+	int i;
+	int found = 0;
+
+	for (i = 0; i < os_max_minor; i++) {
+		if (os == os_data[i] && os_data[i] &&
+		    os_data[i] != (void *)-1) {
+			found = 1;
+		}
+	}
+
+	return found ? 0 : -EINVAL;
+}
+
 void ihk_host_print_os_kmsg(ihk_os_t os)
 {
 	int nread;
@@ -2578,7 +2593,15 @@ int ihk_os_clear_kernel_call_handlers(ihk_os_t ihk_os)
 int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
 		struct ihk_os_cpu_register *desc)
 {
+	int ret;
 	struct ihk_host_linux_os_data *os = ihk_os;
+
+	ret = ihk_host_validate_os((ihk_os_t)os);
+	if (ret) {
+		pr_err("%s: error: invalid os: %lx\n",
+		       __func__, (unsigned long)os);
+		return ret;
+	}
 
 	if (!os || !os->kernel_handlers ||
 			!os->kernel_handlers->read_cpu_register) {
@@ -2591,7 +2614,15 @@ int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
 int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
 		struct ihk_os_cpu_register *desc)
 {
+	int ret;
 	struct ihk_host_linux_os_data *os = ihk_os;
+
+	ret = ihk_host_validate_os((ihk_os_t)os);
+	if (ret) {
+		pr_err("%s: error: invalid os: %lx\n",
+		       __func__, (unsigned long)os);
+		return ret;
+	}
 
 	if (!os || !os->kernel_handlers ||
 			!os->kernel_handlers->write_cpu_register) {
@@ -2771,6 +2802,7 @@ EXPORT_SYMBOL(ihk_os_get_special_address);
 EXPORT_SYMBOL(ihk_os_wait_for_status);
 EXPORT_SYMBOL(ihk_host_find_dev);
 EXPORT_SYMBOL(ihk_host_find_os);
+EXPORT_SYMBOL(ihk_host_validate_os);
 EXPORT_SYMBOL(ihk_host_print_os_kmsg);
 EXPORT_SYMBOL(ihk_host_os_set_usrdata);
 EXPORT_SYMBOL(ihk_host_os_get_usrdata);
