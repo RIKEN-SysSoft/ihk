@@ -3898,7 +3898,7 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		}
 
 		if (cpu_online(cpu)) {
-			printk("IHK-SMP: error: CPU %d is online\n",
+			pr_err("IHK-SMP: error: CPU %d is online\n",
 			       cpu);
 			ret = -EINVAL;
 			goto err;
