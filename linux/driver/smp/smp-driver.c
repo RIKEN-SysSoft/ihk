@@ -3905,7 +3905,8 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		}
 
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
-			printk("IHK-SMP: error: CPU %d is in use\n", cpu);
+			pr_err("%s: error: CPU %d isn't reserved\n",
+			       __func__, cpu);
 			ret = -EINVAL;
 			goto err;
 		}
