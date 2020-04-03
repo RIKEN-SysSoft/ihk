@@ -3883,9 +3883,10 @@ static int _smp_ihk_release_cpu(cpumask_t *cpus_to_online)
 		}
 
 		if (cpu_online(cpu)) {
-			pr_warn("IHK-SMP: warning: CPU %d is online\n",
+			pr_err("IHK-SMP: error: CPU %d is online\n",
 			       cpu);
-			continue;
+			ret = -EINVAL;
+			goto err;
 		}
 
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE) {
