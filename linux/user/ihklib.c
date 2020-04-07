@@ -686,10 +686,16 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
-	CHKANDJUMP(num_cpus > IHK_MAX_NUM_CPUS, -EINVAL, "too many cpus requested\n");
 
 	ret = ihklib_device_readable(index);
 	if (ret) {
+		goto out;
+	}
+
+	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+		dprintf("%s: invalid number of cpus (%d)\n",
+			__func__, num_cpus);
+		ret = -EINVAL;
 		goto out;
 	}
 
