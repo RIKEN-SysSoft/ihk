@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "098c42d2_b2be26c1",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1271,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T09:02:34Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihk_get_num_reserved_mem_chunks\u0027, this function\u0027s name, in a string\n+\t\tdprintf(\"%s: error: ihk_get_num_reserved_mem_chunks\"",
+      "revId": "6f8954eea9796e93d3d0a96135f8aa349ef9d18e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6a51e007_91d4a17e",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1380,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T09:02:34Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihk_query_mem\u0027, this function\u0027s name, in a string\n+\t\t\tdprintf(\"%s: error: ihk_query_mem returned %d\\n\",",
+      "revId": "6f8954eea9796e93d3d0a96135f8aa349ef9d18e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5b5a52b4_48ba7331",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 1674,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T09:02:34Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihklib_os_open\u0027, this function\u0027s name, in a string\n+\t\tdprintf(\"%s: error: ihklib_os_open returned %d\\n\",",
+      "revId": "6f8954eea9796e93d3d0a96135f8aa349ef9d18e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aacf38e0_0eacd15f",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2243,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T09:02:34Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihk_os_query_mem\u0027, this function\u0027s name, in a string\n+\t\t\tdprintf(\"%s: error: ihk_os_query_mem returned %d\\n\",",
+      "revId": "6f8954eea9796e93d3d0a96135f8aa349ef9d18e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
