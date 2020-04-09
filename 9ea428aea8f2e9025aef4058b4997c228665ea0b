@@ -19,6 +19,23 @@
     },
     {
       "key": {
+        "uuid": "d10b6e5c_6c30e823",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 1271,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T20:13:21Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihk_get_num_reserved_mem_chunks\u0027, this function\u0027s name, in a string\n+\t\tdprintf(\"%s: error: ihk_get_num_reserved_mem_chunks\"",
+      "revId": "9ea428aea8f2e9025aef4058b4997c228665ea0b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "cf94e45f_26d72136",
         "filename": "linux/user/ihklib.c",
         "patchSetId": 11
@@ -28,6 +45,23 @@
         "id": 1014954
       },
       "writtenOn": "2020-04-09T20:03:54Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihk_query_mem\u0027, this function\u0027s name, in a string\n+\t\t\tdprintf(\"%s: error: ihk_query_mem returned %d\\n\",",
+      "revId": "9ea428aea8f2e9025aef4058b4997c228665ea0b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5ff2f7c6_46f8c647",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 1380,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T20:13:21Z",
       "side": 1,
       "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihk_query_mem\u0027, this function\u0027s name, in a string\n+\t\t\tdprintf(\"%s: error: ihk_query_mem returned %d\\n\",",
       "revId": "9ea428aea8f2e9025aef4058b4997c228665ea0b",
@@ -53,6 +87,23 @@
     },
     {
       "key": {
+        "uuid": "28957e46_36feb094",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 1674,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T20:13:21Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihklib_os_open\u0027, this function\u0027s name, in a string\n+\t\tdprintf(\"%s: error: ihklib_os_open returned %d\\n\",",
+      "revId": "9ea428aea8f2e9025aef4058b4997c228665ea0b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "14a3e3cf_684fe28c",
         "filename": "linux/user/ihklib.c",
         "patchSetId": 11
@@ -62,6 +113,23 @@
         "id": 1014954
       },
       "writtenOn": "2020-04-09T20:03:54Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihk_os_query_mem\u0027, this function\u0027s name, in a string\n+\t\t\tdprintf(\"%s: error: ihk_os_query_mem returned %d\\n\",",
+      "revId": "9ea428aea8f2e9025aef4058b4997c228665ea0b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8c4c6006_4679da70",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 11
+      },
+      "lineNbr": 2253,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T20:13:21Z",
       "side": 1,
       "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027ihk_os_query_mem\u0027, this function\u0027s name, in a string\n+\t\t\tdprintf(\"%s: error: ihk_os_query_mem returned %d\\n\",",
       "revId": "9ea428aea8f2e9025aef4058b4997c228665ea0b",
