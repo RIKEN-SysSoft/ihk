@@ -418,7 +418,7 @@ void smp_ihk_setup_trampoline(void *priv)
 	os->param->ihk_ikc_irq = ihk_smp_irq;
 #endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
-	os->param->page_offset_base = page_offset_base;
+	os->param->page_offset_base = __PAGE_OFFSET;
 	os->param->linux_kernel_pgt_phys = __pa(&_init_level4_pgt[0]);
 	dprintf("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n", __func__,
 		&_init_level4_pgt[0], os->param->linux_kernel_pgt_phys);
