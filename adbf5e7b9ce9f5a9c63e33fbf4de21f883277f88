@@ -19,6 +19,23 @@
     },
     {
       "key": {
+        "uuid": "50cd673f_37ceb55c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 3757,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:09:03Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"reserved already\\n\");",
+      "revId": "adbf5e7b9ce9f5a9c63e33fbf4de21f883277f88",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "d5dd67c1_8474e330",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 6
@@ -28,6 +45,23 @@
         "id": 1014954
       },
       "writtenOn": "2020-04-09T12:21:16Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"assigned already\\n\");",
+      "revId": "adbf5e7b9ce9f5a9c63e33fbf4de21f883277f88",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "58053d6a_f9e18a4e",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 3760,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:09:03Z",
       "side": 1,
       "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"assigned already\\n\");",
       "revId": "adbf5e7b9ce9f5a9c63e33fbf4de21f883277f88",
@@ -53,6 +87,23 @@
     },
     {
       "key": {
+        "uuid": "c2b52528_c02fcda2",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 3763,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:09:03Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"offline\\n\");",
+      "revId": "adbf5e7b9ce9f5a9c63e33fbf4de21f883277f88",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "5fd6cb18_da01a9d7",
         "filename": "linux/driver/smp/smp-driver.c",
         "patchSetId": 6
@@ -62,6 +113,23 @@
         "id": 1014954
       },
       "writtenOn": "2020-04-09T12:21:16Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"in state of %d\\n\",",
+      "revId": "adbf5e7b9ce9f5a9c63e33fbf4de21f883277f88",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "046065d2_a6af4f6a",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 3766,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:09:03Z",
       "side": 1,
       "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"in state of %d\\n\",",
       "revId": "adbf5e7b9ce9f5a9c63e33fbf4de21f883277f88",
