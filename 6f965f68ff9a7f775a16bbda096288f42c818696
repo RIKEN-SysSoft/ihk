@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "87475b46_f91caa57",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2408,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T04:38:20Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (req_sizes \u003d\u003d NULL) {\n+\t\tpr_err(\"%s: error: allocating sizes\\n\",",
+      "revId": "6f965f68ff9a7f775a16bbda096288f42c818696",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "074ac756_45a9f9be",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2416,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T04:38:20Z",
+      "side": 1,
+      "message": "WARNING: Possible unnecessary \u0027out of memory\u0027 message\n+\tif (req_numa_ids \u003d\u003d NULL) {\n+\t\tpr_err(\"%s: error: allocating NUMA ids\\n\",",
+      "revId": "6f965f68ff9a7f775a16bbda096288f42c818696",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
