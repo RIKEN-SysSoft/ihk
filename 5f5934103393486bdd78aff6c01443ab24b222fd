@@ -19,6 +19,23 @@
     },
     {
       "key": {
+        "uuid": "73854711_67be6b05",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 10
+      },
+      "lineNbr": 390,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T20:19:51Z",
+      "side": 1,
+      "message": "WARNING: Possible switch case/default not preceded by break or fallthrough comment\n+\tcase IHK_OS_STATUS_FROZEN:",
+      "revId": "5f5934103393486bdd78aff6c01443ab24b222fd",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "266cc8e9_c526c0b6",
         "filename": "linux/core/host_driver.c",
         "patchSetId": 10
@@ -28,6 +45,23 @@
         "id": 1014954
       },
       "writtenOn": "2020-04-09T19:53:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tif (ihk_os_wait_for_status((ihk_os_t)data, IHK_OS_STATUS_RUNNING,",
+      "revId": "5f5934103393486bdd78aff6c01443ab24b222fd",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ed26d0a2_4744494f",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 10
+      },
+      "lineNbr": 403,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T20:19:51Z",
       "side": 1,
       "message": "WARNING: line over 80 characters\n+\t\tif (ihk_os_wait_for_status((ihk_os_t)data, IHK_OS_STATUS_RUNNING,",
       "revId": "5f5934103393486bdd78aff6c01443ab24b222fd",
