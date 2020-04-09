@@ -1192,6 +1192,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 				max_ave, max_ave >> 20,
 				ave_min, ave_min >> 20,
 				variance_limit, variance_limit >> 20);
+
 			release = 1;
 			ret = -ENOMEM;
 			goto out;
