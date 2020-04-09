@@ -1,0 +1,191 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f70630b5_69340b2a",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 807,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: Block comments use a trailing */ on a separate line\n+\t   (4) LWK sets boot_param-\u003estatus to 3 in done_init() */",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e3f694f9_167bc699",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1151,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: ENOSYS means \u0027invalid syscall nr\u0027 and nothing else\n+\t\tret \u003d -ENOSYS;",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a735d20b_c698757d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1173,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "ERROR: switch and case should be at the same indent\n+\t\tswitch (data-\u003emonitor-\u003ecpu[i].status) {\n+\t\t    case IHK_OS_MONITOR_KERNEL_FREEZING:\n[...]\n+\t\t    case IHK_OS_MONITOR_KERNEL_FROZEN:\n[...]\n+\t\t    default:",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a7fce8c_bdc1f42a",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1174,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: Statements should start on a tabstop\n+\t\t    case IHK_OS_MONITOR_KERNEL_FREEZING:",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2b510776_0ce529c0",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1177,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: Statements should start on a tabstop\n+\t\t    case IHK_OS_MONITOR_KERNEL_FROZEN:",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8e242f6b_2a74e3f8",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1183,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: Statements should start on a tabstop\n+\t\t    default:",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6fe2bb7d_4bdf7e62",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 873,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: ENOSYS means \u0027invalid syscall nr\u0027 and nothing else\n+\t\tret \u003d -ENOSYS;",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7c9210c4_ae1aeb34",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 895,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "ERROR: switch and case should be at the same indent\n+\t\tswitch (data-\u003emonitor-\u003ecpu[i].status) {\n+\t\t    case IHK_OS_MONITOR_KERNEL_FREEZING:\n[...]\n+\t\t    case IHK_OS_MONITOR_KERNEL_FROZEN:\n[...]\n+\t\t    default:",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "88fab43e_644562e3",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 896,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: Statements should start on a tabstop\n+\t\t    case IHK_OS_MONITOR_KERNEL_FREEZING:",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e47a2e63_60e7a092",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 899,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: Statements should start on a tabstop\n+\t\t    case IHK_OS_MONITOR_KERNEL_FROZEN:",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfaba7dd_a363c431",
+        "filename": "linux/driver/smp/arch/x86_64/smp-arch-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 905,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:05:11Z",
+      "side": 1,
+      "message": "WARNING: Statements should start on a tabstop\n+\t\t    default:",
+      "revId": "7a52772d181b0dd3c0c60df69635c76f8a0824ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
