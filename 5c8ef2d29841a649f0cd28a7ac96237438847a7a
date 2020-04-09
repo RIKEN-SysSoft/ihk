@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "90ec3a0e_52ff1877",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3757,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T04:14:00Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"reserved already\\n\");",
+      "revId": "5c8ef2d29841a649f0cd28a7ac96237438847a7a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f1058e3e_23eb0b49",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3760,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T04:14:00Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"assigned already\\n\");",
+      "revId": "5c8ef2d29841a649f0cd28a7ac96237438847a7a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "51a5a6ee_13b535fe",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3763,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T04:14:00Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"offline\\n\");",
+      "revId": "5c8ef2d29841a649f0cd28a7ac96237438847a7a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "79327354_0e64baf4",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 3766,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T04:14:00Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"in state of %d\\n\",",
+      "revId": "5c8ef2d29841a649f0cd28a7ac96237438847a7a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
