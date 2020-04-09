@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1867f73c_01215410",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 10
+      },
+      "lineNbr": 812,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:02:18Z",
+      "side": 1,
+      "message": "WARNING: ENOSYS means \u0027invalid syscall nr\u0027 and nothing else\n+\t\tret \u003d -ENOSYS;",
+      "revId": "bf320a3f84393b5b6a6f121c0547d466c30ce91a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e769c332_6eeb426d",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 10
+      },
+      "lineNbr": 857,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T14:02:18Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I$",
+      "revId": "bf320a3f84393b5b6a6f121c0547d466c30ce91a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
