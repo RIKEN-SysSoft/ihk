@@ -1177,10 +1177,11 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			__func__, min, max, variance_limit);
 		if (max - ave_requested > variance_limit ||
 		    ave_requested - min > variance_limit) {
+#ifdef DEBUG
 			unsigned long max_ave = max - ave_requested;
 			unsigned long ave_min = ave_requested - min;
 
-			dprintf("%s: error: variance > limit, "
+			printf("%s: error: variance > limit, "
 				"ave: %ld (%ld MiB), "
 				"max - ave: %ld (%ld MiB), "
 				"ave - min: %ld (%ld MiB), "
@@ -1190,6 +1191,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 				max_ave, max_ave >> 20,
 				ave_min, ave_min >> 20,
 				variance_limit, variance_limit >> 20);
+#endif
 			release = 1;
 			ret = -ENOMEM;
 			goto out;
