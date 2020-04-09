@@ -1192,6 +1192,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 				max_ave, max_ave >> 20,
 				ave_min, ave_min >> 20,
 				variance_limit, variance_limit >> 20);
+
 			release = 1;
 			ret = -ENOMEM;
 			goto out;
@@ -2102,17 +2103,6 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 		req.numa_ids[i] = mem_chunks[i].numa_node_number;
 	}
 	req.num_chunks = num_mem_chunks;
-
-	if ((fd = ihklib_os_open(index)) < 0) {
-		dprintf("%s: error: ihklib_os_open returned %d\n",
-			__func__, fd);
-		ret = fd;
-		goto out;
-	}
-
-	ret = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
-	if (ret != 0) {
-		int errno_save = errno;
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		dprintf("%s: error: ihklib_os_open returned %d\n",
