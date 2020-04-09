@@ -1,0 +1,803 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "c2062193_dd917e27",
+        "filename": "test/ihklib/blackbox/include/mckernel.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: Macros with complex values should be enclosed in parentheses\n+#define nop100 \\\n+\tnop10 nop10 nop10 nop10 nop10 \\\n+\tnop10 nop10 nop10 nop10 nop10",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "03a7f750_f4c0c66d",
+        "filename": "test/ihklib/blackbox/include/mckernel.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 12,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: Macros with complex values should be enclosed in parentheses\n+#define nop1000 \\\n+\tnop100 nop100 nop100 nop100 nop100 \\\n+\tnop100 nop100 nop100 nop100 nop100",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "72ea5530_1cdedfbb",
+        "filename": "test/ihklib/blackbox/include/mckernel.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 39,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: Macros with complex values should be enclosed in parentheses\n+#define ldr100 \\\n+\tldr10 ldr10 ldr10 ldr10 ldr10 \\\n+\tldr10 ldr10 ldr10 ldr10 ldr10",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "02133dd9_fd5a8765",
+        "filename": "test/ihklib/blackbox/include/mckernel.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 43,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: Macros with complex values should be enclosed in parentheses\n+#define ldr1000 \\\n+\tldr100 ldr100 ldr100 ldr100 ldr100 \\\n+\tldr100 ldr100 ldr100 ldr100 ldr100",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d9e9f2d6_d3e82323",
+        "filename": "test/ihklib/blackbox/include/okng.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define _OKNG(verb, jump, cond, fmt, args...) do {\t\\\n+\tif (cond) {\t\t\t\t\t\\\n+\t\tif (verb)\t\t\t\t\\\n+\t\t\tprintf(\"[  OK  ] \" fmt, ##args);\t\\\n+\t} else {\t\t\t\t\t\\\n+\t\tprintf(\"[  NG  ] \" fmt, ##args);\t\t\\\n+\t\tif (jump)\t\t\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t}\t\t\t\t\t\t\\\n+} while (0)",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "78634539_c02f9e37",
+        "filename": "test/ihklib/blackbox/include/okng.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define INTERR(cond, fmt, args...) do {\t \\\n+\tif (cond) {\t\t\t \\\n+\t\tchar msg[4096];\t\t\t \\\n+\t\tsprintf(msg, fmt, ##args);\t\t \\\n+\t\tprintf(\"[INTERR] %s:%d %s\", __FILE__, __LINE__, msg);\t\\\n+\t\tret \u003d 1;\t\t\t\t\t\\\n+\t\tgoto out;\t\t\t\t\t\\\n+\t} \\\n+} while (0)",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9fd14e23_83e1d279",
+        "filename": "test/ihklib/blackbox/include/rdtsc.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 5,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: Macros with complex values should be enclosed in parentheses\n+#define isb()\tasm volatile(\"isb\" : : : \"memory\")",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6381b041_88cfe03c",
+        "filename": "test/ihklib/blackbox/include/rdtsc.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+/* @ref.impl linux-linaro/arch/arm64/include/asm/arch_timer.h::arch_counter_get_cntvct */",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "187414c6_f8ffb90a",
+        "filename": "test/ihklib/blackbox/src/consume_cpu_time.patch",
+        "patchSetId": 7
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "05d4b9a5_6545f723",
+        "filename": "test/ihklib/blackbox/src/delay_with_interrupt_disabled_mckernel.patch",
+        "patchSetId": 7
+      },
+      "lineNbr": 18,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e7c33084_68b01fd5",
+        "filename": "test/ihklib/blackbox/src/ihk_get_num_reserved_mem_chunks02.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tret \u003d ihk_reserve_mem(0, mems_expected_size[i].mem_chunks,",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7c092366_76ca3b0c",
+        "filename": "test/ihklib/blackbox/src/ihk_get_num_reserved_mem_chunks02.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 57,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t      mems_expected_size[i].num_mem_chunks);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9d08a8ee_3336f33f",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 145,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t     ru_result[i][1].memory_stat_rss[IHK_OS_PGSIZE_64KB]);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "78882ab6_79a7aba8",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 163,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_result[i][1].memory_stat_rss[IHK_OS_PGSIZE_64KB] -",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "70a89004_a1357f57",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 164,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_result[i][0].memory_stat_rss[IHK_OS_PGSIZE_64KB];",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "85a95393_b10a5337",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 167,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_expected[i].memory_stat_rss[IHK_OS_PGSIZE_64KB];",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5ad8c8e2_3a88b127",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 134,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tru_input_before[i]-\u003ememory_stat_rss[IHK_OS_PGSIZE_64KB]);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6b79da36_163c8eda",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage06.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 164,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_input_after[i].memory_stat_rss[page_size_index[i]] -",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f15ec308_b5793a47",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage06.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 165,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_input_before[i].memory_stat_rss[page_size_index[i]];",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9e57e246_0810f00f",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage06.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 168,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_expected[i].memory_stat_rss[page_size_index[i]];",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a8c667c_50ef50a8",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage09.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 59,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        ret \u003d cpus_ls(\u0026cpus_mckernel);$",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fff9558e_95e208ba",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage09.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 59,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        ret \u003d cpus_ls(\u0026cpus_mckernel);$",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df5c0856_6c8111b4",
+        "filename": "test/ihklib/blackbox/src/ihk_os_release_mem04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 79,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tmems_input[i].mem_chunks[mems_input[i].num_mem_chunks - 1].size,",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6a6a2d7a_be652098",
+        "filename": "test/ihklib/blackbox/src/ihk_os_release_mem04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 80,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tmems_input[i].mem_chunks[mems_input[i].num_mem_chunks - 1].numa_node_number);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f728793c_37ccbbc4",
+        "filename": "test/ihklib/blackbox/src/ihk_os_release_mem04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 93,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t mems_after_release[i].num_mem_chunks - 1);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f1ca4243_fc169bdd",
+        "filename": "test/ihklib/blackbox/src/ihk_os_set_ikc_map01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 87,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tret \u003d ikc_cpu_map_check_channels(map_expected[i]-\u003encpus);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1f615b71_2e4df16d",
+        "filename": "test/ihklib/blackbox/src/ihk_query_mem07.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tret \u003d ihk_reserve_mem(0, mems_expected_size[i].mem_chunks,",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b5048033_d4c89ed6",
+        "filename": "test/ihklib/blackbox/src/ihk_query_mem07.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 57,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t      mems_expected_size[i].num_mem_chunks);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "44fb5f0c_a6ee9321",
+        "filename": "test/ihklib/blackbox/src/ihk_release_mem04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 132,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tmems_input[i].mem_chunks[mems_input[i].num_mem_chunks - 1].size,",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ab27745e_dbacead8",
+        "filename": "test/ihklib/blackbox/src/ihk_release_mem04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 133,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tmems_input[i].mem_chunks[mems_input[i].num_mem_chunks - 1].numa_node_number);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e0479faa_b30f0922",
+        "filename": "test/ihklib/blackbox/src/ihk_release_mem04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 145,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t mems_after_release[i].num_mem_chunks - 1);",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dfe74290_0651ef67",
+        "filename": "test/ihklib/blackbox/src/linux.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 157,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: Symbolic permissions \u0027S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH\u0027 are not preferred. Consider using octal permissions \u00270066\u0027.\n+\tmode_t os_mode \u003d S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "150f0645_a17c239d",
+        "filename": "test/ihklib/blackbox/src/mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 163,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tfp \u003d popen(\"dmesg | awk \u0027 /NUMA.*free mem/ { size[$4] \u003d $10; if ($4 \u003e max) { max \u003d $4 } } END { for (i \u003d 0; i \u003c\u003d max; i++) { if (size[i] \u003e 0) { printf \\\"%d %d\\\\n\\\", i, size[i] } } }\u0027\",",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7b90719e_47b39849",
+        "filename": "test/ihklib/blackbox/src/status_ihk.patch",
+        "patchSetId": 7
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+    $",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8dd345c8_1879cde4",
+        "filename": "test/ihklib/blackbox/src/status_ihk.patch",
+        "patchSetId": 7
+      },
+      "lineNbr": 14,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "489424c7_98f45aad",
+        "filename": "test/ihklib/blackbox/src/status_ihk.patch",
+        "patchSetId": 7
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "92c37c8f_7130ea6f",
+        "filename": "test/ihklib/blackbox/src/status_mckernel.patch",
+        "patchSetId": 7
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+    $",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "99aac137_310b2cdf",
+        "filename": "test/ihklib/blackbox/src/status_mckernel.patch",
+        "patchSetId": 7
+      },
+      "lineNbr": 43,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bfc8ed3a_fa9045f6",
+        "filename": "test/ihklib/blackbox/src/str.patch",
+        "patchSetId": 7
+      },
+      "lineNbr": 18,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "17b6cbb4_82dfd98e",
+        "filename": "test/ihklib/blackbox/src/vfp_sve_wfi_mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "ERROR: Macros with complex values should be enclosed in parentheses\n+#define fadd100 \\\n+\tfadd10 fadd10 fadd10 fadd10 fadd10 \\\n+\tfadd10 fadd10 fadd10 fadd10 fadd10",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "38778e7d_69b0e309",
+        "filename": "test/ihklib/blackbox/src/vfp_sve_wfi_mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 63,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027fmla\u0027, this function\u0027s name, in a string\n+\t     \"fmla z2.d, p0/m, z0.d, z1.d\\n\"",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "705e9f62_9585fe55",
+        "filename": "test/ihklib/blackbox/src/vfp_sve_wfi_mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 84,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: do not add new typedefs\n+typedef struct {",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "02adb334_b9bd0b92",
+        "filename": "test/ihklib/blackbox/src/vfp_sve_wfi_mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 92,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: __aligned(size) is preferred over __attribute__((aligned(size)))\n+} __attribute__((aligned(4))) ihk_spinlock_t;",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "acd51199_6d9369a5",
+        "filename": "test/ihklib/blackbox/src/vfp_sve_wfi_mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 175,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: Use of volatile is usually wrong: see Documentation/process/volatile-considered-harmful.rst\n+volatile char tmp;",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b49b83a1_94095a94",
+        "filename": "test/ihklib/blackbox/src/vfp_sve_wfi_mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 181,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define MYMMAP(buf, size) do {\t\t\t\t\t\\\n+\tbuf \u003d mmap(0, size,\t\t\t\t\t\\\n+\t\t PROT_READ | PROT_WRITE,\t\t\t\\\n+\t\t MAP_ANONYMOUS | MAP_PRIVATE,\t\t\t\\\n+\t\t -1, 0);\t\t\t\t\t\\\n+\tif (buf \u003d\u003d MAP_FAILED) {\t\t\t\t\\\n+\t\tprintf(\"%s: error: allocating memory\\n\",\t\\\n+\t\t       __FILE__);\t\t\t\t\\\n+\t\tret \u003d -ENOMEM;\t\t\t\t\t\\\n+\t\tgoto out;\t\t\t\t\t\\\n+\t}\t\t\t\t\t\t\t\\\n+} while (0)",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7242feca_160d877e",
+        "filename": "test/ihklib/blackbox/src/vfp_sve_wfi_mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 226,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027wfe\u0027, this function\u0027s name, in a string\n+\tprintf(\"[ INFO ] wfe: parent cpu: %d\\n\",",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6eb7ecfb_cd3a053a",
+        "filename": "test/ihklib/blackbox/src/vfp_sve_wfi_mem.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 254,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-09T13:54:36Z",
+      "side": 1,
+      "message": "WARNING: Prefer using \u0027\"%s...\", __func__\u0027 to using \u0027wfe\u0027, this function\u0027s name, in a string\n+\tprintf(\"[ INFO ] wfe: child exited with %d\\n\",",
+      "revId": "afc899107e5aa5d225f8039bd270331bdac765ff",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
