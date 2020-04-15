@@ -1,5 +1,5 @@
 ===========================================
-What's new in V1.7.0 (Nov 15, 2019)
+What's new in V1.7.0rc4 (Apr 15, 2020)
 ===========================================
 
 ------------------
@@ -30,6 +30,7 @@ IHK major bug fixes
 17. ihk_mc_get_vector(): fix handling of TLB invalidation vectors
 18. IKC: use Linux work IRQ for IKC interrupt
 19. Use ASM cmpxchg() instead of compiler atomic intrinsics
+20. __ihk_smp_reserve_mem: Make min chunk size and timeout duration configurable
 
 ===========================================
 What's new in V1.6.0 (Nov 11, 2018)
