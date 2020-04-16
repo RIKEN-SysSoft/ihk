@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "29b4ec4b_e5737bf7",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 15
+      },
+      "lineNbr": 3757,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-16T06:23:05Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"reserved already\\n\");",
+      "revId": "4a6524de1420179816ea306e6eeaa775ee6abc51",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "386c83be_8b553853",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 15
+      },
+      "lineNbr": 3760,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-16T06:23:05Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"assigned already\\n\");",
+      "revId": "4a6524de1420179816ea306e6eeaa775ee6abc51",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "37a9e00b_b75a8c56",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 15
+      },
+      "lineNbr": 3763,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-16T06:23:05Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"offline\\n\");",
+      "revId": "4a6524de1420179816ea306e6eeaa775ee6abc51",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d3f60f20_6c79a472",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 15
+      },
+      "lineNbr": 3766,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-04-16T06:23:05Z",
+      "side": 1,
+      "message": "WARNING: Avoid logging continuation uses where feasible\n+\t\t\t\tpr_cont(\"in state of %d\\n\",",
+      "revId": "4a6524de1420179816ea306e6eeaa775ee6abc51",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
