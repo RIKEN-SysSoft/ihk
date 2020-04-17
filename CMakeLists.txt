@@ -7,7 +7,7 @@ endif (NOT CMAKE_BUILD_TYPE)
 enable_language(C)
 
 project(ihk C)
-set(IHK_VERSION "1.7.0rc3")
+set(IHK_VERSION "1.7.0rc4")
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 include(GNUInstallDirs)
