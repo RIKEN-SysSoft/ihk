@@ -153,11 +153,9 @@ static int cpu_str2array(char *_cpu_list, int num_cpus, int *cpus)
 	}
 
 	if (!(cpu_list = strdup(_cpu_list))) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: allocating cpu_list\n",
 			__func__);
-		ret = -errno_save;
 		goto out;
 	}
 	to_free = cpu_list;
@@ -279,11 +277,9 @@ static int ikc_str2array(char *_ikc_list, int num_maps,
 	}
 
 	if (!(ikc_list = strdup(_ikc_list))) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: allocating ikc_list\n",
 			__func__);
-		ret = -errno_save;
 		goto out;
 	}
 	to_free = ikc_list;
@@ -409,11 +405,9 @@ int mem_str2req(char *_mem_list, int num_mem_chunks, struct ihk_mem_req *req)
 	}
 
 	if (!(mem_list = strdup(_mem_list))) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: allocating mem_list\n",
 			__func__);
-		ret = -errno_save;
 		goto out;
 	}
 	to_free = mem_list;
@@ -640,11 +634,9 @@ static int ihklib_device_readable(int index)
 	sprintf(fn, "/dev/mcd%d", index);
 	ret = access(fn, R_OK);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: access: path: %s, errno: %d\n",
-			__func__, fn, errno_save);
-		ret = -errno_save;
+			__func__, fn, -ret);
 		goto out;
 	}
 
@@ -655,7 +647,7 @@ static int ihklib_device_readable(int index)
 
 int ihklib_device_open(int index)
 {
-	int ret = 0;
+	int ret;
 	char fn[PATH_MAX];
 
 	ret = ihklib_device_readable(index);
@@ -667,11 +659,9 @@ int ihklib_device_open(int index)
 
 	sprintf(fn, "/dev/mcd%d", index);
 	if ((ret = open(fn, O_RDONLY)) == -1) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: open %s: %s\n",
-			__func__, fn, strerror(errno));
-		ret = -errno_save;
+			__func__, fn, strerror(-ret));
 		goto out;
 	}
 
@@ -681,7 +671,7 @@ int ihklib_device_open(int index)
 
 int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 {
-	int ret = 0;
+	int ret;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
@@ -720,12 +710,10 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	}
 
 	ret = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req);
-	if (ret != 0) {
-		int errno_save = errno;
-
-		dprintf("%s: error: ioctl returned %d\n",
-			__func__, ret);
-		ret = -errno_save;
+	if (ret) {
+		ret = -errno;
+		dprintf("%s: IHK_DEVICE_RESERVE_CPU returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
@@ -738,7 +726,7 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 
 int ihk_get_num_reserved_cpus(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -750,7 +738,12 @@ int ihk_get_num_reserved_cpus(int index)
 	}
 
 	ret = ioctl(fd, IHK_DEVICE_GET_NUM_CPUS);
-	CHKANDJUMP(ret < 0, -errno, "ioctl failed\n");
+	if (ret < 0) {
+		ret = -errno;
+		dprintf("%s: IHK_DEVICE_GET_NUM_CPUS returned %d\n",
+			__func__, -ret);
+		goto out;
+	}
 
  out:
 	if (fd != -1) {
@@ -761,7 +754,7 @@ int ihk_get_num_reserved_cpus(int index)
 
 int ihk_query_cpu(int index, int *cpus, int num_cpus)
 {
-	int ret = 0;
+	int ret;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
@@ -787,11 +780,9 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 	}
 
 	if ((ret = ioctl(fd, IHK_DEVICE_GET_NUM_CPUS)) < 0) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: IHK_DEVICE_GET_NUM_CPUS returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -807,11 +798,9 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 	CHKANDJUMP(!req.cpus || !req.num_cpus, -EINVAL, "invalid format\n");
 
 	if ((ret = ioctl(fd, IHK_DEVICE_QUERY_CPU, &req))) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_DEVICE_QUERY_CPU\n",
-			__func__);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: error: IHK_DEVICE_QUERY_CPU returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
@@ -824,7 +813,7 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 
 int ihk_release_cpu(int index, int* cpus, int num_cpus)
 {
-	int ret = 0;
+	int ret;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
@@ -864,11 +853,9 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 
 	ret = ioctl(fd, IHK_DEVICE_RELEASE_CPU, &req);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: IHK_DEVICE_RELEASE_CPU returned %d\n",
-			__func__, errno);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
  out:
@@ -1001,11 +988,9 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 	ret = ioctl(fd, IHK_DEVICE_RESERVE_MEM, &req);
 	if (ret != 0) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: IHK_DEVICE_RESERVE_MEM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1209,11 +1194,9 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 		ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM_PARTIALLY, &req);
 		if (ret != 0) {
-			int errno_save = errno;
-
+			ret = -errno;
 			dprintf("%s: IHK_DEVICE_RESERVE_MEM returned %d\n",
-				__func__, errno_save);
-			ret = -errno_save;
+				__func__, -ret);
 			goto out;
 		}
 
@@ -1244,7 +1227,7 @@ out:
 
 int ihk_get_num_reserved_mem_chunks(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 	struct ihk_mem_req req = { 0 };
 
@@ -1260,11 +1243,9 @@ int ihk_get_num_reserved_mem_chunks(int index)
 
 	ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: IHK_DEVICE_QUERY_MEM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1279,7 +1260,7 @@ int ihk_get_num_reserved_mem_chunks(int index)
 
 int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chunks)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 	int i;
 	int num_mem_chunks;
@@ -1347,11 +1328,9 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 
 	ret = ioctl(fd, IHK_DEVICE_QUERY_MEM, &req);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_DEVICE_QUERY_MEM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1371,7 +1350,7 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 
 int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chunks)
 {
-	int ret = 0, i;
+	int ret, i;
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 	struct ihk_mem_chunk *query_mem_chunks = NULL;
@@ -1453,11 +1432,9 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 
 	ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM, &req);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_RELEASE_MEM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1474,7 +1451,7 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 /* Create OS and return OS index */
 int ihk_create_os(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -1487,11 +1464,9 @@ int ihk_create_os(int index)
 
 	ret = ioctl(fd, IHK_DEVICE_CREATE_OS, 0);
 	if (ret < 0) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_DEVICE_CREATE_OS returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
  out:
@@ -1503,7 +1478,7 @@ int ihk_create_os(int index)
 
 int ihk_get_num_os_instances(int index)
 {
-	int ret = 0;
+	int ret;
 	DIR *dir = NULL;
 	struct dirent *direp;
 	int num_os_instances = 0;
@@ -1519,11 +1494,9 @@ int ihk_get_num_os_instances(int index)
 
 	dir = opendir(PATH_DEV);
 	if (dir == NULL) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: opendir returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1545,7 +1518,7 @@ int ihk_get_num_os_instances(int index)
 
 int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 {
-	int ret = 0;
+	int ret;
 	DIR *dir = NULL;
 	struct dirent *direp;
 	int num_os_instances = 0;
@@ -1577,11 +1550,9 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 
 	dir = opendir(PATH_DEV);
 	if (dir == NULL) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: opendir returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1602,7 +1573,7 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 
 int ihk_destroy_os(int dev_index, int os_index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -1617,11 +1588,9 @@ int ihk_destroy_os(int dev_index, int os_index)
 
 	ret = ioctl(fd, IHK_DEVICE_DESTROY_OS, os_index);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_DEVICE_DESTROY_OS returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
  out:
@@ -1639,15 +1608,12 @@ static int ihklib_os_readable(int index)
 	sprintf(fn, "/dev/mcos%d", index);
 	ret = access(fn, R_OK);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: access: path: %s, errno: %d\n",
-			__func__, fn, errno_save);
-		ret = -errno_save;
+			__func__, fn, -ret);
 		goto out;
 	}
 
-	ret = 0;
  out:
 	return ret;
 }
@@ -1667,21 +1633,19 @@ int ihklib_os_open(int index)
 	sprintf(fn, "/dev/mcos%d", index);
 
 	if ((ret = open(fn, O_RDONLY)) == -1) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: open %s: %s\n",
-			__func__, fn, strerror(errno));
-		ret = -errno_save;
+			__func__, fn, strerror(-ret));
 		goto out;
 	}
-	ret = 0;
+
  out:
 	return ret;
 }
 
 int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 {
-	int ret = 0;
+	int ret;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
@@ -1721,11 +1685,9 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 
 	ret = ioctl(fd, IHK_OS_ASSIGN_CPU, &req);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_ASSIGN_CPU returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1738,7 +1700,7 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 
 int ihk_os_get_num_assigned_cpus(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -1765,7 +1727,7 @@ int ihk_os_get_num_assigned_cpus(int index)
 
 int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 {
-	int ret = 0;
+	int ret;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
@@ -1796,11 +1758,9 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 	}
 
 	if ((ret = ioctl(fd, IHK_OS_GET_NUM_CPUS)) < 0) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_GET_NUM_CPUS returned %d\n",
-			__func__, errno);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1814,11 +1774,9 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 	req.num_cpus = num_cpus;
 
 	if ((ret = ioctl(fd, IHK_OS_QUERY_CPU, &req))) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_QUERY_CPU returned %d\n",
-			__func__, errno);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1831,7 +1789,7 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 
 int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 {
-	int ret = 0;
+	int ret;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
@@ -1870,11 +1828,9 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 
 	ret = ioctl(fd, IHK_OS_RELEASE_CPU, &req);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_RELEASE_CPU returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1887,7 +1843,7 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 
 int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
-	int ret = 0, i;
+	int ret, i;
 	struct ihk_ioctl_ikc_desc req = { 0 };
 	int fd = -1;
 
@@ -1950,11 +1906,9 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
 	ret = ioctl(fd, IHK_OS_SET_IKC_MAP, &req);
 	if (ret) {
-		int errno_save = errno;
-
-		dprintf("%s: error IHK_OS_SET_IKC_MAP returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: IHK_OS_SET_IKC_MAP returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
@@ -1969,7 +1923,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
 int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
-	int ret = 0, i;
+	int ret, i;
 	struct ihk_ioctl_ikc_desc req = { 0 };
 	int fd = -1;
 
@@ -2028,11 +1982,9 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
 	ret = ioctl(fd, IHK_OS_GET_IKC_MAP, &req);
 	if (ret) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_GET_IKC_MAP returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: IHK_OS_GET_IKC_MAP returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
@@ -2040,8 +1992,6 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 		map[i].src_cpu = req.src_cpus[i];
 		map[i].dst_cpu = req.dst_cpus[i];
 	}
-
-	ret = 0;
 
  out:
 	if (fd != -1) {
@@ -2112,12 +2062,10 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 	}
 
 	ret = ioctl(fd, IHK_OS_ASSIGN_MEM, &req);
-	if (ret != 0) {
-		int errno_save = errno;
-
+	if (ret) {
+		ret = -errno;
 		dprintf("%s: IHK_OS_ASSIGN_MEM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -2132,13 +2080,13 @@ int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_c
 
 int ihk_os_get_num_assigned_mem_chunks(int index)
 {
-	int ret = 0, ret_ioctl;
+	int ret;
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_os_open(index)) < 0) {
-		eprintf("%s: error: ihklib_os_open\n",
+		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
@@ -2146,8 +2094,13 @@ int ihk_os_get_num_assigned_mem_chunks(int index)
 
 	req.num_chunks = 0;   /* means only get num_chunks */
 
-	ret_ioctl = ioctl(fd, IHK_OS_QUERY_MEM, &req);
-	CHKANDJUMP(ret_ioctl != 0, -errno, "ioctl failed\n");
+	ret = ioctl(fd, IHK_OS_QUERY_MEM, &req);
+	if (ret) {
+		ret = -errno;
+		dprintf("%s: IHK_OS_QUERY_MEM returned %d\n",
+			__func__, -ret);
+		goto out;
+	}
 
 	ret = req.num_chunks;
 
@@ -2161,7 +2114,7 @@ int ihk_os_get_num_assigned_mem_chunks(int index)
 int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		     int _num_mem_chunks)
 {
-	int ret = 0, i;
+	int ret, i;
 	int num_mem_chunks;
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
@@ -2228,11 +2181,9 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 	ret = ioctl(fd, IHK_OS_QUERY_MEM, &req);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_QUERY_MEM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -2240,8 +2191,6 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		mem_chunks[i].size = req.sizes[i];
 		mem_chunks[i].numa_node_number = req.numa_ids[i];
 	}
-
-	ret = 0;
 
  out:
 	if (fd != -1) {
@@ -2255,7 +2204,7 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		int num_mem_chunks)
 {
-	int ret = 0, i;
+	int ret, i;
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 	struct ihk_mem_chunk *query_mem_chunks = NULL;
@@ -2337,11 +2286,9 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 	ret = ioctl(fd, IHK_OS_RELEASE_MEM, &req);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_RELEASE_MEM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -2388,11 +2335,9 @@ int ihk_os_get_eventfd(int index, int type)
 
 	ret = ioctl(fd, IHK_OS_REGISTER_EVENT, &desc);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_REGISTER_EVENT returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -2427,15 +2372,12 @@ int ihk_os_load(int index, char* fn)
 
 	ret = ioctl(fd, IHK_OS_LOAD, (unsigned long)fn);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_LOAD returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2465,15 +2407,12 @@ int ihk_os_kargs(int index, char* kargs)
 
 	ret = ioctl(fd, IHK_OS_SET_KARGS, kargs);
 	if (ret) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_SET_KARGS returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2483,7 +2422,7 @@ int ihk_os_kargs(int index, char* kargs)
 
 int ihk_os_boot(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 	int i;
 
@@ -2496,11 +2435,9 @@ int ihk_os_boot(int index)
 	}
 
 	if ((ret = ioctl(fd, IHK_OS_BOOT, 0)) == -1) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_BOOT returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -2519,11 +2456,9 @@ int ihk_os_boot(int index)
 	}
 
 	if (ret == -1) {
-		int errno_save = errno;
-
+		ret = -errno;
 		dprintf("%s: error: IHK_OS_STATUS returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -2545,7 +2480,7 @@ int ihk_os_boot(int index)
 
 int ihk_os_shutdown(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2559,11 +2494,9 @@ int ihk_os_shutdown(int index)
 
 	ret = ioctl(fd, IHK_OS_SHUTDOWN, 0);
 	if (ret) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_SHUTDOWN: errno: %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: IHK_OS_SHUTDOWN returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
  out:
@@ -2576,7 +2509,7 @@ int ihk_os_shutdown(int index)
 
 int ihk_os_get_status(int index)
 {
-	int ret = IHK_STATUS_INACTIVE;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2633,7 +2566,6 @@ int ihk_os_get_status(int index)
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2644,7 +2576,7 @@ int ihk_os_get_status(int index)
 
 int ihk_os_get_kmsg_size(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2667,7 +2599,7 @@ int ihk_os_get_kmsg_size(int index)
 
 int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2695,15 +2627,12 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 
 	ret = ioctl(fd, IHK_OS_READ_KMSG, (unsigned long)kmsg);
 	if (ret < 0) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_READ_KMSG returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: IHK_OS_READ_KMSG returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2713,7 +2642,7 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 
 int ihk_os_clear_kmsg(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2727,11 +2656,9 @@ int ihk_os_clear_kmsg(int index)
 
 	ret = ioctl(fd, IHK_OS_CLEAR_KMSG, 0);
 	if (ret) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_CLEAR_KMSG returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: IHK_OS_CLEAR_KMSG returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
@@ -2744,7 +2671,7 @@ int ihk_os_clear_kmsg(int index)
 
 int ihk_os_get_num_numa_nodes(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2758,15 +2685,12 @@ int ihk_os_get_num_numa_nodes(int index)
 
 	ret = ioctl(fd, IHK_OS_GET_NUM_NUMA_NODES);
 	if (ret < 0) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_GET_NUM_NUMA_NODES returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: IHK_OS_GET_NUM_NUMA_NODES returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2917,7 +2841,7 @@ int ihk_os_query_free_mem(int index, unsigned long *result,
 
 int ihk_os_get_num_pagesizes(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2941,7 +2865,7 @@ int ihk_os_get_num_pagesizes(int index)
 
 int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 {
-	int ret = 0;
+	int ret;
 	int i;
 	int fd = -1;
 
@@ -2968,6 +2892,7 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 		pgsizes[i] = rusage_pgtype_to_pgsize((enum ihk_os_pgsize)i);
 	}
 
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2980,7 +2905,7 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
 int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
 		     size_t size_rusage)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -3012,12 +2937,10 @@ int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
 	}
 
 	ret = ioctl(fd, IHK_OS_GETRUSAGE, &desc);
-	if (ret != 0) {
-		int errno_save = -errno;
-
-		dprintf("%s: error: IHK_OS_GETRUSAGE returned %d\n",
-			__func__, ret);
-		ret = errno_save;
+	if (ret) {
+		ret = -errno;
+		dprintf("%s: IHK_OS_GETRUSAGE returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
@@ -3060,21 +2983,17 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 
 	ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
 	if (ret) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_AUX_PERF_NUM returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: IHK_OS_AUX_PERF_NUM returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
 	ret = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
 	if (ret < 0) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_AUX_PERF_SET returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+		ret = -errno;
+		dprintf("%s: IHK_OS_AUX_PERF_SET returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
@@ -3115,16 +3034,13 @@ int ihk_os_perfctl(int index, int comm)
 		ret = -EINVAL;
 		goto out;
 	}
-	if (ret != 0) {
-		int errno_save = errno;
-
-		dprintf("%s: error: ioctl returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+	if (ret) {
+		ret = -errno;
+		dprintf("%s: IHK_OS_AUX_PERF_* returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -3154,16 +3070,13 @@ int ihk_os_getperfevent(int index, unsigned long *counter, int n)
 	}
 
 	ret = ioctl(fd, IHK_OS_AUX_PERF_GET, counter);
-	if (ret != 0) {
-		int errno_save = errno;
-
-		dprintf("%s: error: IHK_OS_AUX_PERF_GET returned %d\n",
-			__func__, errno_save);
-		ret = -errno_save;
+	if (ret) {
+		ret = -errno;
+		dprintf("%s: IHK_OS_AUX_PERF_GET returned %d\n",
+			__func__, -ret);
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -3195,12 +3108,10 @@ int ihk_os_freeze(unsigned long *os_set, int n)
 
 			ret = ioctl(fd, IHK_OS_FREEZE, 0);
 			if (ret) {
-				int errno_save = errno;
-
-				dprintf("%s: error: IHK_OS_FREEZE "
+				ret = -errno;
+				dprintf("%s: IHK_OS_FREEZE "
 					"returned %d\n",
-					__func__, errno_save);
-				ret = -errno_save;
+					__func__, -ret);
 				goto out;
 			}
 
@@ -3241,12 +3152,10 @@ int ihk_os_thaw(unsigned long *os_set, int n)
 
 			ret = ioctl(fd, IHK_OS_THAW, 0);
 			if (ret) {
-				int errno_save = errno;
-
-				dprintf("%s: error: IHK_OS_THAW "
+				ret = -errno;
+				dprintf("%s: IHK_OS_THAW "
 					"returned %d\n",
-					__func__, errno_save);
-				ret = -errno_save;
+					__func__, -ret);
 				goto out;
 			}
 
@@ -3271,7 +3180,7 @@ int ihk_os_thaw(unsigned long *os_set, int n)
 
 int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interactive)
 {
-	int ret = 0;
+	int ret;
 	static char hname[HOST_NAME_MAX+1];
 	bfd *abfd = NULL;
 	bfd_boolean ok;
@@ -3319,40 +3228,34 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 	t = time(NULL);
 	if (t == (time_t)-1) {
-		int errno_save = -errno;
-
+		ret = -errno;
 		dprintf("%s: error: time returned %d\n",
-			__func__, errno);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
 	tm = localtime(&t);
 	if (!tm) {
-		dprintf("%s: error: localtime returned %d\n",
-			__func__, errno);
 		ret = -EINVAL;
+		dprintf("%s: error: localtime failed\n",
+			__func__);
 		goto out;
 	}
 
 	error = gethostname(hname, sizeof(hname));
 	if (error != 0) {
-		int errno_save = -errno;
-
+		ret = -errno;
 		dprintf("%s: error: gethostname returned %d\n",
-			__func__, errno);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
 	/* TODO: might be redundant */
 	pw = getpwuid(getuid());
 	if (pw == NULL) {
-		int errno_save = -errno;
-
+		ret = -errno;
 		dprintf("%s: error: getpwuid returned %d\n",
-			__func__, errno);
-		ret = -errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -3360,22 +3263,18 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	args.level = dump_level;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
 	if (error != 0) {
-		int errno_save = -errno;
-
+		ret = -errno;
 		dprintf("%s: error: DUMP_SET_LEVEL returned %d\n",
-			__func__, errno);
-		ret = errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
 	args.cmd = DUMP_NMI;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
 	if (error != 0) {
-		int errno_save = -errno;
-
+		ret = -errno;
 		dprintf("%s: error: DUMP_NMI returned %d\n",
-			__func__, errno);
-		ret = errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -3383,21 +3282,19 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	args.size = 0;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
 	if (error != 0) {
-		int errno_save = -errno;
-
+		ret = -errno;
 		dprintf("%s: error: "
 			"DUMP_QUERY_NUM_MEM_AREAS returned %d\n",
-			__func__, errno);
-		ret = errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
 	mem_size = args.size;
 	mem_chunks = malloc(mem_size);
 	if (!mem_chunks) {
+		ret = -ENOMEM;
 		dprintf("%s: error: alloating mem_chunks\n",
 			__func__);
-		ret = -ENOMEM;
 		goto out;
 	}
 
@@ -3407,11 +3304,9 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	args.buf = (void *)mem_chunks;
 	error = ioctl(osfd, IHK_OS_DUMP, &args);
 	if (error != 0) {
-		int errno_save = -errno;
-
+		ret = -errno;
 		dprintf("%s: error: DUMP_QUERY_MEM_AREAS returned %d\n",
-			__func__, errno);
-		ret = errno_save;
+			__func__, -ret);
 		goto out;
 	}
 
@@ -3429,8 +3324,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	bsize = 0x100000;
 	buf = malloc(bsize);
 	if (!buf) {
-		dprintf("%s: error: allocating buf\n", __func__);
 		ret = -ENOMEM;
+		dprintf("%s: error: allocating buf\n", __func__);
 		goto out;
 	}
 
@@ -3446,12 +3341,10 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		token[0] = 0;
 		ret = access(dump_file, W_OK);
 		if (ret) {
-			int errno_save = errno;
-
+			ret = -errno;
 			dprintf("%s: %s is inaccessible: %d\n",
-				__func__, dump_file, errno_save);
+				__func__, dump_file, -ret);
 			token[0] = '/';
-			ret = -errno_save;
 			goto out;
 		}
 		token[0] = '/';
@@ -3459,17 +3352,17 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 	abfd = bfd_fopen(dump_file, NULL, "w", -1);
 	if (!abfd) {
+		ret = -EINVAL;
 		dprintf("%s: bfd_fopen failed: %s\n",
 			__func__, bfd_errmsg(bfd_get_error()));
-		ret = -EINVAL;
 		goto out;
 	}
 
 	ok = bfd_set_format(abfd, bfd_object);
 	if (!ok) {
+		ret = -EINVAL;
 		dprintf("%s: error: bfd_set_format: %s\n",
 			__func__, bfd_errmsg(bfd_get_error()));
-		ret = -EINVAL;
 		goto out;
 	}
 
@@ -3478,28 +3371,28 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		cpsize = strlen(date) - 1;	/* exclude trailing '\n' */
 		scn = bfd_make_section_anyway(abfd, "date");
 		if (!scn) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_make_section_anyway(date): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
 		ok = bfd_set_section_size(abfd, scn, cpsize);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_size: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_flags: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 	}
@@ -3508,28 +3401,28 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		cpsize = strlen(hname);
 		scn = bfd_make_section_anyway(abfd, "hostname");
 		if (!scn) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_make_section_anyway(hostname): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
 		ok = bfd_set_section_size(abfd, scn, cpsize);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_size: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_flags: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 	}
@@ -3538,28 +3431,28 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		cpsize = strlen(pw->pw_name);
 		scn = bfd_make_section_anyway(abfd, "user");
 		if (!scn) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_make_section_anyway(user): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
 		ok = bfd_set_section_size(abfd, scn, cpsize);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_size: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_flags: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 	}
@@ -3567,28 +3460,28 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	/* Add section for physical memory chunks information */
 	scn = bfd_make_section_anyway(abfd, "physchunks");
 	if (!scn) {
+		ret = -EINVAL;
 		dprintf("%s: error: "
 			"bfd_make_section_anyway(physchunks): %s\n",
 			__func__, bfd_errmsg(bfd_get_error()));
-		ret = -EINVAL;
 		goto out;
 	}
 
 	ok = bfd_set_section_size(abfd, scn, mem_size);
 	if (!ok) {
+		ret = -EINVAL;
 		dprintf("%s: error: "
 			"bfd_set_section_size: %s\n",
 			__func__, bfd_errmsg(bfd_get_error()));
-		ret = -EINVAL;
 		goto out;
 	}
 
 	ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
 	if (!ok) {
+		ret = -EINVAL;
 		dprintf("%s: error: "
 			"bfd_set_section_flags: %s\n",
 			__func__, bfd_errmsg(bfd_get_error()));
-		ret = -EINVAL;
 		goto out;
 	}
 
@@ -3601,10 +3494,10 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 		/* Physical memory contents section */
 		scn = bfd_make_section_anyway(abfd, physmem_name_buf);
 		if (!scn) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_make_section_anyway(physmem): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
@@ -3615,19 +3508,19 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 			ok = bfd_set_section_size(abfd, scn, mem_chunks->chunks[i].size);
 		}
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_size: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
 		ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_flags: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
@@ -3638,10 +3531,10 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	if (scn) {
 		ok = bfd_set_section_contents(abfd, scn, date, 0, scn->size);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_contents(date): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 	}
@@ -3650,10 +3543,10 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	if (scn) {
 		ok = bfd_set_section_contents(abfd, scn, hname, 0, scn->size);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_contents(hostname): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 	}
@@ -3662,10 +3555,10 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	if (scn) {
 		ok = bfd_set_section_contents(abfd, scn, pw->pw_name, 0, scn->size);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_contents(user): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 	}
@@ -3674,10 +3567,10 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	if (scn) {
 		ok = bfd_set_section_contents(abfd, scn, mem_chunks, 0, mem_size);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_set_section_contents(physchunks): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 	}
@@ -3696,10 +3589,10 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 		scn = bfd_get_section_by_name(abfd, physmem_name);
 		if (!scn) {
+			ret = -EINVAL;
 			dprintf("%s: error: "
 				"bfd_get_section_by_name(physmem_name): %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 			goto out;
 		}
 
@@ -3719,20 +3612,18 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 			error = ioctl(osfd, IHK_OS_DUMP, &args);
 			if (error != 0) {
-				int errno_save = -errno;
-
+				ret = -errno;
 				dprintf("%s: error: DUMP_HEAD returned %d\n",
-					__func__, errno);
-				ret = errno_save;
+					__func__, -ret);
 				goto out;
 			}
 
 			ok = bfd_set_section_contents(abfd, scn, buf, phys_offset, cpsize);
 			if (!ok) {
+				ret = -EINVAL;
 				dprintf("%s: error: "
 					"bfd_set_section_contents(physmem): %s\n",
 					__func__, bfd_errmsg(bfd_get_error()));
-				ret = -EINVAL;
 				goto out;
 			}
 
@@ -3745,19 +3636,17 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	if (abfd) {
 		ok = bfd_close(abfd);
 		if (!ok) {
+			ret = -EINVAL;
 			dprintf("%s: error: bfd_close: %s\n",
 				__func__, bfd_errmsg(bfd_get_error()));
-			ret = -EINVAL;
 		}
 	}
 	if (osfd >= 0) {
 		error = close(osfd);
 		if (error) {
-			int errno_save = errno;
-
+			ret = -errno;
 			dprintf("%s: error: close: %s\n",
-				__func__, strerror(errno));
-			ret = -errno_save;
+				__func__, strerror(-ret));
 		}
 	}
 	return ret;
