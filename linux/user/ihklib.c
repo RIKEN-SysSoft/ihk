@@ -1545,7 +1545,7 @@ int ihk_get_num_os_instances(int index)
 
 int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 {
-	int ret = 0;
+	int ret;
 	DIR *dir = NULL;
 	struct dirent *direp;
 	int num_os_instances = 0;
@@ -1674,14 +1674,14 @@ int ihklib_os_open(int index)
 		ret = -errno_save;
 		goto out;
 	}
-	ret = 0;
+
  out:
 	return ret;
 }
 
 int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 {
-	int ret = 0;
+	int ret;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 
@@ -1729,6 +1729,7 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 		goto out;
 	}
 
+	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -1969,7 +1970,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
 int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
-	int ret = 0, i;
+	int ret, i;
 	struct ihk_ioctl_ikc_desc req = { 0 };
 	int fd = -1;
 
@@ -2042,7 +2043,6 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	}
 
 	ret = 0;
-
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2161,7 +2161,7 @@ int ihk_os_get_num_assigned_mem_chunks(int index)
 int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		     int _num_mem_chunks)
 {
-	int ret = 0, i;
+	int ret, i;
 	int num_mem_chunks;
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
@@ -2242,7 +2242,6 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	}
 
 	ret = 0;
-
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2633,7 +2632,6 @@ int ihk_os_get_status(int index)
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2667,7 +2665,7 @@ int ihk_os_get_kmsg_size(int index)
 
 int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2703,7 +2701,6 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
@@ -2744,7 +2741,7 @@ int ihk_os_clear_kmsg(int index)
 
 int ihk_os_get_num_numa_nodes(int index)
 {
-	int ret = 0;
+	int ret;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2766,7 +2763,6 @@ int ihk_os_get_num_numa_nodes(int index)
 		goto out;
 	}
 
-	ret = 0;
  out:
 	if (fd != -1) {
 		close(fd);
