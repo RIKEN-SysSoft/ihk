@@ -569,6 +569,7 @@ static int do_query(int fd)
 			fprintf(stderr, "error: querying num CPUs\n");
 		}
 
+		req_cpu.num_cpus = cnt;
 		req_cpu.cpus = calloc(sizeof(int), cnt);
 		IHKOSCTL_CHKANDJUMP(!req_cpu.cpus,
 				"allocate request space", -1);
