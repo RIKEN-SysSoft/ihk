@@ -2245,7 +2245,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		}
 		set_bit(os_mem_chunk->numa_id, &os->numa_mask);
 
-		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+		dprintk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
 			   " (len: %lu) @ NUMA node: %d is assigned to OS %p\n",
 			   os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
 			   os_mem_chunk->size, numa_id, ihk_os);
@@ -2395,7 +2395,7 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 			mem_chunk->numa_id = os_mem_chunk->numa_id;
 			INIT_LIST_HEAD(&mem_chunk->chain);
 			
-			printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+			dprintk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
 				   " (len: %lu) @ NUMA node: %d is returned to IHK\n",
 				   mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 				   mem_chunk->size, mem_chunk->numa_id);
@@ -2875,7 +2875,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	struct rb_root tmp_chunks = RB_ROOT;
 	nodemask_t nodemask;
 	int i;
-	int order_limit = (want == IHK_SMP_MEM_ALL) ? 8 : 3;
+	int order_limit = (want == IHK_SMP_MEM_ALL) ? 7 : 3;
 #ifdef USE_TRY_TO_FREE_PAGES
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
@@ -3187,11 +3187,13 @@ pre_out:
 			list_add_tail(&p->chain, &q->chain);
 		}
 
-		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+		dprintk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
 				" (len: %lu) @ NUMA node: %d is available\n",
 				p->addr, p->addr + p->size, p->size, p->numa_id);
 		allocated += max;
 	}
+	printk("%s: NUMA %d, allocated mem: %lu bytes\n",
+		__FUNCTION__, numa_id, allocated);
 
 	ret = 0;
 
@@ -3254,7 +3256,7 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 			}
 		}
 
-		printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+		dprintk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
 				" (len: %lu) @ NUMA node: %d is released\n",
 			   mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 			   mem_chunk->size, mem_chunk->numa_id);
