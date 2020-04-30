@@ -1035,8 +1035,13 @@ static int __ihk_os_read_kaddr(struct ihk_host_linux_os_data *data, void __user 
 		return -EFAULT;
 	}
 
-	if (data->ops->vtop(data, data->priv, desc.kaddr, &phys) != 0) {
-		return -EFAULT;
+	if (desc.flags & IHK_OS_READ_KADDR_PHYS) {
+		phys = desc.kaddr;
+	}
+	else {
+		if (data->ops->vtop(data, data->priv, desc.kaddr, &phys) != 0) {
+			return -EFAULT;
+		}
 	}
 
 	if (copy_to_user(desc.ubuf, phys_to_virt(phys), desc.len)) {
