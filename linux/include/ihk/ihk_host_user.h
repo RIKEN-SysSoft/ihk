@@ -163,10 +163,13 @@ struct ihk_os_ioctl_eventfd_desc {
 };
 
 /* Used by mcinspect */
+#define IHK_OS_READ_KADDR_VIRT	0
+#define IHK_OS_READ_KADDR_PHYS	1
 struct ihk_os_read_kaddr_desc {
 	unsigned long kaddr;
 	unsigned long len;
 	void *ubuf;
+	int flags;
 };
 
 /* Used by IHK-core and ihklib */
