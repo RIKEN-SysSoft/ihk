@@ -665,7 +665,6 @@ int main(int argc, char** argv) {
 							eprintf("pthread_cond_signal failed\n");
 							ret = 255;
 							goto out;
-
 						}
 						ret_lib = pthread_mutex_unlock(&mon_args[os_index].lock);
 						CHKANDJUMP(ret_lib != 0, 255, "pthread_mutex_unlock failed\n");
@@ -676,11 +675,10 @@ int main(int argc, char** argv) {
 						kmsg_args[os_index].mcos_added = 1;
 						ret_lib = pthread_cond_signal(&kmsg_args[os_index].cond_mcos_added);
 						if (ret_lib != 0) {
-							pthread_mutex_unlock(&mon_args[os_index].lock);
+							pthread_mutex_unlock(&kmsg_args[os_index].lock);
 							eprintf("pthread_cond_signal failed\n");
 							ret = 255;
 							goto out;
-
 						}
 						ret_lib = pthread_mutex_unlock(&kmsg_args[os_index].lock);
 						CHKANDJUMP(ret_lib != 0, 255, "pthread_mutex_unlock failed\n");
