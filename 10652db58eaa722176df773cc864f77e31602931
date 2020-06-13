@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "a70e0ab4_0b1296c6",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1015,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-13T09:35:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int __ihk_os_read_kaddr(struct ihk_host_linux_os_data *data, void __user *arg)",
+      "revId": "10652db58eaa722176df773cc864f77e31602931",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c02660c6_2e788fe0",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 775,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-13T09:35:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tIHK_SMP_LARGE_PAGE * 2 - 1) \u0026 IHK_SMP_LARGE_PAGE_MASK;",
+      "revId": "10652db58eaa722176df773cc864f77e31602931",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "592e2a6f_5275b325",
+        "filename": "linux/include/ihk/ihk_host_driver.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 364,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-13T09:35:22Z",
+      "side": 1,
+      "message": "WARNING: function definition argument \u0027ihk_os_t\u0027 should also have an identifier name\n+\tint (*vtop)(ihk_os_t, void *priv, unsigned long virt, unsigned long *phys);",
+      "revId": "10652db58eaa722176df773cc864f77e31602931",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "85ce5a65_6873a085",
+        "filename": "linux/include/ihk/ihk_host_driver.h",
+        "patchSetId": 3
+      },
+      "lineNbr": 364,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-13T09:35:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tint (*vtop)(ihk_os_t, void *priv, unsigned long virt, unsigned long *phys);",
+      "revId": "10652db58eaa722176df773cc864f77e31602931",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
