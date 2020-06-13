@@ -29,7 +29,12 @@ option(ENABLE_WERROR "Enable -Werror" OFF)
 if (ENABLE_WERROR)
 	add_compile_options("-Werror")
 endif(ENABLE_WERROR)
-set(BUILD_TARGET "smp-x86" CACHE STRING "Build target: smp-x86 | smp-arm64")
+
+if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+	set(BUILD_TARGET "smp-x86" CACHE STRING "Build target: smp-x86 | smp-arm64")
+elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+	set(BUILD_TARGET "smp-arm64" CACHE STRING "Build target: smp-x86 | smp-arm64")
+endif()
 set_property(CACHE BUILD_TARGET PROPERTY STRINGS smp-x86 smp-arm64)
 
 if (BUILD_TARGET STREQUAL "smp-x86")
