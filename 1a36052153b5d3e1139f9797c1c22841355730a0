@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "23e63de6_d4cba0ba",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1015,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-13T05:40:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int __ihk_os_read_kaddr(struct ihk_host_linux_os_data *data, void __user *arg)",
+      "revId": "1a36052153b5d3e1139f9797c1c22841355730a0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2ca40fea_14a6b899",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 775,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-13T05:40:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tIHK_SMP_LARGE_PAGE * 2 - 1) \u0026 IHK_SMP_LARGE_PAGE_MASK;",
+      "revId": "1a36052153b5d3e1139f9797c1c22841355730a0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "97f01155_fb5bddf8",
+        "filename": "linux/include/ihk/ihk_host_driver.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 364,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-13T05:40:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tint (*vtop)(ihk_os_t, void *priv, unsigned long virt, unsigned long *phys);",
+      "revId": "1a36052153b5d3e1139f9797c1c22841355730a0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f6cc0332_62dae6c6",
+        "filename": "linux/include/ihk/ihk_host_driver.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 364,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-13T05:40:34Z",
+      "side": 1,
+      "message": "WARNING: function definition argument \u0027ihk_os_t\u0027 should also have an identifier name\n+\tint (*vtop)(ihk_os_t, void *priv, unsigned long virt, unsigned long *phys);",
+      "revId": "1a36052153b5d3e1139f9797c1c22841355730a0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
