@@ -384,6 +384,14 @@ static int ikc_array2str(char *str, ssize_t len, int num_cpus,
 #define rdtsc __native_read_tsc
 #endif
 
+typedef uintptr_t (*tof_smmu_get_ipa_cq_t)(
+		int tni, int cqid, void *addr, size_t len);
+typedef void (*tof_smmu_release_ipa_cq_t)(
+		int tni, int cqid, uintptr_t dma, size_t len);
+
+static tof_smmu_get_ipa_cq_t tofu_smmu_get_ipa = NULL;
+static tof_smmu_release_ipa_cq_t tofu_smmu_release_ipa = NULL;
+
 /** \brief Boot a kernel. */
 static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 {
@@ -560,6 +568,22 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 	bp_mem_chunk = (struct ihk_smp_boot_param_memory_chunk *)bp_numa_node;
 
+	/* Resolve Tofu SMMU functions */
+	if (!tofu_smmu_get_ipa) {
+		tofu_smmu_get_ipa = (tof_smmu_get_ipa_cq_t)
+			kallsyms_lookup_name("tof_smmu_get_ipa_cq");
+	}
+
+	if (!tofu_smmu_release_ipa) {
+		tofu_smmu_release_ipa = (tof_smmu_release_ipa_cq_t)
+			kallsyms_lookup_name("tof_smmu_release_ipa_cq");
+	}
+
+	if (!tofu_smmu_get_ipa || !tofu_smmu_release_ipa) {
+		kprintf("%s: error: resolving Tofu SMMU functions\n", __func__);
+		return -EINVAL;
+	}
+
 	/* Fill in memory chunks information in the order of NUMA nodes */
 	for (linux_numa_id = find_first_bit(&os->numa_mask,
 				(sizeof(os->numa_mask) * 8));
@@ -576,6 +600,35 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 			bp_mem_chunk->end = os_mem_chunk->addr + os_mem_chunk->size;
 			bp_mem_chunk->numa_id =
 				linux_numa_2_lwk_numa(os, os_mem_chunk->numa_id);
+
+			{
+				int tni, cq;
+				memset(bp_mem_chunk->tofu_dma_addr,
+						0, sizeof(bp_mem_chunk->tofu_dma_addr));
+
+				for (tni = 0; tni < 6; ++tni) {
+					for (cq = 0; cq < 12; ++cq) {
+
+						bp_mem_chunk->tofu_dma_addr[tni][cq] =
+							tofu_smmu_get_ipa(tni, cq,
+									phys_to_virt(os_mem_chunk->addr),
+									os_mem_chunk->size);
+						kprintf("%s: chunk 0x%lx:%lu TNI %d, CQ %d,"
+								" DMA addr: 0x%lx (offset: %lu)\n",
+								__func__,
+								os_mem_chunk->addr,
+								os_mem_chunk->size,
+								tni, cq,
+								(unsigned long)bp_mem_chunk->tofu_dma_addr[tni][cq],
+								(os_mem_chunk->addr -
+								 (unsigned long)
+								 bp_mem_chunk->tofu_dma_addr[tni][cq]));
+					}
+				}
+
+				memcpy(os_mem_chunk->tofu_dma_addr, bp_mem_chunk->tofu_dma_addr,
+					sizeof(bp_mem_chunk->tofu_dma_addr));
+			}
 
 			++bp_mem_chunk;
 		}
@@ -2220,6 +2273,8 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 
 		os_mem_chunk->addr = 0;
 		os_mem_chunk->numa_id = numa_id;
+		memset(os_mem_chunk->tofu_dma_addr,
+				0, sizeof(os_mem_chunk->tofu_dma_addr));
 		INIT_LIST_HEAD(&os_mem_chunk->list);
 
 		/* Find the biggest chunk or an exact match on this NUMA node */
@@ -2498,6 +2553,21 @@ static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
 		       " (len: %lu) @ NUMA node: %d is returned to IHK\n",
 		       mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 		       mem_chunk->size, mem_chunk->numa_id);
+
+		{
+			int tni, cq;
+			for (tni = 0; tni < 6; ++tni) {
+				for (cq = 0; cq < 12; ++cq) {
+
+					if (!os_mem_chunk->tofu_dma_addr[tni][cq])
+						continue;
+
+					tofu_smmu_release_ipa(tni, cq,
+						os_mem_chunk->tofu_dma_addr[tni][cq],
+						os_mem_chunk->size);
+				}
+			}
+		}
 
 		add_free_mem_chunk(mem_chunk);
 
@@ -3331,7 +3401,7 @@ retry:
 				if (freed_pages <= 1)
 					++failed_free_attempts;
 
-				dprintk("%s: freed %d pages with order %d..\n",
+				printk("%s: freed %d pages with order %d..\n",
 						__FUNCTION__, freed_pages, order);
 				goto retry;
 			}
