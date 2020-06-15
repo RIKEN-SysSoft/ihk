@@ -39,6 +39,8 @@ struct ihk_smp_boot_param_cpu {
 struct ihk_smp_boot_param_memory_chunk {
 	unsigned long start, end;
 	int numa_id;
+	/* Tofu SMMU DMA addresses per TNI/CQ */
+	uintptr_t tofu_dma_addr[6][12];
 };
 
 #define IHK_SMP_MEMORY_TYPE_DRAM          0x01
@@ -67,6 +69,19 @@ struct ihk_dump_page_set {
 #define DUMP_LEVEL_ALL 0
 #define DUMP_LEVEL_USER_UNUSED_EXCLUDE 24
 
+/* Tofu driver global symbols */
+struct tofu_globals {
+	unsigned long tof_ib_stag_lock_addr;
+	unsigned long tof_ib_stag_list_addr;
+	unsigned long tof_ib_stag_list_Rp_addr;
+	unsigned long tof_ib_stag_list_Wp_addr;
+	unsigned long tof_ib_mbpt_mem_addr;
+	unsigned long tof_ib_steering_addr;
+	unsigned long tof_ib_mb_addr;
+	unsigned long tof_core_cq_addr;
+	unsigned long linux_vmalloc_start;
+	unsigned long linux_vmalloc_end;
+};
 
 /*
  * smp_boot_param holds various boot time arguments.
@@ -135,6 +150,7 @@ struct smp_boot_param {
 	unsigned int dump_level;
 	struct ihk_dump_page_set dump_page_set;
 	int linux_default_huge_page_shift;
+	struct tofu_globals tofu_globals;
 };
 
 extern struct smp_boot_param *boot_param;
