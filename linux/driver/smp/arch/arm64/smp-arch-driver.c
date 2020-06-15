@@ -278,6 +278,7 @@ static struct arm_pmu **ihk_cpu_pmu;
 #else
 static struct arm_pmu **ihk_cpu_pmu;
 #endif
+struct mm_struct *ihk__init_mm;
 
 int (*ihk___irq_set_affinity)(unsigned int irq, const struct cpumask *mask,
 			      bool force);
@@ -412,6 +413,10 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!ihk___memstart_addr))
 		return -EFAULT;
 
+	ihk__init_mm = (void *) kallsyms_lookup_name("init_mm");
+	if (WARN_ON(!ihk__init_mm))
+		return -EFAULT;
+
 	return 0;
 }
 
@@ -445,7 +450,7 @@ ihk_armpmu_set_irq_affi(const int irqs[], const struct smp_os_data *os)
 		if (!(CORE_ISSET(hwid, os->cpu_hw_ids_map))) {
 			continue;
 		}
-		
+
 		irq  = irqs[virtid];
 
 		/*
@@ -980,6 +985,92 @@ void smp_ihk_setup_trampoline(void *priv)
 	int nr_irqs;
 	int i = 0;
 
+	/* Tofu globals */
+	{
+		struct tofu_globals *tg = &os->param->tofu_globals;
+
+		tg->tof_ib_stag_lock_addr =
+			(unsigned long)kallsyms_lookup_name("tof_ib_stag_lock");
+		if (WARN_ON(!tg->tof_ib_stag_lock_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_ib_stag_lock\n",
+				__func__);
+		}
+		kprintf("%s: &tof_ib_stag_lock: 0x%lx\n",
+				__func__, tg->tof_ib_stag_lock_addr);
+
+		tg->tof_ib_stag_list_addr =
+			(unsigned long)kallsyms_lookup_name("tof_ib_stag_list");
+		if (WARN_ON(!tg->tof_ib_stag_list_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_ib_stag_list_Rp\n",
+				__func__);
+		}
+		/* It's the address of a pointer, needs an indirection */
+		tg->tof_ib_stag_list_addr =
+			*((unsigned long *)tg->tof_ib_stag_list_addr);
+
+		tg->tof_ib_stag_list_Rp_addr =
+			(unsigned long)kallsyms_lookup_name("tof_ib_stag_list_Rp");
+		if (WARN_ON(!tg->tof_ib_stag_list_Rp_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_ib_stag_list_Rp\n",
+				__func__);
+		}
+
+		tg->tof_ib_stag_list_Wp_addr =
+			(unsigned long)kallsyms_lookup_name("tof_ib_stag_list_Wp");
+		if (WARN_ON(!tg->tof_ib_stag_list_Wp_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_ib_stag_list_Wp\n",
+				__func__);
+		}
+
+		kprintf("%s: tof_ib_stag_list_Wp_addr: 0x%lx\n",
+				__func__, tg->tof_ib_stag_list_Wp_addr);
+
+		kprintf("%s: tof_ib_stag_list_Wp: %d\n",
+				__func__, *((int *)tg->tof_ib_stag_list_Wp_addr));
+
+		tg->tof_ib_mbpt_mem_addr =
+			(unsigned long)kallsyms_lookup_name("tof_ib_mbpt_mem");
+		if (WARN_ON(!tg->tof_ib_mbpt_mem_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_ib_mbpt_mem\n",
+				__func__);
+		}
+		/* It's the address of a pointer, needs an indirection */
+		tg->tof_ib_mbpt_mem_addr =
+			*((unsigned long *)tg->tof_ib_mbpt_mem_addr);
+
+		tg->tof_ib_steering_addr =
+			(unsigned long)kallsyms_lookup_name("tof_ib_steering");
+		if (WARN_ON(!tg->tof_ib_steering_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_ib_steering\n",
+				__func__);
+		}
+		/* It's the address of a pointer, needs an indirection */
+		tg->tof_ib_steering_addr =
+			*((unsigned long *)tg->tof_ib_steering_addr);
+
+		tg->tof_ib_mb_addr =
+			(unsigned long)kallsyms_lookup_name("tof_ib_mb");
+		if (WARN_ON(!tg->tof_ib_mb_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_ib_mb\n",
+				__func__);
+		}
+		/* It's the address of a pointer, needs an indirection */
+		tg->tof_ib_mb_addr =
+			*((unsigned long *)tg->tof_ib_mb_addr);
+
+		tg->tof_core_cq_addr =
+			(unsigned long)kallsyms_lookup_name("tof_core_cq");
+		if (WARN_ON(!tg->tof_core_cq_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_core_cq\n",
+				__func__);
+		}
+		kprintf("%s: tof_core_cq_addr: 0x%lx\n",
+				__func__, tg->tof_core_cq_addr);
+
+		tg->linux_vmalloc_start = VMALLOC_START;
+		tg->linux_vmalloc_end = VMALLOC_END;
+	}
+
 	for (i = 0; i < nr_cpu_ids; i++) {
 		os->param->ihk_ikc_cpu_hwids[i] = ihk_smp_get_hw_id(i);
 
@@ -998,6 +1089,10 @@ void smp_ihk_setup_trampoline(void *priv)
 		os->param->ihk_ikc_irqs[i] = ihk_smp_irq[i].hwirq;
 	}
 #endif // IHK_IKC_USE_LINUX_WORK_IRQ
+
+	os->param->linux_kernel_pgt_phys = virt_to_phys(ihk__init_mm->pgd);
+	printk("%s: Linux kernel init PT: 0x%lx, phys: 0x%lx\n", __func__,
+		(uint64_t)ihk__init_mm->pgd, (uint64_t)virt_to_phys(ihk__init_mm->pgd));
 
 	/* Prepare trampoline code */
 	memcpy(trampoline_va, ihk_smp_trampoline_data,
@@ -1910,36 +2005,36 @@ int smp_ihk_arch_init(void)
 		order = get_order(IHK_SMP_TRAMPOLINE_SIZE);
 retry_trampoline:
 		trampoline_page = alloc_pages(GFP_DMA | GFP_KERNEL, order);
-		
+
 		if (!trampoline_page) {
 			bad_pages[attempts] = trampoline_page;
-			
+
 			if (++attempts < TRAMP_ATTEMPTS) {
 				printk("IHK-SMP: warning: retrying trampoline_code allocation\n");
 				goto retry_trampoline;
 			}
-			
+
 			printk("IHK-SMP: error: allocating trampoline_code\n");
 			return -EFAULT;
 		}
-		
+
 		/* Free failed attempts.. */
 		for (attempts = 0; attempts < TRAMP_ATTEMPTS; ++attempts) {
 			if (!bad_pages[attempts]) {
 				continue;
 			}
-			
+
 			free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(bad_pages[attempts])),
 			           order);
 		}
-		
+
 		trampoline_phys = page_to_phys(trampoline_page);
 		trampoline_va =
 			pfn_to_kaddr(page_to_pfn(trampoline_page));
-		
+
 		printk(KERN_INFO "IHK-SMP: trampoline_page phys: 0x%lx\n", trampoline_phys);
 	}
-	
+
 	{
 		/* Get GIC register base physical address */
 		int result = ihk_smp_collect_gic_info();
@@ -2447,7 +2542,7 @@ void smp_ihk_arch_exit(void)
 	else {
 		iounmap(trampoline_va);
 	}
-	
+
 	if (ident_npages_order) {
 		free_pages((unsigned long)ident_page_table_virt,
 		           ident_npages_order);
