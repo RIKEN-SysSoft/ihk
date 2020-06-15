@@ -518,6 +518,26 @@ int ihk_mc_get_memory_chunk(int id,
 	return 0;
 }
 
+int ihk_mc_get_memory_chunk_dma_addr(int id,
+		int tni, int cqid,
+		uintptr_t *dma_addr)
+{
+	struct ihk_smp_boot_param_memory_chunk *chunk;
+
+	if (id < 0 || id >= boot_param->nr_memory_chunks)
+		return -1;
+
+	chunk = ((struct ihk_smp_boot_param_memory_chunk *)
+			((char *)boot_param + sizeof(*boot_param) +
+			 boot_param->nr_cpus * sizeof(struct ihk_smp_boot_param_cpu) +
+			 boot_param->nr_numa_nodes *
+			 sizeof(struct ihk_smp_boot_param_numa_node))) + id;
+
+	if (dma_addr) *dma_addr = chunk->tofu_dma_addr[tni][cqid];
+
+	return 0;
+}
+
 int ihk_mc_get_nr_cores(void)
 {
 	return boot_param->nr_cpus;
@@ -562,6 +582,26 @@ extern unsigned long ihk_param_lpj;
 
 /* @ref.impl linux-linaro/include/asm-generic/param.h::HZ, get from partitioning module */
 extern unsigned long ihk_param_hz;
+
+struct page_table linux_page_table = {NULL, NULL, 0};
+void *ihk_mc_get_linux_kernel_pgt(void)
+{
+	if (!linux_page_table.tt_pa) {
+		linux_page_table.tt_pa =
+			(translation_table_t *)boot_param->linux_kernel_pgt_phys;
+		linux_page_table.tt =
+			(translation_table_t *)phys_to_virt(boot_param->linux_kernel_pgt_phys);
+		kprintf("%s: Linux kernel PT: 0x%lx (phys: 0x%lx)\n",
+				__func__, linux_page_table.tt, linux_page_table.tt_pa);
+	}
+
+	return (void *)&linux_page_table;
+}
+
+struct tofu_globals *ihk_mc_get_tofu_globals(void)
+{
+	return &boot_param->tofu_globals;
+}
 
 /* @ref.impl linux-linaro/arch/arm64/lib/delay.c::__udelay, __const_udelay, __delay */
 void arch_delay(int us)
