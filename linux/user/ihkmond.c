@@ -205,21 +205,6 @@ out:
 	return NULL;
 }
 
-static int ihkmond_device_open(int dev_index) {
-	int i, devfd;
-	for (i = 0; i < 4; i++) {
-		devfd = ihklib_device_open(dev_index);
-		if (devfd >= 0) {
-			break;
-		}
-		usleep(200);
-	}
-	if (i == 4) {
-		eprintf("Warning: ihklib_device_open failed %d times\n", i);
-	}
-	return devfd;
-}
-
 static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, int *sizes, int *prod, int shift) {
 	int ret = 0, ret_lib;
 	int devfd = -1;
@@ -227,10 +212,12 @@ static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, in
 	char buf[IHK_KMSG_SIZE];
 	char fn[256];
 	int next_slot = 0;
-	struct ihk_device_read_kmsg_buf_desc desc = { .handle = handle, .shift = shift, .buf = buf };
+	struct ihk_device_read_kmsg_buf_desc desc = {
+		.handle = handle, .shift = shift, .buf = buf };
 	
-	devfd = ihkmond_device_open(dev_index);
-	CHKANDJUMP(devfd < 0, -errno, "ihkmond_device_open returned %d\n", -errno);
+	devfd = ihklib_device_open(dev_index);
+	CHKANDJUMP(devfd < 0, -errno, "ihklib_device_open returned %d\n",
+		   -errno);
 
 	nread = ioctl(devfd, IHK_DEVICE_READ_KMSG_BUF, (unsigned long)&desc);
 	CHKANDJUMP(nread < 0 || nread > IHK_KMSG_SIZE, nread, "ioctl failed\n");
@@ -374,13 +361,14 @@ static void* redirect_kmsg(void* _arg) {
 	}
 	arg->mcos_added = 0;
 	pthread_mutex_unlock(&arg->lock);
-	
+
 	dprintf("mcos add detected\n");
 
 	/* Get (i.e. ref) kmsg_buf */
-	devfd = ihkmond_device_open(arg->dev_index); 
-	CHKANDJUMP(devfd < 0, -errno, "ihkmond_device_open returned %d\n", devfd);
-	
+	devfd = ihklib_device_open(arg->dev_index);
+	CHKANDJUMP(devfd < 0, -errno, "ihklib_device_open returned %d\n",
+		   devfd);
+
 	memset(&desc_get, 0, sizeof(desc_get));
 	desc_get.os_index = arg->os_index;
 	ret_lib = ioctl(devfd, IHK_DEVICE_GET_KMSG_BUF, &desc_get);
@@ -437,15 +425,17 @@ static void* redirect_kmsg(void* _arg) {
 				ret_lib = syslog_kmsg(fps, prod);
 				CHKANDJUMP(ret_lib < 0, ret_lib, "syslog_kmsg returned %d\n", ret_lib);
 				dprintf("after syslog_kmsg for destroy\n");
-#if 1
+
 				/* Release (i.e. unref) kmsg_buf */
-				devfd = ihkmond_device_open(arg->dev_index); 
-				CHKANDJUMP(devfd < 0, -errno, "ihkmond_device_open returned %d\n", devfd);
+				devfd = ihklib_device_open(arg->dev_index);
+				CHKANDJUMP(devfd < 0, -errno,
+					   "ihklib_device_open returned %d\n",
+					   devfd);
 				ret_lib = ioctl(devfd, IHK_DEVICE_RELEASE_KMSG_BUF, desc_get.handle);
 				CHKANDJUMP(ret_lib != 0, ret_lib, "IHK_DEVICE_RELEASE_KMSG_BUF failed\n");
 				close(devfd);
 				devfd = -1;
-#endif
+
 				ret_lib = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd_kmsg, &event);
 				CHKANDJUMP(ret_lib != 0, -EINVAL, "epoll_ctl failed\n");
 				close(evfd_kmsg);
