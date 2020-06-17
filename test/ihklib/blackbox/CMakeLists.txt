@@ -384,6 +384,7 @@ foreach(target IN ITEMS
     ihk_reserve_mem_conf06
     ihk_release_cpu07
     ihk_reserve_cpu07
+    ihklib_device_open01
     )
 
   # Add target

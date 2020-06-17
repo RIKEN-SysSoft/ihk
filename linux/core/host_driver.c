@@ -1351,7 +1351,7 @@ static int __ihk_device_get_kmsg_buf(struct file *file, void __user * _desc)
 	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
 	
 	if (!found) {
-		return -EINVAL;
+		return -ENOENT;
 	}
 
 	desc.handle = cont;
