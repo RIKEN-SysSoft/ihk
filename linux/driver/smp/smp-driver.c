@@ -4771,7 +4771,7 @@ static struct builtin_device_data builtin_data;
 
 static struct ihk_register_device_data builtin_dev_reg_data = {
 	.name = "SMP",
-	.flag = 0,
+	.flag = IHK_DEVICE_FLAG_SHARABLE,
 	.priv = &builtin_data,
 	.ops = &smp_ihk_device_ops,
 };
