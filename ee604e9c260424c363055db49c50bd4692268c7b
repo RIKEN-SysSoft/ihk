@@ -1,0 +1,1194 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2cc8b775_27880e46",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 218,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tCHKANDJUMP(devfd \u003c 0, -errno, \"ihklib_device_open returned %d\\n\", -errno);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e9986e50_3a911756",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 366,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^Idevfd \u003d ihklib_device_open(arg-\u003edev_index); $",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0f8a222e_589fac62",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 367,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tCHKANDJUMP(devfd \u003c 0, -errno, \"ihklib_device_open returned %d\\n\", devfd);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c4925f11_395cc194",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 427,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I^I^Idevfd \u003d ihklib_device_open(arg-\u003edev_index); $",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "845e07da_2c81d19b",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 428,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tCHKANDJUMP(devfd \u003c 0, -errno, \"ihklib_device_open returned %d\\n\", devfd);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da0349ee_dbb9cf70",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        key_t key \u003d ftok(argv[0], 10);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9e14f586_bf4b1f04",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        key_t key \u003d ftok(argv[0], 10);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b7d7e270_3275c528",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 28,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        int *shm;$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c377f6d9_cff8c6cc",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 28,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        int *shm;$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2461d668_94d7cb60",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        int shmid;$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2f0628d8_b58f22bf",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        int shmid;$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "91d26d3b_5f99587b",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        struct shmid_ds shmctl_buf;$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7ac28602_de06b9a2",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        struct shmid_ds shmctl_buf;$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e5bd4555_fc4487d2",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        shmid \u003d shmget(key, sizeof(int), IPC_CREAT | 0660);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6bb9e206_aaeb9e84",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        shmid \u003d shmget(key, sizeof(int), IPC_CREAT | 0660);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e25d8e95_d6a22c82",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 37,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        INTERR(shmid \u003d\u003d -1, \"shmget failed: %s\\n\",$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b4629241_8d535114",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 37,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        INTERR(shmid \u003d\u003d -1, \"shmget failed: %s\\n\",$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e84b8292_3709ac6b",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 51,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                shm \u003d shmat(shmid, NULL, 0);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "71c810a6_fe8f1d4d",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 51,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                shm \u003d shmat(shmid, NULL, 0);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "675d8387_22c223d7",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                INTERR(shm \u003d\u003d (void *)-1,$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "03aa6163_2cb6b886",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                INTERR(shm \u003d\u003d (void *)-1,$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bdeec955_a7585cf8",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 61,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: that open brace { should be on the previous line\n+\t\t\tstruct ihk_device_get_kmsg_buf_desc desc_get \u003d\n+\t\t\t\t{ .os_index \u003d 0 };",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ee75b76b_6e97f288",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 64,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: that open brace { should be on the previous line\n+\t\t\tstruct ihk_device_read_kmsg_buf_desc desc_read \u003d\n+\t\t\t\t{ .shift \u003d 0, .buf \u003d kmsg };",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d4f60633_388ef4af",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 66,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I^Ifd \u003d ihklib_device_open(0); $",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "46c24bfe_a452cd5a",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c4700eef_61e6d9da",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 78,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "10379d52_a72888cf",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 80,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tINTERR(fd \u003c 0, \"ihklib_device_open returned %d\\n\", -errno);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a51007a1_7994ba93",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 82,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tret \u003d ioctl(fd, IHK_DEVICE_READ_KMSG_BUF, (unsigned long)\u0026desc_read);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d6e9ac9e_f24ec719",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 84,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t   \"IHK_DEVICE_READ_KMSG_BUF returned %d\\n\", ret);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ea18c8f7_451a0b20",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 91,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I^Ifd \u003d ihklib_device_open(0); $",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "82de84ad_94f45716",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 93,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tret \u003d ioctl(fd, IHK_DEVICE_RELEASE_KMSG_BUF, desc_get.handle);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "112dc879_c9b0dd89",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 94,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tINTERR(ret !\u003d 0, \"IHK_DEVICE_RELEASE_KMSG_BUF failed\\n\");",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "691c1f3a_7f621d81",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 100,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                ret \u003d shmdt(shm);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "988218e8_5e2fcc13",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 100,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                ret \u003d shmdt(shm);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "abb6a852_f5f39b50",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 101,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                INTERR(ret \u003d\u003d -1, \"shmdt failed\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "543fbd1e_7006eeb6",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 101,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                INTERR(ret \u003d\u003d -1, \"shmdt failed\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "29c5b62c_8f446b7c",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 105,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                shm \u003d shmat(shmid, NULL, 0);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "24b26ae8_f8ea2ec9",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 105,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                shm \u003d shmat(shmid, NULL, 0);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "60795400_d9e6e39b",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 106,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                INTERR(shm \u003d\u003d (void *)-1,$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fc826d32_97a49a52",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 106,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                INTERR(shm \u003d\u003d (void *)-1,$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b7fb47a5_c1991203",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                INFO(\"child: wait until posted\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "564e4e99_b9d6772c",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                INFO(\"child: wait until posted\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aa0876f4_6b337354",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 111,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                while ((*shm) \u003d\u003d 0) {$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "87184b37_eda98df7",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 111,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                while ((*shm) \u003d\u003d 0) {$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dca03983_2e614abd",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 112,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                        sched_yield();$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5afbc910_a7fd5cf1",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 112,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                        sched_yield();$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "74e473e6_ac293658",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 113,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                };$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a2197cf9_af8f0a59",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 113,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                };$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5e011938_9e147595",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 127,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d3602f22_2ab24b46",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 130,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "75eec05c_0ecd11c0",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 133,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8adc2447_d114dcc2",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 136,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "123e45be_53d2bf4e",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 139,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "04bed303_331486f8",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 145,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e3866663_fec942af",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 147,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tINTERR(keyword \u003d\u003d NULL, \"\\\"booted\\\" not found in kmsg\\n\");",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e4a86601_f979665d",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 152,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t       \"os status (%d) didn\u0027t change to RUNNING\\n\", ret);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "85398426_19a69590",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 160,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t       \"os status (%d) didn\u0027t change to INACTIVE\\n\", ret);",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b58d74e0_6f45ccd3",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 177,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I^I$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8d8c6537_f351f1a4",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 184,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                INTERR(ret \u003d\u003d -1, \"waitpid failed\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "620221ae_a86f6898",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 184,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                INTERR(ret \u003d\u003d -1, \"waitpid failed\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "659fbd0f_158661ea",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 185,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                INFO(\"parent: wait succeeded\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "29e4e8b7_3905fd30",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 185,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                INFO(\"parent: wait succeeded\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "14bf0abd_b050d4b6",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 187,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                ret \u003d shmctl(shmid, IPC_RMID, \u0026shmctl_buf);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7bb3db0a_e83003dc",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 187,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                ret \u003d shmctl(shmid, IPC_RMID, \u0026shmctl_buf);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "27674791_499d95ae",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 188,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                INTERR(ret \u003d\u003d -1, \"shmctl failed\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "114ab298_ddd11772",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 188,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                INTERR(ret \u003d\u003d -1, \"shmctl failed\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4df6aee4_b6a4d154",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 190,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                ret \u003d shmdt(shm);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9976a9a8_b0535f9c",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 190,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                ret \u003d shmdt(shm);$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "52362026_6a2da5de",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 191,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+                INTERR(ret \u003d\u003d -1, \"shmdt failed\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "80a5d78f_ba69251e",
+        "filename": "test/ihklib/blackbox/src/ihklib_device_open01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 191,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-17T11:16:34Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+                INTERR(ret \u003d\u003d -1, \"shmdt failed\\n\");$",
+      "revId": "ee604e9c260424c363055db49c50bd4692268c7b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
