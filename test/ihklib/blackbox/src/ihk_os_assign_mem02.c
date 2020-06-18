@@ -23,8 +23,8 @@ int main(int argc, char **argv)
 	ret = linux_insmod(0);
 	INTERR(ret, "linux_insmod returned %d\n", ret);
 
-	ret = mems_reserve();
-	INTERR(ret, "mems_reserve returned %d\n", ret);
+	ret = _mems_reserve(4, 0.9, -1);
+	INTERR(ret, "_mems_reserve returned %d\n", ret);
 
 	ret = ihk_create_os(0);
 	INTERR(ret, "ihk_create_os returned %d\n", ret);
@@ -84,6 +84,10 @@ int main(int argc, char **argv)
 
 	ret = 0;
  out:
+	if (ihk_get_num_os_instances(0)) {
+		mems_os_release();
+		ihk_destroy_os(0, 0);
+	}
 	mems_release();
 	linux_rmmod(0);
 	return ret;

@@ -93,20 +93,20 @@ int main(int argc, char **argv)
 	struct cpus cpus_mckernel = { 0 };
 	struct cpus cpus_linux = { 0 };
 
-	ret = cpus_ls(&cpus_mckernel);
+	ret = _cpus_ls(&cpus_mckernel, "online", 0, 8);
 	INTERR(ret, "cpus_ls returned %d\n", ret);
 
 	ret = cpus_shift(&cpus_mckernel, 2);
 	INTERR(ret, "cpus_shift returned %d\n", ret);
 
-	ret = cpus_ls(&cpus_linux);
+	ret = _cpus_ls(&cpus_linux, "online", 0, 8);
 	INTERR(ret, "cpus_ls returned %d\n", ret);
 
 	ret = cpus_pop(&cpus_linux, cpus_linux.ncpus - 2);
 	INTERR(ret, "cpus_pop returned %d\n", ret);
 
 	/* Precondition */
-	ret = cpus_reserve();
+	ret = _cpus_reserve(2, 6);
 	INTERR(ret, "cpus_reserve returned %d\n", ret);
 
 	ret = mems_reserve();
