@@ -25,20 +25,23 @@ int main(int argc, char **argv)
 	int ret_expected[2] = { 0, 1 };
 
 	for (i = 0; i < 2; i++) {
+		if (i == 1) {
+			ret = ihk_create_os(0);
+			INTERR(ret, "ihk_create_os returned %d\n", ret);
+		}
+
 		ret = ihk_get_num_os_instances(0);
 		OKNG(ret == ret_expected[i],
 		     "# of os instances: %d, expected: %d\n",
 		     ret, ret_expected[i]);
 
-		/* Precondition */
-		if (i == 0) {
-			ret = ihk_create_os(0);
-			INTERR(ret, "ihk_create_os returned %d\n", ret);
-		}
 	}
 
 	ret = 0;
 out:
+	if (ihk_get_num_os_instances(0)) {
+		ihk_destroy_os(0, 0);
+	}
 	linux_rmmod(0);
 	return ret;
 }

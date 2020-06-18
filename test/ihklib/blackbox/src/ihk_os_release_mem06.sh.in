@@ -11,6 +11,7 @@ fi
 
 # insmod as root
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_release_mem06 -u $(id -u) -g $(id -g) -i || exit $?
+
 sudo chmod 666 /dev/mcos0
 
 # try to release memory as non-root

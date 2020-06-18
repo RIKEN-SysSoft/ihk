@@ -406,16 +406,23 @@ void mems_dump_sum(struct mems *mems)
 {
 	int i;
 	long sum[MAX_NUM_MEM_CHUNKS] = { 0 };
+	int found;
 
 	if (mems) {
 		mems_sum(mems, sum);
 	}
 
+	found = 0;
 	for (i = 0; i < MAX_NUM_MEM_CHUNKS; i++) {
 		if (sum[i]) {
 			INFO("size: %ld MiB, numa_node_number: %d\n",
 			     sum[i] >> 20, i);
+			found = 1;
 		}
+	}
+
+	if (!found) {
+		INFO("(none)\n");
 	}
 }
 
@@ -439,9 +446,12 @@ int mems_compare(struct mems *result, struct mems *expected,
 
 	for (i = 0; i < MAX_NUM_MEM_CHUNKS; i++) {
 		if (sum_result[i] > 0) {
-			INFO("actual: %ld MiB, expected: %ld MiB\n",
+			INFO("numa: %d, actual: %ld MiB, "
+			     "expected: %ld MiB, margin: %ld MiB\n",
+			     i,
 			     sum_result[i] >> 20,
-			     sum_expected[i] >> 20);
+			     sum_expected[i] >> 20,
+			     sum_margin[i] >> 20);
 		}
 
 		if (sum_result[i] < sum_expected[i] ||
@@ -478,14 +488,6 @@ int mems_check_reserved(struct mems *expected, struct mems *margin)
 	}
 
 	ret = mems_compare(&mems, expected, margin);
-	if (expected->num_mem_chunks > 0) {
-		INFO("actual reservation:\n");
-		mems_dump_sum(&mems);
-		INFO("expected reservation:\n");
-		mems_dump_sum(expected);
-		INFO("margin:\n");
-		mems_dump_sum(margin);
-	}
 
  out:
 	return ret;
@@ -754,18 +756,6 @@ int mems_check_assigned(struct mems *expected, struct mems *margin)
 	}
 
 	ret = mems_compare(&mems, expected, margin);
-
-	INFO("actual assignment:\n");
-	mems_dump_sum(&mems);
-	if (mems.num_mem_chunks == 0) {
-		INFO("(none)\n");
-	}
-
-	INFO("expected assignment:\n");
-	mems_dump_sum(expected);
-	if (expected->num_mem_chunks == 0) {
-		INFO("(none)\n");
-	}
 
  out:
 	return ret;
