@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < 2; i++) {
 		int excess;
 
-		ret = mems_ls(&mems_input_reserve_mem[i], "MemFree", 0.9);
+		ret = mems_ls(&mems_input_reserve_mem[i]);
 		INTERR(ret, "mems_ls returned %d\n", ret);
 
 		excess = mems_input_reserve_mem[i].num_mem_chunks - 4;

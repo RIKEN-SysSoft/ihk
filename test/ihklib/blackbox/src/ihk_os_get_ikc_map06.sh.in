@@ -10,9 +10,9 @@ else
 fi
 
 # insmod as root
-sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_get_ikc_map06 -u $(id -u) -g $(id -g) -i || exit $?
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_get_ikc_map06 -u $(id -u) -g $(id -g) -i
 num_cpus=$?
-sudo chmod 666 /dev/mcos0
+sudo chmod 666 /dev/mcos0 || exit $?
 
 # try to reserve memory as non-root
 @CMAKE_INSTALL_PREFIX@/bin/ihk_os_get_ikc_map06 -u $(id -u) -g $(id -g) -n ${num_cpus} || exit $?

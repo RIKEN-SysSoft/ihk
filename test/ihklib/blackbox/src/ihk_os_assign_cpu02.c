@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 	ret = linux_insmod(0);
 	INTERR(ret, "linux_insmod returned %d\n", ret);
 
-	ret = cpus_reserve();
+	ret = _cpus_reserve(2, -1);
 	INTERR(ret, "cpus_reserve returned %d\n", ret);
 
 	ret = ihk_create_os(0);
@@ -111,6 +111,9 @@ int main(int argc, char **argv)
 
 	ret = 0;
  out:
+	if (ihk_get_num_os_instances(0)) {
+		ihk_destroy_os(0, 0);
+	}
 	cpus_release();
 	linux_rmmod(0);
 
