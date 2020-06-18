@@ -51,6 +51,11 @@ int main(int argc, char **argv)
 	for (i = 0; i < 2; i++) {
 		START("test-case: %s: %s\n", param, values[i]);
 
+		if (i == 1) {
+			ret = ihk_create_os(0);
+			INTERR(ret, "ihk_create_os returned %d\n", ret);
+		}
+
 		ret = ihk_os_assign_cpu(0, cpus_input[i].cpus,
 				      cpus_input[i].ncpus);
 		OKNG(ret == ret_expected[i],
@@ -66,16 +71,14 @@ int main(int argc, char **argv)
 					      cpus_after_assign[i].ncpus);
 			INTERR(ret, "ihk_os_release_cpu returned %d\n", ret);
 		}
-
-		/* Precondition */
-		if (i == 0) {
-			ret = ihk_create_os(0);
-			INTERR(ret, "ihk_create_os returned %d\n", ret);
-		}
 	}
 
 	ret = 0;
  out:
+	if (ihk_get_num_os_instances(0)) {
+		cpus_os_release();
+		ihk_destroy_os(0, 0);
+	}
 	cpus_release();
 	linux_rmmod(0);
 

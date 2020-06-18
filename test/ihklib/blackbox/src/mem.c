@@ -160,7 +160,7 @@ int mems_free(struct mems *mems)
 		}
 	}
 
-	fp = popen("dmesg | awk ' /NUMA.*free mem/ { size[$4] = $10; if ($4 > max) { max = $4 } } END { for (i = 0; i <= max; i++) { if (size[i] > 0) { printf \"%d %d\\n\", i, size[i] } } }'",
+	fp = popen("dmesg | awk '/NUMA.*free mem/ { numa=$(NF-7); size[numa] = $(NF-1); if (numa > max) { max = numa } } END { for (i = 0; i <= max; i++) { if (size[i] > 0) { printf \"%d %d\\n\", i, size[i] } } }'",
 		   "r");
 	if (fp == NULL) {
 		ret = -errno;
@@ -406,16 +406,23 @@ void mems_dump_sum(struct mems *mems)
 {
 	int i;
 	long sum[MAX_NUM_MEM_CHUNKS] = { 0 };
+	int found;
 
 	if (mems) {
 		mems_sum(mems, sum);
 	}
 
+	found = 0;
 	for (i = 0; i < MAX_NUM_MEM_CHUNKS; i++) {
 		if (sum[i]) {
 			INFO("size: %ld MiB, numa_node_number: %d\n",
 			     sum[i] >> 20, i);
+			found = 1;
 		}
+	}
+
+	if (!found) {
+		INFO("(none)\n");
 	}
 }
 
@@ -439,9 +446,12 @@ int mems_compare(struct mems *result, struct mems *expected,
 
 	for (i = 0; i < MAX_NUM_MEM_CHUNKS; i++) {
 		if (sum_result[i] > 0) {
-			INFO("actual: %ld MiB, expected: %ld MiB\n",
+			INFO("numa: %d, actual: %ld MiB, "
+			     "expected: %ld MiB, margin: %ld MiB\n",
+			     i,
 			     sum_result[i] >> 20,
-			     sum_expected[i] >> 20);
+			     sum_expected[i] >> 20,
+			     sum_margin[i] >> 20);
 		}
 
 		if (sum_result[i] < sum_expected[i] ||
@@ -478,14 +488,6 @@ int mems_check_reserved(struct mems *expected, struct mems *margin)
 	}
 
 	ret = mems_compare(&mems, expected, margin);
-	if (expected->num_mem_chunks > 0) {
-		INFO("actual reservation:\n");
-		mems_dump_sum(&mems);
-		INFO("expected reservation:\n");
-		mems_dump_sum(expected);
-		INFO("margin:\n");
-		mems_dump_sum(margin);
-	}
 
  out:
 	return ret;
@@ -678,7 +680,6 @@ int mems_reserve(void)
 
 	ret = ihk_reserve_mem(0, mems.mem_chunks,
 			      mems.num_mem_chunks);
-
 	INTERR(ret, "ihk_reserve_mem returned %d\n", ret);
 
 	ret = 0;
@@ -754,18 +755,6 @@ int mems_check_assigned(struct mems *expected, struct mems *margin)
 	}
 
 	ret = mems_compare(&mems, expected, margin);
-
-	INFO("actual assignment:\n");
-	mems_dump_sum(&mems);
-	if (mems.num_mem_chunks == 0) {
-		INFO("(none)\n");
-	}
-
-	INFO("expected assignment:\n");
-	mems_dump_sum(expected);
-	if (expected->num_mem_chunks == 0) {
-		INFO("(none)\n");
-	}
 
  out:
 	return ret;

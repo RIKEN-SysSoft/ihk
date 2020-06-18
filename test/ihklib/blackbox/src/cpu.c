@@ -67,7 +67,7 @@ int _cpus_ls(struct cpus *cpus, char *online)
 	int ret;
 
 	sprintf(cmd, "lscpu -p=cpu --%s | awk '!/#/ { print $0; }'", online);
-	//INFO("%s\n", cmd);
+
 	fp = popen(cmd, "r");
 	if (fp == NULL) {
 		ret = -errno;

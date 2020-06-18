@@ -49,15 +49,26 @@ int mems_remove_chunk(struct mems *mems, int idx)
 			(mems->num_mem_chunks - (idx + 1)));
 	}
 
-	mems->mem_chunks = mremap(mems->mem_chunks,
-				  sizeof(struct ihk_mem_chunk) *
-				  mems->num_mem_chunks,
-				  sizeof(struct ihk_mem_chunk) *
-				  (mems->num_mem_chunks - 1),
-				  MREMAP_MAYMOVE);
-	if (mems->mem_chunks == MAP_FAILED) {
-		ret = -errno;
-		goto out;
+	if (mems->num_mem_chunks == 1) {
+		ret = munmap(mems->mem_chunks,
+			     sizeof(struct ihk_mem_chunk) *
+			     mems->num_mem_chunks);
+		if (ret) {
+			ret = -errno;
+			goto out;
+		}
+		mems->mem_chunks = NULL;
+	} else {
+		mems->mem_chunks = mremap(mems->mem_chunks,
+					  sizeof(struct ihk_mem_chunk) *
+					  mems->num_mem_chunks,
+					  sizeof(struct ihk_mem_chunk) *
+					  (mems->num_mem_chunks - 1),
+					  MREMAP_MAYMOVE);
+		if (mems->mem_chunks == MAP_FAILED) {
+			ret = -errno;
+			goto out;
+		}
 	}
 
 	mems->num_mem_chunks -= 1;
@@ -93,12 +104,15 @@ int main(int argc, char **argv)
 	}
 
 	for (i = 0; i < mems_ref.num_mem_chunks; i++) {
-		nodemask |=
-			(1UL << mems_ref.mem_chunks[i].numa_node_number);
+		if (mems_ref.mem_chunks[i].size) {
+			nodemask |= (1UL <<
+				     mems_ref.mem_chunks[i].numa_node_number);
+		}
 	}
+	INFO("nodemask: %lx\n", nodemask);
 
-	ret = mems_reserve();
-	INTERR(ret, "mems_reserve returned %d\n", ret);
+	ret = _mems_reserve(4, 0.9, -1);
+	INTERR(ret, "_mems_reserve returned %d\n", ret);
 
 	ret = ihk_create_os(0);
 	INTERR(ret, "ihk_create_os returned %d\n", ret);
@@ -138,6 +152,8 @@ int main(int argc, char **argv)
 	INTERR(ret, "mems_shift returned %d\n", ret);
 
 	/* minus one */
+	mems_dump(&mems_input[2]);
+
 	for (j = 0; j < maxnode; j++) {
 		int idx;
 
@@ -146,6 +162,8 @@ int main(int argc, char **argv)
 		}
 
 		idx = node_last_chunk(j, &mems_input[2]);
+		INFO("numa: %d, nchunks: %d, idx: %d\n",
+		     j, mems_input[2].num_mem_chunks, idx);
 
 		ret = mems_remove_chunk(&mems_input[2], idx);
 		INTERR(ret, "mems_remove_chunk returned %d\n", ret);
@@ -211,6 +229,10 @@ int main(int argc, char **argv)
 
 	ret = 0;
 out:
+	if (ihk_get_num_os_instances(0)) {
+		mems_os_release();
+		ihk_destroy_os(0, 0);
+	}
 	mems_release();
 	linux_rmmod(0);
 	return ret;

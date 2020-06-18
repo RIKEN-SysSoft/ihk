@@ -59,6 +59,7 @@ int main(int argc, char **argv)
 	unsigned long mems_ratio_expected[2] = { 98, 95 };
 
 	double ratios[2][MAX_NUM_MEM_CHUNKS] = {{ 0 }};
+	int no_dedicated_numa = 0;
 
 	/* Precondition */
 	ret = linux_insmod(0);
@@ -67,18 +68,24 @@ int main(int argc, char **argv)
 	/* Parse additional options */
 	int opt;
 
-	/* Don't request over 0.95 * NR_FREE_PAGES */
-	int mem_conf_value = 95;
-
 	while ((opt = getopt(argc, argv, "s")) != -1) {
 		switch (opt) {
-		case 's':
-			/* no dedicated NUMA nodes for Linux */
+		case 's': {
+			/* Don't ask machines without system-service NUMA nodes
+			 * for memory >= 0.90 * NR_FREE_PAGES
+			 */
+			int mem_conf_value = 90;
+
 			ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL,
 						   &mem_conf_value);
 			INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
 			       ret);
-			break;
+
+			mems_ratio_expected[0] = 90;
+			mems_ratio_expected[1] = 87;
+
+			no_dedicated_numa = 1;
+			break; }
 		default: /* '?' */
 			printf("unknown option %c\n", optopt);
 			exit(1);
@@ -141,7 +148,7 @@ int main(int argc, char **argv)
 			OKNG(ret == 0, "ratio of reserved to NR_FREE_PAGES\n");
 		}
 
-		if (i == 1) {
+		if (i == 1 && !no_dedicated_numa) {
 			int j;
 			int fail = 0;
 

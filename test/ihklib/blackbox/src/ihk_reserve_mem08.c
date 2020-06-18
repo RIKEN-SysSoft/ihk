@@ -46,6 +46,7 @@ int main(int argc, char **argv)
 	struct mems mems_free_on_reserve[1] = {{ 0 }};
 	struct mems mems_ratio[1] = {{ 0 }};
 	double ratios[1][MAX_NUM_MEM_CHUNKS] = {{ 0 }};
+	int no_dedicated_numa = 0;
 
 	/* Precondition */
 	ret = linux_insmod(0);
@@ -54,18 +55,21 @@ int main(int argc, char **argv)
 	/* Parse additional options */
 	int opt;
 
-	/* Don't request over 0.95 * NR_FREE_PAGES */
-	int mem_conf_value = 95;
 
 	while ((opt = getopt(argc, argv, "s")) != -1) {
 		switch (opt) {
-		case 's':
-			/* no dedicated NUMA nodes for Linux */
+		case 's': {
+			/* Don't ask machines without system-service NUMA nodes
+			 * for memory >= 0.90 * NR_FREE_PAGES
+			 */
+			int mem_conf_value = 90;
+
+			no_dedicated_numa = 1;
 			ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL,
 						   &mem_conf_value);
 			INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
 			       ret);
-			break;
+			break; }
 		default: /* '?' */
 			printf("unknown option %c\n", optopt);
 			exit(1);
@@ -98,15 +102,18 @@ int main(int argc, char **argv)
 				&mems_free_on_reserve[i]);
 		INTERR(ret, "mems_copy returned %d\n", ret);
 
-		mems_fill(&mems_ratio[i], 98);
+		mems_fill(&mems_ratio[i],
+			  no_dedicated_numa ? 90 : 98);
 
 		ret = mems_check_ratio(&mems_free_on_reserve[i],
 				       &mems_ratio[i], ratios[i]);
 		OKNG(ret == 0, "ratio of reserved to NR_FREE_PAGES\n");
 
+		if (!no_dedicated_numa) {
 #define LOWER_BOUND 30782652416UL
-		ret = mems_check_total(LOWER_BOUND);
-		OKNG(ret == 0, "total amount reserved\n");
+			ret = mems_check_total(LOWER_BOUND);
+			OKNG(ret == 0, "total amount reserved\n");
+		}
 
 		/* Clean up */
 		ret = mems_release();

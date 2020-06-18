@@ -42,6 +42,7 @@ int main(int argc, char **argv)
 	double mem_taken_ratio[] = { 0, 0.3 };
 
 	int ret_expected[2] = { 0, -ENOMEM };
+	double ratio_free = 0.95;
 
 	/* Precondition */
 	ret = linux_insmod(0);
@@ -50,18 +51,21 @@ int main(int argc, char **argv)
 	/* Parse additional options */
 	int opt;
 
-	/* Don't request over 0.95 * NR_FREE_PAGES */
-	int mem_conf_value = 95;
-
 	while ((opt = getopt(argc, argv, "s")) != -1) {
 		switch (opt) {
-		case 's':
-			/* no dedicated NUMA nodes for Linux */
+		case 's': {
+			/* Don't ask machines without system-service NUMA nodes
+			 * for memory >= 0.90 * NR_FREE_PAGES
+			 */
+			int mem_conf_value = 90;
+
 			ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL,
 						   &mem_conf_value);
 			INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
 			       ret);
-			break;
+
+			ratio_free = 0.90;
+			break; }
 		default: /* '?' */
 			printf("unknown option %c\n", optopt);
 			exit(1);

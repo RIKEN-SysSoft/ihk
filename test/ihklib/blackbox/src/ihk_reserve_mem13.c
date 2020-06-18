@@ -66,18 +66,14 @@ int main(int argc, char **argv)
 	/* Parse additional options */
 	int opt;
 
-	/* Don't request over 0.95 * NR_FREE_PAGES */
-	int mem_conf_value = 95;
-
 	while ((opt = getopt(argc, argv, "s")) != -1) {
 		switch (opt) {
-		case 's':
-			/* no dedicated NUMA nodes for Linux */
-			ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL,
-						   &mem_conf_value);
-			INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
-			       ret);
-			break;
+		case 's': {
+			/* Don't ask machines without system-service NUMA nodes
+			 * for memory >= 0.90 * NR_FREE_PAGES
+			 */
+			mem_conf_input[0] = 90; 
+			break; }
 		default: /* '?' */
 			printf("unknown option %c\n", optopt);
 			exit(1);

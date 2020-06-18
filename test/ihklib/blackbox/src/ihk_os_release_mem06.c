@@ -17,6 +17,7 @@ int main(int argc, char **argv)
 {
 	int ret;
 	int i;
+	int previleged = 0;
 
 	params_getopt(argc, argv);
 
@@ -25,33 +26,82 @@ int main(int argc, char **argv)
 
 	while ((opt = getopt(argc, argv, "ir")) != -1) {
 		switch (opt) {
-		case 'i':
+		case 'i': {
+			previleged = 1;
+
 			/* Precondition */
 			ret = linux_insmod(0);
 			INTERR(ret, "linux_insmod returned %d\n", ret);
 
-			ret = mems_reserve();
-			INTERR(ret, "mems_reserve returned %d\n", ret);
+			struct mems mems = { 0 };
+			int excess;
+
+			ret = mems_ls(&mems, "MemFree", 0.9);
+			INTERR(ret, "mems_ls returned %d\n", ret);
+
+			excess = mems.num_mem_chunks - 4;
+			if (excess > 0) {
+				ret = mems_shift(&mems, excess);
+				INTERR(ret, "mems_shift returned %d\n", ret);
+			}
+
+			mems_dump(&mems);
+
+			ret = ihk_reserve_mem(0, mems.mem_chunks,
+					      mems.num_mem_chunks);
+			INTERR(ret, "ihk_reserve_mem returned %d\n", ret);
 
 			ret = ihk_create_os(0);
 			INTERR(ret, "ihk_create_os returned %d\n", ret);
 
 			ret = mems_os_assign();
 			INTERR(ret, "mems_os_assign returned %d\n", ret);
+
 			exit(0);
-			break;
-		case 'r':
+			break; }
+		case 'r': {
+			previleged = 1;
+
+			struct mems mems_after_assign = { 0 };
+			struct mems margin = { 0 };
+			int excess;
+
+			ret = mems_ls(&mems_after_assign, "MemFree", 0.9);
+			INTERR(ret, "mems_ls returned %d\n", ret);
+
+			excess = mems_after_assign.num_mem_chunks - 4;
+			if (excess > 0) {
+				ret = mems_shift(&mems_after_assign, excess);
+				INTERR(ret, "mems_shift returned %d\n", ret);
+			}
+
+			mems_fill(&mems_after_assign, 1UL << 30);
+
+			ret = mems_copy(&margin, &mems_after_assign);
+			INTERR(ret, "mems_copy returned %d\n", ret);
+
+			mems_fill(&margin, 4UL << 20);
+
+			/* Check if there's no side effects */
+			ret = mems_check_assigned(&mems_after_assign,
+						  &margin);
+			OKNG(ret == 0, "assigned as expected\n");
+
 			/* Clean up */
 			ret = mems_os_release();
 			INTERR(ret, "mems_os_release returned %d\n", ret);
+
+			ret = ihk_destroy_os(0, 0);
+			INTERR(ret, "ihk_destroy_os returned %d\n", ret);
 
 			ret = mems_release();
 			INTERR(ret, "mems_release returned %d\n", ret);
 
 			ret = linux_rmmod(1);
 			INTERR(ret, "rmmod returned %d\n", ret);
+
 			exit(0);
-			break;
+			break; }
 		default: /* '?' */
 			printf("unknown option %c\n", optopt);
 			exit(1);
@@ -80,5 +130,13 @@ int main(int argc, char **argv)
 
 	ret = 0;
  out:
+	if (previleged) {
+		if (ihk_get_num_os_instances(0)) {
+			mems_os_release();
+			ihk_destroy_os(0, 0);
+		}
+		mems_release();
+		linux_rmmod(1);
+	}
 	return ret;
 }
