@@ -11,13 +11,15 @@ fi
 
 . @CMAKE_INSTALL_PREFIX@/bin/util.sh
 
-sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile06 -u $(id -u) -g $(id -g) -i $i -f ${WORKDIR}/dump || exit $?
+for i in {0..1}; do
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile06 -u $(id -u) -g $(id -g) -i $i -f ${WORKDIR}/dump || exit $?
 
-check_dump ${WORKDIR}/dump $i || exit $?
+    check_dump ${WORKDIR}/dump $i || exit $?
 
-sudo rm -f ${WORKDIR}/dump
+    sudo rm -f ${WORKDIR}/dump
 
-# clean up
-sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile06 -u $(id -u) -g $(id -g) -i $i -f ${WORKDIR}/dump -c || exit $?
+    # clean up
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile06 -u $(id -u) -g $(id -g) -i $i -f ${WORKDIR}/dump -c || exit $?
+done;
 
 exit 0

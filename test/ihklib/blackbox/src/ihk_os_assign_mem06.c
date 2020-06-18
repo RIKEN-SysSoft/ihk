@@ -16,6 +16,7 @@ int main(int argc, char **argv)
 {
 	int ret;
 	int i;
+	int previleged = 0;
 
 	params_getopt(argc, argv);
 
@@ -32,6 +33,8 @@ int main(int argc, char **argv)
 	while ((opt = getopt(argc, argv, "ir")) != -1) {
 		switch (opt) {
 		case 'i':
+			previleged = 1;
+
 			/* Precondition */
 			ret = linux_insmod(0);
 			INTERR(ret, "linux_insmod returned %d\n", ret);
@@ -45,6 +48,8 @@ int main(int argc, char **argv)
 			exit(0);
 			break;
 		case 'r':
+			previleged = 1;
+
 			/* Check there's no side effects */
 			if (mems_expected[0]) {
 				ret = mems_check_assigned(mems_expected[0],
@@ -53,6 +58,9 @@ int main(int argc, char **argv)
 			}
 
 			/* Clean up */
+			ret = ihk_destroy_os(0, 0);
+			INTERR(ret, "ihk_destroy_os returned %d\n", ret);
+
 			ret = mems_release();
 			INTERR(ret, "mems_release returned %d\n", ret);
 
@@ -86,5 +94,13 @@ int main(int argc, char **argv)
 
 	ret = 0;
  out:
+	if (previleged) {
+		if (ihk_get_num_os_instances(0)) {
+			mems_os_release();
+			ihk_destroy_os(0, 0);
+		}
+		mems_release();
+		linux_rmmod(0);
+	}
 	return ret;
 }

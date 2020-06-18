@@ -25,14 +25,9 @@ int main(int argc, char **argv)
 
 	struct cpus cpus_input_reserve_cpu[4] = {{ 0 }};
 
-	/* All of McKernel CPUs */
 	for (i = 0; i < 4; i++) {
-		ret = cpus_ls(&cpus_input_reserve_cpu[i]);
-		INTERR(ret, "cpus_ls returned %d\n", ret);
-
-		/* Spare two cpus for Linux */
-		ret = cpus_shift(&cpus_input_reserve_cpu[i], 2);
-		INTERR(ret, "cpus_shift returned %d\n", ret);
+		ret = _cpus_ls(&cpus_input_reserve_cpu[i], "online", 2, -1);
+		INTERR(ret, "_cpus_ls returned %d\n", ret);
 	}
 
 	struct cpus cpus_input[4] = {
@@ -44,8 +39,8 @@ int main(int argc, char **argv)
 
 	/* All of McKernel CPUs */
 	for (i = 1; i < 4; i++) {
-		ret = cpus_ls(&cpus_input[i]);
-		INTERR(ret, "cpus_ls returned %d\n", ret);
+		ret = _cpus_ls(&cpus_input[i], "online", 2, -1);
+		INTERR(ret, "_cpus_ls returned %d\n", ret);
 	}
 
 	/* Plus one */
@@ -56,12 +51,6 @@ int main(int argc, char **argv)
 	/* Minus one */
 	ret = cpus_pop(&cpus_input[3], 1);
 	INTERR(ret, "cpus_pop returned %d\n", ret);
-
-	for (i = 1; i < 4; i++) {
-		/* Spare two cpus for Linux */
-		ret = cpus_shift(&cpus_input[i], 2);
-		INTERR(ret, "cpus_shift returned %d\n", ret);
-	}
 
 	int ret_expected_reserve_cpu[4] = { 0 };
 
@@ -76,12 +65,8 @@ int main(int argc, char **argv)
 
 	/* All of McKernel CPUs */
 	for (i = 0; i < 4; i++) {
-		ret = cpus_ls(&cpus_after_release[i]);
-		INTERR(ret, "cpus_ls returned %d\n", ret);
-
-		/* Spare two cpus for Linux */
-		ret = cpus_shift(&cpus_after_release[i], 2);
-		INTERR(ret, "cpus_shift returned %d\n", ret);
+		ret = _cpus_ls(&cpus_after_release[i], "online", 2, -1);
+		INTERR(ret, "_cpus_ls returned %d\n", ret);
 	}
 
 	/* Empty */

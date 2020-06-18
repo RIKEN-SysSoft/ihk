@@ -28,10 +28,12 @@ function patch_and_build()
     fi
 
     BUILDDIR=$WORKDIR/build/$(uname -r)
-    if [ ! -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+
+    if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
 	pushd $BUILDDIR
     else
 	rm -rf $BUILDDIR
+	mkdir -p $BUILDDIR
 	pushd $BUILDDIR
 	cmake @WITH_MCK_SRC@ -DCMAKE_INSTALL_PREFIX=@WITH_MCK@
     fi

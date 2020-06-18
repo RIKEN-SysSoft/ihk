@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 	struct mems mems = { 0 };
 	int excess;
 
-	ret = mems_ls(&mems, "MemFree", 0.9);
+	ret = mems_ls(&mems);
 	INTERR(ret, "mems_ls returned %d\n", ret);
 
 	excess = mems.num_mem_chunks - 4;

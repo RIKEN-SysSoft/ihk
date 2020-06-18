@@ -30,8 +30,8 @@ int main(int argc, char **argv)
 		int j;
 		int excess;
 
-		ret = mems_ls(&mems_input[i], "MemTotal", 1.0);
-		INTERR(ret, "mems_ls returned %d\n", ret);
+		ret = _mems_ls(&mems_input[i], "MemTotal", 1.0, -1);
+		INTERR(ret, "_mems_ls returned %d\n", ret);
 
 		excess = mems_input[i].num_mem_chunks - 4;
 		if (excess > 0) {
@@ -66,17 +66,16 @@ int main(int argc, char **argv)
 	/* Parse additional options */
 	int opt;
 
-	/* Don't request over 0.95 * NR_FREE_PAGES */
-	int mem_conf_value = 95;
-
 	while ((opt = getopt(argc, argv, "s")) != -1) {
 		switch (opt) {
 		case 's':
-			/* no dedicated NUMA nodes for Linux */
-			ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL,
-						   &mem_conf_value);
-			INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
-			       ret);
+			/* Don't ask machines without system-service NUMA nodes
+			 * for memory >= 0.90 * NR_FREE_PAGES
+			 */
+			mem_conf_values[0] = 90;
+			mem_conf_values[1] = 80;
+			mems_ratio_expected[0] = 90;
+			mems_ratio_expected[1] = 80;
 			break;
 		default: /* '?' */
 			printf("unknown option %c\n", optopt);
@@ -89,7 +88,7 @@ int main(int argc, char **argv)
 		int excess;
 
 		START("test-case: %s: %s\n", param, values[i]);
-
+		
 		ret = ihk_reserve_mem_conf(0, mem_conf_keys[i],
 					   &mem_conf_values[i]);
 		INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
