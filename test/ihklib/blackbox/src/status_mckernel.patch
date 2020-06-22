@@ -1,22 +1,3 @@
-commit 7a99885355cb0a3c5b3b6830c576f5161386b14c
-Author: Masamichi Takagi <masamichi.takagi@riken.jp>
-Date:   Sun Feb 16 07:08:12 2020 +0000
-
-    test: ihklib: patch for ihk_os_shutdown
-    
-    Change-Id: Ia56a9501e419f16fa02426fcc15d97f31e254def
-
-diff --git a/arch/arm64/kernel/include/syscall_list.h b/arch/arm64/kernel/include/syscall_list.h
-index 19f286c6..c3b3fa0b 100644
---- a/arch/arm64/kernel/include/syscall_list.h
-+++ b/arch/arm64/kernel/include/syscall_list.h
-@@ -142,3 +142,6 @@ SYSCALL_HANDLED(1045, signalfd)
- SYSCALL_DELEGATED(1049, stat)
- SYSCALL_DELEGATED(1060, getpgrp)
- SYSCALL_HANDLED(1062, time)
-+
-+SYSCALL_HANDLED(2001, panic)
-+SYSCALL_HANDLED(2002, hungup)
 diff --git a/kernel/freeze.c b/kernel/freeze.c
 index 677fca5b..0717fcac 100644
 --- a/kernel/freeze.c
@@ -58,3 +39,13 @@ index e677e3f0..ecf595c3 100644
  void
  reset_cputime()
  {
+diff --git a/arch/arm64/kernel/include/syscall_list.h b/arch/arm64/kernel/include/syscall_list.h
+index bb3f6c0..2566e6a 100644
+--- a/arch/arm64/kernel/include/syscall_list.h
++++ b/arch/arm64/kernel/include/syscall_list.h
+@@ -148,3 +148,5 @@ SYSCALL_DELEGATED(1069, epoll_wait)
+  * EOF just after it because those are used as a
+  * robust marker for the autotest patch.
+  */
++SYSCALL_HANDLED(2001, panic)
++SYSCALL_HANDLED(2002, hungup)
