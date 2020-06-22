@@ -29,11 +29,9 @@ int main(int argc, char **argv)
 	struct cpus cpus_input[1] = {{ 0 }};
 	struct cpus cpus_after_release[1] = {{ 0 }};
 
-	ret = cpus_ls(&cpu_unreserve);
-	INTERR(ret, "cpus_ls returned %d\n", ret);
-
-	ret = cpus_shift(&cpu_unreserve, 2);
-	INTERR(ret, "cpus_shift returned %d\n", ret);
+	/* e.g. try to release 2-7 when 3-7 is reserved */
+	ret = _cpus_ls(&cpu_unreserve, "online", 2, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 	ret = cpus_pop(&cpu_unreserve, cpu_unreserve.ncpus - 1);
 	INTERR(ret, "cpus_pop returned %d\n", ret);
@@ -42,11 +40,9 @@ int main(int argc, char **argv)
 
 	struct cpus cpus_reserve_input = { 0 };
 
-	ret = cpus_ls(&cpus_reserve_input);
-	INTERR(ret, "cpus_ls returned %d\n", ret);
-
-	ret = cpus_shift(&cpus_reserve_input, 3);
-	INTERR(ret, "cpus_shift returned %d\n", ret);
+	/* e.g. reserve 3-7 */
+	ret = _cpus_ls(&cpus_reserve_input, "online", 3, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 	ret = ihk_reserve_cpu(0, cpus_reserve_input.cpus,
 			cpus_reserve_input.ncpus);
@@ -63,7 +59,7 @@ int main(int argc, char **argv)
 		INTERR(ret, "cpus_pop returned %d\n", ret);
 
 		ret = cpus_reserved(&cpus_input[i]);
-		INTERR(ret, "cpus_ls returned %d\n", ret);
+		INTERR(ret, "cpus_reserved returned %d\n", ret);
 
 		ret = cpus_shift(&cpus_input[i], 2);
 		INTERR(ret, "cpus_shift returned %d\n", ret);

@@ -12,7 +12,8 @@ struct mems {
 
 int mems_init(struct mems *mems, int num_mem_chunks);
 int mems_copy(struct mems *dst, struct mems *src);
-int mems_ls(struct mems *mems, char *type, double ratio);
+int _mems_ls(struct mems *mems, char *type, double ratio, long constant);
+int mems_ls(struct mems *mems);
 int mems_free(struct mems *mems);
 int mems_push(struct mems *mems, unsigned long size, int numa_node_number);
 int mems_pop(struct mems *mems, int n);

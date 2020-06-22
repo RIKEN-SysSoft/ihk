@@ -65,7 +65,7 @@ int mems_copy(struct mems *dst, struct mems *src)
 }
 
 /* type: "MemTotal" or "MemFree" */
-int mems_ls(struct mems *mems, char *type, double ratio)
+int _mems_ls(struct mems *mems, char *type, double ratio, long constant)
 {
 	int ret;
 	FILE *fp = NULL;
@@ -138,6 +138,11 @@ int mems_ls(struct mems *mems, char *type, double ratio)
 
 	mems->num_mem_chunks = numa_node_number + 1;
 	INFO("# of NUMA nodes: %d\n", mems->num_mem_chunks);
+
+	if (constant != -1) {
+		mems_fill(mems, constant);
+	}
+
 	ret = 0;
  out:
 	if (fp) {
@@ -145,6 +150,11 @@ int mems_ls(struct mems *mems, char *type, double ratio)
 	}
 
 	return ret;
+}
+
+int mems_ls(struct mems *mems)
+{
+	return _mems_ls(mems, "MemFree", 0.9, 1UL << 30);
 }
 
 int mems_free(struct mems *mems)
@@ -663,16 +673,16 @@ int mems_check_total(unsigned long lower_limit)
 	return ret;
 }
 
-int mems_reserve(void)
+int _mems_reserve(int nlinux, double ratio, unsigned long constant)
 {
 	int ret;
 	struct mems mems = { 0 };
 	int excess;
 
-	ret = mems_ls(&mems, "MemFree", 0.9);
+	ret = _mems_ls(&mems, "MemFree", ratio, constant);
 	INTERR(ret, "mems_ls returned %d\n", ret);
 
-	excess = mems.num_mem_chunks - 4;
+	excess = mems.num_mem_chunks - nlinux;
 	if (excess > 0) {
 		ret = mems_shift(&mems, excess);
 		INTERR(ret, "mems_shift returned %d\n", ret);
@@ -686,6 +696,11 @@ int mems_reserve(void)
 	ret = 0;
  out:
 	return ret;
+}
+
+int mems_reserve(void)
+{
+	return _mems_reserve(4, 0.9, 1UL << 30);
 }
 
 int mems_release(void)

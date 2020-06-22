@@ -15,8 +15,9 @@ struct ikc_cpu_map {
 
 int cpus_init(struct cpus *cpus, int ncpus);
 int cpus_copy(struct cpus *dst, struct cpus *src);
-int _cpus_ls(struct cpus *cpus, char *online);
+int _cpus_ls(struct cpus *cpus, char *online, int nlinux, int nmck);
 int cpus_ls(struct cpus *cpus);
+int cpus_ls_online(struct cpus *cpus, int nlinux, int nmck);
 int cpus_max_id(struct cpus *cpus);
 int cpus_push(struct cpus *cpus, int id);
 int cpus_pop(struct cpus *cpus, int n);

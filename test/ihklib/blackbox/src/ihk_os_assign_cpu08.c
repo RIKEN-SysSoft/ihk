@@ -36,8 +36,8 @@ int main(int argc, char **argv)
 	struct cpus cpu_last = { 0 };
 	struct cpus cpus_input[5] = {{ 0 }};
 
-	ret = cpus_ls(&cpu_last);
-	INTERR(ret, "cpus_ls returned %d\n", ret);
+	ret = _cpus_ls(&cpu_last, "online", 2, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 	ret = cpus_shift(&cpu_last, cpu_last.ncpus - 1);
 	INTERR(ret, "cpus_shift returned %d\n", ret);
@@ -49,19 +49,16 @@ int main(int argc, char **argv)
 
 	struct cpus cpus = { 0 };
 
-	ret = cpus_ls(&cpu_unreserved);
-	INTERR(ret, "cpus_ls returned %d\n", ret);
+	ret = _cpus_ls(&cpu_unreserved, "online", 2, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 	/* the 2nd last cpu */
 	ret = cpus_shift(&cpu_unreserved, cpu_unreserved.ncpus - 1);
 	INTERR(ret, "cpus_shift returned %d\n", ret);
 	unreserved_cpu = cpu_unreserved.cpus[0];
 
-	ret = cpus_ls(&cpus);
-	INTERR(ret, "cpus_ls returned %d\n", ret);
-
-	ret = cpus_shift(&cpus, 2);
-	INTERR(ret, "cpus_shift returned %d\n", ret);
+	ret = _cpus_ls(&cpus, "online", 2, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 	ret = cpus_pop(&cpus, 1);
 	INTERR(ret, "cpus_shift returned %d\n", ret);
@@ -96,7 +93,7 @@ int main(int argc, char **argv)
 		}
 
 		ret = cpus_reserved(&cpus_input[i]);
-		INTERR(ret, "cpus_ls returned %d\n", ret);
+		INTERR(ret, "cpus_reserved returned %d\n", ret);
 
 		ret = cpus_pop(&cpus_input[i], 1);
 		INTERR(ret, "cpus_shift returned %d\n", ret);

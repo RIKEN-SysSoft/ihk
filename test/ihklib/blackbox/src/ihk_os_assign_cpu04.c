@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	ret = linux_insmod(0);
 	INTERR(ret, "linux_insmod returned %d\n", ret);
 
-	ret = cpus_reserve();
+	ret = _cpus_reserve(2, -1);
 	INTERR(ret, "cpus_reserve returned %d\n", ret);
 
 	ret = ihk_create_os(0);

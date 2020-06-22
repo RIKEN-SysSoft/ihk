@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	for (i = 1; i < 2; i++) {
 		int excess;
 
-		ret = mems_ls(&mems_input[i], "MemFree", 0.9);
+		ret = mems_ls(&mems_input[i]);
 		INTERR(ret, "mems_ls returned %d\n", ret);
 
 		excess = mems_input[i].num_mem_chunks - 4;
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < 2; i++) {
 		int excess;
 
-		ret = mems_ls(&mems_margin[i], "MemFree", 0.9);
+		ret = mems_ls(&mems_margin[i]);
 		INTERR(ret, "mems_ls returned %d\n", ret);
 
 		excess = mems_margin[i].num_mem_chunks - 4;

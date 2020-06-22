@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	/* Create node mask */
 	struct mems mems_ref = { 0 };
 
-	ret = mems_ls(&mems_ref, "MemFree", 1.0);
+	ret = _mems_ls(&mems_ref, "MemFree", 1.0, -1);
 	INTERR(ret, "mems_ls returned %d\n", ret);
 
 	excess = mems_ref.num_mem_chunks - 4;

@@ -29,8 +29,8 @@ int main(int argc, char **argv)
 
 	struct mems mems_ref = { 0 };
 
-	ret = mems_ls(&mems_ref, "MemFree", 1.0);
-	INTERR(ret, "mems_ls returned %d\n", ret);
+	ret = _mems_ls(&mems_ref, "MemFree", 1.0, -1);
+	INTERR(ret, "_mems_ls returned %d\n", ret);
 
 	excess = mems_ref.num_mem_chunks - 4;
 	if (excess > 0) {
@@ -137,8 +137,8 @@ int main(int argc, char **argv)
 			system(cmd);
 		}
 
-		ret = mems_ls(&mems_input[i], "MemFree", 0.95);
-		INTERR(ret, "mems_ls returned %d\n", ret);
+		ret = _mems_ls(&mems_input[i], "MemFree", 0.95, -1);
+		INTERR(ret, "_mems_ls returned %d\n", ret);
 
 		excess = mems_input[i].num_mem_chunks - 4;
 		if (excess > 0) {
