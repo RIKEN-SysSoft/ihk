@@ -36,8 +36,8 @@ int main(int argc, char **argv)
 			struct cpus cpus = { 0 };
 			int excess;
 
-			ret = _cpus_ls(&cpus, "online");
-			INTERR(ret, "cpus_ls returned %d\n", ret);
+			ret = _cpus_ls(&cpus, "online", 0, -1);
+			INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 			excess = cpus.ncpus - 16;
 			if (excess > 0) {
@@ -62,8 +62,8 @@ int main(int argc, char **argv)
 			struct cpus cpus_after_assign = { 0 };
 			int excess;
 
-			ret = _cpus_ls(&cpus_after_assign, "offline");
-			INTERR(ret, "cpus_ls returned %d\n", ret);
+			ret = _cpus_ls(&cpus_after_assign, "offline", 0, -1);
+			INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 			excess = cpus_after_assign.ncpus - 16;
 			if (excess > 0) {

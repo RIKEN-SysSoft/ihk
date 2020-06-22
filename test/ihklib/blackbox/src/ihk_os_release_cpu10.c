@@ -33,8 +33,8 @@ int main(int argc, char **argv)
 	struct cpus cpu_last = { 0 };
 	struct cpus cpus_input[4] = {{ 0 }};
 
-	ret = cpus_ls(&cpu_last);
-	INTERR(ret, "cpus_ls returned %d\n", ret);
+	ret = _cpus_ls(&cpu_last, "online", 2, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 	ret = cpus_shift(&cpu_last, cpu_last.ncpus - 1);
 	INTERR(ret, "cpus_shift returned %d\n", ret);
@@ -44,8 +44,8 @@ int main(int argc, char **argv)
 	ret = cpus_toggle(offlined_cpu, "off");
 	INTERR(ret, "cpus_toggle returned %d\n", ret);
 
-	ret = cpus_reserve();
-	INTERR(ret, "cpus_reserve returned %d\n", ret);
+	ret = _cpus_reserve(2, -1);
+	INTERR(ret, "_cpus_reserve returned %d\n", ret);
 
 	for (i = 0; i < 4; i++) {
 		int push_id;

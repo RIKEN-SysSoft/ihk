@@ -29,8 +29,8 @@ int main(int argc, char **argv)
 
 	/* Both Linux and McKernel cpus */
 	for (i = 0; i < 7; i++) {
-		ret = cpus_ls(&cpus_input[i]);
-		INTERR(ret, "cpus_ls returned %d\n", ret);
+		ret = _cpus_ls(&cpus_input[i], "online", 2, -1);
+		INTERR(ret, "_cpus_ls returned %d\n", ret);
 	}
 
 	/* Plus one */
@@ -41,12 +41,6 @@ int main(int argc, char **argv)
 	/* Minus one */
 	ret = cpus_pop(&cpus_input[5], 1);
 	INTERR(ret, "cpus_pop returned %d\n", ret);
-
-	/* Spare two cpus for Linux */
-	for (i = 0; i < 7; i++) {
-		ret = cpus_shift(&cpus_input[i], 2);
-		INTERR(ret, "cpus_shift returned %d\n", ret);
-	}
 
 	cpus_input[0].ncpus = INT_MIN;
 	cpus_input[1].ncpus = -1;

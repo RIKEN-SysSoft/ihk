@@ -28,8 +28,8 @@ int main(int argc, char **argv)
 	for (i = 0; i < 3; i++) {
 		int excess;
 
-		ret = mems_ls(&mems_input[i], "MemTotal", ratios[i]);
-		INTERR(ret, "mems_ls returned %d\n", ret);
+		ret = _mems_ls(&mems_input[i], "MemTotal", ratios[i], -1);
+		INTERR(ret, "_mems_ls returned %d\n", ret);
 
 		excess = mems_input[i].num_mem_chunks - 4;
 		if (excess > 0) {
@@ -44,8 +44,9 @@ int main(int argc, char **argv)
 	for (i = 0; i < 3; i++) {
 		int excess;
 
-		ret = mems_ls(&mems_after_reserve[i], "MemTotal", ratios[i]);
-		INTERR(ret, "mems_ls returned %d\n", ret);
+		ret = _mems_ls(&mems_after_reserve[i], "MemTotal",
+			       ratios[i], -1);
+		INTERR(ret, "_mems_ls returned %d\n", ret);
 
 		excess = mems_after_reserve[i].num_mem_chunks - 4;
 		if (excess > 0) {
@@ -66,8 +67,8 @@ int main(int argc, char **argv)
 	for (i = 0; i < 3; i++) {
 		int excess;
 
-		ret = mems_ls(&mems_margin[i], "MemTotal", 1.0);
-		INTERR(ret, "mems_ls returned %d\n", ret);
+		ret = _mems_ls(&mems_margin[i], "MemTotal", 1.0, -1);
+		INTERR(ret, "_mems_ls returned %d\n", ret);
 
 		excess = mems_margin[i].num_mem_chunks - 4;
 		if (excess > 0) {

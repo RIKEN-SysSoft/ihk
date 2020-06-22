@@ -30,8 +30,8 @@ int main(int argc, char **argv)
 	struct cpus cpu_offlined = { 0 };
 	struct cpus cpus_input[4] = {{ 0 }};
 
-	ret = cpus_ls(&cpu_offlined);
-	INTERR(ret, "cpus_ls returned %d\n", ret);
+	ret = _cpus_ls(&cpu_offlined, "online", 2, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 	ret = cpus_shift(&cpu_offlined, cpu_offlined.ncpus - 1);
 	INTERR(ret, "cpus_shift returned %d\n", ret);
@@ -50,11 +50,8 @@ int main(int argc, char **argv)
 	for (i = 0; i < 4; i++) {
 		int push_id;
 
-		ret = cpus_ls(&cpus_input[i]);
-		INTERR(ret, "cpus_ls returned %d\n", ret);
-
-		ret = cpus_shift(&cpus_input[i], 2);
-		INTERR(ret, "cpus_shift returned %d\n", ret);
+		ret = _cpus_ls(&cpus_input[i], "online", 2, -1);
+		INTERR(ret, "_cpus_ls returned %d\n", ret);
 
 		switch (i) {
 		case 0:

@@ -30,8 +30,8 @@ int main(int argc, char **argv)
 	struct mems mems_input[2] = {{ 0 }};
 
 	for (i = 0; i < 2; i++) {
-		ret = mems_ls(&mems_input[i], "MemFree", 0.9);
-		INTERR(ret, "mems_ls returned %d\n", ret);
+		ret = _mems_ls(&mems_input[i], "MemFree", 0.9, -1);
+		INTERR(ret, "_mems_ls returned %d\n", ret);
 
 		excess = mems_input[i].num_mem_chunks - 4;
 		if (excess > 0) {

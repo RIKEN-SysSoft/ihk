@@ -30,8 +30,8 @@ int main(int argc, char **argv)
 		int j;
 		int excess;
 
-		ret = mems_ls(&mems_input[i], "MemTotal", 1.0);
-		INTERR(ret, "mems_ls returned %d\n", ret);
+		ret = _mems_ls(&mems_input[i], "MemTotal", 1.0, -1);
+		INTERR(ret, "_mems_ls returned %d\n", ret);
 
 		excess = mems_input[i].num_mem_chunks - 4;
 		if (excess > 0) {
