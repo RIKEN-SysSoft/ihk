@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "799466cd_b6b67d0c",
+        "filename": "test/ihklib/blackbox/src/ihk_os_assign_cpu06.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-22T04:55:44Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I^I$",
+      "revId": "641b9ef8cb0186d7be2a5ccc60e8cfbae02fcc77",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
