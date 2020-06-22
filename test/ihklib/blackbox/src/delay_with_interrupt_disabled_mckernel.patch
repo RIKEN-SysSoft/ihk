@@ -20,23 +20,21 @@ index e677e3f0..75b8c1ca 100644
  void
  reset_cputime()
  {
-diff --git a/arch/x86_64/kernel/include/syscall_list.h b/arch/x86_64/kernel/include/syscall_list.h
-index b6bf4d55..3d2ca10e 100644
---- a/arch/x86_64/kernel/include/syscall_list.h
-+++ b/arch/x86_64/kernel/include/syscall_list.h
-@@ -180,3 +180,5 @@ SYSCALL_HANDLED(803, suspend_threads)
- SYSCALL_HANDLED(804, resume_threads)
- SYSCALL_HANDLED(811, linux_spawn)
- /**** End of File ****/
-+
-+SYSCALL_HANDLED(2003, delay_with_interrupt_disabled)
 diff --git a/arch/arm64/kernel/include/syscall_list.h b/arch/arm64/kernel/include/syscall_list.h
-index 19f286c..daab153 100644
+index bb3f6c0..0db4ce2 100644
 --- a/arch/arm64/kernel/include/syscall_list.h
 +++ b/arch/arm64/kernel/include/syscall_list.h
-@@ -142,3 +142,5 @@ SYSCALL_HANDLED(1045, signalfd)
- SYSCALL_DELEGATED(1049, stat)
- SYSCALL_DELEGATED(1060, getpgrp)
- SYSCALL_HANDLED(1062, time)
-+
+@@ -148,3 +148,4 @@ SYSCALL_DELEGATED(1069, epoll_wait)
+  * EOF just after it because those are used as a
+  * robust marker for the autotest patch.
+  */
++SYSCALL_HANDLED(2003, delay_with_interrupt_disabled)
+diff --git a/arch/x86_64/kernel/include/syscall_list.h b/arch/x86_64/kernel/include/syscall_list.h
+index 576ee0a..f21fe0a 100644
+--- a/arch/x86_64/kernel/include/syscall_list.h
++++ b/arch/x86_64/kernel/include/syscall_list.h
+@@ -184,3 +184,4 @@ SYSCALL_HANDLED(811, linux_spawn)
+  * EOF just after it because those are used as a
+  * robust marker for the autotest patch.
+  */
 +SYSCALL_HANDLED(2003, delay_with_interrupt_disabled)
