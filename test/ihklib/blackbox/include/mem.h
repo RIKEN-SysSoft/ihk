@@ -30,6 +30,7 @@ int mems_check_ratio(struct mems *divisor, struct mems *ratios,
 		     double *ratios_out);
 int mems_check_total(unsigned long lower_limit);
 
+int _mems_reserve(int nlinux, double ratio, unsigned long constant);
 int mems_reserve(void);
 int mems_release(void);
 

@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 				INTERR(ret, "mems_shift returned %d\n", ret);
 			}
 
-			mems_fill(&mems, 1UL << 30);
+			mems_dump(&mems);
 
 			ret = ihk_reserve_mem(0, mems.mem_chunks,
 					      mems.num_mem_chunks);
@@ -67,15 +67,7 @@ int main(int argc, char **argv)
 			int excess;
 
 			ret = mems_ls(&mems_after_assign);
-			INTERR(ret, "mems_ls returned %d\n", ret);
-
-			excess = mems_after_assign.num_mem_chunks - 4;
-			if (excess > 0) {
-				ret = mems_shift(&mems_after_assign, excess);
-				INTERR(ret, "mems_shift returned %d\n", ret);
-			}
-
-			mems_fill(&mems_after_assign, 1UL << 30);
+			INTERR(ret, "_mems_ls returned %d\n", ret);
 
 			excess = mems_after_assign.num_mem_chunks - 4;
 			if (excess > 0) {

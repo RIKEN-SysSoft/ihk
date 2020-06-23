@@ -690,7 +690,6 @@ int _mems_reserve(int nlinux, double ratio, unsigned long constant)
 
 	ret = ihk_reserve_mem(0, mems.mem_chunks,
 			      mems.num_mem_chunks);
-
 	INTERR(ret, "ihk_reserve_mem returned %d\n", ret);
 
 	ret = 0;

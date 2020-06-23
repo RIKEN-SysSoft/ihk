@@ -79,6 +79,10 @@ int main(int argc, char **argv)
 
 	ret = 0;
  out:
+	if (ihk_get_num_os_instances(0)) {
+		mems_os_release();
+		ihk_destroy_os(0, 0);
+	}
 	mems_release();
 	linux_rmmod(0);
 
