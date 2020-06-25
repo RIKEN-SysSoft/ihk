@@ -537,7 +537,11 @@ static int ihk_smp_acpi_parse_entries(char *id, unsigned long table_size,
 	       table_end) {
 		if (entry->type == entry_id
 		    && (!max_entries || count < max_entries)) {
+#if defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 2)
+			if (handler((union acpi_subtable_headers *)entry, table_end))
+#else
 			if (handler(entry, table_end))
+#endif
 				return -EINVAL;
 
 			count++;
@@ -574,9 +578,16 @@ static int ihk_smp_acpi_parse_entries(char *id, unsigned long table_size,
  *		__init gic_acpi_parse_madt_distributor
  *		static bool __init acpi_validate_gic_table
  */
+#if defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 2)
+static int ihk_smp_acpi_parse_madt_distributor(union acpi_subtable_headers *headers,
+				const unsigned long end)
+{
+	struct acpi_subtable_header *header = &headers->common;
+#else
 static int ihk_smp_acpi_parse_madt_distributor(struct acpi_subtable_header *header,
 				const unsigned long end)
 {
+#endif
 
 	struct ihk_acpi_madt_generic_distributor {
 		struct acpi_subtable_header header;
