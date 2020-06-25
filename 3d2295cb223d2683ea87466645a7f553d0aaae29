@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "786c8aac_432306cd",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-25T03:38:31Z",
+      "side": 1,
+      "message": "WARNING: Possible unwrapped commit description (prefer a maximum 75 chars per line)\nhttps://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit/?id\u003d60574d1e05b094d222162260dd9cac49f4d0996a",
+      "revId": "3d2295cb223d2683ea87466645a7f553d0aaae29",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6ba527a3_9cda4876",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 540,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-25T03:38:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+#if defined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(8, 2)",
+      "revId": "3d2295cb223d2683ea87466645a7f553d0aaae29",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "72bd68cf_c4e6db0d",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 541,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-25T03:38:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tif (handler((union acpi_subtable_headers *)entry, table_end))",
+      "revId": "3d2295cb223d2683ea87466645a7f553d0aaae29",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e8bfa80c_c4418ee6",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 581,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-25T03:38:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+#if defined(RHEL_RELEASE_CODE) \u0026\u0026 RHEL_RELEASE_CODE \u003e\u003d RHEL_RELEASE_VERSION(8, 2)",
+      "revId": "3d2295cb223d2683ea87466645a7f553d0aaae29",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6bca3b32_40bfd193",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 582,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-06-25T03:38:31Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int ihk_smp_acpi_parse_madt_distributor(union acpi_subtable_headers *headers,",
+      "revId": "3d2295cb223d2683ea87466645a7f553d0aaae29",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
