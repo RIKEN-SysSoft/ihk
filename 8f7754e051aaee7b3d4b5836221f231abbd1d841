@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "4ee6047e_3d65b2a2",
+        "filename": "test/ihklib/blackbox/src/ihk_os_assign_cpu06.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-07-20T02:04:46Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I^I$",
+      "revId": "8f7754e051aaee7b3d4b5836221f231abbd1d841",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "37676b39_f9afbcb5",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem09.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 91,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-07-20T02:04:46Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I$",
+      "revId": "8f7754e051aaee7b3d4b5836221f231abbd1d841",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9b955a95_e61df35f",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem13.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 75,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-07-20T02:04:46Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I^I^Imem_conf_input[0] \u003d 90; $",
+      "revId": "8f7754e051aaee7b3d4b5836221f231abbd1d841",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3671fd17_a9fbb806",
+        "filename": "test/ihklib/blackbox/src/mem.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 173,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-07-20T02:04:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tfp \u003d popen(\"dmesg | awk \u0027/NUMA.*free mem/ { numa\u003d$(NF-7); size[numa] \u003d $(NF-1); if (numa \u003e max) { max \u003d numa } } END { for (i \u003d 0; i \u003c\u003d max; i++) { if (size[i] \u003e 0) { printf \\\"%d %d\\\\n\\\", i, size[i] } } }\u0027\",",
+      "revId": "8f7754e051aaee7b3d4b5836221f231abbd1d841",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
