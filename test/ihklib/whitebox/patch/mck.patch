@@ -1,0 +1,10 @@
+--- old_CMakeLists.txt	2020-08-11 20:45:14.540630311 +0700
++++ new_CMakeLists.txt	2020-08-11 20:47:42.426645879 +0700
+@@ -210,6 +210,7 @@
+ add_subdirectory(kernel)
+ add_subdirectory(tools/mcstat)
+ add_subdirectory(tools/crash)
++add_subdirectory(ihk/test/ihklib/whitebox/src/driver/mcctrl)
+ 
+ configure_file(scripts/mcreboot-smp.sh.in mcreboot.sh @ONLY)
+ configure_file(scripts/mcstop+release-smp.sh.in mcstop+release.sh @ONLY)
