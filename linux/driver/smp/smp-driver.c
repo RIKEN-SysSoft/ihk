@@ -607,13 +607,13 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 						0, sizeof(bp_mem_chunk->tofu_dma_addr));
 
 				for (tni = 0; tni < 6; ++tni) {
-					for (cq = 0; cq < 12; ++cq) {
+					for (cq = 0; cq < 11; ++cq) {
 
 						bp_mem_chunk->tofu_dma_addr[tni][cq] =
 							tofu_smmu_get_ipa(tni, cq,
 									phys_to_virt(os_mem_chunk->addr),
 									os_mem_chunk->size);
-						kprintf("%s: chunk 0x%lx:%lu TNI %d, CQ %d,"
+						dprintf("%s: chunk 0x%lx:%lu TNI %d, CQ %d,"
 								" DMA addr: 0x%lx (offset: %lu)\n",
 								__func__,
 								os_mem_chunk->addr,
@@ -1272,6 +1272,28 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		dprintk("IHK-SMP: mem chunk: 0x%lx - 0x%lx (len: %lu) freed\n",
 				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 				mem_chunk->size);
+
+		{
+			int tni, cq;
+			for (tni = 0; tni < 6; ++tni) {
+				for (cq = 0; cq < 11; ++cq) {
+
+					if (!os_mem_chunk->tofu_dma_addr[tni][cq])
+						continue;
+
+					tofu_smmu_release_ipa(tni, cq,
+						os_mem_chunk->tofu_dma_addr[tni][cq],
+						os_mem_chunk->size);
+					dprintf("%s: chunk 0x%lx:%lu TNI %d, CQ %d,"
+							" DMA addr: 0x%lx released\n",
+							__func__,
+							os_mem_chunk->addr,
+							os_mem_chunk->size,
+							tni, cq,
+							(unsigned long)os_mem_chunk->tofu_dma_addr[tni][cq]);
+				}
+			}
+		}
 
 		add_free_mem_chunk(mem_chunk);
 
@@ -2557,7 +2579,7 @@ static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
 		{
 			int tni, cq;
 			for (tni = 0; tni < 6; ++tni) {
-				for (cq = 0; cq < 12; ++cq) {
+				for (cq = 0; cq < 11; ++cq) {
 
 					if (!os_mem_chunk->tofu_dma_addr[tni][cq])
 						continue;
@@ -2565,6 +2587,13 @@ static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
 					tofu_smmu_release_ipa(tni, cq,
 						os_mem_chunk->tofu_dma_addr[tni][cq],
 						os_mem_chunk->size);
+					dprintf("%s: chunk 0x%lx:%lu TNI %d, CQ %d,"
+							" DMA addr: 0x%lx released\n",
+							__func__,
+							os_mem_chunk->addr,
+							os_mem_chunk->size,
+							tni, cq,
+							(unsigned long)os_mem_chunk->tofu_dma_addr[tni][cq]);
 				}
 			}
 		}
