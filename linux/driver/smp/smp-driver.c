@@ -2762,6 +2762,10 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 	struct builtin_device_data *data = priv;
 	struct smp_os_data *os;
 
+	if (!priv || !regdata) {
+		return -EINVAL;
+	}
+
 	*regdata = builtin_os_reg_data;
 
 	os = kzalloc(sizeof(struct smp_os_data), GFP_KERNEL);
@@ -4160,7 +4164,7 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	ret_internal = copy_from_user(&req, (void *)arg, sizeof(req));
 	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
 
-	ARCHDRV_CHKANDJUMP(req.num_chunks < 0, "invalid request length",
+	ARCHDRV_CHKANDJUMP(req.num_chunks <= 0, "invalid request length",
 			-EINVAL);
 
 	req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
@@ -4209,7 +4213,7 @@ static int smp_ihk_release_mem_partially(ihk_device_t ihk_dev,
 		goto out;
 	}
 
-	if (req.num_chunks < 0) {
+	if (req.num_chunks <= 0) {
 		pr_err("%s: invalid number of chunks (%d)\n",
 		       __func__, req.num_chunks);
 		ret = -EINVAL;
@@ -4284,6 +4288,10 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	/* Count memory chunks */
 	list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
 		num_chunks++;
+	}
+
+	if (req.num_chunks < 0) {
+		return -EINVAL;
 	}
 
 	if (req.num_chunks == 0) {
