@@ -541,6 +541,36 @@ foreach(target IN ITEMS
     test_ihk_host_device_ioctl
     test_smp_ihk_os_wait_for_status
     test_mcctrl_os_shutdown_notifier
+    test_add_free_mem_chunk
+    test_delete_procfs_entries
+    test_destroy_ikc_channels
+    test_find_procfs_entry
+    test_free_cpu_topology
+    test_free_cpu_topology_one
+    test_free_node_topology
+    test_free_topology_info
+    test_ihk_device_unmap_virtual
+    test_ihk_ikc_destroy_channels
+    test_ihk_ikc_free_channels
+    test_ihk_os_get_special_addr
+    test_ihk_os_query_status
+    test_ihk_os_send_nmi
+    test_ihk_smp_cpu_kill
+    test_ihk_smp_get_cpu_affinity
+    test_ihk_smp_reset_cpu
+    test_ikc_master_finalize
+    test_mcctrl_wakeup_desc_cleanup
+    test_pager_cleanup
+    test_procfs_exit
+    test_release_kmsg_buf
+    test_remove
+    test_smp_ihk_os_query_status
+    test_smp_ihk_map_virtual
+    test_ihk_smp_map_virtual
+    test_smp_ihk_os_send_nmi
+    test_smp_ihk_os_shutdown
+    test_smp_ihk_os_unmap_lwk
+    test_sysfsm_cleanup
     )
   # Add target
   add_executable(${target} src/user/ihk_destroy_os/${target}.c)
