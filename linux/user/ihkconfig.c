@@ -271,7 +271,7 @@ static int do_reserve(int fd)
 		IHKCONFIG_CHKANDJUMP(!req_mem.numa_ids,
 				"allocate request space", -1);
 
-		ret = mem_str2req(__argv[4], cnt, &req_mem);
+		ret = mem_str2req(__argv[4], &req_mem);
 		IHKCONFIG_CHKANDJUMP(ret < 0,
 				"parse provided memlist string", -1);
 
@@ -368,7 +368,7 @@ static int do_release(int fd)
 			IHKCONFIG_CHKANDJUMP(!req_mem.numa_ids,
 					"allocate request space", -1);
 
-			ret = mem_str2req(__argv[4], cnt, &req_mem);
+			ret = mem_str2req(__argv[4], &req_mem);
 			IHKCONFIG_CHKANDJUMP(ret < 0,
 					"parse provided memlist string", -1);
 		}
