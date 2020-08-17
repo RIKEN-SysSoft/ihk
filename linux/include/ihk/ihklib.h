@@ -119,6 +119,11 @@ int ihk_os_freeze(unsigned long *os_set, int n);
 int ihk_os_thaw(unsigned long *os_set, int n);
 int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interactive);
 int ihk_set_loglevel(enum IHKLIB_LOGLEVEL level);
+int ihk_create_os_str(int dev_index, int *_os_index,
+		      const char *envp, int num_env,
+		      const char *kernel_image,
+		      const char *default_kargs,
+		      char *err_msg);
 
 #endif
 
