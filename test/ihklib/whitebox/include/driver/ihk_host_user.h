@@ -81,6 +81,59 @@ typedef enum ihk_test_mode {
   TEST_IHK_OS_SHUTDOWN                            = 30,
   TEST_SMP_IHK_OS_WAIT_FOR_STATUS                 = 31,
   TEST_MCCTRL_OS_SHUTDOWN_NOTIFIER                = 32,
+  TEST_SMP_IHK_OS_QUERY_STATUS                    = 33,
+  TEST__IHK_OS_SEND_NMI                           = 34,
+  TEST_SMP_IHK_OS_SEND_NMI                        = 35,
+  TEST_IHK_OS_GET_SPECIAL_ADDR                    = 36,
+  TEST_SMP_IHK_MAP_VIRTUAL                        = 37,
+  TEST_IHK_SMP_MAP_VIRTUAL                        = 38,
+  TEST_PAGER_CLEANUP                              = 39,
+  TEST_SYSFSM_CLEANUP                             = 40,
+  TEST_REMOVE                                     = 41,
+  TEST_FREE_TOPOLOGY_INFO                         = 42,
+  TEST_FREE_NODE_TOPOLOGY                         = 43,
+  TEST_FREE_CPU_TOPOLOGY_ONE                      = 44,
+  TEST_FREE_CPU_TOPOLOGY                          = 45,
+  TEST_DESTROY_IKC_CHANNELS                       = 46,
+  TEST_IHK_IKC_DESTROY_CHANNEL                    = 47,
+  TEST_MCCTRL_WAKEUP_DESC_CLEANUP                 = 48,
+  TEST_PROCFS_EXIT                                = 49,
+  TEST_FIND_PROCFS_ENTRY                          = 50,
+  TEST_DELETE_PROCFS_ENTRIES                      = 51,
+  TEST_IKC_MASTER_FINALIZE                        = 52,
+  TEST_IHK_IKC_FREE_CHANNEL                       = 53,
+  TEST__IHK_DEVICE_UNMAP_VIRTUAL                  = 54,
+  TEST_RELEASE_KMSG_BUF                           = 55,
+  TEST_ADD_FREE_MEM_CHUNK                         = 56,
+  TEST_IHK_SMP_CPU_KILL                           = 57,
+  TEST_IHK_SMP_GET_CPU_AFFINITY                   = 58,
+  TEST_SMP_IHK_OS_UNMAP_LWK                       = 59,
+  TEST_IHK_SMP_RESET_CPU                          = 60,
+  TEST_SMP_IHK_OS_SHUTDOWN                        = 61,
+  TEST_IHK_SMP_SET_NMI_NODE                       = 62,
+
+  /* ihk_os_assign_cpu */
+  TEST_SMP_IHK_OS_ASSIGN_CPU                      = 63,
+  TEST__IHK_OS_ASSIGN_CPU                         = 64,
+
+  /* ihk_os_query_cpu */
+  TEST_SMP_IHK_OS_QUERY_CPU                       = 65,
+  TEST__IHK_OS_QUERY_CPU                          = 66,
+
+  /* ihk_os_release_cpu */
+  TEST__IHK_OS_RELEASE_CPU                        = 67,
+  TEST_SMP_IHK_OS_RELEASE_CPU                     = 68,
+
+  /* ihk_os_set_ikc_map */
+  TEST__IHK_OS_SET_IKC_MAP                        = 69,
+  TEST_SMP_IHK_OS_SET_IKC_MAP                     = 70,
+
+  /* ihk_os_get_ikc_map */
+  TEST__IHK_OS_GET_IKC_MAP                        = 71,
+  TEST_SMP_IHK_OS_GET_IKC_MAP                     = 72,
+
+  /* ihk_os_get_num_assigned_cpus */
+  TEST__IHK_OS_GET_NUM_CPUS                       = 73,
 
   // other API here
 } ihk_test_mode_t;

@@ -51,6 +51,24 @@ typedef enum ihklib_test_mode {
   /* ihk_destroy_os */
   TEST_IHK_DESTROY_OS                              = 15,
 
+  /* ihk_os_set_ikc_map */
+  TEST_IHK_OS_SET_IKC_MAP                          = 16,
+
+  /* ihk_os_get_ikc_map */
+  TEST_IHK_OS_GET_IKC_MAP                          = 17,
+
+  /* ihk_os_release_cpu */
+  TEST_IHK_OS_RELEASE_CPU                          = 18,
+
+  /* ihk_os_query_cpu */
+  TEST_IHK_OS_QUERY_CPU                            = 19,
+
+  /* ihk_os_get_num_assigned_cpus */
+  TEST_IHK_OS_GET_NUM_ASSIGNED_CPUS                = 20,
+
+  /* ihk_os_assign_cpu */
+  TEST_IHK_OS_ASSIGN_CPU                           = 21,
+
 } ihklib_test_mode_t;
 
 struct ihk_ioctl_desc {
