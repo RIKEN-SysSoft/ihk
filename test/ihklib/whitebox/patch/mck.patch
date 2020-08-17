@@ -1,5 +1,5 @@
---- old_CMakeLists.txt	2020-08-11 20:45:14.540630311 +0700
-+++ new_CMakeLists.txt	2020-08-11 20:47:42.426645879 +0700
+--- old_CMakeLists.txt	2020-08-18 22:18:28.277653647 +0700
++++ new_CMakeLists.txt	2020-08-18 22:15:47.866887590 +0700
 @@ -210,6 +210,7 @@
  add_subdirectory(kernel)
  add_subdirectory(tools/mcstat)

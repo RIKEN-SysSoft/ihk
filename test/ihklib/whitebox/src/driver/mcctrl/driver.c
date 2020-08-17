@@ -34,8 +34,8 @@
 #include <linux/version.h>
 
 #include <driver/ihk_host_driver.h>
-#include "mcctrl.h"
 #include <driver/ihk_host_user.h>
+#include "mcctrl.h"
 
 #include "driver/okng_driver.h"
 #include "driver/fs_utils.h"
@@ -195,20 +195,6 @@ int mcctrl_os_shutdown_notifier_orig(int os_index)
   return 0;
 }
 
-static int _os_procfs_entry_exist(int os_index)
-{
-  char path[20] = "\0";
-  sprintf(path, "/proc/mcos%d", os_index);
-  return fs_folder_exist(path);
-}
-
-static int _os_sysfs_entry_exist(int os_index)
-{
-  char path[200] = "\0";
-  sprintf(path, "/sys/devices/virtual/mcos/mcos%d/sys", os_index);
-  return fs_folder_exist(path);
-}
-
 int mcctrl_os_shutdown_notifier(int os_index)
 {
   if (g_ihk_test_mode != TEST_MCCTRL_OS_SHUTDOWN_NOTIFIER)  // Disable test code
@@ -232,8 +218,8 @@ int mcctrl_os_shutdown_notifier(int os_index)
   }
 
   if (exec_path & PATH_OS_EXIST) {
-    OKNG(!_os_procfs_entry_exist(os_index), "os procfs entries are removed\n");
-    OKNG(!_os_sysfs_entry_exist(os_index), "os sysfs entries are removed\n");
+    OKNG(!fs_os_procfs_entry_exist(os_index), "os procfs entries are removed\n");
+    OKNG(!fs_os_sysfs_entry_exist(os_index), "os sysfs entries are removed\n");
     struct ihk_os_kernel_call_handler *_handlers =
       ihk_os_get_kernel_call_handlers(os[os_index]);
     OKNG(_handlers == NULL, "kernel call handlers should be cleared\n");
@@ -254,10 +240,12 @@ int mcctrl_os_shutdown_notifier(int os_index)
 
   os[os_index] = NULL;
 
+  OKNG(os[os_index] == NULL, "os cache list should be updated\n");
+
   printk("mcctrl: OS ID %d shutdown event handled\n", os_index);
 
   return 0;
-  err:
+ err:
   return -1;
 }
 
