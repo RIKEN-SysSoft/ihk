@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 
   int fd = ihklib_device_open(0);
   INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  int test_mode = TEST_MCCTRL_OS_SHUTDOWN_NOTIFIER;
+  int test_mode = TEST_MCCTRL_WAKEUP_DESC_CLEANUP;
   ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
   INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
   close(fd); fd = -1;
@@ -31,15 +31,15 @@ int main(int argc, char **argv)
   INTERR(ret, "cpus_reserve returned %d\n", ret);
 
   struct mems mems = { 0 };
-  int excess;
+	int excess;
   ret = mems_ls(&mems, "MemFree", 0.02);
-  INTERR(ret, "mems_ls returned %d\n", ret);
-  excess = mems.num_mem_chunks - 4;
-  if (excess > 0) {
-    ret = mems_shift(&mems, excess);
-    INTERR(ret, "mems_shift returned %d\n", ret);
-  }
-  ret = ihk_reserve_mem(0, mems.mem_chunks, mems.num_mem_chunks);
+	INTERR(ret, "mems_ls returned %d\n", ret);
+	excess = mems.num_mem_chunks - 4;
+	if (excess > 0) {
+		ret = mems_shift(&mems, excess);
+		INTERR(ret, "mems_shift returned %d\n", ret);
+	}
+	ret = ihk_reserve_mem(0, mems.mem_chunks, mems.num_mem_chunks);
 
   struct ikc_cpu_map map_input = { 0 };
   ret = ikc_cpu_map_2toN(&map_input);
@@ -51,19 +51,19 @@ int main(int argc, char **argv)
   os_index = ret;
 
   ret = cpus_os_assign();
-  INTERR(ret, "cpus_os_assign returned %d\n", ret);
+	INTERR(ret, "cpus_os_assign returned %d\n", ret);
 
-  ret = mems_os_assign();
-  INTERR(ret, "mems_os_assign returned %d\n", ret);
+	ret = mems_os_assign();
+	INTERR(ret, "mems_os_assign returned %d\n", ret);
 
   ret = ihk_os_set_ikc_map(0, map_input.map, map_input.ncpus);
   INTERR(ret, "ihk_os_set_ikc_map returned %d\n", ret);
 
-  ret = os_load();
-  INTERR(ret, "os_load returned %d\n", ret);
+	ret = os_load();
+	INTERR(ret, "os_load returned %d\n", ret);
 
-  ret = os_kargs();
-  INTERR(ret, "os_kargs returned %d\n", ret);
+	ret = os_kargs();
+	INTERR(ret, "os_kargs returned %d\n", ret);
 
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);

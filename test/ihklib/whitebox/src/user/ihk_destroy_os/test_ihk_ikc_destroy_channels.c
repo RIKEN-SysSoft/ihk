@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 
   int fd = ihklib_device_open(0);
   INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  int test_mode = TEST_MCCTRL_OS_SHUTDOWN_NOTIFIER;
+  int test_mode = TEST_IHK_IKC_DESTROY_CHANNEL;
   ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
   INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
   close(fd); fd = -1;
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
- out:
+  out:
   if (fd != -1) close(fd);
   ret = ihk_destroy_os(0, os_index);
   cpus_release();

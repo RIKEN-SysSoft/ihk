@@ -235,6 +235,9 @@ struct ihk_os_ops {
   /** \note Obsolete. */
   int (*unmap_memory)(ihk_os_t, void *, unsigned long, unsigned long);
 
+  /* Get the number of handlers */
+  int (*get_num_handlers)(ihk_os_t, void *);
+
   /**
    * \brief Register a handler for an interrupt
    *
