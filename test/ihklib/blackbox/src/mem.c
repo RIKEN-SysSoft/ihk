@@ -165,15 +165,37 @@ int mems_free(struct mems *mems)
 
 	if (mems->mem_chunks == NULL) {
 		ret = mems_init(mems, MAX_NUM_MEM_CHUNKS);
-		if (ret != 0) {
+		if (ret) {
+			printf("%s: mems_init failed with %d\n",
+			       __func__, ret);
 			goto out;
 		}
 	}
 
-	fp = popen("dmesg | awk '/NUMA.*free mem/ { numa=$(NF-7); size[numa] = $(NF-1); if (numa > max) { max = numa } } END { for (i = 0; i <= max; i++) { if (size[i] > 0) { printf \"%d %d\\n\", i, size[i] } } }'",
+	/* extracting numa # and size from the line like:
+	 *   [ 6524.591273] __ihk_smp_reserve_mem: NUMA 0 (online nodes: 2), \
+	 *   free mem: 62226497536 bytes
+	 */
+	fp = popen("dmesg | "
+		   "grep -oE '__ihk_smp_reserve_mem: NUMA.*$' | "
+		   "awk '"
+		   "{ "
+			"numa=$(NF-7); size[numa] = $(NF-1); "
+			"if (numa > max) { max = numa } "
+		   "} "
+		   "END { "
+			"for (i = 0; i <= max; i++) { "
+				"if (size[i] > 0) { "
+					"printf \"%d %d\\n\", i, size[i] "
+				"} "
+			"} "
+		   "}'",
 		   "r");
+
 	if (fp == NULL) {
 		ret = -errno;
+		printf("%s: popen failed with %d\n",
+		       __func__, -ret);
 		goto out;
 	}
 
@@ -206,6 +228,8 @@ int mems_free(struct mems *mems)
 	pclose(fp);
 	fp = NULL;
 
+	printf("%s: max_numa_node_number: %d\n",
+	       __func__, max_numa_node_number);
 	mems->mem_chunks = mremap(mems->mem_chunks,
 				  sizeof(struct ihk_mem_chunk) *
 				  mems->num_mem_chunks,
@@ -213,10 +237,10 @@ int mems_free(struct mems *mems)
 				  max_numa_node_number + 1,
 				  MREMAP_MAYMOVE);
 	if (mems->mem_chunks == MAP_FAILED) {
-		int errno_save = errno;
+		ret = -errno;
 
-		printf("%s: mremap returned %d\n", __func__, errno);
-		ret = -errno_save;
+		printf("%s: mremap failed with %d\n",
+		       __func__, -ret);
 		goto out;
 	}
 
@@ -526,7 +550,7 @@ int mems_check_var(double allowed_var)
 		       ret, num_mem_chunks);
 
 		ret = ihk_query_mem(0, mems.mem_chunks, mems.num_mem_chunks);
-		INTERR(ret, "ihk_query_cpu returned %d\n",
+		INTERR(ret, "ihk_query_mem returned %d\n",
 		       ret);
 	}
 
@@ -568,37 +592,17 @@ int mems_check_var(double allowed_var)
 }
 
 /* ratio is represented by percentage */
-int mems_check_ratio(struct mems *divisor, struct mems *ratios,
-		     double *ratios_out)
+int _mems_check_ratio(struct mems *dividend, struct mems *divisor,
+		      struct mems *ratios, double *ratios_out)
 {
 	int ret;
-	int num_mem_chunks;
-	struct mems dividend = { 0 };
 	int i;
 	long sum_dividend[MAX_NUM_MEM_CHUNKS] = { 0 };
 	long sum_divisor[MAX_NUM_MEM_CHUNKS] = { 0 };
 	long sum_ratios[MAX_NUM_MEM_CHUNKS] = { 0 };
 	int fail = 0;
 
-	ret = ihk_get_num_reserved_mem_chunks(0);
-	INTERR(ret < 0, "ihk_get_num_reserved_mem_chunks returned %d\n",
-	       ret);
-
-	num_mem_chunks = ret;
-
-	if (num_mem_chunks > 0) {
-		ret = mems_init(&dividend, num_mem_chunks);
-		INTERR(ret,
-		       "mems_init returned %d, num_mem_chunks: %d\n",
-		       ret, num_mem_chunks);
-
-		ret = ihk_query_mem(0, dividend.mem_chunks,
-				    dividend.num_mem_chunks);
-		INTERR(ret, "ihk_query_cpu returned %d\n",
-		       ret);
-	}
-
-	mems_sum(&dividend, sum_dividend);
+	mems_sum(dividend, sum_dividend);
 	mems_sum(divisor, sum_divisor);
 	mems_sum(ratios, sum_ratios);
 
@@ -626,8 +630,39 @@ int mems_check_ratio(struct mems *divisor, struct mems *ratios,
 	}
 
 	ret = 0;
- out:
+
 	return ret ? ret : fail;
+}
+
+int mems_check_ratio(struct mems *divisor, struct mems *ratios,
+		     double *ratios_out)
+{
+	int ret;
+	int num_mem_chunks;
+	struct mems dividend = { 0 };
+
+	ret = ihk_get_num_reserved_mem_chunks(0);
+	INTERR(ret < 0, "ihk_get_num_reserved_mem_chunks returned %d\n",
+	       ret);
+
+	num_mem_chunks = ret;
+
+	if (num_mem_chunks > 0) {
+		ret = mems_init(&dividend, num_mem_chunks);
+		INTERR(ret,
+		       "mems_init returned %d, num_mem_chunks: %d\n",
+		       ret, num_mem_chunks);
+
+		ret = ihk_query_mem(0, dividend.mem_chunks,
+				    dividend.num_mem_chunks);
+		INTERR(ret, "ihk_query_cpu returned %d\n",
+		       ret);
+	}
+
+	return _mems_check_ratio(&dividend, divisor, ratios,
+				 ratios_out);
+ out:
+	return ret;
 }
 
 int mems_check_total(unsigned long lower_limit)
