@@ -8,6 +8,10 @@
 
 #define IHK_OS_EVENTFD_MONITOR_INTERVAL (1000*1000*2) /* usec */
 
+#define IHKLIB_MAX_SIZE_ENV (1UL << 20)
+#define IHKLIB_MAX_NUM_ENV (1UL << 10)
+#define IHKLIB_MAX_SIZE_ERR_MSG (1UL << 12)
+
 struct ihk_ioctl_desc {
 	char *string;
 	int string_len;
@@ -86,7 +90,7 @@ int cpu_str2count(char *cpu_list);
 int cpu_str2req(char *_cpu_list, int num_cpus, struct ihk_cpu_req *req);
 char *cpu_req2str(struct ihk_cpu_req *req);
 int mem_str2count(char *mem_list);
-int mem_str2req(char *_mem_list, int num_mem_chunks, struct ihk_mem_req *req);
+int mem_str2req(char *_mem_list, struct ihk_mem_req *req);
 char *mem_req2str(struct ihk_mem_req *req);
 int ikc_str2count(char *ikc_list);
 int ikc_str2req(char *_ikc_list, int num_cpus, struct ihk_ikc_req *req);
