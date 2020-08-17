@@ -102,4 +102,26 @@ static inline void arr_copy_and_add(int dst[], int sorted_src[],
   }
 }
 
+static inline int arr_contains(int arr[], int n, int val)
+{
+  if (!arr || n <= 0) return 0;
+  int i;
+  for (i = 0; i < n; i++) {
+    if (arr[i] == val) return 1;
+  }
+  return 0;
+}
+
+static inline int arr_get_num_distinct_elements(int arr[], int n)
+{
+  if (!arr || n <= 0) return 0;
+  int i;
+  int ret = 1;
+  arr_sort(arr, n);
+  for (i = 1; i < n; i++) {
+    if (arr[i] != arr[i-1]) ret++;
+  }
+  return ret;
+}
+
 #endif
