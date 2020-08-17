@@ -400,7 +400,8 @@ static void delete_kmsg_buf(struct ihk_kmsg_buf_container* cont) {
   return;
 }
 
-static int release_kmsg_buf(struct ihk_kmsg_buf_container* cont) {
+static int release_kmsg_buf_orig(struct ihk_kmsg_buf_container* cont)
+{
   unsigned long flags;
 
   if (atomic_read(&cont->count) == 0) {
@@ -408,12 +409,93 @@ static int release_kmsg_buf(struct ihk_kmsg_buf_container* cont) {
     return -EINVAL;
   }
 
-    spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+  spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
   if (atomic_dec_return(&cont->count) == 0) {
     delete_kmsg_buf(cont);
   }
-    spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+  spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
   return 0;
+}
+
+static int release_kmsg_buf(struct ihk_kmsg_buf_container* cont)
+{
+  if (g_ihk_test_mode != TEST_RELEASE_KMSG_BUF)  // Disable test code
+    return release_kmsg_buf_orig(cont);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid container" },
+    { -EINVAL, "container refcnt is zero" },
+    { -EBUSY,  "container is busy" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+  unsigned long flags;
+  struct ihk_kmsg_buf_container* _cont;
+  int count_nbuf_before = 0;
+  spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+  list_for_each_entry(_cont, &ihk_kmsg_bufs, list) {
+		count_nbuf_before++;
+	}
+  spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    ret = 0;
+    int refcnt = 0;
+    int count_nbuf_after = 0;
+
+    if (ivec == 0 || !cont) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec == 1 || atomic_read(&cont->count) == 0) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        dkprintf("%s: Trying to unref kmsg_buf with count of zero\n", __FUNCTION__);
+        return ret;
+      }
+      goto out;
+    }
+
+    spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+    refcnt = atomic_read(&cont->count);
+    if (ivec == 2 || refcnt > 1) {
+      ret = -EBUSY;
+      spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+      goto out;
+    } else if (atomic_dec_return(&cont->count) == 0) {
+      delete_kmsg_buf(cont);
+    }
+    spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+    list_for_each_entry(_cont, &ihk_kmsg_bufs, list) {
+      count_nbuf_after++;
+    }
+    spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+
+    if (ivec == total_branch - 1) {
+      OKNG(count_nbuf_after == count_nbuf_before - 1,
+           "the number of kmsg buffers should be decreased by 1\n");
+    } else {
+      OKNG(count_nbuf_after == count_nbuf_before,
+           "the number of kmsg buffers should be unchanged\n");
+    }
+  }
+
+  return 0;
+ err:
+  return (ret)? ret : -EINVAL;
 }
 
 static int __ihk_os_status(struct ihk_host_linux_os_data *data);
@@ -528,20 +610,6 @@ static int _check_cpus_status(int *status, int n, int target_status)
     if (status[i] != target_status) return 0;
   }
   return 1;
-}
-
-static int _os_procfs_entry_exist(int os_index)
-{
-  char path[20] = "\0";
-  sprintf(path, "/proc/mcos%d", os_index);
-  return fs_folder_exist(path);
-}
-
-static int _os_sysfs_entry_exist(int os_index)
-{
-  char path[200] = "\0";
-  sprintf(path, "/sys/devices/virtual/mcos/mcos%d/sys", os_index);
-  return fs_folder_exist(path);
 }
 
 static struct ihk_kmsg_buf_container *_find_cont(int minor);
@@ -699,18 +767,9 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
   numa_mapping = data->ops->get_numa_mapping(data, data->priv);
   boot_pt = data->ops->get_boot_pt(data, data->priv);
 
-  if (exec_path & PATH_OS_STATUS_SHUTDOWN) {  // busy
-  }
-  if (exec_path & PATH_OS_STATUS_FREEZING
-      || exec_path & PATH_OS_STATUS_FROZEN
-      || exec_path & PATH_OS_STATUS_READY
-      || exec_path & PATH_OS_STATUS_RUNNING) {
-
-  }
-
   if (exec_path & PATH_NOTIFY_SHUTDOWN) {
-    OKNG(!_os_procfs_entry_exist(index), "os procfs entries are removed\n");
-    OKNG(!_os_sysfs_entry_exist(index), "os sysfs entries are removed\n");
+    OKNG(!fs_os_procfs_entry_exist(index), "os procfs entries are removed\n");
+    OKNG(!fs_os_sysfs_entry_exist(index), "os sysfs entries are removed\n");
     OKNG(data->kernel_handlers == NULL,
          "kernel call handlers should be cleared\n");
     OKNG(list_empty(&data->aux_call_list),
@@ -760,11 +819,13 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
       OKNG(n_chunks_after == n_chunks_prev,
            "the number of mem chunks should be unchanged\n");
       OKNG(numa_mapping != NULL, "numa-mapping is not released\n");
+#ifdef X86_64
       OKNG(boot_pt != NULL, "bootstrap table is not released\n");
+#endif
 
       /* notifier */
-      OKNG(_os_procfs_entry_exist(index), "os procfs entries exist\n");
-      OKNG(_os_sysfs_entry_exist(index), "os sysfs entries exist\n");
+      OKNG(fs_os_procfs_entry_exist(index), "os procfs entries exist\n");
+      OKNG(fs_os_sysfs_entry_exist(index), "os sysfs entries exist\n");
       OKNG(data->kernel_handlers != NULL,
            "kernel call handlers should not be cleared\n");
       OKNG(!list_empty(&data->aux_call_list),
@@ -1437,6 +1498,126 @@ static void _timer_handler_for_os_wait_status(unsigned long data)
   os->ops->set_smp_status(os, os_smp_status_target, os_smp_param_status_target);
 }
 
+static int __test_ihk_os_query_status(struct ihk_host_linux_os_data *os)
+{
+  g_ihk_test_mode = TEST_SMP_IHK_OS_QUERY_STATUS;
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 12;
+
+  branch_info_t b_infos[] = {
+    { -ENOSYS,                  "setup monitor fail" },
+    { IHK_OS_STATUS_BOOTING,    "os status is booting" },
+    { IHK_OS_STATUS_BOOTED,     "os status is booted" },
+    { IHK_OS_STATUS_HUNGUP,     "os status is hungup" },
+    { IHK_OS_STATUS_SHUTDOWN,   "os status is shutdown" },
+    { IHK_OS_STATUS_NOT_BOOTED, "os status is not booted" },
+    /* ready/running */
+    { IHK_OS_STATUS_FREEZING,   "cpu0 is freezing" },
+    { IHK_OS_STATUS_FREEZING,   "cpuX is freezing" },
+    { IHK_OS_STATUS_FREEZING,   "cpu0 is not frozen and cpuX is frozen" },
+    { IHK_OS_STATUS_FREEZING,   "cpu0 is frozen and cpuX is not frozen" },
+    { IHK_OS_STATUS_FROZEN,     "all cpus are frozen" },
+    { IHK_OS_STATUS_RUNNING,    "os status is running normally" },
+  };
+
+  /* save previous state */
+  int status_prev, param_status_prev;
+  os->ops->get_smp_status(os, &status_prev, &param_status_prev);
+  int ret, i;
+
+  int *cpus_status_prev = NULL;
+  setup_monitor(os);
+  if (ivec == 0 || !os->monitor) {
+    ret = -ENOSYS;
+    if (ivec != 0) return ret;
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+  int n_cpus = os->monitor->num_processors;
+  cpus_status_prev = kmalloc(n_cpus * sizeof(int), GFP_KERNEL);
+  if (!cpus_status_prev) {
+    return -ENOMEM;
+  }
+  for (i = 0; i < n_cpus; i++) {
+    cpus_status_prev[i] = os->monitor->cpu[i].status;
+  }
+
+  for (ivec = 1; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    /* fake os internal status before querying */
+    if (ivec == 1) {
+      os->ops->set_smp_status(os, 3, 0);
+    }
+    if (ivec == 2) {
+      os->ops->set_smp_status(os, 3, 1);
+    }
+    if (ivec == 3) {
+      os->ops->set_smp_status(os, 5, 0);
+    }
+    if (ivec == 4) {
+      os->ops->set_smp_status(os, 4, 0);
+    }
+    if (ivec == 5) {
+      os->ops->set_smp_status(os, 0, 0);
+    }
+
+    /* for Ready or Running */
+    if (ivec == 6) {  // cpu0 is freezing
+      os->ops->set_smp_status(os, 3, 2);
+      os->monitor->cpu[0].status = 8;  // IHK_OS_MONITOR_KERNEL_FREEZING
+    }
+    if (ivec == 7) {  // cpuX is freezing
+      os->ops->set_smp_status(os, 3, 2);
+      os->monitor->cpu[0].status = IHK_OS_MONITOR_IDLE;
+      os->monitor->cpu[1].status = IHK_OS_MONITOR_KERNEL_FREEZING;
+    }
+    if (ivec == 8) {  // cpuX is frozen, cpu0 is not frozen
+      os->ops->set_smp_status(os, 3, 3);
+      os->monitor->cpu[0].status = IHK_OS_MONITOR_IDLE;
+      os->monitor->cpu[1].status = IHK_OS_MONITOR_KERNEL_FROZEN;
+    }
+    if (ivec == 9) {  // cpuX is not frozen, cpu0 is frozen
+      os->ops->set_smp_status(os, 3, 2);
+      os->monitor->cpu[0].status = IHK_OS_MONITOR_KERNEL_FROZEN;
+      os->monitor->cpu[1].status = IHK_OS_MONITOR_IDLE;
+    }
+    if (ivec == 10) {  // all cpus are frozen
+      os->ops->set_smp_status(os, 3, 2);
+      for (i = 0; i < n_cpus; i++) {
+        os->monitor->cpu[i].status = IHK_OS_MONITOR_KERNEL_FROZEN;
+      }
+    }
+
+    /* not freezing and not frozen */
+    if (ivec == 11) {
+      os->ops->set_smp_status(os, 3, 3);
+      for (i = 0; i < n_cpus; i++) {
+        os->monitor->cpu[i].status = IHK_OS_MONITOR_IDLE;
+      }
+    }
+
+    ret = __ihk_os_query_status(os);
+
+   out:
+    /* reset os and cpus status */
+    os->ops->set_smp_status(os, status_prev, param_status_prev);
+    for (i = 0; i < n_cpus; i++) {
+      os->monitor->cpu[i].status = cpus_status_prev[i];
+    }
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  ret = 0;
+ rel:
+  if (cpus_status_prev) kfree(cpus_status_prev);
+  return ret;
+ err:
+  ret = -ENOSYS;
+  goto rel;
+}
+
 static int __test_ihk_os_wait_for_status(struct ihk_host_linux_os_data *os)
 {
   onesec = msecs_to_jiffies(1000 * 1);
@@ -1457,7 +1638,6 @@ static int __test_ihk_os_wait_for_status(struct ihk_host_linux_os_data *os)
   /* save previous state */
   int status_prev, param_status_prev;
   os->ops->get_smp_status(os, &status_prev, &param_status_prev);
-  int status, param_status;
   int ret;
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
@@ -1485,6 +1665,8 @@ static int __test_ihk_os_wait_for_status(struct ihk_host_linux_os_data *os)
     }
 
     if (ivec == 3) {
+      // fake os status to IHK_OS_STATUS_READY
+      os->ops->set_smp_status(os, 3, 2);
       // force to set os status to IHK_OS_STATUS_BOOTED after 2 seconds
       os_smp_status_target = 3;  // BUILTIN_OS_STATUS_BOOTING
       os_smp_param_status_target = 1;
@@ -1598,7 +1780,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
     break;
 
   case IHK_OS_QUERY_STATUS:
-    ret = __ihk_os_query_status(data);
+    ret = __test_ihk_os_query_status(data);
     break;
 
   case IHK_OS_DETECT_HUNGUP:
@@ -3704,6 +3886,12 @@ int ihk_os_load_file(ihk_os_t os, char *fn) {
   return __ihk_os_load_file(os, fn);
 }
 
+int ihk_os_get_num_handlers(ihk_os_t os)
+{
+  struct ihk_host_linux_os_data *_os = os;
+  return _os->ops->get_num_handlers(os, _os->priv);
+}
+
 int ihk_os_register_interrupt_handler(ihk_os_t os, int itype,
                                       struct ihk_host_interrupt_handler *h)
 {
@@ -4174,6 +4362,7 @@ EXPORT_SYMBOL(ihk_os_load_memory);
 EXPORT_SYMBOL(ihk_os_boot);
 EXPORT_SYMBOL(ihk_os_shutdown);
 EXPORT_SYMBOL(ihk_os_register_interrupt_handler);
+EXPORT_SYMBOL(ihk_os_get_num_handlers);
 EXPORT_SYMBOL(ihk_os_unregister_interrupt_handler);
 EXPORT_SYMBOL(ihk_os_get_special_address);
 EXPORT_SYMBOL(ihk_os_wait_for_status);

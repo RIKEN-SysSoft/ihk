@@ -3738,7 +3738,7 @@ int ihklib_os_open(int index)
   return ret;
 }
 
-int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
+int ihk_os_assign_cpu_orig(int index, int* cpus, int num_cpus)
 {
   int ret;
   struct ihk_ioctl_cpu_desc req = { 0 };
@@ -3793,7 +3793,159 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
   return ret;
 }
 
-int ihk_os_get_num_assigned_cpus(int index)
+int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
+{
+  if (get_test_mode() != TEST_IHK_OS_ASSIGN_CPU)
+    return ihk_os_assign_cpu_orig(index, cpus, num_cpus);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -ENOENT, "ihklib_os_open fail" },
+    { 0,       "main case" },
+  };
+
+  dprintk("%s: enter\n", __func__);
+
+  int ret = 0;
+  /* save previous state */
+  int n_cpus_assigned_prev = ihk_os_get_num_assigned_cpus(index);
+  int n_cpus_reserved_prev = ihk_get_num_reserved_cpus(index);
+  if (n_cpus_assigned_prev < 0 || n_cpus_reserved_prev <= 0) return -EINVAL;
+  int *cpus_assigned_prev = NULL, *cpus_reserved_prev = NULL;
+  cpus_reserved_prev = calloc(n_cpus_reserved_prev, sizeof(int));
+  if (!cpus_reserved_prev) return -ENOMEM;
+  ret = ihk_query_cpu(index, cpus_reserved_prev, n_cpus_reserved_prev);
+  if (ret) {
+    free(cpus_reserved_prev); return ret;
+  }
+  if (n_cpus_assigned_prev > 0) {
+    cpus_assigned_prev = calloc(n_cpus_assigned_prev, sizeof(int));
+    if (!cpus_assigned_prev) {
+      free(cpus_reserved_prev); return -ENOMEM;
+    }
+    ret = ihk_os_query_cpu(index, cpus_assigned_prev, n_cpus_assigned_prev);
+    if (ret) {
+      free(cpus_reserved_prev);
+      free(cpus_assigned_prev);
+      return ret;
+    }
+  }
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_ioctl_cpu_desc req = { 0 };
+    int fd = -1;
+    int should_quit = 0;
+    int n_cpus_assigned_after = 0, n_cpus_reserved_after = 0;
+    int *cpus_assigned_after = NULL, *cpus_reserved_after = NULL;
+
+    ret = ihklib_os_readable(index);
+    if (ret) {
+      goto out;
+    }
+
+    if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+      dprintf("%s: error: invalid # of cpus (%d)\n",
+        __func__, num_cpus);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    if (num_cpus != 0 && cpus == NULL) {
+      ret = -EFAULT;
+      goto out;
+    }
+
+    if (num_cpus == 0) {
+      ret = 0;
+      goto out;
+    }
+
+    req.cpus = cpus;
+    req.num_cpus = num_cpus;
+
+    fd = ihklib_os_open(index);
+    if (ivec == 0 || fd < 0) {
+      ret = -ENOENT;
+      if (ivec != 0) {
+        dprintf("%s: error: ihklib_os_open returned %d\n", __func__, fd);
+        ret = fd;
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_ASSIGN_CPU, &req);
+    if (ret) {
+      ret = -errno;
+      dprintf("%s: error: IHK_OS_ASSIGN_CPU returned %d\n",
+        __func__, -ret);
+      goto out;
+    }
+
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+    if (should_quit) goto err;
+    should_quit = 1;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    /* check current state */
+    n_cpus_assigned_after = ihk_os_get_num_assigned_cpus(index);
+    n_cpus_reserved_after = ihk_get_num_reserved_cpus(index);
+    if (n_cpus_reserved_after > 0) {
+      cpus_reserved_after = calloc(n_cpus_reserved_after, sizeof(int));
+      if (!cpus_reserved_after) goto err;
+      ret = ihk_query_cpu(index, cpus_reserved_after, n_cpus_reserved_after);
+      if (ret) goto err;
+    }
+    if (n_cpus_assigned_after > 0) {
+      cpus_assigned_after = calloc(n_cpus_assigned_after, sizeof(int));
+      if (!cpus_assigned_after) goto err;
+      ret = ihk_os_query_cpu(index, cpus_assigned_after, n_cpus_assigned_after);
+      if (ret) goto err;
+    }
+
+    if (ivec == total_branch - 1) {
+      OKNG(n_cpus_assigned_after == n_cpus_assigned_prev + num_cpus,
+           "check the number of assigned cpus\n");
+      OKNG(n_cpus_reserved_after == n_cpus_reserved_prev - num_cpus,
+           "check the number of reserved cpus\n");
+    } else {
+      OKNG(n_cpus_assigned_after == n_cpus_assigned_prev,
+           "the number of assigned cpus should be unchanged\n");
+      OKNG(n_cpus_reserved_after == n_cpus_reserved_prev,
+           "the number of reserved cpus should be unchanged\n");
+      if (n_cpus_assigned_prev > 0) {
+        OKNG(arr_equals(cpus_assigned_after, cpus_assigned_prev, n_cpus_assigned_prev),
+             "list of assigned cpus should be unchanged\n");
+      }
+      if (n_cpus_reserved_prev > 0) {
+        OKNG(arr_equals(cpus_reserved_after, cpus_reserved_prev, n_cpus_reserved_prev),
+             "list of reserved cpus should be unchanged\n");
+      }
+    }
+    should_quit = 0;
+
+   err:
+    if (cpus_assigned_after) free(cpus_assigned_after);
+    if (cpus_reserved_after) free(cpus_reserved_after);
+    if (should_quit || ivec == total_branch-1) {
+      if (cpus_assigned_prev) free(cpus_assigned_prev);
+      if (cpus_reserved_prev) free(cpus_reserved_prev);
+      return -EINVAL;
+    }
+  }
+
+  return 0;
+}
+
+int ihk_os_get_num_assigned_cpus_orig(int index)
 {
   int ret;
   int fd = -1;
@@ -3820,7 +3972,61 @@ int ihk_os_get_num_assigned_cpus(int index)
   return ret;
 }
 
-int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
+int ihk_os_get_num_assigned_cpus(int index)
+{
+  if (get_test_mode() != TEST_IHK_OS_GET_NUM_ASSIGNED_CPUS)
+    return ihk_os_get_num_assigned_cpus_orig(index);
+
+  int ret = 0;
+
+  dprintk("%s: enter\n", __func__);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "cannot get num_cpus" },
+    { 0,       "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int fd = -1;
+    int should_quit = 0;
+    if ((fd = ihklib_os_open(index)) < 0) {
+      dprintf("%s: error: ihklib_os_open returned %d\n",
+        __func__, fd);
+      ret = fd;
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_GET_NUM_CPUS);
+    if (ivec == 0 || ret < 0) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        dprintf("%s: error: IHK_OS_GET_NUM_CPUS returned %d\n",
+                __func__, ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return 0;
+ err:
+  return -EINVAL;
+}
+
+int ihk_os_query_cpu_orig(int index, int *cpus, int num_cpus)
 {
   int ret;
   struct ihk_ioctl_cpu_desc req = { 0 };
@@ -3882,7 +4088,120 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
   return ret;
 }
 
-int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
+int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
+{
+  if (get_test_mode() != TEST_IHK_OS_QUERY_CPU)
+    return ihk_os_query_cpu_orig(index, cpus, num_cpus);
+
+  int ret;
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 5;
+  int should_quit = 0;
+  branch_info_t b_infos[] = {
+    { -EINVAL, "cpus is null" },
+    { -ENOENT, "ihklib_os_open fail" },
+    { -EINVAL, "cannot get #number of assigned cpus" },
+    { -EINVAL, "cannot query assigned cpus" },
+    { 0,       "main case" },
+  };
+
+  dprintk("%s: enter\n", __func__);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_ioctl_cpu_desc req = { 0 };
+    int fd = -1;
+
+    ret = ihklib_os_readable(index);
+    if (ret) {
+      goto out;
+    }
+
+    if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+      dprintf("%s: error: invalid # of cpus (%d)\n", __func__, num_cpus);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    if (ivec == 0 || (num_cpus != 0 && cpus == NULL)) {
+      ret = -EINVAL;
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+
+    fd = ihklib_os_open(index);
+    if (ivec == 1 || fd < 0) {
+      ret = -ENOENT;
+      if (ivec != 1) {
+        dprintf("%s: error: ihklib_os_open\n", __func__);
+        ret = fd;
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_GET_NUM_CPUS);
+    if (ivec == 2 || ret < 0) {
+      ret = -EINVAL;
+      if (ivec != 2) {
+        ret = -errno;
+        dprintf("%s: error: IHK_OS_GET_NUM_CPUS returned %d\n", __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    if (ret != num_cpus) {
+      dprintf("%s: error: actual # of CPUs (%d) != requested (%d)\n",
+              __func__, ret, num_cpus);
+      ret = -EINVAL;
+      goto out;
+    }
+    req.cpus = cpus;
+    req.num_cpus = num_cpus;
+
+    ret = ioctl(fd, IHK_OS_QUERY_CPU, &req);
+    if (ivec == 3 || ret) {
+      ret = -EINVAL;
+      if (ivec != 3) {
+        ret = -errno;
+        dprintf("%s: error: IHK_OS_QUERY_CPU returned %d\n", __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      struct cpus cpus_online = { 0 };
+      int stat = cpus_ls(&cpus_online);
+      if (stat) return stat;
+      int i, fail = 0;
+      for (i = 0; i < num_cpus; i++) {
+        if (arr_contains(cpus_online.cpus, cpus_online.ncpus, cpus[i])) {
+          fail = 1; break;
+        }
+      }
+      OKNG(!fail, "assigned cpus should be offline\n");
+    }
+  }
+
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+int ihk_os_release_cpu_orig(int index, int *cpus, int num_cpus)
 {
   int ret;
   struct ihk_ioctl_cpu_desc req = { 0 };
@@ -3936,7 +4255,157 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
   return ret;
 }
 
-int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
+int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
+{
+  if (get_test_mode() != TEST_IHK_OS_RELEASE_CPU)
+    return ihk_os_release_cpu_orig(index, cpus, num_cpus);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -ENOENT, "ihklib_os_open fail" },
+    { 0,       "main case" },
+  };
+
+  /* save previous state */
+  int n_cpus_assigned_prev = ihk_os_get_num_assigned_cpus(index);
+  int n_cpus_reserved_prev = ihk_get_num_reserved_cpus(index);
+  if (n_cpus_assigned_prev < 0 || n_cpus_reserved_prev <= 0) return -EINVAL;
+  int *cpus_assigned_prev = NULL, *cpus_reserved_prev = NULL;
+  cpus_reserved_prev = calloc(n_cpus_reserved_prev, sizeof(int));
+  if (!cpus_reserved_prev) return -ENOMEM;
+  int ret = ihk_query_cpu(index, cpus_reserved_prev, n_cpus_reserved_prev);
+  if (ret) {
+    free(cpus_reserved_prev); return ret;
+  }
+  if (n_cpus_assigned_prev > 0) {
+    cpus_assigned_prev = calloc(n_cpus_assigned_prev, sizeof(int));
+    if (!cpus_assigned_prev) {
+      free(cpus_reserved_prev); return -ENOMEM;
+    }
+    ret = ihk_os_query_cpu(index, cpus_assigned_prev, n_cpus_assigned_prev);
+    if (ret) {
+      free(cpus_reserved_prev);
+      free(cpus_assigned_prev);
+      return ret;
+    }
+  }
+
+  dprintk("%s: enter\n", __func__);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_ioctl_cpu_desc req = { 0 };
+    int fd = -1;
+    int should_quit = 0;
+    int n_cpus_assigned_after = 0, n_cpus_reserved_after = 0;
+    int *cpus_assigned_after = NULL, *cpus_reserved_after = NULL;
+
+    ret = ihklib_os_readable(index);
+    if (ret) {
+      goto out;
+    }
+
+    if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+      dprintf("%s: error: invalid # of cpus (%d)\n",
+        __func__, num_cpus);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    if (num_cpus != 0 && cpus == NULL) {
+      ret = -EFAULT;
+      goto out;
+    }
+
+    if (num_cpus == 0) {
+      ret = 0;
+      goto out;
+    }
+    req.cpus = cpus;
+    req.num_cpus = num_cpus;
+
+    fd = ihklib_os_open(index);
+    if (ivec == 0 || fd < 0) {
+      ret = -ENOENT;
+      if (ivec != 0) {
+        dprintf("%s: error: ihklib_os_open returned %d\n", __func__, fd);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_RELEASE_CPU, &req);
+    if (ret) {
+      ret = -errno;
+      dprintf("%s: error: IHK_OS_RELEASE_CPU returned %d\n",
+        __func__, -ret);
+      goto out;
+    }
+
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+
+    if (should_quit) goto err;
+    should_quit = 1;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    /* check current state */
+    n_cpus_assigned_after = ihk_os_get_num_assigned_cpus(index);
+    n_cpus_reserved_after = ihk_get_num_reserved_cpus(index);
+    if (n_cpus_reserved_after > 0) {
+      cpus_reserved_after = calloc(n_cpus_reserved_after, sizeof(int));
+      if (!cpus_reserved_after) goto err;
+      ret = ihk_query_cpu(index, cpus_reserved_after, n_cpus_reserved_after);
+      if (ret) goto err;
+    }
+    if (n_cpus_assigned_after > 0) {
+      cpus_assigned_after = calloc(n_cpus_assigned_after, sizeof(int));
+      if (!cpus_assigned_after) goto err;
+      ret = ihk_os_query_cpu(index, cpus_assigned_after, n_cpus_assigned_after);
+      if (ret) goto err;
+    }
+
+    if (ivec == total_branch - 1) {
+      OKNG(n_cpus_assigned_after == 0,
+           "all assigned cpus should be released\n");
+      OKNG(n_cpus_reserved_after == n_cpus_reserved_prev + num_cpus,
+           "check the number of reserved cpus\n");
+    } else {
+      OKNG(n_cpus_assigned_after == n_cpus_assigned_prev,
+           "the number of assigned cpus should be unchanged\n");
+      OKNG(n_cpus_reserved_after == n_cpus_reserved_prev,
+           "the number of reserved cpus should be unchanged\n");
+      if (n_cpus_assigned_prev > 0) {
+        OKNG(arr_equals(cpus_assigned_after, cpus_assigned_prev, n_cpus_assigned_prev),
+             "list of assigned cpus should be unchanged\n");
+      }
+      if (n_cpus_reserved_prev > 0) {
+        OKNG(arr_equals(cpus_reserved_after, cpus_reserved_prev, n_cpus_reserved_prev),
+             "list of reserved cpus should be unchanged\n");
+      }
+    }
+    should_quit = 0;
+
+   err:
+    if (cpus_assigned_after) free(cpus_assigned_after);
+    if (cpus_reserved_after) free(cpus_reserved_after);
+    if (should_quit || ivec == total_branch-1) {
+      if (cpus_assigned_prev) free(cpus_assigned_prev);
+      if (cpus_reserved_prev) free(cpus_reserved_prev);
+      return -EINVAL;
+    }
+  }
+
+  return 0;
+}
+
+int ihk_os_set_ikc_map_orig(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
   int ret, i;
   struct ihk_ioctl_ikc_desc req = { 0 };
@@ -3950,8 +4419,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   }
 
   if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
-    dprintf("%s: error: invalid # of cpus (%d)\n",
-      __func__, num_cpus);
+    dprintf("%s: error: invalid # of cpus (%d)\n", __func__, num_cpus);
     ret = -EINVAL;
     goto out;
   }
@@ -3964,24 +4432,22 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   ret = ihk_os_get_num_assigned_cpus(index);
   if (ret != num_cpus) {
     dprintf("%s: error: actual number of CPUs (%d) is"
-      " different than requested (%d)\n",
-      __func__, ret, num_cpus);
+            " different than requested (%d)\n",
+            __func__, ret, num_cpus);
     ret = -EINVAL;
     goto out;
   }
 
   req.src_cpus = calloc(num_cpus, sizeof(int));
   if (!req.src_cpus) {
-    dprintf("%s: error: allocating request src_cpus\n",
-      __func__);
+    dprintf("%s: error: allocating request src_cpus\n", __func__);
     ret = -ENOMEM;
     goto out;
   }
 
   req.dst_cpus = calloc(num_cpus, sizeof(int));
   if (!req.dst_cpus) {
-    dprintf("%s: error: allocating request dst_cpuss\n",
-      __func__);
+    dprintf("%s: error: allocating request dst_cpuss\n", __func__);
     ret = -ENOMEM;
     goto out;
   }
@@ -3993,8 +4459,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   req.num_cpus = num_cpus;
 
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open\n",
-      __func__);
+    dprintf("%s: error: ihklib_os_open\n", __func__);
     ret = fd;
     goto out;
   }
@@ -4002,8 +4467,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   ret = ioctl(fd, IHK_OS_SET_IKC_MAP, &req);
   if (ret) {
     ret = -errno;
-    dprintf("%s: IHK_OS_SET_IKC_MAP returned %d\n",
-      __func__, -ret);
+    dprintf("%s: IHK_OS_SET_IKC_MAP returned %d\n", __func__, -ret);
     goto out;
   }
 
@@ -4016,7 +4480,150 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   return ret;
 }
 
-int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
+int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
+{
+  if (get_test_mode() != TEST_IHK_OS_SET_IKC_MAP)
+    return ihk_os_set_ikc_map_orig(index, map, num_cpus);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "num_cpus is zero" },
+    { -EINVAL, "map is null" },
+    { -ENOENT, "ihklib_os_open fail" },
+    { 0,       "main case" },
+  };
+
+  dprintk("%s: enter\n", __func__);
+
+  int ret, i;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_ioctl_ikc_desc req = { 0 };
+    struct ikc_cpu_map map_expected = { 0 };
+    int fd = -1;
+    int should_quit = 0;
+
+    ret = ihklib_os_readable(index);
+    if (ret) {
+      goto out;
+    }
+
+    if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+      dprintf("%s: error: invalid # of cpus (%d)\n", __func__, num_cpus);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    if (ivec == 0 || num_cpus == 0) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec == 1 || (num_cpus != 0 && map == NULL)) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+    }
+
+    ret = ihk_os_get_num_assigned_cpus(index);
+    if (ret != num_cpus) {
+      dprintf("%s: error: actual number of CPUs (%d) is"
+              " different than requested (%d)\n",
+              __func__, ret, num_cpus);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    req.src_cpus = calloc(num_cpus, sizeof(int));
+    if (!req.src_cpus) {
+      dprintf("%s: error: allocating request src_cpus\n", __func__);
+      ret = -ENOMEM;
+      goto out;
+    }
+
+    req.dst_cpus = calloc(num_cpus, sizeof(int));
+    if (!req.dst_cpus) {
+      dprintf("%s: error: allocating request dst_cpuss\n", __func__);
+      ret = -ENOMEM;
+      goto out;
+    }
+
+    for (i = 0; i < num_cpus; i++) {
+      req.src_cpus[i] = map[i].src_cpu;
+      req.dst_cpus[i] = map[i].dst_cpu;
+    }
+    req.num_cpus = num_cpus;
+
+    fd = ihklib_os_open(index);
+    if (ivec == 2 || fd < 0) {
+      ret = -ENOENT;
+      if (ivec != 2) {
+        dprintf("%s: error: ihklib_os_open\n", __func__);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_SET_IKC_MAP, &req);
+    if (ret) {
+      ret = -errno;
+      dprintf("%s: IHK_OS_SET_IKC_MAP returned %d\n", __func__, -ret);
+      goto out;
+    }
+
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+    free(req.src_cpus);
+    free(req.dst_cpus);
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    map_expected.map = map;
+    map_expected.ncpus = num_cpus;
+
+    if (ivec == total_branch - 1) {
+      ret = ikc_cpu_map_check(&map_expected);
+      OKNG(ret == 0, "ikc map configured as expected\n");
+      /* check active IKC channels */
+      {
+        // prepare environment
+        ret = os_load();
+        OKNG(ret == 0, "load os success\n");
+        ret = os_kargs();
+        OKNG(ret == 0, "pass kargs success\n");
+        ret = ihk_os_boot(0);
+        OKNG(ret == 0, "boot os success\n");
+      }
+      ret = ikc_cpu_map_check_channels(num_cpus);
+      OKNG(ret == 0, "all IKC channels are active\n");
+      {
+        // cleanup environment
+        ret = linux_kill_mcexec();
+        OKNG(ret == 0, "kill mcexec success\n");
+        ret = ihk_os_shutdown(0);
+        OKNG(ret == 0, "shutdown os success\n");
+        os_wait_for_status(IHK_STATUS_INACTIVE);
+      }
+    } else {
+      ret = ikc_cpu_map_check(&map_expected);
+      OKNG(ret < 0, "ikc map has not configured successfully\n");
+    }
+  }
+
+  return 0;
+ err:
+  return -EINVAL;
+}
+
+int ihk_os_get_ikc_map_orig(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
   int ret, i;
   struct ihk_ioctl_ikc_desc req = { 0 };
@@ -4031,7 +4638,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 
   if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
     dprintf("%s: error: invalid # of cpus (%d)\n",
-      __func__, num_cpus);
+            __func__, num_cpus);
     ret = -EINVAL;
     goto out;
   }
@@ -4044,24 +4651,22 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   ret = ihk_os_get_num_assigned_cpus(index);
   if (ret != num_cpus) {
     dprintf("%s: error: actual number of CPUs (%d) is"
-      " different than requested (%d)\n",
-      __func__, ret, num_cpus);
+            " different than requested (%d)\n",
+            __func__, ret, num_cpus);
     ret = -EINVAL;
     goto out;
   }
 
   req.src_cpus = calloc(num_cpus, sizeof(int));
   if (!req.src_cpus) {
-    dprintf("%s: error: allocating request src_cpus\n",
-      __func__);
+    dprintf("%s: error: allocating request src_cpus\n", __func__);
     ret = -ENOMEM;
     goto out;
   }
 
   req.dst_cpus = calloc(num_cpus, sizeof(int));
   if (!req.dst_cpus) {
-    dprintf("%s: error: allocating request dst_cpuss\n",
-      __func__);
+    dprintf("%s: error: allocating request dst_cpuss\n", __func__);
     ret = -ENOMEM;
     goto out;
   }
@@ -4069,8 +4674,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   req.num_cpus = num_cpus;
 
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open\n",
-      __func__);
+    dprintf("%s: error: ihklib_os_open\n", __func__);
     ret = fd;
     goto out;
   }
@@ -4078,8 +4682,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   ret = ioctl(fd, IHK_OS_GET_IKC_MAP, &req);
   if (ret) {
     ret = -errno;
-    dprintf("%s: IHK_OS_GET_IKC_MAP returned %d\n",
-      __func__, -ret);
+    dprintf("%s: IHK_OS_GET_IKC_MAP returned %d\n", __func__, -ret);
     goto out;
   }
 
@@ -4095,6 +4698,126 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
   free(req.src_cpus);
   free(req.dst_cpus);
   return ret;
+}
+
+int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
+{
+  if (get_test_mode() != TEST_IHK_OS_GET_IKC_MAP)
+    return ihk_os_get_ikc_map_orig(index, map, num_cpus);
+
+  int ret, i;
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 5;
+  int should_quit = 0;
+  
+  branch_info_t b_infos[] = {
+    { -EINVAL, "map is null" },
+    { -EINVAL, "num_cpus is zero" },
+    { -ENOENT, "ihklib_os_open fail" },
+    { -EINVAL, "get ikc map fail" },
+    { 0,       "main case" },
+  };
+
+  dprintk("%s: enter\n", __func__);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_ioctl_ikc_desc req = { 0 };
+    int fd = -1;
+
+    ret = ihklib_os_readable(index);
+    if (ret) {
+      goto out;
+    }
+
+    if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+      dprintf("%s: error: invalid # of cpus (%d)\n",
+              __func__, num_cpus);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    if (ivec == 0 || num_cpus != 0 && map == NULL) {
+      ret = -EINVAL;
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+
+    if (ivec == 1 || num_cpus == 0) {
+      ret = -EINVAL;
+      if (ivec != 1) should_quit = 1;
+      goto out;
+    }
+
+    ret = ihk_os_get_num_assigned_cpus(index);
+    if (ret != num_cpus) {
+      dprintf("%s: error: actual number of CPUs (%d) is"
+              " different than requested (%d)\n",
+              __func__, ret, num_cpus);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    req.src_cpus = calloc(num_cpus, sizeof(int));
+    if (!req.src_cpus) {
+      dprintf("%s: error: allocating request src_cpus\n", __func__);
+      ret = -ENOMEM;
+      goto out;
+    }
+
+    req.dst_cpus = calloc(num_cpus, sizeof(int));
+    if (!req.dst_cpus) {
+      dprintf("%s: error: allocating request dst_cpuss\n", __func__);
+      ret = -ENOMEM;
+      goto out;
+    }
+
+    req.num_cpus = num_cpus;
+
+    fd = ihklib_os_open(index);
+    if (ivec == 2 || fd < 0) {
+      ret = -ENOENT;
+      if (ivec != 2) {
+        dprintf("%s: error: ihklib_os_open\n", __func__);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_GET_IKC_MAP, &req);
+    if (ivec == 3 || ret) {
+      ret = -EINVAL;
+      if (ivec != 3) {
+        ret = -errno;
+        dprintf("%s: IHK_OS_GET_IKC_MAP returned %d\n", __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    for (i = 0; i < req.num_cpus; i++) {
+      map[i].src_cpu = req.src_cpus[i];
+      map[i].dst_cpu = req.dst_cpus[i];
+    }
+
+    ret = 0;
+
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+    if (req.src_cpus) free(req.src_cpus);
+    if (req.dst_cpus) free(req.dst_cpus);
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 int ihk_os_assign_mem(int index, struct ihk_mem_chunk *mem_chunks, int num_mem_chunks)
