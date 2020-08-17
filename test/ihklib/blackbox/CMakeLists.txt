@@ -14,6 +14,11 @@ if(CPU_IMPLEMENTER STREQUAL "0x46" AND CPU_ARCH STREQUAL "8" AND
   add_definitions(-D__a64fx__)
 endif()
 
+# find first NUMA available to user (0 or 4 now)
+execute_process(COMMAND bash -c "awk -v keyword=nr_free_pages -f ${CMAKE_CURRENT_SOURCE_DIR}/src/zoneinfo.awk /proc/zoneinfo | awk -v page_size=$(getconf PAGE_SIZE) -f ${CMAKE_CURRENT_SOURCE_DIR}/src/zoneinfo_filter.awk | head -n1" OUTPUT_VARIABLE FIRST_USER_NUMA OUTPUT_STRIP_TRAILING_WHITESPACE)
+message("FIRST_USER_NUMA: ${FIRST_USER_NUMA}")
+add_definitions(-DFIRST_USER_NUMA=${FIRST_USER_NUMA})
+
 cmake_policy(SET CMP0005 NEW)
 
 # Options: -DWITH_MCK=<McKernel install directory>
@@ -385,6 +390,19 @@ foreach(target IN ITEMS
     ihk_release_cpu07
     ihk_reserve_cpu07
     ihklib_device_open01
+    ihk_create_os_str01
+    ihk_create_os_str13
+    ihk_create_os_str08
+    ihk_create_os_str02
+    ihk_create_os_str12
+    ihk_create_os_str03
+    ihk_create_os_str04
+    ihk_create_os_str07
+    ihk_create_os_str09
+    ihk_create_os_str10
+    ihk_create_os_str14
+    ihk_create_os_str15
+    ihk_create_os_str06
     )
 
   # Add target
@@ -576,7 +594,7 @@ if(CPU_MODEL STREQUAL "a64fx")
 endif()
 
 # kernel module
-add_custom_target(test_driver ALL COMMAND cp ${WITH_MCK}/kmod/ihk/linux/core/Module.symvers ./ && make EXTRA_CFLAGS=-I/${WITH_MCK}/include && mv test_driver.ko ${CMAKE_BINARY_DIR} && make clean
+add_custom_target(test_driver ALL COMMAND cp ${WITH_MCK}/kmod/ihk/linux/core/Module.symvers ./ && make EXTRA_CFLAGS=\"-I${WITH_MCK}/include -I${WITH_MCK_SRC}/ihk/linux/include\" && mv test_driver.ko ${CMAKE_BINARY_DIR} && make clean
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/driver
   )
 install(PROGRAMS ${CMAKE_BINARY_DIR}/test_driver.ko DESTINATION kmod)
