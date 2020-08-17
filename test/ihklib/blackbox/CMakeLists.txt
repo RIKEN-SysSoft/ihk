@@ -385,6 +385,19 @@ foreach(target IN ITEMS
     ihk_release_cpu07
     ihk_reserve_cpu07
     ihklib_device_open01
+    ihk_create_os_str01
+    ihk_create_os_str13
+    ihk_create_os_str08
+    ihk_create_os_str02
+    ihk_create_os_str12
+    ihk_create_os_str03
+    ihk_create_os_str04
+    ihk_create_os_str07
+    ihk_create_os_str09
+    ihk_create_os_str10
+    ihk_create_os_str14
+    ihk_create_os_str15
+    ihk_create_os_str06
     )
 
   # Add target
