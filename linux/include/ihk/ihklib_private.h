@@ -8,6 +8,10 @@
 
 #define IHK_OS_EVENTFD_MONITOR_INTERVAL (1000*1000*2) /* usec */
 
+#define IHKLIB_MAX_SIZE_ENV (1UL << 20)
+#define IHKLIB_MAX_NUM_ENV (1UL << 10)
+#define IHKLIB_MAX_SIZE_ERR_MSG (1UL << 12)
+
 struct ihk_ioctl_desc {
 	char *string;
 	int string_len;

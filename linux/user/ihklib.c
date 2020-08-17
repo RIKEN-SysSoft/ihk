@@ -3669,3 +3669,517 @@ int ihk_set_loglevel(enum IHKLIB_LOGLEVEL level)
 	loglevel = level;
 	return 0;
 }
+
+int ihk_reserve_cpu_str(int dev_index, char *list, char **err_msg)
+{
+	int ret;
+	int num_cpus;
+	int *cpus = NULL;
+
+	num_cpus = cpu_str2count(list);
+	if (num_cpus <= 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	cpus = calloc(sizeof(int), num_cpus);
+	if (!cpus) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = cpu_str2array(list, num_cpus, cpus);
+	if (ret < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = ihk_reserve_cpu(dev_index, cpus, num_cpus);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_reserve_cpu failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+ out:
+	free(cpus);
+	return ret;
+}
+
+int ihk_reserve_mem_str(int dev_index, char *list, char **err_msg)
+{
+	int ret;
+	int num_mems;
+	struct ihk_mem_chunk *mems = NULL;
+
+	num_mems = mem_str2count(list);
+	if (num_mems <= 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	mems = calloc(sizeof(struct ihk_mem_chunk), num_mems);
+	if (!mems) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = mem_str2array(list, &num_mems, mems);
+	if (ret < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = ihk_reserve_mem(dev_index, mems, num_mems);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_reserve_mem failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+
+ out:
+	free(mems);
+	return ret;
+}
+
+int ihk_os_set_ikc_map_str(int os_index, char *list, char **err_msg)
+{
+	int ret, num_cpus;
+	int *src_cpus = NULL, *dst_cpus = NULL;
+	struct ihk_ikc_cpu_map *pairs = NULL;
+	int i;
+
+	num_cpus = ikc_str2count(list);
+	if (num_cpus <= 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	src_cpus = calloc(sizeof(int), num_cpus);
+	if (!src_cpus) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	dst_cpus = calloc(sizeof(int), num_cpus);
+	if (!dst_cpus) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = ikc_str2array(list, num_cpus, src_cpus, dst_cpus);
+	if (ret < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	/* to array of strucures */
+	pairs = calloc(sizeof(struct ihk_ikc_cpu_map), num_cpus);
+	if (!pairs) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < num_cpus; i++) {
+		pairs[i].src_cpu = src_cpus[i];
+		pairs[i].dst_cpu = dst_cpus[i];
+	}
+
+	ret = ihk_os_set_ikc_map(os_index, pairs, num_cpus);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_os_set_ikc_map failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+
+ out:
+	free(src_cpus);
+	free(dst_cpus);
+	free(pairs);
+
+	return ret;
+}
+
+static int os_assign_cpu_all(int os_index, char **err_msg)
+{
+	int ret;
+	int num_cpus;
+	int *cpus = NULL;
+
+	ret = ihk_get_num_reserved_cpus(os_index);
+	if (ret < 0) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_get_num_reserved_cpus failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+	if (ret == 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+	num_cpus = ret;
+
+	cpus = calloc(sizeof(int), num_cpus);
+	if (!cpus) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = ihk_query_cpu(os_index, cpus, num_cpus);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_query_cpu failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+
+	ret = ihk_os_assign_cpu(os_index, cpus, num_cpus);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_os_assign_cpu failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+
+out:
+	free(cpus);
+	return ret;
+}
+
+static int os_assign_mem_all(int os_index, char **err_msg)
+{
+	int ret;
+	int num_mem_chunks;
+	struct ihk_mem_chunk *mem_chunks = NULL;
+
+	ret = ihk_get_num_reserved_mem_chunks(0);
+	if (ret < 0) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_get_num_reserved_cpus failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+	if (ret == 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+	num_mem_chunks = ret;
+
+	mem_chunks = calloc(sizeof(struct ihk_mem_chunk), num_mem_chunks);
+	if (!mem_chunks) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = ihk_query_mem(os_index, mem_chunks, num_mem_chunks);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_query_mem failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+
+	ret = ihk_os_assign_mem(os_index, mem_chunks, num_mem_chunks);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_os_assign_mem failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+
+out:
+	free(mem_chunks);
+	return ret;
+}
+
+static int os_release_cpu_all(int os_index)
+{
+	int ret;
+	int *cpus = NULL;
+	int num_cpus;
+
+	ret = ihk_os_get_num_assigned_cpus(os_index);
+	if (ret <= 0) {
+		goto out;
+	}
+	num_cpus = ret;
+
+	cpus = calloc(sizeof(int), num_cpus);
+	if (!cpus) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = ihk_query_cpu(os_index, cpus, num_cpus);
+	if (ret) {
+		goto out;
+	}
+
+	ret = ihk_release_cpu(os_index, cpus, num_cpus);
+	if (ret) {
+		goto out;
+	}
+
+	ret = 0;
+out:
+	free(cpus);
+	return ret;
+}
+
+static int release_cpu_all(int dev_index)
+{
+	int ret;
+	int *cpus = NULL;
+	int num_cpus;
+
+	ret = ihk_get_num_reserved_cpus(dev_index);
+	if (ret <= 0) {
+		goto out;
+	}
+	num_cpus = ret;
+
+	cpus = calloc(sizeof(int), num_cpus);
+	if (!cpus) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = ihk_query_cpu(dev_index, cpus, num_cpus);
+	if (ret) {
+		goto out;
+	}
+
+	ret = ihk_release_cpu(dev_index, cpus, num_cpus);
+	if (ret) {
+		goto out;
+	}
+
+	ret = 0;
+ out:
+	free(cpus);
+	return ret;
+}
+
+/* envp (input)
+ *	List of CPU, memory, IKC-map and kernel argument settings.
+ *	The format is as follows:
+ *	"VAR0=VAL0\0VAR1=VAL1\0..."
+ * default_kargs (input)
+ *	kernel arguments used when not present in envp.
+ * err_msg (output)
+ *	Name of the failed ihklib function.
+ */
+int ihk_create_os_str(int dev_index, int *_os_index,
+		      const char *envp, int num_env,
+		      const char *kernel_image,
+		      const char *default_kargs,
+		      char **err_msg)
+{
+	int ret;
+	const char *start, *cur;
+	char **name = NULL, **value = NULL;
+	int os_index = -1;
+	char *kargs = (char *)default_kargs;
+	int i;
+
+	if (!envp) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (num_env <= 0 || num_env > IHKLIB_MAX_NUM_ENV) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	name = calloc(sizeof(char *), num_env);
+	if (!name) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	value = calloc(sizeof(char *), num_env);
+	if (!value) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	/* range check and split */
+	cur = envp;
+	start = cur;
+	for (i = 0; i < num_env; i++) {
+		char *pair = NULL, *car, *cdr;
+
+		while (*cur != '\0') {
+			cur++;
+			if (cur - envp >= IHKLIB_MAX_SIZE_ENV) {
+				ret = -EINVAL;
+				goto out;
+			}
+		}
+
+		pair = strndup(cur, cur - start);
+		if (!pair) {
+			ret = -errno;
+			goto out;
+		}
+
+		cdr = pair;
+		car = strsep(&cdr, "=");
+
+		/* if delimiter found */
+		if (cdr) {
+			name[i] = strdup(car);
+			value[i] = strdup(cdr);
+		} else {
+			name[i] = strdup("");
+			value[i] = strdup("");
+		}
+
+		free(pair);
+
+		cur++;
+		if (cur - envp >= IHKLIB_MAX_SIZE_ENV) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		start = cur;
+	}
+
+	/* those are mandaroty settings. os_assign_{cpu,me}_all will complain
+	 * if any of them is missing.
+	 */
+	for (i = 0; i < num_env; i++) {
+		if (!strcmp(name[i], "MCK_CPUS")) {
+			ret = ihk_reserve_cpu_str(dev_index, value[i],
+						  err_msg);
+			if (ret) {
+				goto out;
+			}
+		}
+
+		else if (!strcmp(name[i], "MCK_MEM")) {
+			ret = ihk_reserve_mem_str(dev_index, value[i],
+						  err_msg);
+			if (ret) {
+				goto out;
+			}
+		}
+	}
+
+	ret = ihk_create_os(dev_index);
+	if (ret < 0) {
+		sprintf(*err_msg,
+			"%s:%d: ihk_create_os failed with %d\n",
+			__FILE__, __LINE__, ret);
+		goto out;
+	}
+	os_index = ret;
+	*_os_index = os_index;
+
+	ret = os_assign_cpu_all(os_index, err_msg);
+	if (ret) {
+		goto out;
+	}
+
+	ret = os_assign_mem_all(os_index, err_msg);
+	if (ret) {
+		goto out;
+	}
+
+	for (i = 0; i < num_env; i++) {
+		if (!strcmp(name[i], "MCK_IKC_MAP")) {
+			ret = ihk_os_set_ikc_map_str(os_index, value[i],
+						  err_msg);
+			if (ret) {
+				goto out;
+			}
+		} else if (!strcmp(name[i], "MCK_KARGS")) {
+			kargs = value[i];
+		}
+	}
+
+	ret = ihk_os_load(os_index, (char *)kernel_image);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_os_load failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+
+	ret = ihk_os_kargs(os_index, kargs);
+	if (ret) {
+		if (err_msg) {
+			sprintf(*err_msg,
+				"%s:%d: ihk_os_kargs failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+
+ out:
+	if (name) {
+		for (i = 0; i < num_env; i++) {
+			free(name[i]);
+		}
+	}
+	free(name);
+
+	if (value) {
+		for (i = 0; i < num_env; i++) {
+			free(value[i]);
+		}
+	}
+	free(value);
+
+	/* roll back */
+	if (ret) {
+		int num_os;
+		int *os_list;
+		struct ihk_mem_chunk mem_chunks[1] = {
+			{ .size = -1UL, .numa_node_number = 0 }
+		};
+
+		num_os = ihk_get_num_os_instances(dev_index);
+		if (num_os > 0) {
+			os_list = calloc(sizeof(int), num_os);
+			if (os_list) {
+				ihk_get_os_instances(dev_index, os_list,
+						     num_os);
+				for (i = 0; i < num_os; i++) {
+					os_release_cpu_all(os_list[i]);
+					ihk_os_release_mem(os_list[i],
+							   mem_chunks, 1);
+					ihk_destroy_os(dev_index, os_list[i]);
+				}
+			}
+		}
+		release_cpu_all(dev_index);
+		ihk_release_mem(dev_index, mem_chunks, 1);
+	}
+
+	return ret;
+}
