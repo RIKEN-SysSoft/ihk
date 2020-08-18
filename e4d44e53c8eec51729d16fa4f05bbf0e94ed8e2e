@@ -1,0 +1,157 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "714c8c19_d363e815",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2908,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\teprintf(\"%s: error: actual # of NUMA nodes (%d) !\u003d requested (%d)\\n\",",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c856a584_479ff4a6",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 4235,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: ihk_reserve_cpu_str failed with %d\\n\",",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "244dd532_00a84f7d",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 4245,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: ihk_reserve_mem_str failed with %d\\n\",",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ee3e06c1_61db726e",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 4281,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: ihk_os_set_ikc_map_str failed with %d\\n\",",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bd3e0bb9_a3bbe8cf",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str01.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 74,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "ERROR: spaces required around that \u0027:\u0027 (ctx:VxW)\n+\t\t     *err_msg ? err_msg: \"(empty)\\n\");\n \t\t                       ^",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f49efae9_77b65235",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str02.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 75,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "ERROR: spaces required around that \u0027:\u0027 (ctx:VxW)\n+\t\t     *err_msg ? err_msg: \"(empty)\\n\");\n \t\t                       ^",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "221acf7f_24b3034d",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str08.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 80,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "ERROR: spaces required around that \u0027:\u0027 (ctx:VxW)\n+\t\t     *err_msg ? err_msg: \"(empty)\\n\");\n \t\t                       ^",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bd4ac490_5f2831b4",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str12.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 170,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "ERROR: spaces required around that \u0027:\u0027 (ctx:VxW)\n+\t\t     *err_msg ? err_msg: \"(empty)\\n\");\n \t\t                       ^",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4bbc1686_ce7f6140",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str13.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 108,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-18T07:27:15Z",
+      "side": 1,
+      "message": "ERROR: spaces required around that \u0027:\u0027 (ctx:VxW)\n+\t\t     *err_msg ? err_msg: \"(empty)\\n\");\n \t\t                       ^",
+      "revId": "e4d44e53c8eec51729d16fa4f05bbf0e94ed8e2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
