@@ -4,6 +4,7 @@
 #include <user/ihklib_private.h>
 #include <user/okng_user.h>
 
+#include <blackbox/include/util.h>
 #include <blackbox/include/cpu.h>
 #include <blackbox/include/mem.h>
 #include <blackbox/include/params.h>
@@ -20,8 +21,12 @@ int main(int argc, char **argv)
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
 
-  ret = _cpus_reserve(98, -1);
-  INTERR(ret, "cpus_reserve returned %d\n", ret);
+  int fd = ihklib_device_open(0);
+  INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
+  int test_mode = TEST__IHK_OS_QUERY_MEM;
+  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
+  INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
+  close(fd); fd = -1;
 
   struct mems mems = { 0 };
   int excess;
@@ -34,44 +39,29 @@ int main(int argc, char **argv)
   }
   ret = ihk_reserve_mem(0, mems.mem_chunks, mems.num_mem_chunks);
 
-  struct ikc_cpu_map map_input = { 0 };
-  ret = ikc_cpu_map_2toN(&map_input);
-  INTERR(ret, "ikc_cpu_map_2toN returned %d\n", ret);
+  struct mems mems_input = { 0 };
+  ret = mems_reserved(&mems_input);
+	INTERR(ret, "mems_reserved returned %d\n", ret);
 
   ret = ihk_create_os(0);
   INTERR(ret < 0, "ihk_create_os returned: %d\n", ret);
-
   os_index = ret;
 
-  ret = cpus_os_assign();
-  INTERR(ret, "cpus_os_assign returned %d\n", ret);
+  ret = ihk_os_assign_mem(0, mems_input.mem_chunks, mems_input.num_mem_chunks);
+	INTERR(ret, "ihk_os_assign_mem return value: %d, expected: %d\n", ret, 0);
 
-  ret = mems_os_assign();
-  INTERR(ret, "mems_os_assign returned %d\n", ret);
+  ret = ihk_os_query_mem(0, mems_input.mem_chunks, mems_input.num_mem_chunks);
+  INTERR(ret, "ihk_os_query_mem return value: %d, expected: %d\n", ret, 0);
 
-  ret = ihk_os_set_ikc_map(0, map_input.map, map_input.ncpus);
-  INTERR(ret, "ihk_os_set_ikc_map returned %d\n", ret);
-
-  ret = os_load();
-  INTERR(ret, "os_load returned %d\n", ret);
-
-  ret = os_kargs();
-  INTERR(ret, "os_kargs returned %d\n", ret);
-
-  ret = ihk_os_boot(0);
-  INTERR(ret, "ihk_os_boot returned %d\n", ret);
-
-  int fd = ihklib_os_open(0);
-  INTERR(fd < 0, "ihklib_os_open returned %d\n", fd);
-  ret = ioctl(fd, IHK_OS_QUERY_STATUS);
-  INTERR(ret, "ioctl returned: %d\n", ret);
-  close(fd);
-
+  ret = mems_os_release();
+  INTERR(ret, "mems_os_release returned %d\n", ret);
  out:
   if (fd != -1) close(fd);
-  ret = ihk_destroy_os(0, os_index);
-  cpus_release();
+  if (ihk_get_num_os_instances(0)) {
+    ihk_destroy_os(0, os_index);
+  }
   mems_release();
+
   linux_rmmod(0);
   return ret;
 }

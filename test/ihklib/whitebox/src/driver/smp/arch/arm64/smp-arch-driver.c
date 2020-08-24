@@ -938,7 +938,7 @@ static inline int ihk_smp_get_cpu_affinity(int hwid, u64* affi)
   return -EINVAL;
 }
 
-int smp_wakeup_secondary_cpu(int hw_id, unsigned long start_eip)
+int smp_wakeup_secondary_cpu_orig(int hw_id, unsigned long start_eip)
 {
   int ret;
   u64 affi;
@@ -950,6 +950,44 @@ int smp_wakeup_secondary_cpu(int hw_id, unsigned long start_eip)
   D("ihk_psci_ops->cpu_on[0x%lx] (0x%llx, 0x%lx)\n",
     (unsigned long)ihk_psci_ops->cpu_on, affi, start_eip);
   return ihk_psci_ops->cpu_on(affi, start_eip);
+}
+
+int smp_wakeup_secondary_cpu(int hw_id, unsigned long start_eip)
+{
+  if (g_ihk_test_mode != TEST_SMP_WAKEUP_SECONDARY_CPU)  // Disable test code
+    return smp_wakeup_secondary_cpu_orig(hw_id, start_eip);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "getting cpu affinity fail" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    u64 affi;
+
+    ret = ihk_smp_get_cpu_affinity(hw_id, &affi);
+    if (ivec == 0 || ret) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+    D("ihk_psci_ops->cpu_on[0x%lx] (0x%llx, 0x%lx)\n",
+      (unsigned long)ihk_psci_ops->cpu_on, affi, start_eip);
+    ret = ihk_psci_ops->cpu_on(affi, start_eip);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 unsigned long calc_ns_per_tsc(void)
@@ -1114,7 +1152,7 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
   return entry;
 }
 
-int smp_ihk_arch_vmap_area_taken(void)
+int smp_ihk_arch_vmap_area_taken_orig(void)
 {
   int vmap_area_taken = 0;
   struct vmap_area *tmp_va;
@@ -1129,16 +1167,71 @@ int smp_ihk_arch_vmap_area_taken(void)
         break;
       }
       p = p->rb_left;
-    }
-    else {
+    } else {
       p = p->rb_right;
     }
   }
   return vmap_area_taken;
 }
 
+int smp_ihk_arch_vmap_area_taken(void)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_ARCH_VMAP_AREA_TAKEN)  // Disable test code
+    return smp_ihk_arch_vmap_area_taken_orig();
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "root node is null" },
+    { 0, "main case" },
+  };
+
+  int vmap_area_taken = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    vmap_area_taken = 0;
+    struct vmap_area *tmp_va;
+    struct rb_node *p = ihk_vmap_area_root->rb_node;
+
+    if (ivec == 0 || !p) {
+      if (ivec != 0) return 0;
+      goto out;
+    }
+    while (p) {
+      tmp_va = rb_entry(p, struct vmap_area, rb_node);
+
+      if (tmp_va->va_end >= IHK_SMP_MAP_KERNEL_START) {
+        if (tmp_va->va_start < MODULES_END) {
+          vmap_area_taken = 1;
+          break;
+        }
+        p = p->rb_left;
+      } else {
+        p = p->rb_right;
+      }
+    }
+
+   out:
+    if (ivec == total_branch - 1) {
+      if (vmap_area_taken) {
+        OKNG(tmp_va->va_end >= IHK_SMP_MAP_KERNEL_START && tmp_va->va_start < MODULES_END,
+             "check vmap area taken condition\n");
+      } else {
+        OKNG(1, "nothing to do\n");
+      }
+    } else {
+      OKNG(vmap_area_taken == 0, "vmap area is not taken\n");
+    }
+  }
+ err:
+  return vmap_area_taken;
+}
+
 int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
-                            unsigned long entry)
+                             unsigned long entry)
 {
   struct smp_os_data *os = priv;
   extern char startup_data[];
@@ -2600,16 +2693,20 @@ int ihk_smp_reset_cpu(int hw_id)
     { 0,       "main case" },
   };
 
-  int ret;
   dprintk(KERN_INFO "IHK-SMP: resetting CPU %d.\n", hw_id);
+
+  int ret, i;
+  u64 affi;
+  /* check previous state */
+  ret = ihk_smp_get_cpu_affinity(hw_id, &affi);
+  if (ret) return ret;
+  int info_prev = ihk_psci_ops->affinity_info(affi, 0);
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
 
+    int info_after;
     ret = 0;
-    int i;
-    u64 affi;
-    int info;
 
     if (ivec == 0 || !ihk_psci_ops || !ihk_psci_ops->affinity_info) {
       ret = -EFAULT;
@@ -2667,11 +2764,11 @@ int ihk_smp_reset_cpu(int hw_id)
    out:
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
 
-    info = ihk_psci_ops->affinity_info(affi, 0);
+    info_after = ihk_psci_ops->affinity_info(affi, 0);
     if (ivec == total_branch - 1) {
-      OKNG(info == PSCI_0_2_AFFINITY_LEVEL_OFF, "cpu %d is killed\n", hw_id);
+      OKNG(info_after == PSCI_0_2_AFFINITY_LEVEL_OFF, "cpu %d is killed\n", hw_id);
     } else {
-      OKNG(info != PSCI_0_2_AFFINITY_LEVEL_OFF, "cpu %d is not killed\n", hw_id);
+      OKNG(info_after == info_prev, "cpu %d info is not changed\n", hw_id);
     }
   }
 

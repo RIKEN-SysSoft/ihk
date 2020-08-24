@@ -537,6 +537,7 @@ endforeach()
 foreach(target IN ITEMS
     test__ihk_device_destroy_os
     test__ihk_os_shutdown
+    test__ihk_os_query_status
     test_ihk_destroy_os
     test_ihk_host_device_ioctl
     test_smp_ihk_os_wait_for_status
@@ -555,6 +556,7 @@ foreach(target IN ITEMS
     test_ihk_os_get_special_addr
     test_ihk_os_query_status
     test_ihk_os_send_nmi
+    test_ihk_os_shutdown
     test_ihk_smp_cpu_kill
     test_ihk_smp_get_cpu_affinity
     test_ihk_smp_reset_cpu
@@ -574,6 +576,404 @@ foreach(target IN ITEMS
     )
   # Add target
   add_executable(${target} src/user/ihk_destroy_os/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test_ihk_os_assign_cpu
+    test__ihk_os_assign_cpu
+    test_smp_ihk_os_assign_cpu
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_assign_cpu/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_assign_mem
+    test__smp_ihk_os_assign_mem
+    test_ihk_os_assign_mem
+    test_merge_mem_chunks
+    test_smp_ihk_os_assign_mem
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_assign_mem/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test_ihk_os_get_ikc_map
+    test__ihk_os_get_ikc_map
+    test_smp_ihk_os_get_ikc_map
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_get_ikc_map/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_get_num_assigned_cpus
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_get_num_assigned_cpus/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test_ihk_os_get_num_assigned_mem_chunks
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_get_num_assigned_mem_chunks/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_query_mem
+    test_ihk_os_query_mem
+    test_smp_ihk_os_query_mem
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_query_mem/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_query_cpu
+    test_smp_ihk_os_query_cpu
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_query_cpu/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_release_cpu
+    test_smp_ihk_os_release_cpu
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_release_cpu/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_release_mem
+    test__smp_ihk_os_release_mem
+    test_ihk_os_release_mem
+    test_smp_ihk_os_release_mem
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_release_mem/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_set_ikc_map
+    test_smp_ihk_os_set_ikc_map
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_set_ikc_map/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_register_event
+    test_ihk_os_get_eventfd
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_get_eventfd/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_load_file
+    test__ihk_os_load_memory
+    test_smp_ihk_arch_vmap_area_taken
+    test_smp_ihk_os_load_file
+    test_smp_ihk_os_load_mem
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_load/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_set_kargs
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_kargs/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_issue_interrupt
+    test__ihk_device_map_memory
+    test__ihk_device_map_virtual
+    test__ihk_os_boot
+    test_ihk_os_boot
+    test__ihk_os_get_cpu_info
+    test__ihk_os_get_memory_info
+    test__ihk_os_get_special_addr
+    test__ihk_os_register_handler
+    test_ihk_device_map_memory
+    test_ihk_host_ikc_init_first
+    test_ihk_ikc_master_init
+    test_linux_numa_2_lwk_numa
+    test_smp_wakeup_secondary_cpu
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_boot/${target}.c)
   # -D
   target_compile_definitions(${target}
     PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
