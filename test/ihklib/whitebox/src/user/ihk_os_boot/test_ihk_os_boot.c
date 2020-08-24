@@ -15,6 +15,11 @@ int main(int argc, char **argv)
   int os_index;
   params_getopt(argc, argv);
 
+  char mode[6] = "\0";
+  sprintf(mode, "%d", TEST_IHK_OS_BOOT);
+  ret = setenv(IHKLIB_TEST_MODE_ENV_NAME, mode, 1);
+  INTERR(ret, "setenv returned %d. errno=%d\n", ret, -errno);
+
   /* Activate and check */
   /* Precondition */
   ret = linux_insmod(0);
@@ -61,14 +66,7 @@ int main(int argc, char **argv)
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-  int fd = ihklib_os_open(0);
-  INTERR(fd < 0, "ihklib_os_open returned %d\n", fd);
-  ret = ioctl(fd, IHK_OS_QUERY_STATUS);
-  INTERR(ret, "ioctl returned: %d\n", ret);
-  close(fd);
-
  out:
-  if (fd != -1) close(fd);
   ret = ihk_destroy_os(0, os_index);
   cpus_release();
   mems_release();

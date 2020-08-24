@@ -94,7 +94,7 @@ IHK_OS_OPS_BEGIN(int, assign_cpu,
                  unsigned long arg)
 {
   if (g_ihk_test_mode != TEST__IHK_OS_ASSIGN_CPU)  // Disable test code
-    return data->ops->assign_cpu(data, data->priv, arg);
+    return __ihk_os_assign_cpu_orig(data, arg);
 
   unsigned long ivec = 0;
   unsigned long total_branch = 2;
@@ -135,7 +135,7 @@ IHK_OS_OPS_BEGIN(int, release_cpu,
                  unsigned long arg)
 {
   if (g_ihk_test_mode != TEST__IHK_OS_RELEASE_CPU)  // Disable test code
-    return data->ops->release_cpu(data, data->priv, arg);
+    return __ihk_os_release_cpu_orig(data, arg);
 
   unsigned long ivec = 0;
   unsigned long total_branch = 2;
@@ -176,7 +176,7 @@ IHK_OS_OPS_BEGIN(int, set_ikc_map,
                  unsigned long arg)
 {
   if (g_ihk_test_mode != TEST__IHK_OS_SET_IKC_MAP)  // Disable test code
-    return data->ops->set_ikc_map(data, data->priv, arg);
+    return __ihk_os_set_ikc_map_orig(data, arg);
 
   unsigned long ivec = 0;
   unsigned long total_branch = 2;
@@ -217,7 +217,7 @@ IHK_OS_OPS_BEGIN(int, get_ikc_map,
                  unsigned long arg)
 {
   if (g_ihk_test_mode != TEST__IHK_OS_GET_IKC_MAP)  // Disable test code
-    return data->ops->get_ikc_map(data, data->priv, arg);
+    return __ihk_os_get_ikc_map_orig(data, arg);
 
   unsigned long ivec = 0;
   unsigned long total_branch = 2;
@@ -264,7 +264,7 @@ IHK_OS_OPS_BEGIN(int, query_cpu,
                  unsigned long arg)
 {
   if (g_ihk_test_mode != TEST__IHK_OS_QUERY_CPU)  // Disable test code
-    return data->ops->query_cpu(data, data->priv,arg);
+    return __ihk_os_query_cpu_orig(data, arg);
 
   unsigned long ivec = 0;
   unsigned long total_branch = 2;
@@ -303,7 +303,51 @@ IHK_OS_OPS_BEGIN_NOARG(int, get_num_cpus_orig)
 IHK_OS_OPS_BEGIN_NOARG(int, get_num_cpus)
 {
   if (g_ihk_test_mode != TEST__IHK_OS_GET_NUM_CPUS)  // Disable test code
-    return data->ops->get_num_cpus(data, data->priv);
+    return __ihk_os_get_num_cpus_orig(data);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  int ret;
+  int num_cpus_ = -1;
+
+  branch_info_t b_infos[] = {
+    { -1, "invalid handler" },
+    { 0,  "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+    num_cpus_ = -1;
+
+    if (ivec == 0 || (!data->ops || !data->ops->get_num_cpus)) {
+      ret = -1;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    num_cpus_ = data->ops->get_num_cpus(data, data->priv);
+    if (num_cpus_ >= 0) ret = 0;
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    ret = num_cpus_;
+  }
+
+  return ret;
+ err:
+  return -1;
+}
+
+IHK_OS_OPS_BEGIN(int, assign_mem_orig,
+                 unsigned long arg)
+{
+  IHK_OPS_BODY(assign_mem, arg);
+}
+
+IHK_OS_OPS_BEGIN(int, assign_mem,
+                 unsigned long arg)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_ASSIGN_MEM)  // Disable test code
+    return __ihk_os_assign_mem_orig(data, arg);
 
   unsigned long ivec = 0;
   unsigned long total_branch = 2;
@@ -317,13 +361,13 @@ IHK_OS_OPS_BEGIN_NOARG(int, get_num_cpus)
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
 
-    if (ivec == 0 || (!data->ops || !data->ops->get_num_cpus)) {
+    if (ivec == 0 || (!data->ops || !data->ops->assign_mem)) {
       ret = -1;
       if (ivec == 0) goto out;
       goto err;
     }
 
-    ret = data->ops->get_num_cpus(data, data->priv);
+    ret = data->ops->assign_mem(data, data->priv, arg);
 
    out:
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
@@ -334,22 +378,86 @@ IHK_OS_OPS_BEGIN_NOARG(int, get_num_cpus)
   return -1;
 }
 
-IHK_OS_OPS_BEGIN(int, assign_mem,
-                 unsigned long arg)
-{
-  IHK_OPS_BODY(assign_mem, arg);
-}
-
-IHK_OS_OPS_BEGIN(int, release_mem,
+IHK_OS_OPS_BEGIN(int, release_mem_orig,
                  unsigned long arg)
 {
   IHK_OPS_BODY(release_mem, arg);
 }
 
-IHK_OS_OPS_BEGIN(int, query_mem,
+IHK_OS_OPS_BEGIN(int, release_mem,
+                 unsigned long arg)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_RELEASE_MEM)  // Disable test code
+    return __ihk_os_release_mem_orig(data, arg);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  int ret;
+
+  branch_info_t b_infos[] = {
+    { -1, "invalid handler" },
+    { 0,  "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->release_mem)) {
+      ret = -1;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->release_mem(data, data->priv, arg);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return ret;
+ err:
+  return -1;
+}
+
+IHK_OS_OPS_BEGIN(int, query_mem_orig,
                  unsigned long arg)
 {
   IHK_OPS_BODY(query_mem, arg);
+}
+
+IHK_OS_OPS_BEGIN(int, query_mem,
+                 unsigned long arg)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_QUERY_MEM)  // Disable test code
+    return __ihk_os_query_mem_orig(data, arg);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  int ret;
+
+  branch_info_t b_infos[] = {
+    { -1, "invalid handler" },
+    { 0,  "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->query_mem)) {
+      ret = -1;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->query_mem(data, data->priv, arg);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return ret;
+ err:
+  return -1;
 }
 
 IHK_OS_OPS_BEGIN(unsigned long, map_memory,
@@ -363,10 +471,45 @@ IHK_OS_OPS_BEGIN(int, unmap_memory, unsigned long lphys, unsigned long size)
   IHK_OPS_BODY(unmap_memory, lphys, size);
 }
 
-IHK_OS_OPS_BEGIN(int, register_handler, int itype,
+IHK_OS_OPS_BEGIN(int, register_handler_orig, int itype,
                  struct ihk_host_interrupt_handler *h)
 {
   IHK_OPS_BODY(register_handler, itype, h);
+}
+
+IHK_OS_OPS_BEGIN(int, register_handler, int itype,
+                 struct ihk_host_interrupt_handler *h)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_REGISTER_HANDLER)  // Disable test code
+    return __ihk_os_register_handler_orig(data, itype, h);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  int ret;
+
+  branch_info_t b_infos[] = {
+    { -1, "invalid handler" },
+    { 0,  "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->register_handler)) {
+      ret = -1;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->register_handler(data, data->priv, itype, h);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return ret;
+ err:
+  return -1;
 }
 
 IHK_OS_OPS_BEGIN(int, unregister_handler, int itype,
@@ -380,10 +523,45 @@ IHK_OS_OPS_BEGIN(int, alloc_resource, struct ihk_resource *resource)
   IHK_OPS_BODY(alloc_resource, resource);
 }
 
-IHK_OS_OPS_BEGIN(int, get_special_addr, enum ihk_special_addr_type type,
+IHK_OS_OPS_BEGIN(int, get_special_addr_orig, enum ihk_special_addr_type type,
                  unsigned long *address, unsigned long *size)
 {
   IHK_OPS_BODY(get_special_addr, type, address, size);
+}
+
+IHK_OS_OPS_BEGIN(int, get_special_addr, enum ihk_special_addr_type type,
+                 unsigned long *address, unsigned long *size)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_GET_SPECIAL_ADDR)  // Disable test code
+    return __ihk_os_get_special_addr_orig(data, type, address, size);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  int ret;
+
+  branch_info_t b_infos[] = {
+    { -1, "invalid handler" },
+    { 0,  "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->get_special_addr)) {
+      ret = -1;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->get_special_addr(data, data->priv, type, address, size);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return ret;
+ err:
+  return -1;
 }
 
 IHK_OS_OPS_BEGIN(int, wait_for_status, enum ihk_os_status status,
@@ -392,9 +570,43 @@ IHK_OS_OPS_BEGIN(int, wait_for_status, enum ihk_os_status status,
   IHK_OPS_BODY(wait_for_status, status, sleepable, timeout);
 }
 
-IHK_OS_OPS_BEGIN(int, issue_interrupt, int cpu, int vector)
+IHK_OS_OPS_BEGIN(int, issue_interrupt_orig, int cpu, int vector)
 {
   IHK_OPS_BODY(issue_interrupt, cpu, vector);
+}
+
+IHK_OS_OPS_BEGIN(int, issue_interrupt, int cpu, int vector)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_ISSUE_INTERRUPT)  // Disable test code
+    return __ihk_os_issue_interrupt_orig(data, cpu, vector);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  int ret;
+
+  branch_info_t b_infos[] = {
+    { -1,      "invalid handler" },
+    { -EINVAL, "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->issue_interrupt)) {
+      ret = -1;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->issue_interrupt(data, data->priv, cpu, vector);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return ret;
+ err:
+  return -1;
 }
 
 IHK_OS_OPS_BEGIN(int, send_nmi_orig, int mode)
@@ -405,7 +617,7 @@ IHK_OS_OPS_BEGIN(int, send_nmi_orig, int mode)
 IHK_OS_OPS_BEGIN(int, send_nmi, int mode)
 {
   if (g_ihk_test_mode != TEST__IHK_OS_SEND_NMI)  // Disable test code
-    return data->ops->send_nmi(data, data->priv, mode);
+    return __ihk_os_send_nmi_orig(data, mode);
 
   unsigned long ivec = 0;
   unsigned long total_branch = 2;
@@ -436,19 +648,130 @@ IHK_OS_OPS_BEGIN(int, send_nmi, int mode)
   return -1;
 }
 
-IHK_OS_OPS_BEGIN_NOARG(struct ihk_mem_info *, get_memory_info)
+IHK_OS_OPS_BEGIN_NOARG(struct ihk_mem_info *, get_memory_info_orig)
 {
   IHK_OPS_BODY_PTR_NOARG(get_memory_info);
 }
 
-IHK_OS_OPS_BEGIN_NOARG(struct ihk_cpu_info *, get_cpu_info)
+IHK_OS_OPS_BEGIN_NOARG(struct ihk_mem_info *, get_memory_info)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_GET_MEMORY_INFO)  // Disable test code
+    return __ihk_os_get_memory_info_orig(data);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  struct ihk_mem_info *ret;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid handler" },
+    { 0, "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->get_memory_info)) {
+      ret = NULL;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->get_memory_info(data, data->priv);
+
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(ret, "should return a valid memory info\n");
+    } else {
+      OKNG(!ret, "cannot get memory info\n");
+    }
+  }
+
+  return ret;
+ err:
+  return NULL;
+}
+
+IHK_OS_OPS_BEGIN_NOARG(struct ihk_cpu_info *, get_cpu_info_orig)
 {
   IHK_OPS_BODY_PTR_NOARG(get_cpu_info);
 }
 
-IHK_OS_OPS_BEGIN_NOARG(int, query_status)
+IHK_OS_OPS_BEGIN_NOARG(struct ihk_cpu_info *, get_cpu_info)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_GET_CPU_INFO)  // Disable test code
+    return __ihk_os_get_cpu_info_orig(data);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  struct ihk_cpu_info *ret;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid handler" },
+    { 0, "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->get_cpu_info)) {
+      ret = NULL;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->get_cpu_info(data, data->priv);
+
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(ret, "should return a valid cpu info\n");
+    } else {
+      OKNG(!ret, "cannot get cpu info\n");
+    }
+  }
+
+  return ret;
+ err:
+  return NULL;
+}
+
+IHK_OS_OPS_BEGIN_NOARG(int, query_status_orig)
 {
   IHK_OPS_BODY_NOARG(query_status);
+}
+
+IHK_OS_OPS_BEGIN_NOARG(int, query_status)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_QUERY_STATUS)  // Disable test code
+    return __ihk_os_query_status_orig(data);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  int ret;
+
+  branch_info_t b_infos[] = {
+    { -1, "invalid handler" },
+    { 0,  "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+    int output = -1;
+    if (ivec == 0 || (!data->ops || !data->ops->query_status)) {
+      ret = -1;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    output = data->ops->query_status(data, data->priv);
+    ret = 0;
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    ret = output;
+  }
+
+  return ret;
+ err:
+  return -1;
 }
 
 IHK_OS_OPS_BEGIN_NOARG(void, notify_hungup)
@@ -467,10 +790,49 @@ IHK_OS_OPS_BEGIN_NOARG(int, query_free_mem)
 }
 
 
-IHK_DEV_OPS_BEGIN(unsigned long, map_memory,
+IHK_DEV_OPS_BEGIN(unsigned long, map_memory_orig,
                  unsigned long rphys, unsigned long size)
 {
   IHK_OPS_BODY(map_memory, rphys, size);
+}
+
+IHK_DEV_OPS_BEGIN(unsigned long, map_memory,
+                 unsigned long rphys, unsigned long size)
+{
+  if (g_ihk_test_mode != TEST__IHK_DEVICE_MAP_MEMORY)  // Disable test code
+    return __ihk_device_map_memory_orig(data, rphys, size);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  unsigned long ret;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid handler" },
+    { 0, "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->map_memory)) {
+      ret = 0;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->map_memory(data, data->priv, rphys, size);
+
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(ret, "should return a valid address\n");
+    } else {
+      OKNG(!ret, "cannot map memory\n");
+    }
+  }
+
+  return ret;
+ err:
+  return 0;
 }
 
 IHK_DEV_OPS_BEGIN(int, unmap_memory, unsigned long lphys, unsigned long size)
@@ -478,10 +840,49 @@ IHK_DEV_OPS_BEGIN(int, unmap_memory, unsigned long lphys, unsigned long size)
   IHK_OPS_BODY(unmap_memory, lphys, size);
 }
 
-IHK_DEV_OPS_BEGIN(void *, map_virtual, unsigned long phys, unsigned long size,
-                  void *virtual, int flags)
+IHK_DEV_OPS_BEGIN(void *, map_virtual_orig, unsigned long phys,
+                  unsigned long size, void *virtual, int flags)
 {
   IHK_OPS_BODY_PTR(map_virtual, phys, size, virtual, flags);
+}
+
+IHK_DEV_OPS_BEGIN(void *, map_virtual, unsigned long phys,
+                  unsigned long size, void *virtual, int flags)
+{
+  if (g_ihk_test_mode != TEST__IHK_DEVICE_MAP_VIRTUAL)  // Disable test code
+    return __ihk_device_map_virtual_orig(data, phys, size, virtual, flags);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  void *ret;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid handler" },
+    { 0, "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data->ops || !data->ops->map_virtual)) {
+      ret = NULL;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    ret = data->ops->map_virtual(data, data->priv, phys, size, virtual, flags);
+
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(ret, "should return a valid address\n");
+    } else {
+      OKNG(!ret, "cannot map virtual address\n");
+    }
+  }
+
+  return ret;
+ err:
+  return NULL;
 }
 
 IHK_DEV_OPS_BEGIN(int, unmap_virtual_orig, void *virtual, int flags)
@@ -492,7 +893,7 @@ IHK_DEV_OPS_BEGIN(int, unmap_virtual_orig, void *virtual, int flags)
 IHK_DEV_OPS_BEGIN(int, unmap_virtual, void *virtual, int flags)
 {
   if (g_ihk_test_mode != TEST__IHK_DEVICE_UNMAP_VIRTUAL)  // Disable test code
-    return data->ops->unmap_virtual(data, data->priv, virtual, flags);
+    return __ihk_device_unmap_virtual_orig(data, virtual, flags);
 
   unsigned long ivec = 0;
   unsigned long total_branch = 2;

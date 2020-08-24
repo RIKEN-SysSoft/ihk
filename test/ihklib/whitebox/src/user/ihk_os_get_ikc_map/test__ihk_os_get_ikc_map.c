@@ -20,6 +20,13 @@ int main(int argc, char **argv)
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
 
+  int fd = ihklib_device_open(0);
+  INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
+  int test_mode = TEST__IHK_OS_GET_IKC_MAP;
+  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
+  INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
+  close(fd); fd = -1;
+
   ret = _cpus_reserve(98, -1);
   INTERR(ret, "cpus_reserve returned %d\n", ret);
 
@@ -61,11 +68,8 @@ int main(int argc, char **argv)
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-  int fd = ihklib_os_open(0);
-  INTERR(fd < 0, "ihklib_os_open returned %d\n", fd);
-  ret = ioctl(fd, IHK_OS_QUERY_STATUS);
-  INTERR(ret, "ioctl returned: %d\n", ret);
-  close(fd);
+  ret = ihk_os_get_ikc_map(0, map_input.map, map_input.ncpus);
+  INTERR(ret, "ihk_os_set_ikc_map returned %d\n", ret);
 
  out:
   if (fd != -1) close(fd);
