@@ -78,7 +78,7 @@ typedef enum ihk_test_mode {
   /* ihk_destroy_os */
   TEST_IHK_DEVICE_DESTROY_OS                      = 28,
   TEST_IHK_HOST_DEVICE_IOCTL                      = 29,
-  TEST_IHK_OS_SHUTDOWN                            = 30,
+  TEST__IHK_OS_SHUTDOWN                           = 30,
   TEST_SMP_IHK_OS_WAIT_FOR_STATUS                 = 31,
   TEST_MCCTRL_OS_SHUTDOWN_NOTIFIER                = 32,
   TEST_SMP_IHK_OS_QUERY_STATUS                    = 33,
@@ -134,6 +134,54 @@ typedef enum ihk_test_mode {
 
   /* ihk_os_get_num_assigned_cpus */
   TEST__IHK_OS_GET_NUM_CPUS                       = 73,
+
+  /* ihk_os_assign_mem */
+  TEST__IHK_OS_ASSIGN_MEM                         = 74,
+  TEST_MERGE_MEM_CHUNKS                           = 75,
+  TEST_SMP_IHK_OS_ASSIGN_MEM                      = 76,
+  TEST__SMP_IHK_OS_ASSIGN_MEM                     = 77,
+
+  /* ihk_os_get_num_assigned_mem_chunks */
+  TEST__IHK_OS_QUERY_MEM                          = 78,
+
+  /* ihk_os_query_mem */
+  TEST_SMP_IHK_OS_QUERY_MEM                       = 79,
+
+  /* ihk_os_release_mem */
+  TEST__IHK_OS_RELEASE_MEM                        = 80,
+  TEST__SMP_IHK_OS_RELEASE_MEM                    = 81,
+  TEST_SMP_IHK_OS_RELEASE_MEM                     = 82,
+
+  /* ihk_os_get_eventfd */
+  TEST__IHK_OS_REGISTER_EVENT                     = 83,
+
+  /* ihk_os_load */
+  TEST_SMP_IHK_ARCH_VMAP_AREA_TAKEN               = 84,
+  TEST_SMP_IHK_OS_LOAD_MEM                        = 85,
+  TEST__IHK_OS_LOAD_FILE                          = 86,
+  TEST_SMP_IHK_OS_LOAD_FILE                       = 87,
+  TEST__IHK_OS_LOAD_MEMORY                        = 88,
+
+  /* ihk_os_kargs */
+  TEST__IHK_OS_SET_KARGS                          = 89,
+
+  /* ihk_os_boot */
+  TEST__IHK_OS_BOOT                               = 90,
+  TEST_LINUX_NUMA_2_LWK_NUMA                      = 91,
+  TEST_SMP_WAKEUP_SECONDARY_CPU                   = 92,
+  TEST_IHK_IKC_MASTER_INIT                        = 93,
+  TEST_IHK_HOST_IKC_INIT_FIRST                    = 94,
+  TEST__IHK_OS_REGISTER_HANDLER                   = 95,
+  TEST__IHK_OS_GET_SPECIAL_ADDR                   = 96,
+  TEST_IHK_DEVICE_MAP_MEMORY                      = 97,
+  TEST__IHK_DEVICE_MAP_MEMORY                     = 98,
+  TEST__IHK_DEVICE_MAP_VIRTUAL                    = 99,
+  TEST__IHK_OS_ISSUE_INTERRUPT                    = 100,
+  TEST__IHK_OS_GET_CPU_INFO                       = 101,
+  TEST__IHK_OS_GET_MEMORY_INFO                    = 102,
+
+  /* ihk_os_get_status */
+  TEST__IHK_OS_QUERY_STATUS                       = 103,
 
   // other API here
 } ihk_test_mode_t;

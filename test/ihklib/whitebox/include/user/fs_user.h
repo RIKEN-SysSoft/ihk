@@ -1,22 +1,23 @@
-#ifndef __FS_UTILS_H_INCLUDED__
-#define __FS_UTILS_H_INCLUDED__
+#ifndef __FS_USER_H_INCLUDED__
+#define __FS_USER_H_INCLUDED__
 
-#include <linux/fs.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 static inline int fs_file_exist(const char *path)
 {
-  struct file* filp = filp_open(path, O_RDONLY, 0);
-  if (IS_ERR(filp)) return 0;
-  filp_close(filp, NULL);
+  if (access(path, F_OK) == -1)
+    return 0;
   return 1;
 }
 
 static inline int fs_folder_exist(const char *path)
 {
-  struct file* filp = filp_open(path, O_RDONLY | O_DIRECTORY, 0);
-  if (IS_ERR(filp)) return 0;
-  filp_close(filp, NULL);
-  return 1;
+  struct stat stats;
+  stat(path, &stats);
+  if (S_ISDIR(stats.st_mode))
+    return 1;
+  return 0;
 }
 
 static inline int fs_os_procfs_entry_exist(int os_index)
