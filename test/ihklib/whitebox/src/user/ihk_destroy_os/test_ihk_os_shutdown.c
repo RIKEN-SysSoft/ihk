@@ -4,6 +4,7 @@
 #include <user/ihklib_private.h>
 #include <user/okng_user.h>
 
+#include <blackbox/include/util.h>
 #include <blackbox/include/cpu.h>
 #include <blackbox/include/mem.h>
 #include <blackbox/include/params.h>
@@ -15,6 +16,10 @@ int main(int argc, char **argv)
   int os_index;
   params_getopt(argc, argv);
 
+  char mode[6] = "\0";
+  sprintf(mode, "%d", TEST_IHK_OS_SHUTDOWN);
+  ret = setenv(IHKLIB_TEST_MODE_ENV_NAME, mode, 1);
+  INTERR(ret, "setenv returned %d. errno=%d\n", ret, -errno);
   /* Activate and check */
   /* Precondition */
   ret = linux_insmod(0);
@@ -61,15 +66,12 @@ int main(int argc, char **argv)
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-  int fd = ihklib_os_open(0);
-  INTERR(fd < 0, "ihklib_os_open returned %d\n", fd);
-  ret = ioctl(fd, IHK_OS_QUERY_STATUS);
-  INTERR(ret, "ioctl returned: %d\n", ret);
-  close(fd);
-
- out:
-  if (fd != -1) close(fd);
-  ret = ihk_destroy_os(0, os_index);
+  ret = ihk_os_shutdown(0);
+  INTERR(ret, "return value: %d, expected: %d\n", ret, 0);
+  out:
+	if (ihk_get_num_os_instances(0)) {
+    ihk_destroy_os(0, os_index);
+  }
   cpus_release();
   mems_release();
   linux_rmmod(0);
