@@ -183,9 +183,8 @@ void *ihk_os_get_mcos_private_data(struct file *file)
   return ifile->mcos_data;
 }
 
-/** \brief load_memory operation for an OS device file */
-static int __ihk_os_load_memory(struct ihk_host_linux_os_data *data,
-                                char *buf, unsigned long size, long offset)
+static int __ihk_os_load_memory_orig(struct ihk_host_linux_os_data *data,
+                                     char *buf, unsigned long size, long offset)
 {
   if (data->ops->load_mem) {
     return data->ops->load_mem(data, data->priv, buf, size, offset);
@@ -194,14 +193,43 @@ static int __ihk_os_load_memory(struct ihk_host_linux_os_data *data,
   }
 }
 
-/** \brief load_file operation for an OS device file
- *
- * This function is called when a user requests to load the kernel image
- * directly from a file.
- * If the IHK OS driver does not provide a handler for load_file,
- * it uses the load_mem handler instead.
- */
-static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
+/** \brief load_memory operation for an OS device file */
+static int __ihk_os_load_memory(struct ihk_host_linux_os_data *data,
+                                char *buf, unsigned long size, long offset)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_LOAD_MEMORY)  // Disable test code
+    return __ihk_os_load_memory_orig(data, buf, size, offset);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid handler" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec != 0 && (ivec == 1 && data->ops->load_mem)) {
+      ret = data->ops->load_mem(data, data->priv, buf, size, offset);
+    } else {  // ivec = 0
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+static int __ihk_os_load_file_orig(struct ihk_host_linux_os_data *data, char *fn)
 {
   char *buf;
   struct file *file;
@@ -209,11 +237,14 @@ static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
   loff_t size, done, pos = 0;
   long r;
 
-  if (data->ops->load_file) {
+  int use_load_mem = (g_ihk_test_mode == TEST_SMP_IHK_OS_LOAD_MEM ||
+                      g_ihk_test_mode == TEST__IHK_OS_LOAD_MEMORY) ? 1 : 0;
+
+  if (!use_load_mem && data->ops->load_file) {
     dprintf("IHK: os_load_file is defined. Use it.\n");
 
     ret = data->ops->load_file(data, data->priv, fn);
-  } else if (data->ops->load_mem){
+  } else if (data->ops->load_mem) {
     dprintf("IHK: os_load_mem is defined. Use it.\n");
 
     file = filp_open(fn, O_RDONLY, 0);
@@ -262,6 +293,142 @@ static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
   return ret;
 }
 
+/** \brief load_file operation for an OS device file
+ *
+ * This function is called when a user requests to load the kernel image
+ * directly from a file.
+ * If the IHK OS driver does not provide a handler for load_file,
+ * it uses the load_mem handler instead.
+ */
+static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_LOAD_FILE)  // Disable test code
+    return __ihk_os_load_file_orig(data, fn);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 7;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "No loading function is defined" },
+    { -ENOENT, "filp_open fail"  },
+    { -EINVAL, "i_size_read fail" },
+    { -EFAULT, "kernel_read fail" },
+    { -EINVAL, "__ihk_os_load_memory fail" },
+    { 0,       "load_mem success" },
+    { 0,       "load_file success" },
+  };
+
+  void *load_file_handler = data->ops->load_file;
+  void *load_mem_handler = data->ops->load_mem;
+  int ret = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    char *buf;
+    struct file *file;
+    ret = 0;
+    loff_t size = 0, done = 0, pos = 0;
+    long r;
+    int should_quit = 0;
+
+    if (ivec <= 5) data->ops->load_file = NULL;
+    if (ivec == 0) data->ops->load_mem = NULL;
+
+    if (data->ops->load_file) {  // main case
+      dprintf("IHK: os_load_file is defined. Use it.\n");
+
+      ret = data->ops->load_file(data, data->priv, fn);
+    } else if (data->ops->load_mem) {  // ivec >= 1
+      if (ivec > 4)
+        dprintf("IHK: os_load_mem is defined. Use it.\n");
+
+      file = filp_open(fn, O_RDONLY, 0);
+      if (ivec == 1 || IS_ERR(file)) {
+        ret = -ENOENT;
+        if (ivec != 1) {
+          dprintf("IHK: file not found %s\n", fn);
+          return ret;
+        }
+        goto out;
+      }
+
+      size = i_size_read(file->f_path.dentry->d_inode);
+      if (ivec == 2 || size <= 0) {
+        ret = -EINVAL;
+        if (ivec != 2) {
+          fput(file);
+          dprintf("IHK: file size invalid: %lld\n", size);
+          return ret;
+        }
+        goto out;
+      }
+
+      buf = (unsigned char *)__get_free_page(GFP_KERNEL);
+      if (!buf) {
+        fput(file);
+        return -ENOMEM;
+      }
+
+      for (done = 0; ret == 0 && done < size; ) {
+  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+        r = kernel_read(file, buf, PAGE_SIZE, &pos);
+  #else
+        r = kernel_read(file, pos, buf, PAGE_SIZE);
+        pos += r;
+  #endif
+        if (ivec == 3 || r <= 0) {
+          ret = -EFAULT;
+          if (ivec != 3) {
+            dprintf("kernel_read failed: %ld\n", r);
+            ret = (int)r;
+            should_quit = 1;
+          }
+          break;
+        }
+
+        ret = __ihk_os_load_memory(data, buf, r, done);
+        if (ivec == 4 || ret) {
+          ret = -EINVAL;
+          if (ivec != 4) should_quit = 1;
+          break;
+        }
+
+        done += r;
+      }
+
+      fput(file);
+    } else {  // ivec = 0
+      ret = -EINVAL;
+      if (ivec != 0) {
+        dprintf("IHK: No loading function is defined.\n");
+        return ret;
+      }
+      goto out;
+    }
+
+   out:
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec >= 1 && ivec <= 4) {
+      OKNG(done == 0, "not load any mem\n");
+    } else if (ivec == 5) {
+      OKNG(size > 0, "file size to load is valid\n");
+      OKNG(done == size, "load mem success\n");
+    }
+
+    /* reset state */
+    data->ops->load_file = load_file_handler;
+    data->ops->load_mem = load_mem_handler;
+  }
+
+  return ret;
+ err:
+  return -EINVAL;
+}
+
 /** \brief ioctl handler for a load-file request */
 static int __ihk_os_ioctl_load(struct ihk_host_linux_os_data *data,
                                char * __user filename)
@@ -281,8 +448,7 @@ static int __ihk_os_ioctl_load(struct ihk_host_linux_os_data *data,
   return ret;
 }
 
-/** \brief Boot a kernel related to the OS file */
-static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
+static int  __ihk_os_boot_orig(struct ihk_host_linux_os_data *data, int flag)
 {
   int ret = -EINVAL;
   int index = ihk_host_os_get_index(data);
@@ -333,6 +499,156 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 
   up(&ihk_os_notifiers_lock);
   return ret;
+}
+
+/** \brief Boot a kernel related to the OS file */
+static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_BOOT)  // Disable test code
+    return __ihk_os_boot_orig(data, flag);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 9;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL,      "ihk_kmsg_bufs is empty" },
+    { -EINVAL,      "not found a valid kmsg bufs container" },
+    { -ERESTARTSYS, "cannot acquire OS notifier lock" },
+    { -EINVAL,      "invalid OS boot handler" },
+    { -EINVAL,      "ihk_os_notifiers is empty" },
+    { -EINVAL,      "ihk_ikc_master_init fail" },
+    { -EINVAL,      "invalid OS notifier handler" },
+    { -EINVAL,      "OS notifier boot fail" },
+    { 0,            "main case" },
+  };
+
+  unsigned long flags = 0;
+  int ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int index = ihk_host_os_get_index(data);
+    int found = 0;
+    int should_quit = 0;
+    struct ihk_kmsg_buf_container *cont = NULL;
+    ret = 0;
+
+    /* Get the latest kmsg_buf */
+    spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+    if (ivec == 0 || list_empty(&ihk_kmsg_bufs)) {
+      // through
+    } else list_for_each_entry_reverse(cont, &ihk_kmsg_bufs, list) {
+      if (ivec != 1 && cont->os_index == data->minor) {
+        data->kmsg_buf_container = cont;
+        dkprintf("%s: got kmsg_buf %p\n", __FUNCTION__, cont);
+        atomic_inc(&cont->count); /* OS instance is referring to it */
+        found = 1;
+        break;
+      }
+    }
+    spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+
+    if (!found) {  // ivec = 0|1 go here
+      ret = -EINVAL;
+      if (ivec > 1) return ret;
+      goto out;
+    }
+
+    /*
+     * Take OS notifiers lock here so that we can safely
+     * return on a signal..
+     */
+    if (ivec == 2 || down_interruptible(&ihk_os_notifiers_lock)) {
+      ret = -ERESTARTSYS;
+      if (ivec != 2) should_quit = 1;
+      goto out;
+    }
+
+    if (ivec == 3 || !data->ops->boot) {
+      ret = -EINVAL;
+      if (ivec != 3) should_quit = 1;
+      // through
+    } else if (data->ops->boot) {
+      if (ivec == 4 || list_empty(&ihk_os_notifiers)) {
+        ret = -EINVAL;
+        if (ivec != 4) should_quit = 1;
+        goto out_up;
+      }
+      if (ivec > 7)
+        ret = data->ops->boot(data, data->priv, flag);
+      if (ivec >= 5 || ret == 0) {
+        if (ivec > 7)
+          ret = ihk_ikc_master_init(data);
+        if (ivec == 5 || ret) {
+          ret = -EINVAL;
+          if (ivec != 5) should_quit = 1;
+          goto out_up;
+        }
+      }
+
+      /* Call OS notifiers */
+      if (ivec >= 6 || ret == 0) {
+        struct ihk_os_notifier *_ion;
+        list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
+          if (ivec == 6 || !_ion->ops || !_ion->ops->boot) {
+            ret = -EINVAL;
+            if (ivec != 6) should_quit = 1;
+            goto out_up;
+          }
+          if (ivec > 7)
+            ret = _ion->ops->boot(index);
+          if (ivec == 7 || ret) {
+            ret = -EINVAL;
+            if (ivec != 7) {
+              should_quit = 1;
+              ikc_master_finalize(data);
+              data->ops->shutdown(data, data->priv, flag);
+            }
+            goto out_up;
+          }
+        }
+      }
+      if (ret) should_quit = 1;
+    }
+
+   out_up:
+    up(&ihk_os_notifiers_lock);
+   out:
+    if ((ivec > 1 && ivec < total_branch - 1) || should_quit)
+      atomic_dec(&cont->count); // reset refcnt of kmsg bufs container
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(atomic_read(&cont->count) == 1, "check refcnt of kmsg buf container\n");
+      /* fs */
+      OKNG(fs_os_procfs_entry_exist(index), "os procfs entries exist\n");
+      OKNG(fs_os_sysfs_entry_exist(index), "os sysfs entries exist\n");
+      /* notifier */
+      OKNG(data->kernel_handlers != NULL,
+           "kernel call handlers should not be cleared\n");
+      OKNG(!list_empty(&data->aux_call_list),
+           "List of the additional ioctl handlers should not be empty\n");
+    } else {
+      if (cont) {
+        OKNG(atomic_read(&cont->count) == 0, "check refcnt of kmsg buf container\n");
+      }
+      /* fs */
+      OKNG(!fs_os_procfs_entry_exist(index), "os procfs entries are not created\n");
+      OKNG(!fs_os_sysfs_entry_exist(index), "os sysfs entries are not created\n");
+      /* notifier */
+      OKNG(data->kernel_handlers == NULL,
+           "kernel call handlers should be cleared\n");
+      OKNG(list_empty(&data->aux_call_list),
+           "List of the additional ioctl handlers should be empty\n");
+
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 static void delete_kmsg_buf_orig(struct ihk_kmsg_buf_container* cont) {
@@ -617,7 +933,7 @@ static struct ihk_kmsg_buf_container *_find_cont(int minor);
 /** \brief Shutdown the kernel related to the OS file */
 static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 {
-  if (g_ihk_test_mode != TEST_IHK_OS_SHUTDOWN)  // Disable test code
+  if (g_ihk_test_mode != TEST__IHK_OS_SHUTDOWN)  // Disable test code
     return __ihk_os_shutdown_orig(data, flag);
 
   /* for keeping track of execution path */
@@ -1024,11 +1340,8 @@ static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
   return ret;
 }
 
-/** \brief Set the kernel command-line parameter for the kernel
- *
- * This function accepts 1023 letters at most. */
-static int __ihk_os_set_kargs(struct ihk_host_linux_os_data *data,
-                              char __user *buf)
+static int __ihk_os_set_kargs_orig(struct ihk_host_linux_os_data *data,
+                                   char __user *buf)
 {
   char *kbuf;
   int error;
@@ -1050,6 +1363,59 @@ static int __ihk_os_set_kargs(struct ihk_host_linux_os_data *data,
 
   kfree(kbuf);
   return error;
+}
+
+/** \brief Set the kernel command-line parameter for the kernel
+ *
+ * This function accepts 1023 letters at most. */
+static int __ihk_os_set_kargs(struct ihk_host_linux_os_data *data,
+                              char __user *buf)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_SET_KARGS)  // Disable test code
+    return __ihk_os_set_kargs_orig(data, buf);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid handler" },
+    { 0,       "main case" },
+  };
+
+  int error;
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    char *kbuf;
+    int should_quit = 0;
+
+    kbuf = kmalloc(1024, GFP_KERNEL);
+    if (!kbuf) {
+      return -ENOMEM;
+    }
+    if (strncpy_from_user(kbuf, buf, 1024) < 0) {
+      kfree(kbuf);
+      return -EFAULT;
+    }
+    kbuf[1023] = 0;
+
+    error = -EINVAL;
+    if (ivec == 0 || !data->ops->set_kargs) {
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+    if (data->ops->set_kargs) {
+      error = data->ops->set_kargs(data, data->priv, kbuf);
+    }
+
+   out:
+    kfree(kbuf);
+    if (should_quit) return error;
+    BRANCH_RET_CHK(error, b_infos[ivec].expected);
+  }
+  return error;
+ err:
+  return -EINVAL;
 }
 
 void setup_monitor(struct ihk_host_linux_os_data *data)
@@ -1222,7 +1588,7 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
   return 0;
 }
 
-static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, void __user *_desc)
+static int __ihk_os_register_event_orig(struct ihk_host_linux_os_data *os, void __user *_desc)
 {
   struct ihk_event *ep;
   struct ihk_os_ioctl_eventfd_desc desc;
@@ -1249,6 +1615,84 @@ static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, void __use
   list_add_tail(&ep->list, &os->event_list);
   spin_unlock_irqrestore(&os->event_list_lock, flags);
   return 0;
+}
+
+static int __ihk_os_register_event(struct ihk_host_linux_os_data *os, void __user *_desc)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_REGISTER_EVENT)  // Disable test code
+    return __ihk_os_register_event_orig(os, _desc);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -ENOENT, "eventfd_fget fail" },
+    { -ENOENT, "eventfd_ctx_fileget fail" },
+    { 0,       "main case" },
+  };
+
+  /* save previous state */
+  unsigned long flags;
+  struct ihk_event *ep;
+  int count_evt_prev = 0;
+  spin_lock_irqsave(&os->event_list_lock, flags);
+  list_for_each_entry(ep, &os->event_list, list) {
+    count_evt_prev++;
+  }
+  spin_unlock_irqrestore(&os->event_list_lock, flags);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int ret = 0;
+    struct ihk_os_ioctl_eventfd_desc desc;
+    struct eventfd_ctx *event;
+    struct file *filp;
+    int count_evt_after = 0;
+
+    if (copy_from_user(&desc, _desc, sizeof(desc))) {
+      return -EFAULT;
+    }
+
+    filp = eventfd_fget(desc.fd);
+    if (ivec == 0 || IS_ERR(filp)) {
+      ret = -ENOENT;
+      if (ivec != 0) return PTR_ERR(filp);
+      goto out;
+    }
+    event = eventfd_ctx_fileget(filp);
+    if (ivec == 1 || IS_ERR(event)) {
+      ret = -ENOENT;
+      if (ivec != 1) return PTR_ERR(event);
+      goto out;
+    }
+    ep = kzalloc(sizeof(struct ihk_event), GFP_KERNEL);
+    ep->event = event;
+    ep->type = desc.type;
+    spin_lock_irqsave(&os->event_list_lock, flags);
+    list_add_tail(&ep->list, &os->event_list);
+    spin_unlock_irqrestore(&os->event_list_lock, flags);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    /* check current state */
+    spin_lock_irqsave(&os->event_list_lock, flags);
+    list_for_each_entry(ep, &os->event_list, list) {
+      count_evt_after++;
+    }
+    spin_unlock_irqrestore(&os->event_list_lock, flags);
+    if (ivec == total_branch - 1) {
+      OKNG(count_evt_after == count_evt_prev + 1,
+           "the number of events should be increased by 1\n");
+    } else {
+      OKNG(count_evt_after == count_evt_prev,
+           "the number of events should not be changed\n");
+    }
+  }
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 void ihk_os_eventfd(ihk_os_t data, int type)
@@ -1503,10 +1947,11 @@ static int __test_ihk_os_query_status(struct ihk_host_linux_os_data *os)
   g_ihk_test_mode = TEST_SMP_IHK_OS_QUERY_STATUS;
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 12;
+  unsigned long total_branch = 13;
 
   branch_info_t b_infos[] = {
     { -ENOSYS,                  "setup monitor fail" },
+    { IHK_OS_STATUS_FAILED,     "cpu status is panic" },
     { IHK_OS_STATUS_BOOTING,    "os status is booting" },
     { IHK_OS_STATUS_BOOTED,     "os status is booted" },
     { IHK_OS_STATUS_HUNGUP,     "os status is hungup" },
@@ -1529,8 +1974,9 @@ static int __test_ihk_os_query_status(struct ihk_host_linux_os_data *os)
   int *cpus_status_prev = NULL;
   setup_monitor(os);
   if (ivec == 0 || !os->monitor) {
+    START(b_infos[ivec].name);
     ret = -ENOSYS;
-    if (ivec != 0) return ret;
+    if (!os->monitor) return ret;
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
   }
   int n_cpus = os->monitor->num_processors;
@@ -1547,42 +1993,46 @@ static int __test_ihk_os_query_status(struct ihk_host_linux_os_data *os)
 
     /* fake os internal status before querying */
     if (ivec == 1) {
-      os->ops->set_smp_status(os, 3, 0);
+      os->ops->set_smp_status(os, 3, 2);
+      os->monitor->cpu[0].status = IHK_OS_MONITOR_PANIC;
     }
     if (ivec == 2) {
-      os->ops->set_smp_status(os, 3, 1);
+      os->ops->set_smp_status(os, 3, 0);
     }
     if (ivec == 3) {
-      os->ops->set_smp_status(os, 5, 0);
+      os->ops->set_smp_status(os, 3, 1);
     }
     if (ivec == 4) {
-      os->ops->set_smp_status(os, 4, 0);
+      os->ops->set_smp_status(os, 5, 0);
     }
     if (ivec == 5) {
+      os->ops->set_smp_status(os, 4, 0);
+    }
+    if (ivec == 6) {
       os->ops->set_smp_status(os, 0, 0);
     }
 
     /* for Ready or Running */
-    if (ivec == 6) {  // cpu0 is freezing
+    if (ivec == 7) {  // cpu0 is freezing
       os->ops->set_smp_status(os, 3, 2);
       os->monitor->cpu[0].status = 8;  // IHK_OS_MONITOR_KERNEL_FREEZING
     }
-    if (ivec == 7) {  // cpuX is freezing
+    if (ivec == 8) {  // cpuX is freezing
       os->ops->set_smp_status(os, 3, 2);
       os->monitor->cpu[0].status = IHK_OS_MONITOR_IDLE;
       os->monitor->cpu[1].status = IHK_OS_MONITOR_KERNEL_FREEZING;
     }
-    if (ivec == 8) {  // cpuX is frozen, cpu0 is not frozen
+    if (ivec == 9) {  // cpuX is frozen, cpu0 is not frozen
       os->ops->set_smp_status(os, 3, 3);
       os->monitor->cpu[0].status = IHK_OS_MONITOR_IDLE;
       os->monitor->cpu[1].status = IHK_OS_MONITOR_KERNEL_FROZEN;
     }
-    if (ivec == 9) {  // cpuX is not frozen, cpu0 is frozen
+    if (ivec == 10) {  // cpuX is not frozen, cpu0 is frozen
       os->ops->set_smp_status(os, 3, 2);
       os->monitor->cpu[0].status = IHK_OS_MONITOR_KERNEL_FROZEN;
       os->monitor->cpu[1].status = IHK_OS_MONITOR_IDLE;
     }
-    if (ivec == 10) {  // all cpus are frozen
+    if (ivec == 11) {  // all cpus are frozen
       os->ops->set_smp_status(os, 3, 2);
       for (i = 0; i < n_cpus; i++) {
         os->monitor->cpu[i].status = IHK_OS_MONITOR_KERNEL_FROZEN;
@@ -1590,7 +2040,7 @@ static int __test_ihk_os_query_status(struct ihk_host_linux_os_data *os)
     }
 
     /* not freezing and not frozen */
-    if (ivec == 11) {
+    if (ivec == 12) {
       os->ops->set_smp_status(os, 3, 3);
       for (i = 0; i < n_cpus; i++) {
         os->monitor->cpu[i].status = IHK_OS_MONITOR_IDLE;
@@ -2135,7 +2585,6 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
   int ret = 0;
   unsigned long ivec = 0;
   unsigned long total_branch = 3;
-  int should_quit = 0;
 
   branch_info_t b_infos[] = {
     { -EINVAL, "create_os handler is not set" },
@@ -2148,6 +2597,7 @@ static int __ihk_device_create_os_init(struct ihk_host_linux_device_data *data,
 
     struct ihk_host_linux_os_data *os = NULL;
     struct ihk_register_os_data drv_data;
+    int should_quit = 0;
 
     os = kzalloc(sizeof(*os), GFP_KERNEL);
     if (!os) {
@@ -2388,13 +2838,14 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
     return __ihk_device_create_os_orig(data, arg);
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 7;
+  unsigned long total_branch = 8;
 
   branch_info_t b_infos[] = {
     { 0,       "none free slot" },
     { -ENOMEM, "exceed OS_MAX_MINOR" },
     { -EINVAL, "cannot create and init os" },
     { 0,       "ihk_kmsg_bufs is full" },
+    { 0,       "ihk_kmsg_bufs has at least 1 seat" },
     { -ENOMEM, "cdev_add fail" },
     { -ENOMEM, "device_create fail" },
     { 0,       "main case" },
@@ -2403,7 +2854,7 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
   int minor = -1;
   int os_max_minor_prev = os_max_minor;
   int nbufs_prev = 0, nbufs_after = 0;
-  struct ihk_kmsg_buf_container *cont, *cont_it;
+  struct ihk_kmsg_buf_container *cont, *cont_it, *cont_first = NULL;
   list_for_each_entry(cont_it, &ihk_kmsg_bufs, list) {
     nbufs_prev++;
   }
@@ -2524,10 +2975,19 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
     if (ivec == total_branch - 1)
       dkprintf("%s: number of kmsg_buf=%d\n", __FUNCTION__, nbufs);
 
+    if (ivec == 4 || (ivec != 3 && nbufs <= (IHK_MAX_NUM_KMSG_BUFS - 1))) {
+      if (nbufs > IHK_MAX_NUM_KMSG_BUFS - 1) {  // all seats are busy
+        /* should remove one exist container to reserve seat for the new one */
+        cont_first = list_first_entry(&ihk_kmsg_bufs,
+                                      struct ihk_kmsg_buf_container, list);
+        list_del(&cont_first->list);
+      }
+    } else
     /* with ivec = 3, we will definitely go inside this for-loop
      * because we have manually created a full kmsg bufs before */
     for (i = 0; i < nbufs - (IHK_MAX_NUM_KMSG_BUFS - 1); i++) {
-      cont = list_first_entry(&ihk_kmsg_bufs, struct ihk_kmsg_buf_container, list);
+      cont = list_first_entry(&ihk_kmsg_bufs,
+                              struct ihk_kmsg_buf_container, list);
       delete_kmsg_buf(cont);
       if (ivec != 3)
         ekprintf("%s: Warning: stray kmsg_buf %p freed\n", __FUNCTION__, cont);
@@ -2556,11 +3016,11 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
     os->cdev.owner = THIS_MODULE;
     os->dev_num = mcos_dev_num + minor;
 
-    if (ivec != 4)
+    if (ivec != 5)
       ret = cdev_add(&os->cdev, os->dev_num, 1);
-    if (ivec == 4 || ret < 0) {
+    if (ivec == 5 || ret < 0) {
       ret = -ENOMEM;
-      if (ivec != 4) {
+      if (ivec != 5) {
         printk("ihk: cdev_add failed (%d)\n", ret);
         should_quit = 1;
         goto err;
@@ -2574,12 +3034,12 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
     os_data[minor] = os;
     os->minor = minor;
 
-    if (ivec != 5)
+    if (ivec != 6)
       os->lindev = device_create(mcos_class, NULL, os->dev_num, NULL,
                                  OS_DEV_NAME "%d", minor);
-    if (ivec == 5 || IS_ERR(os->lindev)) {
+    if (ivec == 6 || IS_ERR(os->lindev)) {
       ret = -ENOMEM;
-      if (ivec != 5) {
+      if (ivec != 6) {
         printk("ihk: device_create failed.\n");
         should_quit = 1;
         goto err;
@@ -2619,8 +3079,13 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
       OKNG(nbufs_prev == nbufs_after,
            "the number of kmsg bufs should be unchanged\n");
     } else {
-      OKNG(nbufs_prev == nbufs_after - 1,
-           "the number of kmsg bufs should be increased by 1\n");
+      if (nbufs_prev < IHK_MAX_NUM_KMSG_BUFS) {
+        OKNG(nbufs_prev == nbufs_after - 1,
+             "the number of kmsg bufs should be increased by 1\n");
+      } else {
+        OKNG(nbufs_after == IHK_MAX_NUM_KMSG_BUFS,
+             "the number of kmsg bufs should not exceed %d\n", IHK_MAX_NUM_KMSG_BUFS);
+      }
       OKNG(os_max_minor <= OS_MAX_MINOR, "checking max minor constrain\n");
       OKNG(minor >= 0 && minor < os_max_minor, "checking minor constrain\n");
       OKNG(os != NULL && os_data[minor] == os, "new os_data should be added\n");
@@ -2632,6 +3097,8 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
     if (ivec != total_branch - 1 || should_quit) {
       spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
       delete_kmsg_buf(cont);
+      if (ivec == 4 && cont_first)
+        list_add_tail(&cont_first->list, &ihk_kmsg_bufs);
       spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
       if (minor >= 0)  {
         os_data[minor] = NULL;
@@ -3955,8 +4422,8 @@ int ihk_os_send_nmi(ihk_os_t os, int mode)
   return __ihk_os_send_nmi(os, mode);
 }
 
-unsigned long ihk_device_map_memory(ihk_device_t dev, unsigned long pa,
-                                    unsigned long size)
+unsigned long ihk_device_map_memory_orig(ihk_device_t dev, unsigned long pa,
+                                         unsigned long size)
 {
   /* XXX: PAGE_SIZE should be device-specific */
   unsigned long st, ed, offset, r;
@@ -3971,6 +4438,53 @@ unsigned long ihk_device_map_memory(ihk_device_t dev, unsigned long pa,
   }
 
   return r + offset;
+}
+
+unsigned long ihk_device_map_memory(ihk_device_t dev, unsigned long pa,
+                                    unsigned long size)
+{
+  if (g_ihk_test_mode != TEST_IHK_DEVICE_MAP_MEMORY)  // Disable test code
+    return ihk_device_map_memory_orig(dev, pa, size);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "cannot map memory" },
+    { 0, "main case" },
+  };
+
+  unsigned long ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    /* XXX: PAGE_SIZE should be device-specific */
+    unsigned long st, ed, offset, r;
+
+    offset = pa & (PAGE_SIZE - 1);
+    st = pa & PAGE_MASK;
+    ed = (pa + size + PAGE_SIZE - 1) & PAGE_MASK;
+
+    if (ivec > 0)
+      r = __ihk_device_map_memory(dev, st, ed - st);
+    if (ivec == 0 || (long) r <= 0) {
+      ret = 0;
+      if (ivec != 0) return r;
+      goto out;
+    }
+
+    ret = r + offset;
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(ret > 0, "mapped memory should be valid\n");
+    } else {
+      OKNG(ret <= 0, "mapped memory is invalid\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 int ihk_device_unmap_memory(ihk_device_t dev, unsigned long pa,

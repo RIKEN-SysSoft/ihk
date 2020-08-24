@@ -32,7 +32,7 @@
 
 #include "driver/okng_driver.h"
 #include "branch_info.h"
-
+#include "ops_wrappers.h"
 //#define DEBUG_IKC
 
 #ifdef DEBUG_IKC
@@ -45,13 +45,9 @@
 
 static int arch_master_handler(struct ihk_ikc_channel_desc *c,
                                void *__packet, void *__os);
-/**
- * \brief Core function of initialization of a master channel.
- * It waits for the kernel to become ready, maps the queues,
- * and allocates a channel descriptor strcuture for the master channel.
- */
-struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
-                                                     ihk_ikc_ph_t handler)
+
+struct ihk_ikc_channel_desc *ihk_host_ikc_init_first_orig(ihk_os_t ihk_os,
+                                                          ihk_ikc_ph_t handler)
 {
 	struct ihk_host_linux_os_data *os = ihk_os;
 	unsigned long r, w, rp, wp, rsz, wsz;
@@ -109,8 +105,107 @@ struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
 	}
 }
 
-/** \brief Initializes a master channel */
-int ihk_ikc_master_init(ihk_os_t __os)
+/**
+ * \brief Core function of initialization of a master channel.
+ * It waits for the kernel to become ready, maps the queues,
+ * and allocates a channel descriptor strcuture for the master channel.
+ */
+struct ihk_ikc_channel_desc *ihk_host_ikc_init_first(ihk_os_t ihk_os,
+                                                     ihk_ikc_ph_t handler)
+{
+  if (g_ihk_test_mode != TEST_IHK_HOST_IKC_INIT_FIRST)  // Disable test code
+    return ihk_host_ikc_init_first_orig(ihk_os, handler);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "OS Ready status is not reached" },
+    { 0, "main case" },
+  };
+
+  struct ihk_host_linux_os_data *os = ihk_os;
+  struct ihk_ikc_channel_desc *ret = NULL;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+  	unsigned long r, w, rp, wp, rsz, wsz;
+  	struct ihk_ikc_queue_head *rq, *wq;
+  	struct ihk_ikc_channel_desc *c;
+
+    if (ivec > 0)
+  	  ihk_ikc_system_init(ihk_os);
+  	os->ikc_initialized = 1;
+
+  	if (ivec != 0 &&
+        ihk_os_wait_for_status(ihk_os, IHK_OS_STATUS_READY, 0, 200) == 0) {
+  		/* XXX:
+  		 * We assume this address is remote,
+  		 * but the local is possible... */
+  		dprintf("OS is now marked ready.\n");
+
+  		ihk_os_get_special_address(ihk_os, IHK_SPADDR_MIKC_QUEUE_RECV,
+  		                           &r, &rsz);
+  		ihk_os_get_special_address(ihk_os, IHK_SPADDR_MIKC_QUEUE_SEND,
+  		                           &w, &wsz);
+
+  		dprintf("MIKC rq: 0x%lX, wq: 0x%lX\n", r, w);
+
+  		rp = ihk_device_map_memory(os->dev_data, r, rsz);
+  		wp = ihk_device_map_memory(os->dev_data, w, wsz);
+
+  		rq = ihk_device_map_virtual(os->dev_data, rp, rsz, NULL, 0);
+  		wq = ihk_device_map_virtual(os->dev_data, wp, wsz, NULL, 0);
+
+  		c = kzalloc(sizeof(struct ihk_ikc_channel_desc)
+  		            + sizeof(struct ihk_ikc_master_packet), GFP_KERNEL);
+  		ihk_ikc_init_desc(c, ihk_os, 0, rq, wq,
+  		                  ihk_ikc_master_channel_packet_handler, c);
+
+  		ihk_ikc_channel_set_cpu(c, 0);
+
+  		c->recv.qphys = rp;
+  		c->send.qphys = wp;
+  		c->recv.qrphys = r;
+  		c->send.qrphys = w;
+  		/*
+  		 * ihk_ikc_interrupt_handler() on the LWK now iterates the channel
+  		 * until all packets are purged. This makes the notification IRQ
+  		 * on master channel unnecessary.
+  		 */
+  		//c->flag |= IKC_FLAG_NO_COPY;
+
+  		dprintf("c->remote_os = %p\n", c->remote_os);
+  		os->packet_handler = handler;
+
+  		ret = c;
+  	} else {  // ivec = 0 goes here
+      if (ivec != 0) {
+  		  printk("IHK: OS does not become ready, kernel msg:\n");
+  		  ihk_host_print_os_kmsg(ihk_os);
+      }
+  		ret = NULL;
+      goto out;
+  	}
+
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(__ihk_os_query_status(os) == IHK_OS_STATUS_READY,
+           "os status should be ready\n");
+      OKNG(ret, "channel desc should be created\n");
+    } else {
+      OKNG(__ihk_os_query_status(os) != IHK_OS_STATUS_READY,
+           "os status is not ready\n");
+      OKNG(!ret, "channel desc is not created\n");
+    }
+  }
+  return ret;
+ err:
+  return NULL;
+}
+
+int ihk_ikc_master_init_orig(ihk_os_t __os)
 {
 	struct ihk_host_linux_os_data *os = __os;
 	struct ihk_ikc_master_packet packet;
@@ -121,8 +216,7 @@ int ihk_ikc_master_init(ihk_os_t __os)
 		return -EINVAL;
 	}
 
-	os->mchannel =
-		ihk_host_ikc_init_first(os, arch_master_handler);
+	os->mchannel = ihk_host_ikc_init_first(os, arch_master_handler);
 	dprintf("os(%p)->mchannel = %p\n", os, os->mchannel);
 	if (!os->mchannel) {
 		return -EINVAL;
@@ -137,6 +231,71 @@ int ihk_ikc_master_init(ihk_os_t __os)
 
 		return 0;
 	}
+}
+
+/** \brief Initializes a master channel */
+int ihk_ikc_master_init(ihk_os_t __os)
+{
+  if (g_ihk_test_mode != TEST_IHK_IKC_MASTER_INIT)  // Disable test code
+    return ihk_ikc_master_init_orig(__os);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os data" },
+    { -EINVAL, "cannot create master channel" },
+    { 0,       "main case" },
+  };
+
+  dprintf("ikc_master_init\n");
+  struct ihk_host_linux_os_data *os = __os;
+  int ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+  	struct ihk_ikc_master_packet packet;
+
+  	if (ivec == 0 || !os) {
+  		ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+  	}
+
+    if (ivec > 1) {
+  	  os->mchannel = ihk_host_ikc_init_first(os, arch_master_handler);
+  	  dprintf("os(%p)->mchannel = %p\n", os, os->mchannel);
+    }
+  	if (ivec == 1 || !os->mchannel) {
+  		ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+  	} else {
+  		ihk_ikc_enable_channel(os->mchannel);
+
+  		dprintf("ikc_master_init done.\n");
+
+  		/* ack send */
+  		packet.msg = IHK_IKC_MASTER_MSG_INIT_ACK;
+  		ihk_ikc_send(os->mchannel, &packet, 0);
+
+  		ret = 0;
+  	}
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(os->mchannel, "master channel should be created\n");
+      OKNG(os->mchannel->flag & IKC_FLAG_ENABLED,
+           "master channel should be enabled\n");
+    } else {
+      OKNG(!os->mchannel, "master channel is not created\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 void ikc_master_finalize_orig(ihk_os_t __os)
@@ -206,7 +365,7 @@ void ikc_master_finalize(ihk_os_t __os)
 
    out:
     irq_h_count_after = ihk_os_get_num_handlers(os);
-    
+
     OKNG(os->ikc_initialized == 0, "ikc master is released\n");
     if (ivec == total_branch - 1) {
       OKNG(irq_h_count_after == irq_h_count_prev - 1,
