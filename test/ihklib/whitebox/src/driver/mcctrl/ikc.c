@@ -677,16 +677,14 @@ void destroy_ikc_channels(ihk_os_t os)
 
     ihk_host_os_set_usrdata(os, NULL);
 
-    if (ivec == 1 || usrdata->num_channels == 0) {
-      goto out;
-    }
+    if (ivec >= 1 && ivec <= 3) goto skip1;
     for (i = 0; i < usrdata->num_channels; i++) {
-      if (ivec == 2 || !usrdata->channels[i].c) continue;
       if (usrdata->channels[i].c) {
         ihk_ikc_destroy_channel(usrdata->channels[i].c);
       }
     }
-    if (ivec == 2) goto out;
+   skip1:
+    if (ivec >= 1 && ivec <= 3) goto skip2;
 
     for (i = 0; i < nr_cpu_ids; i++) {
       if (ivec == 3 || !usrdata->ikc2linux[i]) continue;
@@ -694,7 +692,8 @@ void destroy_ikc_channels(ihk_os_t os)
         ihk_ikc_destroy_channel(usrdata->ikc2linux[i]);
       }
     }
-    if (ivec == 3) goto out;
+   skip2:
+    if (ivec >= 1 && ivec <= 3) goto out;
 
     spin_lock_irqsave(&usrdata->wakeup_descs_lock, flags);
     if (ivec == 4 || list_empty(&usrdata->wakeup_descs_list)) {

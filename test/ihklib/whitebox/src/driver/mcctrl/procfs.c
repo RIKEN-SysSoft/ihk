@@ -216,6 +216,7 @@ static char *_find_entry_path(struct procfs_list_entry *e)
       sprintf(dup, "%s", path);
       sprintf(path, "%s/%s", parent->name, dup);
     }
+    parent = parent->parent;
   }
 
   sprintf(dup, "%s", path);
@@ -302,12 +303,12 @@ add_procfs_entry(struct procfs_list_entry *parent, const char *name, int mode,
   struct proc_dir_entry *parent_pde = NULL;
   int f_mode = mode & 0777;
 
-  if(e)
+  if (e)
     delete_procfs_entries(e);
 
   e = kmalloc(sizeof(struct procfs_list_entry) + strlen(name) + 1,
               GFP_KERNEL);
-  if(!e){
+  if (!e) {
     kprintf("ERROR: not enough memory to create PROCFS entry.\n");
     return NULL;
   }
@@ -315,7 +316,7 @@ add_procfs_entry(struct procfs_list_entry *parent, const char *name, int mode,
   INIT_LIST_HEAD(&e->children);
   strcpy(e->name, name);
 
-  if(parent)
+  if (parent)
     parent_pde = parent->entry;
 
   if (mode & S_IFDIR) {
@@ -324,31 +325,29 @@ add_procfs_entry(struct procfs_list_entry *parent, const char *name, int mode,
 #else
     pde = proc_mkdir_data(name, f_mode, parent_pde, e);
 #endif
-  }
-  else if ((mode & S_IFLNK) == S_IFLNK) {
+  } else if ((mode & S_IFLNK) == S_IFLNK) {
     pde = proc_symlink(name, parent_pde, (char *)opaque);
-  }
-  else {
+  } else {
     const struct file_operations *fop;
 
-    if(opaque)
+    if (opaque)
       fop = (const struct file_operations *)opaque;
-    else if(mode & S_IWUSR)
+    else if (mode & S_IWUSR)
       fop = &mckernel_forward;
     else
       fop = &mckernel_forward_ro;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
     pde = create_proc_entry(name, f_mode, parent_pde);
-    if(pde)
+    if (pde)
       pde->proc_fops = fop;
 #else
     pde = proc_create_data(name, f_mode, parent_pde, fop, e);
-    if(pde)
+    if (pde)
       proc_set_user(pde, uid, gid);
 #endif
   }
-  if(!pde){
+  if (!pde) {
     kprintf("ERROR: cannot create a PROCFS entry for %s.\n", name);
     kfree(e);
     return NULL;
@@ -359,7 +358,7 @@ add_procfs_entry(struct procfs_list_entry *parent, const char *name, int mode,
   pde->data = e;
 #endif
 
-  if(parent)
+  if (parent)
     e->osnum = parent->osnum;
   e->entry = pde;
   e->parent = parent;
@@ -374,7 +373,7 @@ add_procfs_entries(struct procfs_list_entry *parent,
 {
   const struct procfs_entry *p;
 
-  for(p = entries; p->name; p++){
+  for (p = entries; p->name; p++) {
     add_procfs_entry(parent, p->name, p->mode, uid, gid, p->fops);
   }
 }

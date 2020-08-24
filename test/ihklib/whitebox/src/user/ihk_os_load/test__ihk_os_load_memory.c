@@ -4,6 +4,7 @@
 #include <user/ihklib_private.h>
 #include <user/okng_user.h>
 
+#include <blackbox/include/util.h>
 #include <blackbox/include/cpu.h>
 #include <blackbox/include/mem.h>
 #include <blackbox/include/params.h>
@@ -19,6 +20,13 @@ int main(int argc, char **argv)
   /* Precondition */
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
+
+  int fd = ihklib_device_open(0);
+  INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
+  int test_mode = TEST__IHK_OS_LOAD_MEMORY;
+  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
+  INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
+  close(fd); fd = -1;
 
   ret = _cpus_reserve(98, -1);
   INTERR(ret, "cpus_reserve returned %d\n", ret);
@@ -52,24 +60,24 @@ int main(int argc, char **argv)
   ret = ihk_os_set_ikc_map(0, map_input.map, map_input.ncpus);
   INTERR(ret, "ihk_os_set_ikc_map returned %d\n", ret);
 
-  ret = os_load();
-  INTERR(ret, "os_load returned %d\n", ret);
+  char fn[4096];
+	sprintf(fn, "%s/%s/kernel/mckernel.img",
+		QUOTE(WITH_MCK), QUOTE(BUILD_TARGET));
+  ret = ihk_os_load(0, fn);
+  INTERR(ret, "ihk_os_load returned %d\n", ret);
 
   ret = os_kargs();
   INTERR(ret, "os_kargs returned %d\n", ret);
 
-  ret = ihk_os_boot(0);
-  INTERR(ret, "ihk_os_boot returned %d\n", ret);
+  //ret = ihk_os_boot(0);
+  //INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-  int fd = ihklib_os_open(0);
-  INTERR(fd < 0, "ihklib_os_open returned %d\n", fd);
-  ret = ioctl(fd, IHK_OS_QUERY_STATUS);
-  INTERR(ret, "ioctl returned: %d\n", ret);
-  close(fd);
-
- out:
-  if (fd != -1) close(fd);
-  ret = ihk_destroy_os(0, os_index);
+  ret = ihk_os_shutdown(0);
+  INTERR(ret, "return value: %d, expected: %d\n", ret, 0);
+  out:
+	if (ihk_get_num_os_instances(0)) {
+    ihk_destroy_os(0, os_index);
+  }
   cpus_release();
   mems_release();
   linux_rmmod(0);

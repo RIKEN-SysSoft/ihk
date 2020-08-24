@@ -378,15 +378,51 @@ static int lwk_numa_2_linux_numa(struct smp_os_data *os, int numa_id)
   os->numa_mapping[numa_id] : -1;
 }
 
-static int linux_numa_2_lwk_numa(struct smp_os_data *os, int numa_id)
+static int linux_numa_2_lwk_numa_orig(struct smp_os_data *os, int numa_id)
 {
   int i;
 
   for (i = 0; i < os->nr_numa_nodes; ++i) {
-  if (os->numa_mapping[i] == numa_id)
-  return i;
+    if (os->numa_mapping[i] == numa_id)
+      return i;
   }
 
+  return -1;
+}
+
+static int linux_numa_2_lwk_numa(struct smp_os_data *os, int numa_id)
+{
+  if (g_ihk_test_mode != TEST_LINUX_NUMA_2_LWK_NUMA)  // Disable test code
+    return linux_numa_2_lwk_numa_orig(os, numa_id);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "not found node numa_id" },
+    { 0, "main case" },
+  };
+
+  int ret = -1, i;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    for (i = 0; i < os->nr_numa_nodes; ++i) {
+      if (ivec == 0 || os->numa_mapping[i] != numa_id) continue;
+      ret = i;
+      break;
+    }
+
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(ret >= 0, "found a valid numa mapping\n");
+    } else {
+      OKNG(ret == -1, "not found the node numa_id\n");
+    }
+  }
+  return ret;
+ err:
   return -1;
 }
 
@@ -439,13 +475,14 @@ static int cpu_array2str(char *str, ssize_t len,
   char target[200] = "\0";
   int ncpus;
   int *_cpus;
-  int n;
+  int n = 0;
   int should_quit = 0;
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 4;
+  unsigned long total_branch = 6;
 
   branch_info_t b_infos[] = {
+    { 0, "invalid parameter" },
     { 0, "continous cpus" },
     { 0, "discrete cpus" },
     { 0, "single cpu" },
@@ -458,7 +495,12 @@ static int cpu_array2str(char *str, ssize_t len,
 
     should_quit = 1;
 
-    if (ivec == 0) {
+    if (ivec == 0 || (!str || len <= 0 || num_cpus <= 0 || !cpus)) {
+      if (ivec != 0) return 0;
+      goto out;
+    }
+
+    if (ivec == 1) {
       ncpus = 8;
       _cpus = kmalloc(ncpus * sizeof(int), GFP_KERNEL);
       if (!_cpus) return -ENOMEM;
@@ -468,7 +510,7 @@ static int cpu_array2str(char *str, ssize_t len,
       sprintf(target, "%s", "2-9");
     }
 
-    if (ivec == 1) {
+    if (ivec == 2) {
       ncpus = 6;
       _cpus = kmalloc(ncpus * sizeof(int), GFP_KERNEL);
       if (!_cpus) return -ENOMEM;
@@ -478,7 +520,7 @@ static int cpu_array2str(char *str, ssize_t len,
       sprintf(target, "%s", "2,4,6,30,32,34");
     }
 
-    if (ivec == 2) {
+    if (ivec == 3) {
       ncpus = 1;
       _cpus = kmalloc(ncpus * sizeof(int), GFP_KERNEL);
       if (!_cpus) return -ENOMEM;
@@ -487,7 +529,7 @@ static int cpu_array2str(char *str, ssize_t len,
       sprintf(target, "%s", "3");
     }
 
-    if (ivec == 3) {
+    if (ivec == 4) {
       ncpus = 8;
       _cpus = kmalloc(ncpus * sizeof(int), GFP_KERNEL);
       if (!_cpus) return -ENOMEM;
@@ -497,7 +539,7 @@ static int cpu_array2str(char *str, ssize_t len,
       sprintf(target, "%s", "2-4,7,9,12-14");
     }
 
-    if (ivec == 4) {
+    if (ivec == 5) {
       ncpus = 7;
       _cpus = kmalloc(ncpus * sizeof(int), GFP_KERNEL);
       if (!_cpus) return -ENOMEM;
@@ -613,19 +655,19 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
   spin_lock_irqsave(&dev->lock, flags);
   if (dev->status != BUILTIN_DEV_STATUS_READY) {
-  pr_err("IHK-SMP: error: "
-         "Device has already booted / is booting OS.\n");
-  ret = -EBUSY;
-  spin_unlock_irqrestore(&dev->lock, flags);
-  goto out;
+    pr_err("IHK-SMP: error: "
+           "Device has already booted / is booting OS.\n");
+    ret = -EBUSY;
+    spin_unlock_irqrestore(&dev->lock, flags);
+    goto out;
   }
   spin_unlock_irqrestore(&dev->lock, flags);
 
   if (os->status == BUILTIN_OS_STATUS_BOOTING) {
-  pr_err("IHK-SMP: error: "
-         "Device has already booted / is booting OS.\n");
-  ret = -EBUSY;
-  goto out;
+    pr_err("IHK-SMP: error: "
+           "Device has already booted / is booting OS.\n");
+    ret = -EBUSY;
+    goto out;
   }
 
   /* Compute size including CPUs, NUMA nodes and memory chunks */
@@ -641,65 +683,63 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
 
   os->numa_mapping = kmalloc(nr_numa_nodes * sizeof(int), GFP_KERNEL);
   if (!os->numa_mapping) {
-  pr_err("IHK-SMP: error allocating NUMA mapping\n");
-  ret = -ENOMEM;
-  goto out;
+    pr_err("IHK-SMP: error allocating NUMA mapping\n");
+    ret = -ENOMEM;
+    goto out;
   }
 
   /* Fill in LWK NUMA mapping */
   numa_id = 0;
   for (linux_numa_id = find_first_bit(&os->numa_mask,
-  (sizeof(os->numa_mask) * 8));
-  linux_numa_id < (sizeof(os->numa_mask) * 8);
-  linux_numa_id = find_next_bit(&os->numa_mask,
-  (sizeof(os->numa_mask) * 8), linux_numa_id + 1)) {
+                                      (sizeof(os->numa_mask) * 8));
+       linux_numa_id < (sizeof(os->numa_mask) * 8);
+       linux_numa_id = find_next_bit(&os->numa_mask,
+                                     (sizeof(os->numa_mask) * 8),
+                                     linux_numa_id + 1)) {
+    os->numa_mapping[numa_id] = linux_numa_id;
+    dprintf("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
+            os, numa_id, linux_numa_id);
 
-  os->numa_mapping[numa_id] = linux_numa_id;
-  dprintf("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
-  os, numa_id, linux_numa_id);
-
-  ++numa_id;
+    ++numa_id;
   }
 
   buffer_size = 0;
   /* Count number of memory chunks */
   list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-  if (os_mem_chunk->os != ihk_os)
-  continue;
+    if (os_mem_chunk->os != ihk_os)
+      continue;
 
-  ++nr_memory_chunks;
-  buffer_size +=
-  ((((os_mem_chunk->size +
-      PAGE_SIZE * BITS_PER_LONG - 1) /
-     (PAGE_SIZE * BITS_PER_LONG)) *
-    sizeof(unsigned long)) +
-   sizeof(struct ihk_dump_page));
+    ++nr_memory_chunks;
+    buffer_size += ((((os_mem_chunk->size +
+                       PAGE_SIZE * BITS_PER_LONG - 1) /
+                      (PAGE_SIZE * BITS_PER_LONG)) * sizeof(unsigned long)) +
+                      sizeof(struct ihk_dump_page));
   }
 
   param_size += (nr_memory_chunks *
   sizeof(struct ihk_smp_boot_param_memory_chunk));
 
   dprintf("IHK-SMP: %d memory chunks from %d NUMA nodes\n",
-  nr_memory_chunks, nr_numa_nodes);
+          nr_memory_chunks, nr_numa_nodes);
 
   /* Allocate boot parameter pages */
   param_size = (param_size + PAGE_SIZE - 1) & PAGE_MASK;
   param_pages_order = 0;
   while (((size_t)PAGE_SIZE << param_pages_order) < param_size)
-  ++param_pages_order;
+    ++param_pages_order;
 
   param_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, param_pages_order);
   if (!param_pages) {
-  pr_err("IHK-SMP: error: allocating boot parameter structure\n");
-  ret = -ENOMEM;
-  goto free_numa_mapping;
+    pr_err("IHK-SMP: error: allocating boot parameter structure\n");
+    ret = -ENOMEM;
+    goto free_numa_mapping;
   }
 
   os->param = pfn_to_kaddr(page_to_pfn(param_pages));
   os->param->param_size = param_size;
   os->param_pages_order = param_pages_order;
   printk("IHK-SMP: boot param size: %d, nr_pages: %lu\n",
-  param_size, 1UL << param_pages_order);
+         param_size, 1UL << param_pages_order);
 
   os->param->nr_cpus = os->nr_cpus;
   os->param->nr_linux_cpus = nr_cpu_ids;
@@ -707,101 +747,96 @@ static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
   os->param->nr_memory_chunks = nr_memory_chunks;
   os->param->osnum = ihk_host_os_get_index(ihk_os);
   os->param->linux_default_huge_page_shift =
-  huge_page_order(&smp_ihk_hstates[*smp_ihk_default_hstate_idx])
-  + PAGE_SHIFT;
+    huge_page_order(&smp_ihk_hstates[*smp_ihk_default_hstate_idx])
+      + PAGE_SHIFT;
   os->nr_numa_nodes = nr_numa_nodes;
 
   ret = smp_ihk_arch_get_perf_event_map(os->param);
   if (ret) {
-  pr_err("IHK-SMP: error: smp_ihk_arch_get_perf_event_map "
-         "returned %d", ret);
-  goto free_param_pages;
+    pr_err("IHK-SMP: error: smp_ihk_arch_get_perf_event_map "
+           "returned %d", ret);
+    goto free_param_pages;
   }
 
   bp_cpu = (struct ihk_smp_boot_param_cpu *)((char *)os->param +
-  sizeof(*os->param));
+           sizeof(*os->param));
 
   /* NOTE: CPU mapping is determined by the CPU assign operation
    * so that the order can be controlled by the user */
   /* Pass in CPU information according to CPU mapping */
   for (lwk_cpu = 0; lwk_cpu < os->nr_cpus; ++lwk_cpu) {
-bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
-  cpu_to_node(os->cpu_mapping[lwk_cpu]));
-  bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
-  bp_cpu->linux_cpu_id = os->cpu_mapping[lwk_cpu];
-  bp_cpu->ikc_cpu = ihk_smp_cpus[lwk_cpu_2_linux_cpu(os, lwk_cpu)].ikc_map_cpu;
-  os->cpu_ikc_map[lwk_cpu] = bp_cpu->ikc_cpu;
+    bp_cpu->numa_id = linux_numa_2_lwk_numa(os, cpu_to_node(os->cpu_mapping[lwk_cpu]));
+    bp_cpu->hw_id = os->cpu_hw_ids[lwk_cpu];
+    bp_cpu->linux_cpu_id = os->cpu_mapping[lwk_cpu];
+    bp_cpu->ikc_cpu = ihk_smp_cpus[lwk_cpu_2_linux_cpu(os, lwk_cpu)].ikc_map_cpu;
+    os->cpu_ikc_map[lwk_cpu] = bp_cpu->ikc_cpu;
 
-  dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, LWK CPU: %d,"
-  " CPU APIC: %d, IKC CPU: %d\n",
-  os, cpu_to_node(os->cpu_mapping[lwk_cpu]), lwk_cpu,
-  bp_cpu->hw_id, bp_cpu->ikc_cpu);
+    dprintf("IHK-SMP: OS: %p, Linux NUMA: %d, LWK CPU: %d,"
+            " CPU APIC: %d, IKC CPU: %d\n",
+            os, cpu_to_node(os->cpu_mapping[lwk_cpu]), lwk_cpu,
+            bp_cpu->hw_id, bp_cpu->ikc_cpu);
 
-  ++bp_cpu;
+    ++bp_cpu;
   }
 
   bp_numa_node = (struct ihk_smp_boot_param_numa_node *)bp_cpu;
 
   /* Fill in NUMA nodes information */
   numa_id = 0;
-  for (linux_numa_id = find_first_bit(&os->numa_mask,
-  (sizeof(os->numa_mask) * 8));
-  linux_numa_id < (sizeof(os->numa_mask) * 8);
-  linux_numa_id = find_next_bit(&os->numa_mask,
-  (sizeof(os->numa_mask) * 8), linux_numa_id + 1)) {
+  for (linux_numa_id = find_first_bit(&os->numa_mask, (sizeof(os->numa_mask) * 8));
+       linux_numa_id < (sizeof(os->numa_mask) * 8);
+       linux_numa_id = find_next_bit(&os->numa_mask,
+                                     (sizeof(os->numa_mask) * 8),
+                                     linux_numa_id + 1)) {
+    bp_numa_node->type = IHK_SMP_MEMORY_TYPE_DRAM;
+    bp_numa_node->linux_numa_id = linux_numa_id;
 
-  bp_numa_node->type = IHK_SMP_MEMORY_TYPE_DRAM;
-  bp_numa_node->linux_numa_id = linux_numa_id;
+    dprintf("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
+            os, numa_id, linux_numa_id);
 
-  dprintf("IHK-SMP: OS: %p, NUMA: %d => Linux NUMA: %d\n",
-  os, numa_id, linux_numa_id);
-
-  ++bp_numa_node;
-  ++numa_id;
+    ++bp_numa_node;
+    ++numa_id;
   }
 
   bp_mem_chunk = (struct ihk_smp_boot_param_memory_chunk *)bp_numa_node;
 
   /* Fill in memory chunks information in the order of NUMA nodes */
-  for (linux_numa_id = find_first_bit(&os->numa_mask,
-  (sizeof(os->numa_mask) * 8));
-  linux_numa_id < (sizeof(os->numa_mask) * 8);
-  linux_numa_id = find_next_bit(&os->numa_mask,
-  (sizeof(os->numa_mask) * 8), linux_numa_id + 1)) {
+  for (linux_numa_id = find_first_bit(&os->numa_mask, (sizeof(os->numa_mask) * 8));
+       linux_numa_id < (sizeof(os->numa_mask) * 8);
+       linux_numa_id = find_next_bit(&os->numa_mask,
+                                     (sizeof(os->numa_mask) * 8),
+                                     linux_numa_id + 1)) {
+    list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+      if (os_mem_chunk->os != ihk_os || os_mem_chunk->numa_id != linux_numa_id)
+        continue;
 
-  list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-  if (os_mem_chunk->os != ihk_os ||
-  os_mem_chunk->numa_id != linux_numa_id)
-  continue;
+      bp_mem_chunk->start = os_mem_chunk->addr;
+      bp_mem_chunk->end = os_mem_chunk->addr + os_mem_chunk->size;
+      bp_mem_chunk->numa_id =
+      linux_numa_2_lwk_numa(os, os_mem_chunk->numa_id);
 
-  bp_mem_chunk->start = os_mem_chunk->addr;
-  bp_mem_chunk->end = os_mem_chunk->addr + os_mem_chunk->size;
-  bp_mem_chunk->numa_id =
-  linux_numa_2_lwk_numa(os, os_mem_chunk->numa_id);
-
-  ++bp_mem_chunk;
-  }
+      ++bp_mem_chunk;
+    }
   }
 
   /* Fill in NUMA distances */
   ihk_smp_boot_numa_distance = (int *)bp_mem_chunk;
   for (i = 0; i < nr_numa_nodes; ++i) {
-  for (j = 0; j < nr_numa_nodes; ++j) {
-  *ihk_smp_boot_numa_distance =
-  node_distance(
-  lwk_numa_2_linux_numa(os, i),
-  lwk_numa_2_linux_numa(os, j));
-  ++ihk_smp_boot_numa_distance;
-  }
+    for (j = 0; j < nr_numa_nodes; ++j) {
+      *ihk_smp_boot_numa_distance = node_distance(
+                                      lwk_numa_2_linux_numa(os, i),
+                                      lwk_numa_2_linux_numa(os, j));
+      ++ihk_smp_boot_numa_distance;
+    }
   }
 
   set_dev_status(dev, BUILTIN_DEV_STATUS_BOOTING);
 
   __build_os_info(os);
   if (os->cpu_info.n_cpus < 1) {
-  pr_err("IHK-SMP: error: There are no CPU to boot!\n");
-  ret = -EINVAL;
-  goto revert_dev_status;
+    pr_err("IHK-SMP: error: There are no CPU to boot!\n");
+    ret = -EINVAL;
+    goto revert_dev_status;
   }
   os->boot_cpu = os->cpu_info.hw_ids[0];
 
@@ -827,78 +862,71 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
   os->param->boot_sec = now.tv_sec;
   os->param->boot_nsec = now.tv_nsec;
 
-
   dprintf("boot cpu : %d, %lx, %lx, %lx, %lx\n",
           os->boot_cpu, os->mem_start, os->mem_end, os->cpu_hw_ids_map.set[0],
-          os->param->dma_address
-  );
+          os->param->dma_address);
 
   smp_ihk_setup_trampoline(os);
 
   dump_size = (buffer_size + PAGE_SIZE - 1) & PAGE_MASK;
   dump_pages_order = 0;
   while (((size_t)PAGE_SIZE << dump_pages_order) < dump_size)
-  ++dump_pages_order;
+    ++dump_pages_order;
 
   dump_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, dump_pages_order);
   if (!dump_pages) {
-  kfree(os);
-  printk("IHK-SMP: error: allocating boot parameter structure\n");
-  ret = -ENOMEM;
-  goto revert_os_status;
+    kfree(os);
+    printk("IHK-SMP: error: allocating boot parameter structure\n");
+    ret = -ENOMEM;
+    goto revert_os_status;
   }
 
   dump_page = pfn_to_kaddr(page_to_pfn(dump_pages));
-
   if (dump_page) {
+    dump_page_set_addr = (unsigned long)&os->param->dump_page_set;
 
-  dump_page_set_addr = (unsigned long)&os->param->dump_page_set;
+    memset(dump_page,0,buffer_size);
+    os->param->dump_page_set.count = nr_memory_chunks;
+    os->param->dump_page_set.page_size = dump_size;
+    os->param->dump_page_set.phy_page = __pa(dump_page);
 
-  memset(dump_page,0,buffer_size);
-  os->param->dump_page_set.count = nr_memory_chunks;
-  os->param->dump_page_set.page_size = dump_size;
-  os->param->dump_page_set.phy_page = __pa(dump_page);
+    /* Perform initial setting of dump_page information */
+    /* Turn on the BIT of the physical memory allocation range. */
+    if (nr_memory_chunks) {
+      i = 0;
+      list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+        const size_t csize = os_mem_chunk->size;
 
-  /* Perform initial setting of dump_page information */
-  /* Turn on the BIT of the physical memory allocation range. */
-  if (nr_memory_chunks) {
+        if (i) {
+          dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+        }
 
-  i = 0;
-  list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-  const size_t csize = os_mem_chunk->size;
+        dump_page->start = os_mem_chunk->addr;
+        dump_page->map_count = ((csize + PAGE_SIZE * BITS_PER_LONG - 1) /
+                                (PAGE_SIZE * BITS_PER_LONG));
+        map_end = ((csize + PAGE_SIZE - 1) >> PAGE_SHIFT);
 
-  if (i) {
-  dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
-  }
+        for (index = 0; index < map_end; index++) {
+          if(MAP_INDEX(index) >= dump_page->map_count) {
+            printk("%s:used chunk is out of range(max:%ld): %ld\n", __FUNCTION__, dump_page->map_count, MAP_INDEX(index));
+            break;
+          }
+          dump_page->map[MAP_INDEX(index)] |= (1UL << MAP_BIT(index));
+        }
 
-  dump_page->start = os_mem_chunk->addr;
-  dump_page->map_count =
-  ((csize + PAGE_SIZE * BITS_PER_LONG - 1) /
-   (PAGE_SIZE * BITS_PER_LONG));
-  map_end = ((csize + PAGE_SIZE - 1) >>
-     PAGE_SHIFT);
-
-  for (index = 0; index < map_end; index++) {
-  if(MAP_INDEX(index) >= dump_page->map_count) {
-  printk("%s:used chunk is out of range(max:%ld): %ld\n", __FUNCTION__, dump_page->map_count, MAP_INDEX(index));
-  break;
-  }
-  dump_page->map[MAP_INDEX(index)] |= (1UL << MAP_BIT(index));
-  }
-
-  i++;
-  }
-  }
+        i++;
+      }
+    }
   } else {
-  os->param->dump_page_set.count = 0;
-  os->param->dump_page_set.page_size = 0;
-  dprintf("IHK-SMP: error: allocating dump_page_set(size:%ld)\n",buffer_size);
+    os->param->dump_page_set.count = 0;
+    os->param->dump_page_set.page_size = 0;
+    dprintf("IHK-SMP: error: allocating dump_page_set(size:%ld)\n",buffer_size);
   }
 
   os->param->dump_page_set.completion_flag = IHK_DUMP_PAGE_SET_INCOMPLETE;
 
   printk("IHK-SMP: booting OS 0x%lx, calling smp_wakeup_secondary_cpu() \n",
-  (unsigned long)ihk_os);
+         (unsigned long)ihk_os);
   udelay(300);
 
   return smp_wakeup_secondary_cpu(os->boot_cpu, trampoline_phys);
@@ -916,7 +944,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
   set_dev_status(dev, BUILTIN_DEV_STATUS_READY);
  free_param_pages:
   free_pages((unsigned long)pfn_to_kaddr(page_to_pfn(param_pages)),
-     param_pages_order);
+             param_pages_order);
  free_numa_mapping:
   kfree(os->numa_mapping);
  out:
@@ -934,33 +962,31 @@ static int smp_ihk_os_map_lwk(unsigned long phys)
    */
   lwk_va = kmalloc(sizeof(*lwk_va), GFP_KERNEL);
   if (!lwk_va) {
-  return -1;
+    return -1;
   }
 
   spin_lock_irqsave(ihk_vmap_area_lock, flags);
 
   if ((vmap_area_taken = smp_ihk_arch_vmap_area_taken())) {
-  kfree(lwk_va);
-  lwk_va = NULL;
-  pr_info("%s: ERROR: reserving LWK kernel memory virtual range\n",
-  __func__);
-  }
-  else {
-  lwk_va->va_start = IHK_SMP_MAP_KERNEL_START;
-  lwk_va->va_end = MODULES_END;
-  lwk_va->flags = 0;
-  ihk___insert_vmap_area(lwk_va);
+    kfree(lwk_va);
+    lwk_va = NULL;
+    pr_info("%s: ERROR: reserving LWK kernel memory virtual range\n",
+            __func__);
+  } else {
+    lwk_va->va_start = IHK_SMP_MAP_KERNEL_START;
+    lwk_va->va_end = MODULES_END;
+    lwk_va->flags = 0;
+    ihk___insert_vmap_area(lwk_va);
   }
 
   spin_unlock_irqrestore(ihk_vmap_area_lock, flags);
 
   if (vmap_area_taken)
-  return -1;
+    return -1;
 
   if (ihk_ioremap_page_range(IHK_SMP_MAP_KERNEL_START, MODULES_END,
-     phys, PAGE_KERNEL_EXEC) < 0) {
-  pr_info("%s: error: mapping LWK to Linux kernel space\n",
-  __func__);
+                             phys, PAGE_KERNEL_EXEC) < 0) {
+    pr_info("%s: error: mapping LWK to Linux kernel space\n", __func__);
   }
 
   return 0;
@@ -989,7 +1015,7 @@ static int smp_ihk_os_vtop(ihk_os_t ihk_os,
   return 0;
 }
 
-static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
+static int smp_ihk_os_load_file_orig(ihk_os_t ihk_os, void *priv, const char *fn)
 {
   int ret;
   struct smp_os_data *os = priv;
@@ -1012,82 +1038,80 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
   /* Update bootstrap_numa_id with the lowest NUMA id if not set */
   /* TODO: add IHK API to set bootstrap_numa_id */
   if (os->bootstrap_numa_id == -1) {
-  int min_numa_id = -1;
+    int min_numa_id = -1;
 
-  list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
-  if (min_numa_id != -1 &&
-  min_numa_id <= os_mem_chunk_iter->numa_id) {
-  continue;
-  }
+    list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+      if (min_numa_id != -1 && min_numa_id <= os_mem_chunk_iter->numa_id) {
+        continue;
+      }
 
-  min_numa_id = os_mem_chunk_iter->numa_id;
-  }
+      min_numa_id = os_mem_chunk_iter->numa_id;
+    }
 
-  os->bootstrap_numa_id = min_numa_id;
+    os->bootstrap_numa_id = min_numa_id;
   }
 
   /* Find the bootstrap memory chunk for image and page table */
   list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
-  if (os_mem_chunk_iter->os != ihk_os ||
-  os_mem_chunk_iter->numa_id != os->bootstrap_numa_id) {
-  continue;
-  }
+    if (os_mem_chunk_iter->os != ihk_os ||
+        os_mem_chunk_iter->numa_id != os->bootstrap_numa_id) {
+      continue;
+    }
 
-  /* Find the largest memory chunk on the bootstrap NUMA node */
-  if ((os->bootstrap_mem_end - os->bootstrap_mem_start) <
-  os_mem_chunk_iter->size) {
-  os_mem_chunk = os_mem_chunk_iter;
-  os->bootstrap_mem_start = os_mem_chunk->addr;
-  os->bootstrap_mem_end = os_mem_chunk->addr + os_mem_chunk->size;
-  }
+    /* Find the largest memory chunk on the bootstrap NUMA node */
+    if ((os->bootstrap_mem_end - os->bootstrap_mem_start) <
+         os_mem_chunk_iter->size) {
+      os_mem_chunk = os_mem_chunk_iter;
+      os->bootstrap_mem_start = os_mem_chunk->addr;
+      os->bootstrap_mem_end = os_mem_chunk->addr + os_mem_chunk->size;
+    }
   }
 
   if (os_mem_chunk == NULL) {
-  printk("%s: couldn't find NUMA node to load kernel image\n",
-  __FUNCTION__);
-  ret = -EINVAL;
-  goto out;
+    printk("%s: couldn't find NUMA node to load kernel image\n",
+           __FUNCTION__);
+    ret = -EINVAL;
+    goto out;
   }
 
   printk("IHK-SMP: bootstrap addr: 0x%lx, chunk size: %lu @ NUMA: %d\n",
-  os->bootstrap_mem_start,
-  os->bootstrap_mem_end - os->bootstrap_mem_start,
-  os->bootstrap_numa_id);
+         os->bootstrap_mem_start,
+         os->bootstrap_mem_end - os->bootstrap_mem_start,
+         os->bootstrap_numa_id);
 
   if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) ||
-  os->bootstrap_mem_end < os->bootstrap_mem_start) {
-  printk("%s: OS is not ready to boot\n", __FUNCTION__);
-  ret = -EINVAL;
-  goto out;
+      os->bootstrap_mem_end < os->bootstrap_mem_start) {
+    printk("%s: OS is not ready to boot\n", __FUNCTION__);
+    ret = -EINVAL;
+    goto out;
   }
 
   spin_lock_irqsave(&os->lock, flags);
   if (os->status != BUILTIN_OS_STATUS_INITIAL) {
-  printk("builtin: OS status is not initial.\n");
-  spin_unlock_irqrestore(&os->lock, flags);
-  ret = -EBUSY;
-  goto out;
-
+    printk("builtin: OS status is not initial.\n");
+    spin_unlock_irqrestore(&os->lock, flags);
+    ret = -EBUSY;
+    goto out;
   }
   os->status = BUILTIN_OS_STATUS_LOADING;
   spin_unlock_irqrestore(&os->lock, flags);
 
   file = filp_open(fn, O_RDONLY, 0);
   if (IS_ERR(file)) {
-  printk("open failed: %s\n", fn);
-  ret = -ENOENT;
-  goto revert_state;
+    printk("open failed: %s\n", fn);
+    ret = -ENOENT;
+    goto revert_state;
   }
 
   elf64 = ihk_smp_map_virtual(os->bootstrap_mem_end - PAGE_SIZE, PAGE_SIZE);
   if (!elf64) {
-  printk("error: ioremap() returns NULL\n");
-  ret = -EINVAL;
-  goto revert_state;
+    printk("error: ioremap() returns NULL\n");
+    ret = -EINVAL;
+    goto revert_state;
   }
 
   printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n",
-  (unsigned long)ihk_os, os->bootstrap_mem_end - PAGE_SIZE);
+         (unsigned long)ihk_os, os->bootstrap_mem_end - PAGE_SIZE);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
   r = kernel_read(file, (char *)elf64, PAGE_SIZE, &pos);
@@ -1095,22 +1119,22 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
   r = kernel_read(file, pos, (char *)elf64, PAGE_SIZE);
 #endif
   if (r <= 0) {
-  pr_err("kernel_read failed: %ld\n", r);
-  ihk_smp_unmap_virtual(elf64);
-  fput(file);
-  ret = r;
-  goto revert_state;
+    pr_err("kernel_read failed: %ld\n", r);
+    ihk_smp_unmap_virtual(elf64);
+    fput(file);
+    ret = r;
+    goto revert_state;
   }
-  if(elf64->e_ident[0] != 0x7f ||
-     elf64->e_ident[1] != 'E' ||
-     elf64->e_ident[2] != 'L' ||
-     elf64->e_ident[3] != 'F' ||
-     elf64->e_phoff + sizeof(Elf64_Phdr) * elf64->e_phnum > PAGE_SIZE){
-  printk("kernel: BAD ELF\n");
-  ihk_smp_unmap_virtual(elf64);
-  fput(file);
-  ret = -EINVAL;
-  goto revert_state;
+  if (elf64->e_ident[0] != 0x7f ||
+      elf64->e_ident[1] != 'E' ||
+      elf64->e_ident[2] != 'L' ||
+      elf64->e_ident[3] != 'F' ||
+      elf64->e_phoff + sizeof(Elf64_Phdr) * elf64->e_phnum > PAGE_SIZE) {
+    printk("kernel: BAD ELF\n");
+    ihk_smp_unmap_virtual(elf64);
+    fput(file);
+    ret = -EINVAL;
+    goto revert_state;
   }
   entry = elf64->e_entry;
   elf64p = (Elf64_Phdr *)(((char *)elf64) + elf64->e_phoff);
@@ -1119,84 +1143,84 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
   entry = smp_ihk_adjust_entry(entry, phys);
 
-  for(i = 0; i < elf64->e_phnum; i++){
-  unsigned long end;
-  unsigned long size;
-  char *buf;
-  unsigned long pphys;
-  unsigned long psize;
+  for (i = 0; i < elf64->e_phnum; i++) {
+    unsigned long end;
+    unsigned long size;
+    char *buf;
+    unsigned long pphys;
+    unsigned long psize;
 
-  if (elf64p[i].p_type != PT_LOAD)
-  continue;
-  if (elf64p[i].p_vaddr == 0)
-  continue;
+    if (elf64p[i].p_type != PT_LOAD)
+      continue;
+    if (elf64p[i].p_vaddr == 0)
+      continue;
 
-  offset = elf64p[i].p_vaddr - (IHK_SMP_MAP_KERNEL_START -phys);
-  pphys = offset;
-  psize = (elf64p[i].p_memsz + PAGE_SIZE - 1) & PAGE_MASK;
-  size = elf64p[i].p_filesz;
-  pos = elf64p[i].p_offset;
-  end = pos + size;
-  while(pos < end){
-  long l = end - pos;
+    offset = elf64p[i].p_vaddr - (IHK_SMP_MAP_KERNEL_START -phys);
+    pphys = offset;
+    psize = (elf64p[i].p_memsz + PAGE_SIZE - 1) & PAGE_MASK;
+    size = elf64p[i].p_filesz;
+    pos = elf64p[i].p_offset;
+    end = pos + size;
+    while (pos < end) {
+      long l = end - pos;
 
-  if (l > PAGE_SIZE)
-  l = PAGE_SIZE;
+      if (l > PAGE_SIZE)
+        l = PAGE_SIZE;
 
-  if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
-  printk("builtin: OS is too big to load.\n");
-  return -E2BIG;
-  }
+      if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
+        printk("builtin: OS is too big to load.\n");
+        return -E2BIG;
+      }
 
-  buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
-  r = kernel_read(file, buf, l, &pos);
-#else
-  r = kernel_read(file, pos, buf, l);
-  pos += r;
-#endif
-  if(r != PAGE_SIZE){
-  memset(buf + r, '\0', PAGE_SIZE - r);
-  }
-  ihk_smp_unmap_virtual(buf);
-  if (r <= 0) {
-  pr_err("kernel_read failed: %ld\n", r);
-  ihk_smp_unmap_virtual(elf64);
-  fput(file);
-  return (int)r;
-  }
-  offset += PAGE_SIZE;
-  }
+      buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
+    #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+      r = kernel_read(file, buf, l, &pos);
+    #else
+      r = kernel_read(file, pos, buf, l);
+      pos += r;
+    #endif
+      if (r != PAGE_SIZE) {
+        memset(buf + r, '\0', PAGE_SIZE - r);
+      }
+      ihk_smp_unmap_virtual(buf);
+      if (r <= 0) {
+        pr_err("kernel_read failed: %ld\n", r);
+        ihk_smp_unmap_virtual(elf64);
+        fput(file);
+        return (int)r;
+      }
+      offset += PAGE_SIZE;
+    }
 
-  for (size = (size + PAGE_SIZE - 1) & PAGE_MASK;
-  size < psize; size += PAGE_SIZE) {
+    for (size = (size + PAGE_SIZE - 1) & PAGE_MASK;
+         size < psize; size += PAGE_SIZE) {
+      if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
+        printk("builtin: OS is too big to load.\n");
+        return -E2BIG;
+      }
 
-  if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
-  printk("builtin: OS is too big to load.\n");
-  return -E2BIG;
-  }
+      buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
+      memset(buf, '\0', PAGE_SIZE);
+      ihk_smp_unmap_virtual(buf);
+      offset += PAGE_SIZE;
+    }
 
-  buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
-  memset(buf, '\0', PAGE_SIZE);
-  ihk_smp_unmap_virtual(buf);
-  offset += PAGE_SIZE;
-  }
-
-  if (offset > maxoffset)
-  maxoffset = offset;
+    if (offset > maxoffset)
+      maxoffset = offset;
   }
 
   fput(file);
   ihk_smp_unmap_virtual(elf64);
 
   if ((ret = smp_ihk_os_map_lwk(phys))) {
-  pr_info("%s: WARNING: smp_ihk_os_map_lwk failed: %d\n",
-  __func__, ret);
+    pr_info("%s: WARNING: smp_ihk_os_map_lwk failed: %d\n",
+            __func__, ret);
   }
 
   if ((ret = smp_ihk_os_setup_startup(os, phys, entry))) {
-  printk("%s: ERROR: smp_ihk_os_setup_startup failed (%d)\n", __FUNCTION__, ret);
-  goto revert_state;
+    printk("%s: ERROR: smp_ihk_os_setup_startup failed (%d)\n",
+           __FUNCTION__, ret);
+    goto revert_state;
   }
 
 
@@ -1209,8 +1233,351 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
   return ret;
 }
 
-static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
-                               unsigned long size, long offset)
+static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_OS_LOAD_FILE)  // Disable test code
+    return smp_ihk_os_load_file_orig(ihk_os, priv, fn);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 13;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "list of mem used chunks is empty" },
+    { -EINVAL, "not found a valid mem chunk" },
+    { -ENOENT, "filp_open fail" },
+    { -EINVAL, "cannot map address for loading ELF header" },
+    { -EFAULT, "read ELF header fail" },
+    { -EINVAL, "not found elf header entry type PT_LOAD" },
+    { -EINVAL, "all elf header entries virtual addr is zero" },
+    { -E2BIG,  "OS is too big to load" },
+    { -EINVAL, "cannot map address for reading data" },
+    { -EFAULT, "read data fail" },
+    { -E2BIG,  "OS is too big to load" },
+    { -EINVAL, "setup startup fail" },
+    { 0,       "main case" },
+  };
+
+  struct smp_os_data *os = priv;
+  int ret, i;
+  int bootstrap_numa_id_prev = os->bootstrap_numa_id;
+  unsigned long flags;
+  spin_lock_irqsave(&os->lock, flags);
+  int os_status_prev = os->status;
+  spin_unlock_irqrestore(&os->lock, flags);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct file *file;
+    loff_t pos = 0;
+    long r;
+    unsigned long phys = 0;
+    unsigned long offset = 0;
+    unsigned long maxoffset = 0;
+    Elf64_Ehdr *elf64;
+    Elf64_Phdr *elf64p;
+    unsigned long entry;
+    struct ihk_os_mem_chunk *os_mem_chunk_iter;
+    struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+    int os_status_after;
+    int should_quit = 0;
+    os->bootstrap_mem_start = 0;
+    os->bootstrap_mem_end = 0;
+    os->bootstrap_numa_id = bootstrap_numa_id_prev;
+    ret = 0;
+
+    if (ivec == 0) os->bootstrap_numa_id = -1;
+
+    /* Update bootstrap_numa_id with the lowest NUMA id if not set */
+    /* TODO: add IHK API to set bootstrap_numa_id */
+    if (os->bootstrap_numa_id == -1) {
+      int min_numa_id = -1;
+
+      if (ivec == 0 || list_empty(&ihk_mem_used_chunks)) {
+        // through
+      } else list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+        if (min_numa_id != -1 && min_numa_id <= os_mem_chunk_iter->numa_id) {
+          continue;
+        }
+
+        min_numa_id = os_mem_chunk_iter->numa_id;
+      }
+
+      os->bootstrap_numa_id = min_numa_id;
+    }
+
+    /* Find the bootstrap memory chunk for image and page table */
+    if (ivec == 0 || list_empty(&ihk_mem_used_chunks)) {
+      // through
+    } else list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+      if (ivec == 1 ||
+          (os_mem_chunk_iter->os != ihk_os ||
+           os_mem_chunk_iter->numa_id != os->bootstrap_numa_id)) {
+        continue;
+      }
+
+      /* Find the largest memory chunk on the bootstrap NUMA node */
+      if ((os->bootstrap_mem_end - os->bootstrap_mem_start) <
+           os_mem_chunk_iter->size) {
+        os_mem_chunk = os_mem_chunk_iter;
+        os->bootstrap_mem_start = os_mem_chunk->addr;
+        os->bootstrap_mem_end = os_mem_chunk->addr + os_mem_chunk->size;
+      }
+    }
+
+    if (os_mem_chunk == NULL) {
+      if (ivec > 1) {
+        printk("%s: couldn't find NUMA node to load kernel image\n",
+               __FUNCTION__);
+        should_quit = 1;
+      }
+      ret = -EINVAL;
+      goto out;
+    }
+
+    printk("IHK-SMP: bootstrap addr: 0x%lx, chunk size: %lu @ NUMA: %d\n",
+           os->bootstrap_mem_start,
+           os->bootstrap_mem_end - os->bootstrap_mem_start,
+           os->bootstrap_numa_id);
+
+    if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) ||
+        os->bootstrap_mem_end < os->bootstrap_mem_start) {
+      printk("%s: OS is not ready to boot\n", __FUNCTION__);
+      ret = -EINVAL;
+      should_quit = 1;
+      goto out;
+    }
+
+    spin_lock_irqsave(&os->lock, flags);
+    if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+      printk("builtin: OS status is not initial.\n");
+      spin_unlock_irqrestore(&os->lock, flags);
+      ret = -EBUSY;
+      should_quit = 1;
+      goto out;
+    }
+    os->status = BUILTIN_OS_STATUS_LOADING;
+    spin_unlock_irqrestore(&os->lock, flags);
+
+    file = filp_open(fn, O_RDONLY, 0);
+    if (ivec == 2 || IS_ERR(file)) {
+      if (ivec != 2) {
+        printk("open failed: %s\n", fn);
+        should_quit = 1;
+      }
+      ret = -ENOENT;
+      goto revert_state;
+    }
+
+    elf64 = ihk_smp_map_virtual(os->bootstrap_mem_end - PAGE_SIZE, PAGE_SIZE);
+    if (ivec == 3 || !elf64) {
+      if (ivec != 3) {
+        printk("error: ioremap() returns NULL\n");
+        should_quit = 1;
+      }
+      ret = -EINVAL;
+      fput(file);
+      goto revert_state;
+    }
+
+    printk("IHK-SMP: loading ELF header for OS 0x%lx, phys=0x%lx\n",
+           (unsigned long)ihk_os, os->bootstrap_mem_end - PAGE_SIZE);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+    r = kernel_read(file, (char *)elf64, PAGE_SIZE, &pos);
+#else
+    r = kernel_read(file, pos, (char *)elf64, PAGE_SIZE);
+#endif
+    if (ivec == 4 || r <= 0) {
+      ret = -EFAULT;
+      if (ivec != 4) {
+        pr_err("kernel_read failed: %ld\n", r);
+        should_quit = 1;
+        ret = r;
+      }
+      ihk_smp_unmap_virtual(elf64);
+      fput(file);
+      goto revert_state;
+    }
+    if (elf64->e_ident[0] != 0x7f ||
+        elf64->e_ident[1] != 'E' ||
+        elf64->e_ident[2] != 'L' ||
+        elf64->e_ident[3] != 'F' ||
+        elf64->e_phoff + sizeof(Elf64_Phdr) * elf64->e_phnum > PAGE_SIZE) {
+      printk("kernel: BAD ELF\n");
+      ihk_smp_unmap_virtual(elf64);
+      fput(file);
+      ret = -EINVAL;
+      should_quit = 1;
+      goto revert_state;
+    }
+    entry = elf64->e_entry;
+    elf64p = (Elf64_Phdr *)(((char *)elf64) + elf64->e_phoff);
+    phys = (os->bootstrap_mem_start + IHK_SMP_LARGE_PAGE * 2 - 1) & IHK_SMP_LARGE_PAGE_MASK;
+    maxoffset = phys;
+
+    entry = smp_ihk_adjust_entry(entry, phys);
+
+    for (i = 0; i < elf64->e_phnum; i++) {
+      unsigned long end;
+      unsigned long size;
+      char *buf;
+      unsigned long pphys;
+      unsigned long psize;
+
+      if (ivec == 5 || elf64p[i].p_type != PT_LOAD)
+        continue;
+      if (ivec == 6 || elf64p[i].p_vaddr == 0)
+        continue;
+
+      offset = elf64p[i].p_vaddr - (IHK_SMP_MAP_KERNEL_START - phys);
+      pphys = offset;
+      psize = (elf64p[i].p_memsz + PAGE_SIZE - 1) & PAGE_MASK;
+      size = elf64p[i].p_filesz;
+      pos = elf64p[i].p_offset;
+      end = pos + size;
+      while (pos < end) {
+        long l = end - pos;
+        if (l > PAGE_SIZE)
+          l = PAGE_SIZE;
+
+        if (ivec == 7 || offset + PAGE_SIZE > os->bootstrap_mem_end) {
+          if (ivec != 7) {
+            printk("builtin: OS is too big to load.\n");
+            should_quit = 1;
+          }
+          ret = -E2BIG;
+          ihk_smp_unmap_virtual(elf64);
+          fput(file);
+          goto revert_state;
+        }
+
+        buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
+        if (ivec == 8 || !buf) {
+          ret = -EINVAL;
+          if (ivec != 8) should_quit = 1;
+          ihk_smp_unmap_virtual(elf64);
+          fput(file);
+          goto revert_state;
+        }
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+        r = kernel_read(file, buf, l, &pos);
+#else
+        r = kernel_read(file, pos, buf, l);
+        pos += r;
+#endif
+        if (r != PAGE_SIZE && r > 0) {
+          memset(buf + r, '\0', PAGE_SIZE - r);
+        }
+        ihk_smp_unmap_virtual(buf);
+        if (ivec == 9 || r <= 0) {
+          ret = -EFAULT;
+          if (ivec != 9) {
+            pr_err("kernel_read failed: %ld\n", r);
+            should_quit = 1;
+            ret = (int)r;
+          }
+          ihk_smp_unmap_virtual(elf64);
+          fput(file);
+          goto revert_state;
+        }
+        offset += PAGE_SIZE;
+      }
+
+      for (size = (size + PAGE_SIZE - 1) & PAGE_MASK;
+           size < psize; size += PAGE_SIZE) {
+        if (ivec == 10 || offset + PAGE_SIZE > os->bootstrap_mem_end) {
+          if (ivec != 10) {
+            printk("builtin: OS is too big to load.\n");
+            should_quit = 1;
+          }
+          ret = -E2BIG;
+          ihk_smp_unmap_virtual(elf64);
+          fput(file);
+          goto revert_state;
+        }
+
+        buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
+        memset(buf, '\0', PAGE_SIZE);
+        ihk_smp_unmap_virtual(buf);
+        offset += PAGE_SIZE;
+      }
+
+      if (offset > maxoffset)
+        maxoffset = offset;
+    }
+
+    fput(file);
+    ihk_smp_unmap_virtual(elf64);
+
+    if (ivec == 5 || ivec == 6) {
+      ret = -EINVAL;
+      goto revert_state;
+    }
+
+    int vmap_area_taken = 0;
+    if (ivec > 11 && (vmap_area_taken = smp_ihk_os_map_lwk(phys))) {
+      pr_info("%s: WARNING: smp_ihk_os_map_lwk failed: %d\n",
+              __func__, vmap_area_taken);
+    }
+
+    if (ivec == 11 || (ret = smp_ihk_os_setup_startup(os, phys, entry))) {
+      ret = -EINVAL;
+      if (ivec != 11) {
+        printk("%s: ERROR: smp_ihk_os_setup_startup failed (%d)\n",
+               __FUNCTION__, ret);
+        should_quit = 1;
+      }
+      goto revert_state;
+    }
+
+    dump_bootstrap_mem_start = os->bootstrap_mem_start;
+    ret = 0;
+
+   revert_state:
+    set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+   out:
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    spin_lock_irqsave(&os->lock, flags);
+    os_status_after = os->status;
+    spin_unlock_irqrestore(&os->lock, flags);
+
+    if (ivec <= 1) {
+      OKNG(os_status_prev == os_status_after, "os status should be unchanged\n");
+    } else {
+      OKNG(os_status_after == BUILTIN_OS_STATUS_INITIAL,
+           "os status should be initial\n");
+      OKNG(os->bootstrap_mem_start > 0 &&
+           os->bootstrap_mem_end > os->bootstrap_mem_start,
+           "check bootstrap mem\n");
+    }
+    if (ivec > 4) {
+      OKNG(phys > 0, "check phys\n");
+    }
+    if (ivec > 6) {
+      OKNG(offset > 0, "check read offset\n");
+    }
+
+    if (ivec == total_branch - 1) {
+      OKNG(os->boot_rip > 0, "check boot_rip\n");
+      OKNG(dump_bootstrap_mem_start > 0, "check dump_bootstrap_mem_start\n");
+      if (vmap_area_taken) OKNG(lwk_va, "lwk_va should be initialized\n");
+    } else {
+      OKNG(os->boot_rip == 0, "boot_rip should not be set\n");
+      OKNG(dump_bootstrap_mem_start == 0,
+           "dump_bootstrap_mem_start should not be set\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+static int smp_ihk_os_load_mem_orig(ihk_os_t ihk_os, void *priv, const char *buf,
+                                    unsigned long size, long offset)
 {
   struct smp_os_data *os = priv;
   unsigned long phys, to_read, flags;
@@ -1220,19 +1587,19 @@ static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
 
   /* We just load from the lowest address of the private memory */
   if (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->mem_end < os->mem_start) {
-  printk("builtin: OS is not ready to boot.\n");
-  return -EINVAL;
+    printk("builtin: OS is not ready to boot.\n");
+    return -EINVAL;
   }
   if (os->mem_start + size > os->mem_end) {
-  printk("builtin: OS is too big to load.\n");
-  return -E2BIG;
+    printk("builtin: OS is too big to load.\n");
+    return -E2BIG;
   }
 
   spin_lock_irqsave(&os->lock, flags);
   if (os->status != BUILTIN_OS_STATUS_INITIAL) {
-  printk("builtin: OS status is not initial.\n");
-  spin_unlock_irqrestore(&os->lock, flags);
-  return -EBUSY;
+    printk("builtin: OS status is not initial.\n");
+    spin_unlock_irqrestore(&os->lock, flags);
+    return -EBUSY;
   }
   os->status = BUILTIN_OS_STATUS_LOADING;
   spin_unlock_irqrestore(&os->lock, flags);
@@ -1242,29 +1609,29 @@ static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
   offset -= phys;
 
   for (; size > 0; ) {
-  virt = ihk_smp_map_virtual(phys, PAGE_SIZE);
-  if (!virt) {
-  dprintf("builtin: Failed to map %lx\n", phys);
+    virt = ihk_smp_map_virtual(phys, PAGE_SIZE);
+    if (!virt) {
+      dprintf("builtin: Failed to map %lx\n", phys);
 
-  set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+      set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 
-  return -ENOMEM;
-  }
-  if ((offset & (PAGE_SIZE - 1)) + size > PAGE_SIZE) {
-  to_read = PAGE_SIZE - (offset & (PAGE_SIZE - 1));
-  } else {
-  to_read = size;
-  }
-  dprintf("memcpy(%p[%lx], buf + %lx, %lx)\n",
-          virt, phys, offset, to_read);
-  memcpy(virt, buf + offset, to_read);
+      return -ENOMEM;
+    }
+    if ((offset & (PAGE_SIZE - 1)) + size > PAGE_SIZE) {
+      to_read = PAGE_SIZE - (offset & (PAGE_SIZE - 1));
+    } else {
+      to_read = size;
+    }
+    dprintf("memcpy(%p[%lx], buf + %lx, %lx)\n",
+            virt, phys, offset, to_read);
+    memcpy(virt, buf + offset, to_read);
 
-  /* Offset is only non-aligned at the first copy */
-  offset += to_read;
-  size -= to_read;
-  ihk_smp_unmap_virtual(virt);
+    /* Offset is only non-aligned at the first copy */
+    offset += to_read;
+    size -= to_read;
+    ihk_smp_unmap_virtual(virt);
 
-  phys += PAGE_SIZE;
+    phys += PAGE_SIZE;
   }
 
   os->boot_rip = os->mem_start;
@@ -1272,6 +1639,136 @@ static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
   set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
 
   return 0;
+}
+
+static int smp_ihk_os_load_mem(ihk_os_t ihk_os, void *priv, const char *buf,
+                               unsigned long size, long offset)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_OS_LOAD_MEM)  // Disable test code
+    return smp_ihk_os_load_mem_orig(ihk_os, priv, buf, size, offset);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 6;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid hw_id map or mem_start" },
+    { -E2BIG,  "size is too big" },
+    { -EBUSY,  "os status is not initial" },
+    { -EINVAL, "size is zero" },
+    { -ENOMEM, "cannot map virtual address" },
+    { 0,       "main case" },
+  };
+
+  dprint_func_enter;
+
+  unsigned long flags;
+  struct smp_os_data *os = priv;
+  spin_lock_irqsave(&os->lock, flags);
+  int os_status_prev = os->status;
+  spin_unlock_irqrestore(&os->lock, flags);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int ret = 0;
+    unsigned long phys, to_read;
+    void *virt;
+    int os_status_after;
+
+    /* We just load from the lowest address of the private memory */
+    if (ivec == 0 ||
+        (!CORE_ISSET_ANY(&os->cpu_hw_ids_map) || os->mem_end < os->mem_start)) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        printk("builtin: OS is not ready to boot.\n");
+        return ret;
+      }
+      goto out;
+    }
+    if (ivec == 1 || os->mem_start + size > os->mem_end) {
+      ret = -E2BIG;
+      if (ivec != 1) {
+        printk("builtin: OS is too big to load.\n");
+        return ret;
+      }
+      goto out;
+    }
+
+    spin_lock_irqsave(&os->lock, flags);
+    if (ivec == 2 || os->status != BUILTIN_OS_STATUS_INITIAL) {
+      ret = -EBUSY;
+      spin_unlock_irqrestore(&os->lock, flags);
+      if (ivec != 2) {
+        printk("builtin: OS status is not initial.\n");
+        return ret;
+      }
+      goto out;
+    }
+    os->status = BUILTIN_OS_STATUS_LOADING;
+    spin_unlock_irqrestore(&os->lock, flags);
+
+    offset += os->mem_start;
+    phys = (offset & PAGE_MASK);
+    offset -= phys;
+
+    if (ivec == 3 || size == 0) {
+      set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+      ret = -EINVAL;
+      if (ivec != 3) return ret;
+      goto out;
+    }
+    for (; size > 0; ) {
+      virt = ihk_smp_map_virtual(phys, PAGE_SIZE);
+      if (ivec == 4 || !virt) {
+        set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+        ret = -ENOMEM;
+        if (ivec != 4) {
+          dprintf("builtin: Failed to map %lx\n", phys);
+          return ret;
+        }
+        goto out;
+      }
+      if ((offset & (PAGE_SIZE - 1)) + size > PAGE_SIZE) {
+        to_read = PAGE_SIZE - (offset & (PAGE_SIZE - 1));
+      } else {
+        to_read = size;
+      }
+      dprintf("memcpy(%p[%lx], buf + %lx, %lx)\n",
+              virt, phys, offset, to_read);
+      memcpy(virt, buf + offset, to_read);
+
+      /* Offset is only non-aligned at the first copy */
+      offset += to_read;
+      size -= to_read;
+      ihk_smp_unmap_virtual(virt);
+
+      phys += PAGE_SIZE;
+    }
+
+    os->boot_rip = os->mem_start;
+
+    set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    spin_lock_irqsave(&os->lock, flags);
+    os_status_after = os->status;
+    spin_unlock_irqrestore(&os->lock, flags);
+
+    if (ivec >= 0 && ivec <= 2) {
+      OKNG(os_status_prev == os_status_after,
+           "os status should be unchanged\n");
+    } else {
+      OKNG(os_status_after == BUILTIN_OS_STATUS_INITIAL,
+           "os status should be initial\n");
+    }
+    set_os_status(os, os_status_prev);
+  }
+
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 static void add_free_mem_chunk_orig(struct chunk *chunk)
@@ -1363,29 +1860,107 @@ static void add_free_mem_chunk(struct chunk *chunk)
   return;
 }
 
-static void merge_mem_chunks(struct list_head *chunks)
+static void merge_mem_chunks_orig(struct list_head *chunks)
 {
   struct chunk *mem_chunk;
   struct chunk *mem_chunk_next;
 
 rerun:
   list_for_each_entry_safe(mem_chunk, mem_chunk_next, chunks, chain) {
+    if (mem_chunk != mem_chunk_next &&
+        mem_chunk_next->addr == mem_chunk->addr + mem_chunk->size &&
+        mem_chunk_next->numa_id == mem_chunk->numa_id) {
+      dprintf("IHK-SMP: free 0x%lx - 0x%lx and 0x%lx - 0x%lx merged\n",
+              mem_chunk->addr,
+              mem_chunk->addr + mem_chunk->size,
+              mem_chunk_next->addr,
+              mem_chunk_next->addr + mem_chunk_next->size);
 
-  if (mem_chunk != mem_chunk_next &&
-      mem_chunk_next->addr == mem_chunk->addr + mem_chunk->size &&
-      mem_chunk_next->numa_id == mem_chunk->numa_id) {
-  dprintf("IHK-SMP: free 0x%lx - 0x%lx and 0x%lx - 0x%lx merged\n",
-          mem_chunk->addr,
-          mem_chunk->addr + mem_chunk->size,
-          mem_chunk_next->addr,
-          mem_chunk_next->addr + mem_chunk_next->size);
+      mem_chunk->size = mem_chunk->size + mem_chunk_next->size;
+      list_del(&mem_chunk_next->chain);
 
-  mem_chunk->size = mem_chunk->size +
-                    mem_chunk_next->size;
-  list_del(&mem_chunk_next->chain);
-
-  goto rerun;
+      goto rerun;
+    }
   }
+}
+
+static void merge_mem_chunks(struct list_head *chunks)
+{
+  if (g_ihk_test_mode != TEST_MERGE_MEM_CHUNKS)  // Disable test code
+    return merge_mem_chunks_orig(chunks);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid chunks list" },
+    { 0, "chunks list is empty" },
+    { 0, "not found any relevant chunks pairs" },
+    { 0, "main case" },
+  };
+
+  struct chunk *mem_chunk;
+  struct chunk *mem_chunk_next;
+
+  if (!chunks) return;
+  /* save previous state */
+  int count_chunks_prev = 0;
+  list_for_each_entry(mem_chunk, chunks, chain) {
+    count_chunks_prev++;
+  }
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int count_chunks_after = 0;
+    int count_merged = 0;
+
+    if (ivec == 0 || !chunks) {
+      if (ivec != 0) return;
+      goto out;
+    }
+
+    if (ivec == 1 || list_empty(chunks)) {
+      if (ivec != 1) return;
+      goto out;
+    }
+
+  rerun:
+    list_for_each_entry_safe(mem_chunk, mem_chunk_next, chunks, chain) {
+      if (ivec == 2) continue;  // not found a valid pair
+      if (mem_chunk != mem_chunk_next &&
+          mem_chunk_next->addr == mem_chunk->addr + mem_chunk->size &&
+          mem_chunk_next->numa_id == mem_chunk->numa_id) {
+        dprintf("IHK-SMP: free 0x%lx - 0x%lx and 0x%lx - 0x%lx merged\n",
+                mem_chunk->addr,
+                mem_chunk->addr + mem_chunk->size,
+                mem_chunk_next->addr,
+                mem_chunk_next->addr + mem_chunk_next->size);
+
+        mem_chunk->size = mem_chunk->size + mem_chunk_next->size;
+        list_del(&mem_chunk_next->chain);
+        count_merged++;
+
+        goto rerun;
+      }
+    }
+
+   out:
+    list_for_each_entry(mem_chunk, chunks, chain) {
+      count_chunks_after++;
+    }
+
+    if (ivec == total_branch - 1) {
+      if (count_merged) {
+        OKNG(count_chunks_prev == count_chunks_after + count_merged,
+             "check the number of mem chunks\n");
+      }
+    } else {
+      OKNG(count_chunks_prev == count_chunks_after,
+           "the number of mem chunks should be unchanged\n");
+    }
+   err:
+    return;
   }
 }
 
@@ -1908,9 +2483,9 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
 
   spin_lock_irqsave(&os->lock, flags);
   if (os->status != BUILTIN_OS_STATUS_INITIAL) {
-  printk("builtin: OS status is not initial.\n");
-  spin_unlock_irqrestore(&os->lock, flags);
-  return -EBUSY;
+    printk("builtin: OS status is not initial.\n");
+    spin_unlock_irqrestore(&os->lock, flags);
+    return -EBUSY;
   }
   os->status = BUILTIN_OS_STATUS_LOADING;
   spin_unlock_irqrestore(&os->lock, flags);
@@ -2459,6 +3034,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
     struct ihk_cpu_req req;
     int *req_cpus = NULL;
     char req_string[REQ_STR_MAXLEN];
+    int should_quit = 0;
 
     spin_lock_irqsave(&os->lock, flags);
     if (os->status != BUILTIN_OS_STATUS_INITIAL) {
@@ -2539,7 +3115,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
     pr_info("IHK-SMP: CPUs: %s assigned to OS %p\n", req_string, ihk_os);
 
    out:
-    if (req_cpus) kfree(req_cpus);
+    should_quit = 1;
 
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
 
@@ -2557,20 +3133,25 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
     } else {
       OKNG(os->nr_cpus == 0, "the number of assigned cpus is zero\n");
 
-      for (i = 0; i < req.num_cpus; i++) {
-        cpu = req_cpus[i];
-        if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE
-            || ihk_smp_cpus[cpu].os != (ihk_os_t)0) {
-          fail = 1; break;
+      if (req_cpus) {
+        for (i = 0; i < req.num_cpus; i++) {
+          cpu = req_cpus[i];
+          if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE
+              || ihk_smp_cpus[cpu].os != (ihk_os_t)0) {
+            fail = 1; break;
+          }
         }
       }
       OKNG(!fail, "cpus status should be unchanged\n");
     }
+    should_quit = 0;
+
+   err:
+    if (req_cpus) kfree(req_cpus);
+    if (should_quit) return -EINVAL;
   }
 
   return 0;
- err:
-  return -EINVAL;
 }
 
 static int smp_ihk_os_release_cpu_orig(ihk_os_t ihk_os, void *priv, unsigned long arg)
@@ -3221,6 +3802,7 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
     if (os->status != BUILTIN_OS_STATUS_INITIAL) {
       spin_unlock_irqrestore(&os->lock, flags);
       ret = -EBUSY;
+      should_quit = 1;
       goto out;
     }
     spin_unlock_irqrestore(&os->lock, flags);
@@ -3234,18 +3816,21 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
     if (copy_from_user(req_src_cpus, req.src_cpus, sizeof(int) * req.num_cpus)) {
       pr_err("%s: error: copying request src_cpus\n", __func__);
       ret = -EFAULT;
+      should_quit = 1;
       goto out;
     }
 
     req_dst_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
     if (!req_dst_cpus) {
       pr_err("%s: error: allocating request dst_cpus\n", __func__);
+      kfree(req_src_cpus);
       return -EINVAL;
     }
 
     if (copy_from_user(req_dst_cpus, req.dst_cpus, sizeof(int) * req.num_cpus)) {
       pr_err("%s: error: copying request dst_cpus\n", __func__);
       ret = -EFAULT;
+      should_quit = 1;
       goto out;
     }
 
@@ -3266,12 +3851,14 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
                "SMP_MAX_CPUS: %d\n",
                __func__, src_cpu, SMP_MAX_CPUS);
         ret = -EINVAL;
+        should_quit = 1;
         goto out;
       }
 
       if (ihk_smp_cpus[src_cpu].status != IHK_SMP_CPU_ASSIGNED) {
         pr_err("%s: error: src cpu %d is not assigned\n", __func__, src_cpu);
         ret = -EINVAL;
+        should_quit = 1;
         goto out;
       }
 
@@ -3280,12 +3867,14 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
                "SMP_MAX_CPUS: %d\n",
                __func__, dst_cpu, SMP_MAX_CPUS);
         ret = -EINVAL;
+        should_quit = 1;
         goto out;
       }
 
       if (ihk_smp_cpus[dst_cpu].status == IHK_SMP_CPU_ASSIGNED) {
         pr_err("%s: error: dst cpu %d is assigned\n", __func__, dst_cpu);
         ret = -EINVAL;
+        should_quit = 1;
         goto out;
       }
 
@@ -3301,6 +3890,7 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
       if (!cpu_online(dst_cpu)) {
         pr_err("%s: error: dst cpu %d isn't online\n", __func__, dst_cpu);
         ret = -EINVAL;
+        should_quit = 1;
         goto out;
       }
 
@@ -3559,6 +4149,7 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
           pr_err("%s: error: query_space is not large enough\n", __func__);
           should_quit = 1;
         }
+        idx = 0;
         goto out;
       }
     }
@@ -3615,8 +4206,8 @@ static int smp_ihk_os_get_buildid(ihk_os_t ihk_os, void *priv, unsigned long arg
   return 0;
 }
 
-static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
-   size_t mem_size, int numa_id)
+static int __smp_ihk_os_assign_mem_orig(ihk_os_t ihk_os, struct smp_os_data *os,
+    size_t mem_size, int numa_id)
 {
   int ret = 0;
   struct ihk_os_mem_chunk *os_mem_chunk;
@@ -3635,155 +4226,149 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
   INIT_LIST_HEAD(&to_be_assigned_chunks);
 
   while (mem_size_left) {
-  mem_size = mem_size_left;
+    mem_size = mem_size_left;
 
-  /* Allocate OS memory chunk descriptor */
-  os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
+    /* Allocate OS memory chunk descriptor */
+    os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
 
-  if (!os_mem_chunk) {
-  printk(KERN_ERR "IHK-SMP: error: allocating os_mem_chunk\n");
-  ret = -ENOMEM;
-  goto out;
-  }
+    if (!os_mem_chunk) {
+      printk(KERN_ERR "IHK-SMP: error: allocating os_mem_chunk\n");
+      ret = -ENOMEM;
+      goto out;
+    }
 
-  os_mem_chunk->addr = 0;
-  os_mem_chunk->numa_id = numa_id;
-  INIT_LIST_HEAD(&os_mem_chunk->list);
+    os_mem_chunk->addr = 0;
+    os_mem_chunk->numa_id = numa_id;
+    INIT_LIST_HEAD(&os_mem_chunk->list);
 
-  /* Find the biggest chunk or an exact match on this NUMA node */
-  mem_chunk_max = NULL;
-  mem_chunk_match = NULL;
-  list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
-  if (mem_chunk_iter->numa_id != numa_id) {
-  continue;
-  }
+    /* Find the biggest chunk or an exact match on this NUMA node */
+    mem_chunk_max = NULL;
+    mem_chunk_match = NULL;
+    list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+      if (mem_chunk_iter->numa_id != numa_id) {
+        continue;
+      }
 
-  if (!mem_chunk_match && (mem_chunk_iter->size == mem_size)) {
-  mem_chunk_match = mem_chunk_iter;
-  break;
-  }
+      if (!mem_chunk_match && (mem_chunk_iter->size == mem_size)) {
+        mem_chunk_match = mem_chunk_iter;
+        break;
+      }
 
-  if (!mem_chunk_max || (mem_chunk_max->size < mem_chunk_iter->size)) {
-  mem_chunk_max = mem_chunk_iter;
-  }
-  }
+      if (!mem_chunk_max || (mem_chunk_max->size < mem_chunk_iter->size)) {
+        mem_chunk_max = mem_chunk_iter;
+      }
+    }
 
-  if (!mem_chunk_max && !mem_chunk_match) {
-  /* Special condition for "all" */
-  if (want == IHK_SMP_MEM_ALL) {
-  break;
-  }
+    if (!mem_chunk_max && !mem_chunk_match) {
+      /* Special condition for "all" */
+      if (want == IHK_SMP_MEM_ALL) {
+        break;
+      }
 
-  printk(KERN_ERR "IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
-  kfree(os_mem_chunk);
-  ret = -ENOMEM;
-  goto out;
-  }
+      printk(KERN_ERR "IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
+      kfree(os_mem_chunk);
+      ret = -ENOMEM;
+      goto out;
+    }
 
-  os_mem_chunk->os = ihk_os;
-  os_mem_chunk->numa_id = numa_id;
+    os_mem_chunk->os = ihk_os;
+    os_mem_chunk->numa_id = numa_id;
 
-  /* Exact match? */
-  if (mem_chunk_match) {
-  os_mem_chunk->addr = mem_chunk_match->addr;
-  os_mem_chunk->size = mem_chunk_match->size;
+    /* Exact match? */
+    if (mem_chunk_match) {
+      os_mem_chunk->addr = mem_chunk_match->addr;
+      os_mem_chunk->size = mem_chunk_match->size;
 
-  list_del(&mem_chunk_match->chain);
-  }
-  else {
-  os_mem_chunk->addr = mem_chunk_max->addr;
-  os_mem_chunk->size = mem_size < mem_chunk_max->size ?
-  mem_size : mem_chunk_max->size;
+      list_del(&mem_chunk_match->chain);
+    } else {
+      os_mem_chunk->addr = mem_chunk_max->addr;
+      os_mem_chunk->size = mem_size < mem_chunk_max->size ?
+                             mem_size : mem_chunk_max->size;
 
-  list_del(&mem_chunk_max->chain);
+      list_del(&mem_chunk_max->chain);
 
-  /* Split if there is any leftover */
-  if (mem_chunk_max->size > mem_size) {
-  struct page *pg;
+      /* Split if there is any leftover */
+      if (mem_chunk_max->size > mem_size) {
+        struct page *pg;
 
-  pg = virt_to_page(phys_to_virt(mem_chunk_max->addr + mem_size));
-  /* Do not split compound pages though */
-  if (PageTail(pg)) {
-  struct page *head = compound_head(pg);
-  size_t comp_size = PAGE_SIZE << compound_order(head);
+        pg = virt_to_page(phys_to_virt(mem_chunk_max->addr + mem_size));
+        /* Do not split compound pages though */
+        if (PageTail(pg)) {
+          struct page *head = compound_head(pg);
+          size_t comp_size = PAGE_SIZE << compound_order(head);
 
-  if ((page_to_phys(head) + comp_size) <
-  mem_chunk_max->addr + mem_chunk_max->size) {
-  off_t comp_end_offset = comp_size -
-  (page_to_phys(pg) - page_to_phys(head));
+          if ((page_to_phys(head) + comp_size) <
+               mem_chunk_max->addr + mem_chunk_max->size) {
+            off_t comp_end_offset = comp_size -
+                                      (page_to_phys(pg) - page_to_phys(head));
 
-  mem_chunk_leftover = (struct chunk*)
-  phys_to_virt(mem_chunk_max->addr + mem_size +
-  comp_end_offset);
-  mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size +
-  comp_end_offset;
-  mem_chunk_leftover->size = mem_chunk_max->size - mem_size -
-  comp_end_offset;
-  mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
-  add_free_mem_chunk(mem_chunk_leftover);
-  dprintk("%s: comp_end_offset: %lu\n",
-  __FUNCTION__, comp_end_offset);
-  }
-  }
-  else {
-  mem_chunk_leftover = (struct chunk*)
-  phys_to_virt(mem_chunk_max->addr + mem_size);
-  mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size;
-  mem_chunk_leftover->size = mem_chunk_max->size - mem_size;
-  mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
-  add_free_mem_chunk(mem_chunk_leftover);
-  }
-  }
-  }
+            mem_chunk_leftover = (struct chunk*)
+              phys_to_virt(mem_chunk_max->addr + mem_size + comp_end_offset);
+            mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size +
+                                         comp_end_offset;
+            mem_chunk_leftover->size = mem_chunk_max->size - mem_size -
+                                         comp_end_offset;
+            mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+            add_free_mem_chunk(mem_chunk_leftover);
+            dprintk("%s: comp_end_offset: %lu\n",
+                    __FUNCTION__, comp_end_offset);
+          }
+        } else {
+          mem_chunk_leftover = (struct chunk*)
+                                 phys_to_virt(mem_chunk_max->addr + mem_size);
+          mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size;
+          mem_chunk_leftover->size = mem_chunk_max->size - mem_size;
+          mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+          add_free_mem_chunk(mem_chunk_leftover);
+        }
+      }
+    }
 
-  list_add_tail(&os_mem_chunk->list, &to_be_assigned_chunks);
-  mem_size_left -= os_mem_chunk->size;
+    list_add_tail(&os_mem_chunk->list, &to_be_assigned_chunks);
+    mem_size_left -= os_mem_chunk->size;
   }
 
   /* We got all pieces we need, add them to the OS instance */
   list_for_each_entry_safe(os_mem_chunk_tba_iter, os_mem_chunk_tba_next,
-  &to_be_assigned_chunks, list) {
+                           &to_be_assigned_chunks, list) {
+    list_del(&os_mem_chunk_tba_iter->list);
+    os_mem_chunk = os_mem_chunk_tba_iter;
 
-  list_del(&os_mem_chunk_tba_iter->list);
-  os_mem_chunk = os_mem_chunk_tba_iter;
+    /* Insert the chunk in physical address ascending order */
+    os_mem_chunk_next = NULL;
+    list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+      if (os_mem_chunk->addr < os_mem_chunk_iter->addr) {
+        os_mem_chunk_next = os_mem_chunk_iter;
+        break;
+      }
+    }
 
+    /* Add in front of next */
+    if (os_mem_chunk_next) {
+      list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
+      dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [in front of 0x%lx]\n",
+              os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
+    } else {
+      /* Add to the end */
+      list_add_tail(&os_mem_chunk->list, &ihk_mem_used_chunks);
+      dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [tail]\n",
+              os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+              os_mem_chunk->size, numa_id, ihk_os);
+    }
 
-  /* Insert the chunk in physical address ascending order */
-  os_mem_chunk_next = NULL;
-  list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
-  if (os_mem_chunk->addr < os_mem_chunk_iter->addr) {
-  os_mem_chunk_next = os_mem_chunk_iter;
-  break;
-  }
-  }
+    /* Update OS start and end addresses */
+    if (!os->mem_start || os->mem_start > os_mem_chunk->addr) {
+      os->mem_start = os_mem_chunk->addr;
+    }
+    if (!os->mem_end || os->mem_end < os_mem_chunk->addr + os_mem_chunk->size) {
+      os->mem_end = os_mem_chunk->addr + os_mem_chunk->size;
+    }
+    set_bit(os_mem_chunk->numa_id, &os->numa_mask);
 
-  /* Add in front of next */
-  if (os_mem_chunk_next) {
-  list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
-  dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [in front of 0x%lx]\n",
-  os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
-  }
-  /* Add to the end */
-  else {
-  list_add_tail(&os_mem_chunk->list, &ihk_mem_used_chunks);
-  dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [tail]\n",
-  os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
-  os_mem_chunk->size, numa_id, ihk_os);
-  }
-
-  /* Update OS start and end addresses */
-  if (!os->mem_start || os->mem_start > os_mem_chunk->addr) {
-  os->mem_start = os_mem_chunk->addr;
-  }
-  if (!os->mem_end || os->mem_end < os_mem_chunk->addr + os_mem_chunk->size) {
-  os->mem_end = os_mem_chunk->addr + os_mem_chunk->size;
-  }
-  set_bit(os_mem_chunk->numa_id, &os->numa_mask);
-
-  printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
-     " (len: %lu) @ NUMA node: %d is assigned to OS %p\n",
-     os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
-     os_mem_chunk->size, numa_id, ihk_os);
+    printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+           " (len: %lu) @ NUMA node: %d is assigned to OS %p\n",
+           os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+           os_mem_chunk->size, numa_id, ihk_os);
   }
 
   ret = 0;
@@ -3791,26 +4376,354 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 out:
   /* Release all chunks which were to be assigned (error path) */
   list_for_each_entry_safe(os_mem_chunk_tba_iter, os_mem_chunk_tba_next,
-  &to_be_assigned_chunks, list) {
+      &to_be_assigned_chunks, list) {
 
-  list_del(&os_mem_chunk_tba_iter->list);
-  os_mem_chunk = os_mem_chunk_tba_iter;
+    list_del(&os_mem_chunk_tba_iter->list);
+    os_mem_chunk = os_mem_chunk_tba_iter;
 
-  mem_chunk_leftover = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
-  mem_chunk_leftover->addr = os_mem_chunk->addr;
-  mem_chunk_leftover->size = os_mem_chunk->size;
-  mem_chunk_leftover->numa_id = os_mem_chunk->numa_id;
+    mem_chunk_leftover = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+    mem_chunk_leftover->addr = os_mem_chunk->addr;
+    mem_chunk_leftover->size = os_mem_chunk->size;
+    mem_chunk_leftover->numa_id = os_mem_chunk->numa_id;
 
-  add_free_mem_chunk(mem_chunk_leftover);
-  merge_mem_chunks(&ihk_mem_free_chunks);
-  kfree(os_mem_chunk);
+    add_free_mem_chunk(mem_chunk_leftover);
+    merge_mem_chunks(&ihk_mem_free_chunks);
+    kfree(os_mem_chunk);
   }
 
   return ret;
 }
 
+static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
+   size_t mem_size, int numa_id)
+{
+  if (g_ihk_test_mode != TEST__SMP_IHK_OS_ASSIGN_MEM)  // Disable test code
+    return __smp_ihk_os_assign_mem_orig(ihk_os, os, mem_size, numa_id);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 7;
+
+  branch_info_t b_infos[] = {
+    { 0,       "mem_size is zero" },
+    { -ENOMEM, "not found any chunks of node numa_id" },
+    { 0,       "want = IHK_SMP_MEM_ALL" },
+    { 0,       "size of max chunk is less than mem_size" },
+    { 0,       "leftover page is not page compound tail" },
+    { 0,       "found a mem used chunk to add the new one in front of" },
+    { 0,       "main case" },
+  };
+
+  /* save previous state */
+  struct chunk *mem_chunk_iter;
+  int count_free_prev = 0;
+  list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+    count_free_prev++;
+  }
+  struct ihk_os_mem_chunk *os_mem_chunk_iter;
+  int count_used_prev = 0;
+  list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+    count_used_prev++;
+  }
+  size_t mem_size_prev = mem_size;
+  int ret = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    mem_size = mem_size_prev;
+    ret = 0;
+    struct ihk_os_mem_chunk *os_mem_chunk;
+    struct ihk_os_mem_chunk *os_mem_chunk_tba_iter;
+    struct ihk_os_mem_chunk *os_mem_chunk_tba_next = NULL;
+    struct ihk_os_mem_chunk *os_mem_chunk_next = NULL;
+    struct chunk *mem_chunk_leftover;
+    struct chunk *mem_chunk_max;
+    struct chunk *mem_chunk_match;
+    size_t mem_size_left = mem_size;
+    size_t want = mem_size;
+    struct list_head to_be_assigned_chunks;
+    struct list_head to_be_reverted_chunks;
+    struct list_head leftover_chunks;
+    int should_quit = 0;
+    int count_free_after = 0;
+    int count_used_after = 0;
+
+    INIT_LIST_HEAD(&to_be_assigned_chunks);
+    INIT_LIST_HEAD(&to_be_reverted_chunks);
+    INIT_LIST_HEAD(&leftover_chunks);
+
+    if (ivec == 0 || !mem_size_left) {
+      if (ivec == 0) mem_size_left = 0;
+    }
+
+    if (ivec == 2) {  // fake IHK_SMP_MEM_ALL
+      mem_size = mem_size_left = want = IHK_SMP_MEM_ALL;
+    }
+
+    while (mem_size_left) {
+      mem_size = mem_size_left;
+
+      /* Allocate OS memory chunk descriptor */
+      os_mem_chunk = kmalloc(sizeof(struct ihk_os_mem_chunk), GFP_KERNEL);
+
+      if (!os_mem_chunk) {
+        printk(KERN_ERR "IHK-SMP: error: allocating os_mem_chunk\n");
+        ret = -ENOMEM;
+        goto out;
+      }
+
+      os_mem_chunk->addr = 0;
+      os_mem_chunk->numa_id = numa_id;
+      INIT_LIST_HEAD(&os_mem_chunk->list);
+
+      /* Find the biggest chunk or an exact match on this NUMA node */
+      mem_chunk_max = NULL;
+      mem_chunk_match = NULL;
+      list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+        if (ivec == 1 || mem_chunk_iter->numa_id != numa_id) {
+          continue;
+        }
+
+        if (!mem_chunk_match && (mem_chunk_iter->size == mem_size)) {
+          mem_chunk_match = mem_chunk_iter;
+          break;
+        }
+
+        if (!mem_chunk_max || (mem_chunk_max->size < mem_chunk_iter->size)) {
+          mem_chunk_max = mem_chunk_iter;
+        }
+      }
+
+      if (!mem_chunk_max && !mem_chunk_match) {
+        /* Special condition for "all" */
+        if (want == IHK_SMP_MEM_ALL) {
+          break;
+        }
+
+        printk(KERN_ERR "IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
+        kfree(os_mem_chunk);
+        ret = -ENOMEM;
+        if (ivec != 1) should_quit = 1;
+        goto out;
+      }
+
+      os_mem_chunk->os = ihk_os;
+      os_mem_chunk->numa_id = numa_id;
+
+      if (ivec == 3) {
+        mem_chunk_max = mem_chunk_match;
+        mem_chunk_match = NULL;
+      }
+
+      /* Exact match? */
+      if (mem_chunk_match) {
+        os_mem_chunk->addr = mem_chunk_match->addr;
+        os_mem_chunk->size = mem_chunk_match->size;
+
+        list_del(&mem_chunk_match->chain);
+      } else {
+        os_mem_chunk->addr = mem_chunk_max->addr;
+        os_mem_chunk->size = mem_size < mem_chunk_max->size ?
+                               mem_size : mem_chunk_max->size;
+
+        list_del(&mem_chunk_max->chain);
+
+        /* Split if there is any leftover */
+        if (ivec != 3 && (ivec == 4 || mem_chunk_max->size > mem_size)) {
+          struct page *pg;
+
+          pg = virt_to_page(phys_to_virt(mem_chunk_max->addr + mem_size));
+          /* Do not split compound pages though */
+          if (ivec != 4 && PageTail(pg)) {
+            struct page *head = compound_head(pg);
+            size_t comp_size = PAGE_SIZE << compound_order(head);
+
+            if ((page_to_phys(head) + comp_size) <
+                 mem_chunk_max->addr + mem_chunk_max->size) {
+              off_t comp_end_offset = comp_size -
+                                        (page_to_phys(pg) - page_to_phys(head));
+
+              mem_chunk_leftover = (struct chunk*)
+                phys_to_virt(mem_chunk_max->addr + mem_size + comp_end_offset);
+              mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size +
+                                           comp_end_offset;
+              mem_chunk_leftover->size = mem_chunk_max->size - mem_size -
+                                           comp_end_offset;
+              mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+              add_free_mem_chunk(mem_chunk_leftover);
+              list_add_tail(&mem_chunk_leftover->chain, &leftover_chunks);
+              dprintk("%s: comp_end_offset: %lu\n",
+                      __FUNCTION__, comp_end_offset);
+            }
+          } else if (ivec == 4) {
+            mem_chunk_leftover = (struct chunk*)
+                                   phys_to_virt(mem_chunk_max->addr + mem_size);
+            mem_chunk_leftover->addr = mem_chunk_max->addr + mem_size;
+            mem_chunk_leftover->size = mem_chunk_max->size - mem_size;
+            mem_chunk_leftover->numa_id = mem_chunk_max->numa_id;
+            add_free_mem_chunk(mem_chunk_leftover);
+            list_add_tail(&mem_chunk_leftover->chain, &leftover_chunks);
+          }
+        } else if (ivec == 3) {
+          os_mem_chunk->size = mem_chunk_max->size;
+
+        }
+      }
+
+      list_add_tail(&os_mem_chunk->list, &to_be_assigned_chunks);
+      list_add_tail(&os_mem_chunk->list, &to_be_reverted_chunks);
+      mem_size_left -= os_mem_chunk->size;
+    }
+
+    /* We got all pieces we need, add them to the OS instance */
+    list_for_each_entry_safe(os_mem_chunk_tba_iter, os_mem_chunk_tba_next,
+                             &to_be_assigned_chunks, list) {
+      list_del(&os_mem_chunk_tba_iter->list);
+      os_mem_chunk = os_mem_chunk_tba_iter;
+
+      /* Insert the chunk in physical address ascending order */
+      os_mem_chunk_next = NULL;
+      list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+        // with ivec = 5, we force to assign os_mem_chunk_next != NULL
+        // then the target chunks list will be not in physical address ascending order
+        if (ivec == 5 || os_mem_chunk->addr < os_mem_chunk_iter->addr) {
+          os_mem_chunk_next = os_mem_chunk_iter;
+          break;
+        }
+      }
+
+      /* Add in front of next */
+      if (os_mem_chunk_next) {  // ivec = 5 goes here
+        list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
+        dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [in front of 0x%lx]\n",
+                os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
+      } else {
+        /* Add to the end */
+        list_add_tail(&os_mem_chunk->list, &ihk_mem_used_chunks);
+        dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [tail]\n",
+                os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+                os_mem_chunk->size, numa_id, ihk_os);
+      }
+
+      /* Update OS start and end addresses */
+      if (!os->mem_start || os->mem_start > os_mem_chunk->addr) {
+        os->mem_start = os_mem_chunk->addr;
+      }
+
+      if (!os->mem_end || os->mem_end < os_mem_chunk->addr + os_mem_chunk->size) {
+        os->mem_end = os_mem_chunk->addr + os_mem_chunk->size;
+      }
+
+      set_bit(os_mem_chunk->numa_id, &os->numa_mask);
+
+      printk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
+             " (len: %lu) @ NUMA node: %d is assigned to OS %p\n",
+             os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
+             os_mem_chunk->size, numa_id, ihk_os);
+    }
+
+    ret = 0;
+   out:
+    /* Release all chunks which were to be assigned (error path) */
+    list_for_each_entry_safe(os_mem_chunk_tba_iter, os_mem_chunk_tba_next,
+        &to_be_assigned_chunks, list) {
+
+      list_del(&os_mem_chunk_tba_iter->list);
+      os_mem_chunk = os_mem_chunk_tba_iter;
+
+      mem_chunk_leftover = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+      mem_chunk_leftover->addr = os_mem_chunk->addr;
+      mem_chunk_leftover->size = os_mem_chunk->size;
+      mem_chunk_leftover->numa_id = os_mem_chunk->numa_id;
+
+      add_free_mem_chunk(mem_chunk_leftover);
+      merge_mem_chunks(&ihk_mem_free_chunks);
+      kfree(os_mem_chunk);
+    }
+    if (should_quit) goto err;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    /* check current state */
+    list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+      count_free_after++;
+    }
+    list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+      count_used_after++;
+    }
+
+    if (ivec >= 2) {  // success
+      int count_assigned = 0, count_leftover = 0;
+      list_for_each_entry(os_mem_chunk_tba_iter, &to_be_reverted_chunks, list) {
+        count_assigned++;
+      }
+      list_for_each_entry(mem_chunk_iter, &leftover_chunks, chain) {
+        count_leftover++;
+      }
+
+      if (ivec == 4) {
+        OKNG(count_leftover > 0, "leftover chunk should exist\n");
+      }
+
+      OKNG(count_free_after == count_free_prev - count_assigned + count_leftover,
+           "check the number of mem free chunks\n");
+      OKNG(count_used_prev + count_assigned == count_used_after,
+           "check the number of mem used chunks\n");
+
+      if (ivec != total_branch - 1) {  // revert state
+        /* remove dummies from used list */
+        list_for_each_entry(os_mem_chunk_tba_iter,
+            &to_be_reverted_chunks, list) {
+          list_for_each_entry_safe(os_mem_chunk_iter, os_mem_chunk_next,
+              &ihk_mem_used_chunks, list) {
+            if (os_mem_chunk_iter == os_mem_chunk_tba_iter) {
+              list_del(&os_mem_chunk_iter->list);
+              break;
+            }
+          }
+        }
+        /* remove leftover from free list */
+        list_for_each_entry(mem_chunk_iter, &leftover_chunks, chain) {
+          struct chunk *mem_it, *mem_it_next;
+          list_for_each_entry_safe(mem_it, mem_it_next, &ihk_mem_free_chunks, chain) {
+            if (mem_it == mem_chunk_iter) {
+              list_del(&mem_it->chain);
+              break;
+            }
+          }
+        }
+        /* add dummies back to free list */
+        list_for_each_entry_safe(os_mem_chunk_tba_iter, os_mem_chunk_tba_next,
+            &to_be_reverted_chunks, list) {
+          list_del(&os_mem_chunk_tba_iter->list);
+          os_mem_chunk = os_mem_chunk_tba_iter;
+          mem_chunk_leftover = (struct chunk*)phys_to_virt(os_mem_chunk->addr);
+          mem_chunk_leftover->addr = os_mem_chunk->addr;
+          mem_chunk_leftover->size = os_mem_chunk->size;
+          mem_chunk_leftover->numa_id = os_mem_chunk->numa_id;
+          add_free_mem_chunk(mem_chunk_leftover);
+          merge_mem_chunks(&ihk_mem_free_chunks);
+          kfree(os_mem_chunk);
+        }
+      }
+    } else {  // fail cases
+      if (ivec == 0 || ivec == 1) {
+        OKNG(count_free_after == count_free_prev,
+             "the number of mem free chunks should not be changed\n");
+        OKNG(count_used_prev == count_used_after,
+             "the number of mem used chunks should not be changed\n");
+      }
+    }
+  }
+
+  return ret;
+ err:
+  return (ret)? ret : -ENOMEM;
+}
+
 static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id);
-static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+
+static int smp_ihk_os_assign_mem_orig(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
   struct smp_os_data *os = priv;
   unsigned long flags;
@@ -3822,62 +4735,59 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
   spin_lock_irqsave(&os->lock, flags);
   if (os->status != BUILTIN_OS_STATUS_INITIAL) {
-  spin_unlock_irqrestore(&os->lock, flags);
-  return -EBUSY;
+    spin_unlock_irqrestore(&os->lock, flags);
+    return -EBUSY;
   }
   spin_unlock_irqrestore(&os->lock, flags);
 
   if (copy_from_user(&req, (void *)arg, sizeof(req))) {
-  printk("%s: error: copying request\n", __FUNCTION__);
-  return -EFAULT;
+    printk("%s: error: copying request\n", __FUNCTION__);
+    return -EFAULT;
   }
 
   if (req.num_chunks == 0) {
-  printk("%s: invalid request length\n", __FUNCTION__);
-  return -EINVAL;
+    printk("%s: invalid request length\n", __FUNCTION__);
+    return -EINVAL;
   }
 
   req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
   if (!req_sizes) {
-  pr_err("%s: error: allocating request sizes\n", __func__);
-  return -EINVAL;
+    pr_err("%s: error: allocating request sizes\n", __func__);
+    return -EINVAL;
   }
 
   req_numa_ids = kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);
   if (!req_numa_ids) {
-  pr_err("%s: error: allocating request numa_ids\n",
-  __func__);
-  return -EINVAL;
+    pr_err("%s: error: allocating request numa_ids\n", __func__);
+    return -EINVAL;
   }
 
-  if (copy_from_user(req_sizes, req.sizes,
-     sizeof(size_t) * req.num_chunks)) {
-  pr_err("%s: error: copying request sizes\n", __func__);
-  ret = -EFAULT;
-  goto out;
+  if (copy_from_user(req_sizes, req.sizes, sizeof(size_t) * req.num_chunks)) {
+    pr_err("%s: error: copying request sizes\n", __func__);
+    ret = -EFAULT;
+    goto out;
   }
 
   if (copy_from_user(req_numa_ids, req.numa_ids,
-     sizeof(int) * req.num_chunks)) {
-  pr_err("%s: error: copying request numa_ids\n", __func__);
-  ret = -EFAULT;
-  goto out;
+                     sizeof(int) * req.num_chunks)) {
+    pr_err("%s: error: copying request numa_ids\n", __func__);
+    ret = -EFAULT;
+    goto out;
   }
 
   for (i = 0; i < req.num_chunks; i++) {
-  ret = __smp_ihk_os_assign_mem(ihk_os, os, req_sizes[i],
-  req_numa_ids[i]);
-  if (ret != 0) {
-  printk("IHK-SMP: os_assign_mem: error: assigning memory chunk\n");
-  failed_index = i;
-  goto out;
-  }
+    ret = __smp_ihk_os_assign_mem(ihk_os, os, req_sizes[i], req_numa_ids[i]);
+    if (ret != 0) {
+      printk("IHK-SMP: os_assign_mem: error: assigning memory chunk\n");
+      failed_index = i;
+      goto out;
+    }
   }
 
 out:
   /* Release all when failed */
   for (i = 0; i < failed_index; i++) {
-  _smp_ihk_os_release_mem(ihk_os, req_sizes[i], req_numa_ids[i]);
+    _smp_ihk_os_release_mem(ihk_os, req_sizes[i], req_numa_ids[i]);
   }
 
   kfree(req_sizes);
@@ -3885,41 +4795,177 @@ out:
   return ret;
 }
 
-static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
+static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_OS_ASSIGN_MEM)  // Disable test code
+    return smp_ihk_os_assign_mem_orig(ihk_os, priv, arg);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid num_chunks" },
+    { 0,       "main case" },
+  };
+
+  /* save previous state */
+  struct chunk *mem_chunk_iter;
+  int count_free_prev = 0;
+  list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+    count_free_prev++;
+  }
+  struct ihk_os_mem_chunk *os_mem_chunk_iter;
+  int count_used_prev = 0;
+  list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+    count_used_prev++;
+  }
+
+  int ret, i;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct smp_os_data *os = priv;
+    unsigned long flags;
+    struct ihk_mem_req req;
+    size_t *req_sizes = NULL;
+    int *req_numa_ids = NULL;
+    int failed_index = 0;
+    int count_free_after = 0, count_used_after = 0;
+    int should_quit = 0;
+    ret = 0;
+
+    spin_lock_irqsave(&os->lock, flags);
+    if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+      spin_unlock_irqrestore(&os->lock, flags);
+      return -EBUSY;
+    }
+    spin_unlock_irqrestore(&os->lock, flags);
+
+    if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+      printk("%s: error: copying request\n", __FUNCTION__);
+      return -EFAULT;
+    }
+
+    if (ivec == 0 || req.num_chunks <= 0) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        printk("%s: invalid request length\n", __FUNCTION__);
+        return ret;
+      }
+      goto out;
+    }
+
+    req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
+    if (!req_sizes) {
+      pr_err("%s: error: allocating request sizes\n", __func__);
+      return -ENOMEM;
+    }
+
+    req_numa_ids = kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);
+    if (!req_numa_ids) {
+      pr_err("%s: error: allocating request numa_ids\n", __func__);
+      kfree(req_sizes);
+      return -ENOMEM;
+    }
+
+    if (copy_from_user(req_sizes, req.sizes, sizeof(size_t) * req.num_chunks)) {
+      pr_err("%s: error: copying request sizes\n", __func__);
+      ret = -EFAULT;
+      should_quit = 1;
+      goto out;
+    }
+
+    if (copy_from_user(req_numa_ids, req.numa_ids,
+                       sizeof(int) * req.num_chunks)) {
+      pr_err("%s: error: copying request numa_ids\n", __func__);
+      ret = -EFAULT;
+      should_quit = 1;
+      goto out;
+    }
+
+    for (i = 0; i < req.num_chunks; i++) {
+      ret = __smp_ihk_os_assign_mem(ihk_os, os, req_sizes[i], req_numa_ids[i]);
+      if (ret != 0) {
+        printk("IHK-SMP: os_assign_mem: error: assigning memory chunk\n");
+        failed_index = i;
+        should_quit = 1;
+        goto out;
+      }
+    }
+
+  out:
+    /* Release all when failed */
+    for (i = 0; i < failed_index; i++) {
+      _smp_ihk_os_release_mem(ihk_os, req_sizes[i], req_numa_ids[i]);
+    }
+
+    kfree(req_sizes);
+    kfree(req_numa_ids);
+    if (should_quit) goto err;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    /* check current state */
+    list_for_each_entry(mem_chunk_iter, &ihk_mem_free_chunks, chain) {
+      count_free_after++;
+    }
+    list_for_each_entry(os_mem_chunk_iter, &ihk_mem_used_chunks, list) {
+      count_used_after++;
+    }
+
+    if (ivec == total_branch - 1) {
+      OKNG(failed_index == 0, "mem chunks are assigned w/o any errors\n");
+      OKNG(count_used_after > count_used_prev,
+           "the number of mem used chunks should be increased\n");
+    } else {
+      OKNG(count_free_after == count_free_prev,
+           "the number of mem free chunks should be unchanged\n");
+      OKNG(count_used_after == count_used_prev,
+           "the number of mem used chunks should be unchanged\n");
+    }
+  }
+
+  return ret;
+ err:
+  return (ret)? ret : -EINVAL;
+}
+
+static int _smp_ihk_os_release_mem_orig(ihk_os_t ihk_os, size_t size, int numa_id)
 {
   int ret;
+
   struct ihk_os_mem_chunk *os_mem_chunk = NULL;
   struct ihk_os_mem_chunk *next_chunk = NULL;
   struct chunk *mem_chunk;
 
   list_for_each_entry_safe(os_mem_chunk, next_chunk,
-   &ihk_mem_used_chunks, list) {
+                           &ihk_mem_used_chunks, list) {
+    if (os_mem_chunk->os != ihk_os
+        || os_mem_chunk->size != size
+        || os_mem_chunk->numa_id != numa_id) {
+      continue;
+    }
 
-  if (os_mem_chunk->os != ihk_os
-      || os_mem_chunk->size != size
-      || os_mem_chunk->numa_id != numa_id) {
-  continue;
-  }
+    list_del(&os_mem_chunk->list);
 
-  list_del(&os_mem_chunk->list);
+    mem_chunk = (struct chunk *)phys_to_virt(os_mem_chunk->addr);
+    mem_chunk->addr = os_mem_chunk->addr;
+    mem_chunk->size = os_mem_chunk->size;
+    mem_chunk->numa_id = os_mem_chunk->numa_id;
+    INIT_LIST_HEAD(&mem_chunk->chain);
 
-  mem_chunk = (struct chunk *)phys_to_virt(os_mem_chunk->addr);
-  mem_chunk->addr = os_mem_chunk->addr;
-  mem_chunk->size = os_mem_chunk->size;
-  mem_chunk->numa_id = os_mem_chunk->numa_id;
-  INIT_LIST_HEAD(&mem_chunk->chain);
+    pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
+            " (len: %lu) @ NUMA node: %d is returned to IHK\n",
+            mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+            mem_chunk->size, mem_chunk->numa_id);
 
-  pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
-         " (len: %lu) @ NUMA node: %d is returned to IHK\n",
-         mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
-         mem_chunk->size, mem_chunk->numa_id);
+    add_free_mem_chunk(mem_chunk);
 
-  add_free_mem_chunk(mem_chunk);
+    kfree(os_mem_chunk);
 
-  kfree(os_mem_chunk);
-
-  ret = 0;
-  goto out;
+    ret = 0;
+    goto out;
   }
 
   ret = -EINVAL;
@@ -3927,7 +4973,105 @@ static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
   return ret;
 }
 
-static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
+{
+  if (g_ihk_test_mode != TEST__SMP_IHK_OS_RELEASE_MEM)  // Disable test code
+    return _smp_ihk_os_release_mem_orig(ihk_os, size, numa_id);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { 0,       "list of mem used chunks is empty" },
+    { -EINVAL, "not found a valid mem chunk" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+
+  /* save previous state */
+  int count_assigned_prev = 0;
+  struct ihk_os_mem_chunk *os_mem_chunk;
+  list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+    count_assigned_prev++;
+  }
+  int count_reserved_prev = 0;
+  struct chunk *mem_chunk;
+  list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
+    count_reserved_prev++;
+  }
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_os_mem_chunk *next_chunk = NULL;
+    struct chunk *mem_chunk;
+    int count_assigned_after = 0, count_reserved_after = 0;
+    int should_quit = 0;
+
+    if (ivec == 0 || list_empty(&ihk_mem_used_chunks)) {
+      ret = 0;
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+    list_for_each_entry_safe(os_mem_chunk, next_chunk,
+                             &ihk_mem_used_chunks, list) {
+      if (ivec == 1 ||
+          (os_mem_chunk->os != ihk_os ||
+           os_mem_chunk->size != size ||
+           os_mem_chunk->numa_id != numa_id)) {
+        continue;
+      }
+
+      list_del(&os_mem_chunk->list);
+
+      mem_chunk = (struct chunk *)phys_to_virt(os_mem_chunk->addr);
+      mem_chunk->addr = os_mem_chunk->addr;
+      mem_chunk->size = os_mem_chunk->size;
+      mem_chunk->numa_id = os_mem_chunk->numa_id;
+      INIT_LIST_HEAD(&mem_chunk->chain);
+
+      pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
+              " (len: %lu) @ NUMA node: %d is returned to IHK\n",
+              mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+              mem_chunk->size, mem_chunk->numa_id);
+
+      add_free_mem_chunk(mem_chunk);
+
+      kfree(os_mem_chunk);
+
+      ret = 0;
+      goto out;
+    }
+
+    ret = -EINVAL;
+   out:
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    /* check current state */
+    list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+      count_assigned_after++;
+    }
+    list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
+      count_reserved_after++;
+    }
+
+    if (ivec == total_branch - 1) {
+      OKNG(count_assigned_after == count_assigned_prev - 1, "the number of assigned mem chunks should be decreased by 1\n");
+      OKNG(count_reserved_after == count_reserved_prev + 1, "the number of reserved mem chunks should be increased by 1\n");
+    } else {
+      OKNG(count_assigned_after == count_assigned_prev, "the number of assigned mem chunks should be unchanged\n");
+      OKNG(count_reserved_after == count_reserved_prev, "the number of reserved mem chunks should be unchanged\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+static int smp_ihk_os_release_mem_orig(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
   struct smp_os_data *os = priv;
   unsigned long flags;
@@ -3938,65 +5082,59 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 
   spin_lock_irqsave(&os->lock, flags);
   if (os->status != BUILTIN_OS_STATUS_INITIAL) {
-  spin_unlock_irqrestore(&os->lock, flags);
-  return -EBUSY;
+    spin_unlock_irqrestore(&os->lock, flags);
+    return -EBUSY;
   }
   spin_unlock_irqrestore(&os->lock, flags);
 
   ret = copy_from_user(&req, (void *)arg, sizeof(req));
   if (ret) {
-  pr_err("%s: error: copy_from_user request\n",
-         __func__);
-  goto out;
+    pr_err("%s: error: copy_from_user request\n", __func__);
+    goto out;
   }
 
   if (req.num_chunks == 0) {
-  ret = 0;
-  goto out;
+    ret = 0;
+    goto out;
   }
 
   req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
   if (req_sizes == NULL) {
-  pr_err("%s: error: allocating sizes\n",
-         __func__);
-  ret = -ENOMEM;
-  goto out;
+    pr_err("%s: error: allocating sizes\n", __func__);
+    ret = -ENOMEM;
+    goto out;
   }
 
   req_numa_ids = kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);
   if (req_numa_ids == NULL) {
-  pr_err("%s: error: allocating NUMA ids\n",
-         __func__);
-  ret = -ENOMEM;
-  goto out;
+    pr_err("%s: error: allocating NUMA ids\n", __func__);
+    ret = -ENOMEM;
+    goto out;
   }
 
-  ret = copy_from_user(req_sizes, req.sizes,
-  sizeof(size_t) * req.num_chunks);
+  ret = copy_from_user(req_sizes,
+                       req.sizes, sizeof(size_t) * req.num_chunks);
   if (ret) {
-  pr_err("%s: error: copy_from_user sizes\n",
-         __func__);
-  goto out;
+    pr_err("%s: error: copy_from_user sizes\n", __func__);
+    goto out;
   }
 
   ret = copy_from_user(req_numa_ids, req.numa_ids,
-  sizeof(int) * req.num_chunks);
+                       sizeof(int) * req.num_chunks);
   if (ret) {
-  pr_err("%s: error: copy_from_user NUMA ids\n",
-         __func__);
-  goto out;
+    pr_err("%s: error: copy_from_user NUMA ids\n", __func__);
+    goto out;
   }
 
   /* Drop specified memory chunks */
   for (i = 0; i < req.num_chunks; i++) {
-  ret = _smp_ihk_os_release_mem(ihk_os, req_sizes[i],
-        req_numa_ids[i]);
-  if (ret) {
-  pr_err("%s: error: _smp_ihk_os_release_mem"
-         " returned %d\n",
-         __func__, ret);
-  goto out;
-  }
+    ret = _smp_ihk_os_release_mem(ihk_os, req_sizes[i], req_numa_ids[i]);
+    if (ret) {
+      pr_err("%s: error: _smp_ihk_os_release_mem"
+             " returned %d\n",
+             __func__, ret);
+      goto out;
+    }
   }
 
   ret = 0;
@@ -4004,6 +5142,137 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
   kfree(req_sizes);
   kfree(req_numa_ids);
   return ret;
+}
+
+static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_OS_RELEASE_MEM)  // Disable test code
+    return smp_ihk_os_release_mem_orig(ihk_os, priv, arg);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "negative num_chunks" },
+    { 0,       "main case" },
+  };
+
+  int ret = -EINVAL, i;
+  /* save previous state */
+  int count_assigned_prev = 0;
+  struct ihk_os_mem_chunk *os_mem_chunk;
+  list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+    count_assigned_prev++;
+  }
+  int count_reserved_prev = 0;
+  struct chunk *mem_chunk;
+  list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
+    count_reserved_prev++;
+  }
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct smp_os_data *os = priv;
+    unsigned long flags;
+    struct ihk_mem_req req;
+    size_t *req_sizes = NULL;
+    int *req_numa_ids = NULL;
+    int count_assigned_after = 0, count_reserved_after = 0;
+
+    spin_lock_irqsave(&os->lock, flags);
+    if (os->status != BUILTIN_OS_STATUS_INITIAL) {
+      spin_unlock_irqrestore(&os->lock, flags);
+      return -EBUSY;
+    }
+    spin_unlock_irqrestore(&os->lock, flags);
+
+    ret = copy_from_user(&req, (void *)arg, sizeof(req));
+    if (ret) {
+      pr_err("%s: error: copy_from_user request\n", __func__);
+      goto out;
+    }
+
+    if (ivec == 0 || req.num_chunks < 0) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (req.num_chunks == 0) {
+      ret = 0;
+      goto out;
+    }
+
+    req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
+    if (req_sizes == NULL) {
+      pr_err("%s: error: allocating sizes\n", __func__);
+      ret = -ENOMEM;
+      goto out;
+    }
+
+    req_numa_ids = kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);
+    if (req_numa_ids == NULL) {
+      pr_err("%s: error: allocating NUMA ids\n", __func__);
+      ret = -ENOMEM;
+      goto out;
+    }
+
+    ret = copy_from_user(req_sizes,
+                         req.sizes, sizeof(size_t) * req.num_chunks);
+    if (ret) {
+      pr_err("%s: error: copy_from_user sizes\n", __func__);
+      goto out;
+    }
+
+    ret = copy_from_user(req_numa_ids, req.numa_ids,
+                         sizeof(int) * req.num_chunks);
+    if (ret) {
+      pr_err("%s: error: copy_from_user NUMA ids\n", __func__);
+      goto out;
+    }
+
+    /* Drop specified memory chunks */
+    for (i = 0; i < req.num_chunks; i++) {
+      ret = _smp_ihk_os_release_mem(ihk_os, req_sizes[i], req_numa_ids[i]);
+      if (ret) {
+        pr_err("%s: error: _smp_ihk_os_release_mem"
+               " returned %d\n",
+               __func__, ret);
+        goto out;
+      }
+    }
+
+    ret = 0;
+   out:
+    kfree(req_sizes);
+    kfree(req_numa_ids);
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    /* check current state */
+    list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+      count_assigned_after++;
+    }
+    list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
+      count_reserved_after++;
+    }
+
+    if (ivec == total_branch - 1) {
+      OKNG(count_assigned_after == count_assigned_prev - req.num_chunks,
+           "check the number of assigned mem chunks\n");
+      OKNG(count_reserved_after == count_reserved_prev + req.num_chunks,
+           "check the number of reserved mem chunks\n");
+    } else {
+      OKNG(count_assigned_after == count_assigned_prev,
+           "the number of assigned mem chunks should be unchanged\n");
+      OKNG(count_reserved_after == count_reserved_prev,
+           "the number of reserved mem chunks should be unchanged\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 static int smp_ihk_os_get_num_mem_chunks(ihk_os_t ihk_os, void *priv)
@@ -4030,7 +5299,7 @@ static pgd_t *smp_ihk_os_get_boot_pt(ihk_os_t ihk_os, void *priv)
   return os->boot_pt;
 }
 
-static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+static int smp_ihk_os_query_mem_orig(ihk_os_t ihk_os, void *priv, unsigned long arg)
 {
   int ret, num_chunks = 0, idx = 0;
   struct ihk_mem_req req;
@@ -4040,84 +5309,73 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
   int *query_res_numa_id = NULL;
 
   if (copy_from_user(&req, (void *)arg, sizeof(req))) {
-  pr_err("%s: error: copying request\n", __func__);
-  return -EFAULT;
+    pr_err("%s: error: copying request\n", __func__);
+    return -EFAULT;
   }
 
   /* Count memory chunks */
   list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-  if (os_mem_chunk->os != ihk_os)
-  continue;
-  num_chunks++;
+    if (os_mem_chunk->os != ihk_os)
+      continue;
+    num_chunks++;
   }
 
   if (req.num_chunks == 0) {
-  /* Get assigned num chunks */
-  if (copy_to_user(&res->num_chunks, &num_chunks, sizeof(int))) {
-  pr_err("%s: error: copying mem num_chunks to user-space\n",
-  __func__);
-  ret = -EFAULT;
-  goto out;
-  }
-  ret = 0;
-  goto out;
-  }
-  else if (num_chunks > req.num_chunks) {
-  pr_err("%s: error: query_space is not large enough\n",
-  __func__);
-  ret = -EINVAL;
-  goto out;
+    /* Get assigned num chunks */
+    if (copy_to_user(&res->num_chunks, &num_chunks, sizeof(int))) {
+      pr_err("%s: error: copying mem num_chunks to user-space\n", __func__);
+      ret = -EFAULT;
+      goto out;
+    }
+    ret = 0;
+    goto out;
+  } else if (num_chunks > req.num_chunks) {
+    pr_err("%s: error: query_space is not large enough\n", __func__);
+    ret = -EINVAL;
+    goto out;
   }
 
   if (!(query_res_size = kmalloc(sizeof(size_t) * req.num_chunks,
-  GFP_KERNEL))) {
-  pr_err("%s: error: allocating query_res_size\n",
-  __func__);
-  ret = -ENOMEM;
-  goto out;
+        GFP_KERNEL))) {
+    pr_err("%s: error: allocating query_res_size\n", __func__);
+    ret = -ENOMEM;
+    goto out;
   }
 
   if (!(query_res_numa_id = kmalloc(sizeof(int) * req.num_chunks,
-  GFP_KERNEL))) {
-  pr_err("%s: error: allocating query_res_numa_id\n",
-  __func__);
-  ret = -ENOMEM;
-  goto out;
+        GFP_KERNEL))) {
+    pr_err("%s: error: allocating query_res_numa_id\n", __func__);
+    ret = -ENOMEM;
+    goto out;
   }
 
   /* Collect memory information */
   list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
-  if (os_mem_chunk->os != ihk_os)
-  continue;
+    if (os_mem_chunk->os != ihk_os)
+      continue;
 
-  query_res_size[idx] = os_mem_chunk->size;
-  query_res_numa_id[idx] = os_mem_chunk->numa_id;
-  idx++;
-
+    query_res_size[idx] = os_mem_chunk->size;
+    query_res_numa_id[idx] = os_mem_chunk->numa_id;
+    idx++;
   }
 
   if (idx > 0) {
-  if (copy_to_user(req.sizes, query_res_size,
-   sizeof(size_t) * idx)) {
-  pr_err("%s: error: copying mem sizes to user-space\n",
-  __func__);
-  ret = -EFAULT;
-  goto out;
-  }
-  if (copy_to_user(req.numa_ids, query_res_numa_id,
-   sizeof(int) * idx)) {
-  pr_err("%s: error: copying mem numa_ids to user-space\n",
-  __func__);
-  ret = -EFAULT;
-  goto out;
-  }
+    if (copy_to_user(req.sizes, query_res_size, sizeof(size_t) * idx)) {
+      pr_err("%s: error: copying mem sizes to user-space\n", __func__);
+      ret = -EFAULT;
+      goto out;
+    }
+    if (copy_to_user(req.numa_ids, query_res_numa_id, sizeof(int) * idx)) {
+      pr_err("%s: error: copying mem numa_ids to user-space\n", __func__);
+      ret = -EFAULT;
+      goto out;
+    }
   }
 
   if (copy_to_user(&res->num_chunks, &idx, sizeof(int))) {
-  pr_err("%s: error: copying mem num_chunks to user-space\n",
-  __func__);
-  ret = -EFAULT;
-  goto out;
+    pr_err("%s: error: copying mem num_chunks to user-space\n", __func__);
+    ret = -EFAULT;
+    goto out;
   }
 
   ret = 0;
@@ -4126,6 +5384,152 @@ out:
   kfree(query_res_size);
   kfree(query_res_numa_id);
   return ret;
+}
+
+static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_OS_QUERY_MEM)  // Disable test code
+    return smp_ihk_os_query_mem_orig(ihk_os, priv, arg);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 5;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "negative num_chunks" },
+    { 0,       "list of mem used chunks is empty" },
+    { 0,       "not found any chunks of target os instance" },
+    { -EINVAL, "query space is not large enough" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int num_chunks = 0, idx = 0;
+    struct ihk_mem_req req;
+    struct ihk_mem_req *res = (struct ihk_mem_req *)arg;
+    struct ihk_os_mem_chunk *os_mem_chunk;
+    size_t *query_res_size = NULL;
+    int *query_res_numa_id = NULL;
+    int should_quit = 0;
+
+    if (copy_from_user(&req, (void *)arg, sizeof(req))) {
+      pr_err("%s: error: copying request\n", __func__);
+      return -EFAULT;
+    }
+
+    if (ivec == 0 || req.num_chunks < 0) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    /* Count memory chunks */
+    if (ivec == 1 || list_empty(&ihk_mem_used_chunks)) {
+      ret = 0;
+      if (ivec != 1) {
+        should_quit = 1;
+        goto out_count;
+      }
+      goto out;
+    }
+
+    list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+      if (ivec == 2 || os_mem_chunk->os != ihk_os)
+        continue;
+      num_chunks++;
+    }
+
+    if (ivec != 3 && req.num_chunks == 0) {
+      /* Get assigned num chunks */
+      if (copy_to_user(&res->num_chunks, &num_chunks, sizeof(int))) {
+        pr_err("%s: error: copying mem num_chunks to user-space\n", __func__);
+        ret = -EFAULT;
+        should_quit = 1;
+        goto out;
+      }
+      ret = 0;
+      goto out;
+    } else if (ivec == 3 || num_chunks > req.num_chunks) {
+      ret = -EINVAL;
+      if (ivec != 3) {
+        pr_err("%s: error: query_space is not large enough\n", __func__);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    if (!(query_res_size = kmalloc(sizeof(size_t) * req.num_chunks,
+          GFP_KERNEL))) {
+      pr_err("%s: error: allocating query_res_size\n", __func__);
+      ret = -ENOMEM;
+      should_quit = 1;
+      goto out;
+    }
+
+    if (!(query_res_numa_id = kmalloc(sizeof(int) * req.num_chunks,
+          GFP_KERNEL))) {
+      pr_err("%s: error: allocating query_res_numa_id\n", __func__);
+      ret = -ENOMEM;
+      should_quit = 1;
+      goto out;
+    }
+
+    /* Collect memory information */
+    list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+      if (ivec == 2 || os_mem_chunk->os != ihk_os)
+        continue;
+
+      query_res_size[idx] = os_mem_chunk->size;
+      query_res_numa_id[idx] = os_mem_chunk->numa_id;
+      idx++;
+    }
+
+    if (idx > 0) {
+      if (copy_to_user(req.sizes, query_res_size, sizeof(size_t) * idx)) {
+        pr_err("%s: error: copying mem sizes to user-space\n", __func__);
+        ret = -EFAULT;
+        goto out;
+      }
+      if (copy_to_user(req.numa_ids, query_res_numa_id, sizeof(int) * idx)) {
+        pr_err("%s: error: copying mem numa_ids to user-space\n", __func__);
+        ret = -EFAULT;
+        goto out;
+      }
+    }
+
+   out_count:
+    if (should_quit || ivec == total_branch - 1) {
+      if (copy_to_user(&res->num_chunks, &idx, sizeof(int))) {
+        pr_err("%s: error: copying mem num_chunks to user-space\n", __func__);
+        ret = -EFAULT;
+        goto out;
+      }
+    }
+
+    ret = 0;
+
+   out:
+    kfree(query_res_size);
+    kfree(query_res_numa_id);
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == 1 || ivec == 2) {
+      OKNG(idx == 0, "chunks count is zero\n");
+    }
+    if (ivec == total_branch - 1) {
+      if (req.num_chunks > 0)
+        OKNG(idx > 0, "check chunks count\n");
+    }
+  }
+
+  return 0;
+ err:
+  return (ret)? ret : -EINVAL;
 }
 
 static int smp_ihk_os_freeze(ihk_os_t ihk_os, void *priv)
@@ -5944,9 +7348,10 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
     return __ihk_smp_release_mem_orig(ihk_mem, numa_id);
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 2;
+  unsigned long total_branch = 3;
 
   branch_info_t b_infos[] = {
+    { 0, "ihk_mem_free_chunks is empty" },
     { 0, "not found any chunks to release" },
     { 0, "main case" },
   };
@@ -5964,8 +7369,12 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 
     struct chunk *mem_chunk_next;
 
-    list_for_each_entry_safe(mem_chunk, mem_chunk_next, &ihk_mem_free_chunks, chain) {
-      if (ivec == 0
+    if (ivec == 0 || list_empty(&ihk_mem_free_chunks)) {
+      if (ivec != 0) return 0;
+      goto out;
+    } else list_for_each_entry_safe(mem_chunk, mem_chunk_next,
+                                    &ihk_mem_free_chunks, chain) {
+      if (ivec == 1
           || (mem_chunk->size != ihk_mem || mem_chunk->numa_id != numa_id)) {
         continue;
       }
@@ -6813,20 +8222,20 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
   int i;
   int ret, fail;
   unsigned long ivec = 0;
-  unsigned long total_branch = 11;
-  int should_quit = 0;
+  unsigned long total_branch = 12;
 
   branch_info_t b_infos[] = {
     { -EINVAL, "branch 1" },
     { -EINVAL, "branch 2" },
-    { -EINVAL, "branch 3" },
+    { -EFAULT, "branch 3" },
     { -EINVAL, "branch 4" },
     { -EINVAL, "branch 5" },
     { -EINVAL, "branch 6" },
     { -EINVAL, "branch 7" },
-    { 0,       "branch 8" },
-    { -EINVAL, "branch 9" },
-    { 0,       "branch 10" },
+    { -EINVAL, "branch 8" },
+    { 0,       "branch 9" },
+    { -EINVAL, "branch 10" },
+    { 0,       "branch 11" },
     { 0,       "main case" }
   };
 
@@ -6851,6 +8260,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
     struct ihk_cpu_req req;
     req_cpus = NULL;
     char req_string[REQ_STR_MAXLEN];
+    int should_quit = 0;
 
     ret = copy_from_user(&req, (void *)arg, sizeof(req));
     if (ret) {
@@ -6858,11 +8268,11 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
       return -EFAULT;
     }
 
-    if (ivec == 0 || req.num_cpus == 0) {
+    if (ivec == 0 || req.num_cpus <= 0) {
       ret = -EINVAL;
       if (ivec != 0) {
         printk("%s: invalid request length\n", __FUNCTION__);
-        should_quit = 1;
+        return ret;
       }
       goto out;
     }
@@ -6877,6 +8287,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
     if (ret) {
       ret = -EFAULT;
       pr_err("%s: error: copying request cpus\n", __func__);
+      should_quit = 1;
       goto err;
     }
 
@@ -6898,56 +8309,52 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
     }
 
     /* Ugly, but for_each_cpu doesn't look beyond nr_cpu_ids */
-    if (nr_cpu_ids >= sizeof(cpus_to_offline) * BITS_PER_BYTE) {
-      /* site-effect is already handled in branches below.
-       * we add this code to prevent ivec counting mismatch in case of the
-       * for-loop in the else-statement below is never be iterated. */
-      if (ivec == 2) {
-        ret = -EINVAL; goto out;
-      }
-    } else {
-      for (cpu = nr_cpu_ids;
-          cpu < sizeof(cpus_to_offline) * BITS_PER_BYTE; ++cpu) {
-    #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
-        if (ivec == 2 || cpumask_test_cpu(cpu, &cpus_to_offline)) {
-    #else
-        if (ivec == 2 || cpu_isset(cpu, cpus_to_offline)) {
-    #endif
-          ret = -EINVAL;
-          if (ivec != 2) {
-            printk("%s: invalid CPU requested: %d\n",  __FUNCTION__, cpu);
-            should_quit = 1;
-          }
-          goto out;
+    if (ivec == 2 || nr_cpu_ids >= sizeof(cpus_to_offline) * BITS_PER_BYTE) {
+      ret = -EFAULT;
+      if (ivec != 2) should_quit = 1;
+      goto out;
+    }
+    for (cpu = nr_cpu_ids;
+         cpu < sizeof(cpus_to_offline) * BITS_PER_BYTE; ++cpu) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+      if (ivec == 3 || cpumask_test_cpu(cpu, &cpus_to_offline)) {
+#else
+      if (ivec == 3 || cpu_isset(cpu, cpus_to_offline)) {
+#endif
+        ret = -EINVAL;
+        if (ivec != 3) {
+          printk("%s: invalid CPU requested: %d\n",  __FUNCTION__, cpu);
+          should_quit = 1;
         }
+        goto out;
       }
     }
 
     /* Collect cores to be offlined */
-  #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
     for_each_cpu(cpu, &cpus_to_offline) {
-  #else
+#else
     for_each_cpu_mask(cpu, cpus_to_offline) {
-  #endif
-      if (ivec == 3 || cpu > SMP_MAX_CPUS) {
+#endif
+      if (ivec == 4 || cpu > SMP_MAX_CPUS) {
         ret = -EINVAL;
-        if (ivec == 3) goto err_before_offline;
+        if (ivec == 4) goto err_before_offline;
         printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
         should_quit = 1;
         goto err_before_offline;
       }
 
-      if (ivec == 4 || !cpu_present(cpu)) {
+      if (ivec == 5 || !cpu_present(cpu)) {
         ret = -EINVAL;
-        if (ivec == 4) goto err_before_offline;
+        if (ivec == 5) goto err_before_offline;
         printk("IHK-SMP: error: CPU %d is not present\n", cpu);
         should_quit = 1;
         goto err_before_offline;
       }
 
-      if (ivec == 5 || !cpu_online(cpu)) {
+      if (ivec == 6 || !cpu_online(cpu)) {
         ret = -EINVAL;
-        if (ivec == 5) goto err_before_offline;
+        if (ivec == 6) goto err_before_offline;
 
         pr_err("%s: error: CPU %d was ", __func__, cpu);
         switch (ihk_smp_cpus[cpu].status) {
@@ -6970,9 +8377,9 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
         goto err_before_offline;
       }
 
-      if (ivec == 6 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ONLINE) {
+      if (ivec == 7 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_ONLINE) {
         ret = -EINVAL;
-        if (ivec == 6) goto err_before_offline;
+        if (ivec == 7) goto err_before_offline;
         printk("IHK-SMP: error: CPU %d is in inconsistent state, skipping\n", cpu);
         should_quit = 1;
         goto err_before_offline;
@@ -6983,19 +8390,20 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
       ihk_smp_cpus[cpu].status = IHK_SMP_CPU_TO_OFFLINE;
       ihk_smp_cpus[cpu].os = (ihk_os_t)0;
 
-      dprintk(KERN_INFO "IHK-SMP: CPU %d to be offlined, HWID: %d\n",
-             ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
+      if (ivec == total_branch - 1)
+        dprintk(KERN_INFO "IHK-SMP: CPU %d to be offlined, HWID: %d\n",
+                ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
     }
 
     /* Offline CPU cores */
     for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-      if (ivec == 7 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
+      if (ivec == 8 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
         continue;
 
-      if (ivec != 8) ret = smp_ihk_offline_cpu(cpu);
-      if (ivec == 8 || ret != 0) {
+      if (ivec != 9) ret = smp_ihk_offline_cpu(cpu);
+      if (ivec == 9 || ret != 0) {
         ret = -EINVAL;
-        if (ivec != 8) should_quit = 1;
+        if (ivec != 9) should_quit = 1;
         goto err_during_offline;
       }
 
@@ -7005,30 +8413,32 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 
       ret = ihk_smp_reset_cpu(ihk_smp_cpus[cpu].hw_id);
 
-      dprintk(KERN_INFO "IHK-SMP: CPU %d offlined successfully, HWID: %d\n",
-             ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
+      if (ivec == total_branch - 1)
+        dprintk(KERN_INFO "IHK-SMP: CPU %d offlined successfully, HWID: %d\n",
+                ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
     }
 
     /* Offlining CPU cores went well, mark them as available */
     for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-      if (ivec == 9 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
+      if (ivec == 10 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
         continue;
       ihk_smp_cpus[cpu].status = IHK_SMP_CPU_AVAILABLE;
 
-      dprintk(KERN_INFO "IHK-SMP: CPU %d reserved successfully, HWID: %d\n",
-             ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
+      if (ivec == total_branch - 1)
+        dprintk(KERN_INFO "IHK-SMP: CPU %d reserved successfully, HWID: %d\n",
+                ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
     }
 
     if (ivec == total_branch - 1)
       printk(KERN_INFO "IHK-SMP: CPUs: %s reserved successfully\n", req_string);
     ret = 0;
-    if (ivec == 7) goto err_before_offline;
-    if (ivec == 9) goto err_during_offline;
+    if (ivec == 8) goto err_before_offline;
+    if (ivec == 10) goto err_during_offline;
     goto out;
 
    err_during_offline:
     for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-      if (ivec == 9 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
+      if (ivec == 10 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_OFFLINED)
         continue;
 
       smp_ihk_online_cpu(cpu);
@@ -7037,7 +8447,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 
    err_before_offline:
     for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-      if (ivec == 7 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
+      if (ivec == 8 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_TO_OFFLINE)
         continue;
 
       ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
@@ -7047,7 +8457,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
     if (should_quit) goto err;
     should_quit = 1;
 
-    if (ivec == 7) {
+    if (ivec == 8) {
       fail = 0;
       for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
         if (ihk_smp_cpus[cpu].status == IHK_SMP_CPU_TO_OFFLINE)
@@ -7062,7 +8472,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
         ihk_smp_cpus[cpu].status = IHK_SMP_CPU_ONLINE;
       }
     }
-    if (ivec == 9) {
+    if (ivec == 10) {
       fail = 0;
   #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
       for_each_cpu(cpu, &cpus_to_offline)
@@ -7105,7 +8515,7 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
       OKNG(!fail, "cpus state must be updated successfully\n");
 
       OKNG(req.num_cpus == count_online_before - count_online_after,
-        "checking the number of online cpus\n");
+           "checking the number of online cpus\n");
     } else {
       // state must be reverted
       for (cpu = 0; cpu < SMP_MAX_CPUS; ++cpu) {
@@ -7253,13 +8663,8 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
   if (g_ihk_test_mode != TEST_SMP_IHK_RELEASE_CPU)  // Disable test code
     return smp_ihk_release_cpu_orig(ihk_dev, arg);
 
-  int ret;
   unsigned long ivec = 0;
   unsigned long total_branch = 9;
-  int cpu;
-  int should_quit = 0;
-  int fail = 0;
-  int *req_cpus = NULL;
 
   branch_info_t b_infos[] = {
     { -EINVAL, "branch 1" },
@@ -7269,9 +8674,12 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
     { -EINVAL, "branch 5" },
     { -EINVAL, "branch 6" },
     { -EINVAL, "branch 7" },
-    { 0,       "branch 8" },
+    { -EINVAL, "branch 8" },
     { 0,       "branch 9" },
   };
+
+  int ret, cpu, i;
+  int *req_cpus = NULL;
 
   // store previous state
   int cpu_status_before[SMP_MAX_CPUS];
@@ -7289,9 +8697,10 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
     START(b_infos[ivec].name);
 
     size_t count_online_after = 0;
-    int i;
     cpumask_t cpus_to_online;
     struct ihk_cpu_req req;
+    int should_quit = 0;
+    int fail = 0;
 
     ret = copy_from_user(&req, (void *)arg, sizeof(req));
     if (ret) {
@@ -7413,7 +8822,7 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
               ihk_smp_cpus[cpu].id, ihk_smp_cpus[cpu].hw_id);
     }
 
-    if (ivec == 6) goto revert_marking;
+    if (ivec == 6) { ret = -EINVAL; goto revert_marking; }
 
     ret = 0;
     goto out;
@@ -7429,6 +8838,8 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
     }
 
    out:
+    if (should_quit) goto err;
+
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
 
     if (ivec == 6) {  // revert
@@ -7473,7 +8884,6 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
     }
 
     if (req_cpus) { kfree(req_cpus); req_cpus = NULL; }
-    if (should_quit) return ret;
   }
 
   return ret;
@@ -7642,28 +9052,28 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
   if (g_ihk_test_mode != TEST_SMP_IHK_QUERY_CPU)  // Disable test code
     return smp_ihk_query_cpu_orig(ihk_dev, arg);
 
-  int ret;
-  int *res_cpus = NULL;
-
   unsigned long ivec = 0;
   unsigned long total_branch = 5;
-  int should_quit = 0;
 
   branch_info_t b_infos[] = {
-    { 0,       "no any cpus is available" },
+    { -EINVAL, "no any cpus is available" },
     { 0,       "checking the number of available cpus" },
-    { -EINVAL, "the number of cpus requested mismatch" },
     { -EINVAL, "invalid number of cpus requested" },
+    { -EINVAL, "the number of cpus requested mismatch" },
     { 0,       "main case" },
   };
+
+  int ret;
+  int cpu;
+  int *res_cpus = NULL;
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
 
-    int idx;
+    int idx = 0;
     struct ihk_cpu_req req;
     struct ihk_cpu_req *res = (struct ihk_cpu_req *)arg;
-    int cpu;
+    int should_quit = 0;
 
     ret = copy_from_user(&req, (void *)arg, sizeof(req));
     if (ret) {
@@ -7678,10 +9088,17 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
         continue;
       idx++;
     }
+
     if (ivec == 1) goto out;  // for check counting
 
-    if (ivec == 2 || idx != req.num_cpus) {
-      if (ivec != 2) {
+    if (ivec == 2 || req.num_cpus <= 0) {
+      if (ivec != 2) should_quit = 1;
+      ret = -EINVAL;
+      goto out;
+    }
+
+    if (ivec == 3 || idx != req.num_cpus) {
+      if (ivec != 3 && ivec != 0) {
         pr_err("%s: error: #cpu requested (%d) != actual (%d)\n",
                __func__, req.num_cpus, idx);
         should_quit = 1;
@@ -7699,17 +9116,11 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
     }
 
     for (cpu = 0, idx = 0; cpu < SMP_MAX_CPUS; ++cpu) {
-      if (ivec == 0 || ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
+      if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
         continue;
 
       res_cpus[idx] = cpu;
       idx++;
-    }
-
-    if (ivec == 3 || req.num_cpus <= 0) {
-      if (ivec != 3) should_quit = 1;
-      ret = -EINVAL;
-      goto out;
     }
 
     ret = copy_to_user(req.cpus, res_cpus, sizeof(int) * req.num_cpus);
@@ -7744,7 +9155,8 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
       }
       /* check count of available cpus */
       if (ivec == 1) {
-        OKNG(count_offline == idx, "the number of available cpus. expected: %ld, real: %ld\n", count_offline, idx);
+        OKNG(count_offline == idx,
+             "the number of available cpus. expected: %ld, real: %ld\n", count_offline, idx);
       }
 
       /* check result */
@@ -7767,7 +9179,8 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
           }
         }
         kfree(cpus_offline);
-        OKNG(count_offline == req.num_cpus, "the number of reserved cpus. expected: %ld, real: %ld\n", i, req.num_cpus);
+        OKNG(count_offline == req.num_cpus,
+             "the number of reserved cpus. expected: %ld, real: %ld\n", i, req.num_cpus);
         OKNG(!fail, "checking result values\n");
       }
 
@@ -7912,7 +9325,6 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
   int ret = 0;
   unsigned long ivec = 0;
   unsigned long total_branch = 3;
-  int should_quit = 0;
 
   branch_info_t b_infos[] = {
     { -EINVAL, "branch 1" },
@@ -7937,6 +9349,7 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
     struct ihk_mem_req req;
     size_t *req_sizes = NULL;
     int *req_numa_ids = NULL;
+    int should_quit = 0;
 
     ret = copy_from_user(&req, (void *)arg, sizeof(req));
     if (ret) {
@@ -8396,19 +9809,24 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
       goto out;
     }
 
-    /* Count memory chunks */
-    list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
-      num_chunks++;
-    }
-
     if (ivec == 0 || req.num_chunks < 0) {
       ret = -EINVAL;
+      if (ivec != 0) should_quit = 1;
       goto out;
     }
 
-    if (ivec == 1 || req.num_chunks == 0) {
+    /* Count memory chunks */
+    if (ivec == 1 || list_empty(&ihk_mem_free_chunks)) {
+      ret = 0;
+      if (ivec != 1) return copy_to_user(&res->num_chunks, &num_chunks, sizeof(int));
+      goto out;
+    } else list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
+      num_chunks++;
+    }
+
+    if (ivec == 2 || req.num_chunks == 0) {
       /* Get reserved mem chunks */
-      if (ivec != 1)
+      if (ivec != 2)
         ret = copy_to_user(&res->num_chunks, &num_chunks, sizeof(int));
       if (ret) {
         pr_err("%s: error: copying mem num_chunks to user-space\n", __func__);
@@ -8416,7 +9834,7 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
         ret = -EFAULT;
         goto out;
       }
-      if (ivec != 1) should_quit = 1;
+      if (ivec != 2) should_quit = 1;
       // ivec = 1
       ret = 0;
       goto out;
@@ -8443,11 +9861,6 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
       query_res_size[idx] = mem_chunk->size;
       query_res_numa_id[idx] = mem_chunk->numa_id;
       idx++;
-    }
-
-    if (ivec == 2 || idx == 0) {
-      if (ivec != 2) should_quit = 1;
-      goto out;
     }
 
     ret = copy_to_user(req.sizes, query_res_size, sizeof(size_t) * idx);
