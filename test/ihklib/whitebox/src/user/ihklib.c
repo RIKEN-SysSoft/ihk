@@ -6172,7 +6172,7 @@ int ihk_os_shutdown(int index)
   return -EINVAL;
 }
 
-int ihk_os_get_status(int index)
+int ihk_os_get_status_orig(int index)
 {
   int ret;
   int fd = -1;
@@ -6234,6 +6234,153 @@ int ihk_os_get_status(int index)
   }
   dprintk("%s: returning %d\n", __func__, ret);
   return ret;
+}
+
+int ihk_os_get_status(int index)
+{
+  if (get_test_mode() != TEST_IHK_OS_GET_STATUS)
+    return ihk_os_get_status_orig(index);
+
+  dprintk("%s: enter\n", __func__);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 7;
+
+  branch_info_t b_infos[] = {
+    { -ENOENT,             "cannot query status" },
+    { IHK_STATUS_BOOTING,  "booting" },
+    { IHK_STATUS_SHUTDOWN, "shutdown" },
+    { IHK_STATUS_PANIC,    "panic" },
+    { IHK_STATUS_HUNGUP,   "hungup" },
+    { IHK_STATUS_FREEZING, "freezing" },
+    { 0,                   "main case" },
+  };
+
+  int ret;
+  int fd = -1;
+  /* save previous state */
+  os_status_req_t status_prev;
+  fd = ihklib_os_open(index);
+  if (fd < 0) return fd;
+  ret = ioctl(fd, IHK_OS_GET_STATUS, &status_prev);
+  close(fd);
+  if (ret) return ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int should_quit = 0;
+    int faked = 0;
+    os_status_req_t req;
+    req.cpu_status = -1;
+
+    if ((fd = ihklib_os_open(index)) < 0) {
+      dprintf("%s: error: ihklib_os_open\n", __func__);
+      ret = fd;
+      goto out;
+    }
+
+    /* fake os status before querying */
+    switch (ivec) {
+    case 1:
+      req.status = 3;
+      req.param_status = 0;
+      break;
+    case 2:
+      req.status = 4;
+      break;
+    case 3:
+      req.status = 3;
+      req.param_status = 3;
+      req.cpu_status = 99;
+      break;
+    case 4:
+      req.status = 5;
+      break;
+    case 5:
+      req.status = 3;
+      req.param_status = 3;
+      req.cpu_status = 8;
+      break;
+    default:  // other
+      break;
+    }
+    if (ivec >= 1 && ivec <= 5) {
+      ret = ioctl(fd, IHK_OS_FAKE_STATUS, &req);
+      if (ret) {
+        should_quit = 1;
+        goto out;
+      }
+      faked = 1;
+    }
+
+    ret = ioctl(fd, IHK_OS_STATUS);
+    if (ivec == 0 || ret < 0) {
+      if (ivec != 0) {
+        dprintf("%s: error: IHK_OS_STATUS: %d\n", __func__, ret);
+        should_quit = 1;
+      }
+      ret = -ENOENT;
+      goto out;
+    }
+
+    switch (ret) {
+    case IHK_OS_STATUS_NOT_BOOTED: /* before smp_ihk_os_boot or
+            * after smp_ihk_destroy_os
+            */
+      ret = IHK_STATUS_INACTIVE;
+      break;
+    case IHK_OS_STATUS_BOOTING:  /* smp_ihk_os_boot -- arch_init */
+    case IHK_OS_STATUS_BOOTED:  /* arch_init -- arch_ready */
+    case IHK_OS_STATUS_READY:  /* arch_ready -- done_init */
+      ret = IHK_STATUS_BOOTING;
+      break;
+    case IHK_OS_STATUS_RUNNING:  /* after done_init */
+      ret = IHK_STATUS_RUNNING;
+      break;
+    case IHK_OS_STATUS_SHUTDOWN:  /* smp_ihk_os_shutdown --
+             * smp_ihk_destroy_os
+             */
+      ret = IHK_STATUS_SHUTDOWN;
+      break;
+    case IHK_OS_STATUS_FAILED:
+      ret = IHK_STATUS_PANIC;
+      break;
+    case IHK_OS_STATUS_HUNGUP:
+      ret = IHK_STATUS_HUNGUP;
+      break;
+    case IHK_OS_STATUS_FREEZING:
+      ret = IHK_STATUS_FREEZING;
+      break;
+    case IHK_OS_STATUS_FROZEN:
+      ret = IHK_STATUS_FROZEN;
+      break;
+    default:
+      dprintf("%s: error: unknown os status: %d\n", __func__, ret);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    int saved_status = ret;
+    if (ivec == total_branch - 1) ret = 0;
+
+   out:
+    if (fd != -1) {
+      int r = 0;
+      if (faked)  // reset to go to next loop
+        r = ioctl(fd, IHK_OS_FAKE_STATUS, &status_prev);
+      close(fd);
+      if (r) return r;
+    }
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    ret = saved_status;
+  }
+  dprintk("%s: returning %d\n", __func__, ret);
+  return ret;
+ err:
+  return -ENOENT;
 }
 
 int ihk_os_get_kmsg_size(int index)
@@ -6305,8 +6452,7 @@ int ihk_os_clear_kmsg(int index)
   dprintk("%s: enter\n", __func__);
 
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open\n",
-      __func__);
+    dprintf("%s: error: ihklib_os_open\n", __func__);
     ret = fd;
     goto out;
   }
@@ -6314,8 +6460,7 @@ int ihk_os_clear_kmsg(int index)
   ret = ioctl(fd, IHK_OS_CLEAR_KMSG, 0);
   if (ret) {
     ret = -errno;
-    dprintf("%s: IHK_OS_CLEAR_KMSG returned %d\n",
-      __func__, -ret);
+    dprintf("%s: IHK_OS_CLEAR_KMSG returned %d\n", __func__, -ret);
     goto out;
   }
 

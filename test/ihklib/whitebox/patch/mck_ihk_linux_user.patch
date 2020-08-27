@@ -1,5 +1,5 @@
---- old_CMakeLists.txt	2020-08-19 00:06:35.340610234 +0700
-+++ new_CMakeLists.txt	2020-08-19 00:09:17.798522123 +0700
+--- old_CMakeLists.txt	2020-09-01 18:33:31.000375660 +0700
++++ new_CMakeLists.txt	2020-09-01 18:33:25.080428037 +0700
 @@ -3,6 +3,10 @@
  	"${PROJECT_SOURCE_DIR}/linux/include/ihk/arch/${ARCH}"
  	"${PROJECT_BINARY_DIR}/linux/include"

@@ -1,5 +1,5 @@
---- old_CMakeLists.txt	2020-08-18 22:20:17.852702345 +0700
-+++ new_CMakeLists.txt	2020-08-18 22:19:47.860970168 +0700
+--- old_CMakeLists.txt	2020-09-01 18:30:41.493874844 +0700
++++ new_CMakeLists.txt	2020-09-01 18:30:31.657961803 +0700
 @@ -78,6 +78,9 @@
  	#add_subdirectory("linux/driver/builtin")
  elseif(BUILD_TARGET MATCHES "smp.*")
