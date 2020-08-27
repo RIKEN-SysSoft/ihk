@@ -166,7 +166,7 @@ retry:
 	return 0;
 }
 
-int ihk_ikc_write_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
+int ihk_ikc_write_queue_orig(struct ihk_ikc_queue_head *q, void *packet, int flag)
 {
 	uint64_t r, w;
 	int attempt = 0;
@@ -185,12 +185,12 @@ retry:
 		/* Did we run out of attempts? */
 		if (++attempt > IHK_IKC_WRITE_QUEUE_RETRY) {
 			kprintf("%s: queue %p r: %llu, w: %llu is full\n",
-					__FUNCTION__, (void *)virt_to_phys(q), r, w);
+					    __FUNCTION__, (void *)virt_to_phys(q), r, w);
 			return -EBUSY;
 		}
 
 		dkprintf("%s: queue %p r: %llu, w: %llu full, retrying\n",
-			__FUNCTION__, (void *)virt_to_phys(q), r, w);
+			       __FUNCTION__, (void *)virt_to_phys(q), r, w);
 		goto retry;
 	}
 
@@ -199,10 +199,10 @@ retry:
 		goto retry;
 	}
 	dkprintf("%s: queue %p r: %llu, w: %llu\n",
-			__FUNCTION__, (void *)virt_to_phys(q), r, w);
+			     __FUNCTION__, (void *)virt_to_phys(q), r, w);
 
 	memcpyl((char *)q + sizeof(*q) + ((w % q->pktcount) * q->pktsize),
-			packet, q->pktsize);
+			    packet, q->pktsize);
 
 	/*
 	 * Advance the max read index so that the element is visible to readers,
@@ -215,15 +215,112 @@ retry:
 	return 0;
 }
 
+int ihk_ikc_write_queue(struct ihk_ikc_queue_head *q, void *packet, int flag)
+{
+  if (g_ihk_test_mode != TEST_IHK_IKC_WRITE_QUEUE)  // Disable test code
+    return ihk_ikc_write_queue_orig(q, packet, flag);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid queue or packet" },
+    { -EBUSY,  "queue is full" },
+    { 0,       "main case" },
+  };
+
+  /* save previous state */
+  if (!q) return -EINVAL;
+  uint64_t w_prev = q->write_off;;
+  uint64_t max_read_prev = q->max_read_off;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+  	uint64_t r, w;
+    uint64_t w_after, max_read_after;
+    int ret = 0;
+  	int attempt = 0;
+
+  	if (ivec == 0 || (!q || !packet)) {
+  		ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+  	}
+
+  retry:
+  	r = q->read_off;
+  	w = q->write_off;
+  	barrier();
+
+  	/* Is the queue full? */
+  	if (ivec == 1 || ((w - r) == (q->pktcount - 1))) {
+  		/* Did we run out of attempts? */
+  		if (++attempt > IHK_IKC_WRITE_QUEUE_RETRY) {
+        ret = -EBUSY;
+        if (ivec != 1) {
+  			  kprintf("%s: queue %p r: %llu, w: %llu is full\n",
+  					      __FUNCTION__, (void *)virt_to_phys(q), r, w);
+          return ret;
+        }
+        goto out;
+  		}
+
+      if (ivec > 1)
+  		  dkprintf("%s: queue %p r: %llu, w: %llu full, retrying\n",
+  			         __FUNCTION__, (void *)virt_to_phys(q), r, w);
+  		goto retry;
+  	}
+
+  	/* Try to advance the queue, but see if someone else has done it already */
+  	if (cmpxchg(&q->write_off, w, w + 1) != w) {
+  		goto retry;
+  	}
+  	dkprintf("%s: queue %p r: %llu, w: %llu\n",
+  			     __FUNCTION__, (void *)virt_to_phys(q), r, w);
+
+  	memcpyl((char *)q + sizeof(*q) + ((w % q->pktcount) * q->pktsize),
+  			    packet, q->pktsize);
+
+  	/*
+  	 * Advance the max read index so that the element is visible to readers,
+  	 * this has to succeed eventually, but we cannot afford to be interrupted
+  	 * by another request which would then end up waiting for this hence
+  	 * IRQs are disabled during queue operations.
+  	 */
+  	while (cmpxchg(&q->max_read_off, w, w + 1) != w) {}
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    /* check current state */
+    w_after = q->write_off;;
+    max_read_after = q->max_read_off;
+    if (ivec == total_branch - 1) {
+      OKNG(w_after == w_prev + 1, "write offset should be increased by 1\n");
+      OKNG((max_read_after == max_read_prev + 1) &&
+			 		 (max_read_prev + 1 == w_after),
+           "check max read offset\n");
+    } else {
+      OKNG(w_after == w_prev, "write offset should not be changed\n");
+      OKNG(max_read_after == max_read_prev,
+           "max read offset should not be changed\n");
+    }
+  }
+	return 0;
+ err:
+  return -EINVAL;
+}
+
 /*
  * Channel and queue descriptors
  */
-void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
-                       ihk_os_t ros, int port,
-                       struct ihk_ikc_queue_head *rq,
-                       struct ihk_ikc_queue_head *wq,
-                       ihk_ikc_ph_t packet_handler,
-					   struct ihk_ikc_channel_desc *master)
+void ihk_ikc_init_desc_orig(struct ihk_ikc_channel_desc *c,
+                            ihk_os_t ros, int port,
+                            struct ihk_ikc_queue_head *rq,
+                            struct ihk_ikc_queue_head *wq,
+                            ihk_ikc_ph_t packet_handler,
+					                  struct ihk_ikc_channel_desc *master)
 {
 	struct list_head *all_list = ihk_ikc_get_channel_list(ros);
 	ihk_spinlock_t *all_lock = ihk_ikc_get_channel_list_lock(ros);
@@ -257,6 +354,99 @@ void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
 	flags = ihk_ikc_spinlock_lock(all_lock);
 	list_add_tail(&c->list_all, all_list);
 	ihk_ikc_spinlock_unlock(all_lock, flags);
+}
+
+void ihk_ikc_init_desc(struct ihk_ikc_channel_desc *c,
+                       ihk_os_t ros, int port,
+                       struct ihk_ikc_queue_head *rq,
+                       struct ihk_ikc_queue_head *wq,
+                       ihk_ikc_ph_t packet_handler,
+					             struct ihk_ikc_channel_desc *master)
+{
+  if (g_ihk_test_mode != TEST_IHK_IKC_INIT_DESC)  // Disable test code
+    return ihk_ikc_init_desc_orig(c, ros, port, rq, wq, packet_handler, master);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid channel desc" },
+    { 0, "invalid parameter" },
+    { 0, "main case" },
+  };
+
+  /* save previous state */
+  struct list_head *all_list = ihk_ikc_get_channel_list(ros);
+  ihk_spinlock_t *all_lock = ihk_ikc_get_channel_list_lock(ros);
+  struct ihk_ikc_channel_desc *c_it;
+  int count_list_all_prev = 0;
+  unsigned long flags = ihk_ikc_spinlock_lock(all_lock);
+  list_for_each_entry(c_it, all_list, list_all) {
+    count_list_all_prev++;
+  }
+  ihk_ikc_spinlock_unlock(all_lock, flags);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int count_list_all_after = 0;
+
+    if (ivec == 0 || (!c || !master)) {
+      if (ivec != 0) return;
+      goto out;
+    }
+
+    if (ivec == 1 || (ihk_host_validate_os(ros) || !rq || !wq)) {
+      if (ivec != 1) return;
+      goto out;
+    }
+
+  	INIT_LIST_HEAD(&c->list_all);
+  	INIT_LIST_HEAD(&c->packet_pool);
+
+  	c->remote_os = ros;
+  	c->port = port;
+  	c->channel_id = ihk_ikc_get_unique_channel_id(ros);
+  	c->recv.queue = rq;
+  	c->send.queue = wq;
+  	if (rq) {
+  		c->recv.queue->channel_id = c->channel_id;
+  		c->recv.queue->read_cpu = ihk_ikc_get_processor_id();
+  		c->recv.cache = *rq;
+  	}
+  	if (wq) {
+  		c->remote_channel_id = c->send.cache.channel_id;
+  		c->send.queue->write_cpu = ihk_ikc_get_processor_id();
+  		c->send.cache = *wq;
+  	}
+  	c->handler = packet_handler;
+  	c->master = master;
+
+  	ihk_ikc_spinlock_init(&c->recv.lock);
+  	ihk_ikc_spinlock_init(&c->send.lock);
+  	ihk_ikc_spinlock_init(&c->packet_pool_lock);
+
+  	flags = ihk_ikc_spinlock_lock(all_lock);
+  	list_add_tail(&c->list_all, all_list);
+  	ihk_ikc_spinlock_unlock(all_lock, flags);
+
+   out:
+    flags = ihk_ikc_spinlock_lock(all_lock);
+    list_for_each_entry(c_it, all_list, list_all) {
+      count_list_all_after++;
+    }
+   ihk_ikc_spinlock_unlock(all_lock, flags);
+
+    if (ivec == total_branch - 1) {
+      OKNG(count_list_all_after == count_list_all_prev + 1,
+           "channel list should be added a new item\n");
+    } else {
+      OKNG(count_list_all_after == count_list_all_prev,
+           "channel list should not be changed\n");
+    }
+  }
+ err:
+  return;
 }
 
 /*

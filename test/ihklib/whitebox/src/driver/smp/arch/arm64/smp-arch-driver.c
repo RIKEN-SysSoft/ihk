@@ -1067,7 +1067,7 @@ void ihk_pwr_clear_retention_state_flag_address(void)
 }
 EXPORT_SYMBOL(ihk_pwr_clear_retention_state_flag_address);
 
-void smp_ihk_setup_trampoline(void *priv)
+void smp_ihk_setup_trampoline_orig(void *priv)
 {
   struct smp_os_data *os = priv;
   struct ihk_smp_trampoline_header *header;
@@ -1119,9 +1119,9 @@ void smp_ihk_setup_trampoline(void *priv)
   header->default_vl = get_sve_default_vl();
   header->cpu_logical_map_size = sizeof(header->cpu_logical_map) / sizeof(unsigned long);
   memcpy(header->cpu_logical_map, ihk___cpu_logical_map,
-    header->cpu_logical_map_size * sizeof(unsigned long));
+         header->cpu_logical_map_size * sizeof(unsigned long));
   memcpy(header->rdist_base_pa, ihk_smp_gic_rdist_pa,
-    header->cpu_logical_map_size * sizeof(unsigned long));
+         header->cpu_logical_map_size * sizeof(unsigned long));
 
   raw_spin_lock_irqsave(&__retention_state_lock, flags);
   if (__pwr_g_retention_state_flag) {
@@ -1140,6 +1140,107 @@ void smp_ihk_setup_trampoline(void *priv)
   //ihk_armpmu_set_irq_affi(header->pmu_irq_affi, os);
 
   ihk___flush_dcache_area(header, IHK_SMP_TRAMPOLINE_SIZE);
+}
+
+void smp_ihk_setup_trampoline(void *priv)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_SETUP_TRAMPOLINE)  // Disable test code
+    return smp_ihk_setup_trampoline_orig(priv);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid container" },
+    { 0, "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct smp_os_data *os = priv;
+    struct ihk_smp_trampoline_header *header;
+    unsigned long flags;
+    int nr_irqs;
+    int i = 0;
+
+    for (i = 0; i < nr_cpu_ids; i++) {
+      os->param->ihk_ikc_cpu_hwids[i] = ihk_smp_get_hw_id(i);
+
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+      /* IRQ work per-CPU raised_list head physical addresses */
+      os->param->ihk_ikc_cpu_raised_list[i] =
+        (void *)virt_to_phys(per_cpu_ptr(ihk__raised_list, i));
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
+    }
+
+#ifdef IHK_IKC_USE_LINUX_WORK_IRQ
+    os->param->ikc_irq_work_func = (void *)smp_ihk_ikc_irq_work_func;
+    os->param->ihk_ikc_irq = ihk_smp_irq;
+#else
+    for (i = 0; i < SMP_MAX_IRQS; i++) {
+      os->param->ihk_ikc_irqs[i] = ihk_smp_irq[i].hwirq;
+    }
+#endif // IHK_IKC_USE_LINUX_WORK_IRQ
+
+    /* Prepare trampoline code */
+    memcpy(trampoline_va, ihk_smp_trampoline_data,
+           IHK_SMP_TRAMPOLINE_SIZE);
+    D("trampoline=0x%llx, trampoline_va=0x%lx\n", __pa(trampoline_va), (unsigned long)trampoline_va);
+
+    header = trampoline_va;
+    header->page_table = ident_page_table;
+    header->next_ip = os->boot_rip;
+    header->notify_address = __pa(os->param);
+    header->st_phys_base = virt_to_phys((void*)PAGE_OFFSET);
+    header->st_phys_size = (unsigned long)high_memory - PAGE_OFFSET;
+    header->dist_base_pa = ihk_smp_gic_dist_base_pa;
+    header->dist_map_size = ihk_smp_gic_dist_size;
+    header->cpu_base_pa = ihk_smp_gic_cpu_base_pa;
+    header->cpu_map_size = ihk_smp_gic_cpu_size;
+    header->percpu_offset = ihk_gic_percpu_offset;
+    header->gic_version = ihk_gic_version;
+    header->loops_per_jiffy = loops_per_jiffy;
+    header->hz = HZ;
+    header->psci_method = ihk_smp_psci_method;
+    header->use_virt_timer = is_arch_timer_use_virt();
+    header->evtstrm_timer_rate = (unsigned long)*ihk_arch_timer_rate;
+    header->default_vl = get_sve_default_vl();
+    header->cpu_logical_map_size = sizeof(header->cpu_logical_map) / sizeof(unsigned long);
+    memcpy(header->cpu_logical_map, ihk___cpu_logical_map,
+           header->cpu_logical_map_size * sizeof(unsigned long));
+    memcpy(header->rdist_base_pa, ihk_smp_gic_rdist_pa,
+           header->cpu_logical_map_size * sizeof(unsigned long));
+
+    raw_spin_lock_irqsave(&__retention_state_lock, flags);
+    if (__pwr_g_retention_state_flag) {
+      header->retention_state_flag_pa = __pa(__pwr_g_retention_state_flag);
+    }
+    raw_spin_unlock_irqrestore(&__retention_state_lock, flags);
+
+    nr_irqs = ihk_armpmu_get_irq_affi(header->pmu_irq_affi, *ihk_cpu_pmu, os);
+    if (ivec == 0 || nr_irqs < 0) {
+      header->nr_pmu_irq_affi = 0;
+      if (ivec != 0) return;
+      goto out;
+    }
+    header->nr_pmu_irq_affi = nr_irqs;
+    // TODO[PMU]: McKernel側でコアが起きた後にaffinity設定しないと駄目なら、ここでの設定は止める。
+    // TODO[PMU]: A log that fails in __irq_set_affinity() in combination with CPUFW-0.8.0 or later is output.
+    //ihk_armpmu_set_irq_affi(header->pmu_irq_affi, os);
+
+    ihk___flush_dcache_area(header, IHK_SMP_TRAMPOLINE_SIZE);
+
+   out:
+    OKNG(header == trampoline_va, "header is initialized\n");
+    if (ivec == total_branch - 1) {
+      OKNG(header->nr_pmu_irq_affi >= 0, "check the number of irqs\n");
+    } else {
+      OKNG(header->nr_pmu_irq_affi == 0, "the number of irqs should be zero\n");
+    }
+  }
+ err:
+  return;
 }
 
 unsigned long smp_ihk_adjust_entry(unsigned long entry,
@@ -1651,8 +1752,8 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
   return 0;
 }
 
-int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
-                               int cpu, int v)
+int smp_ihk_os_issue_interrupt_orig(ihk_os_t ihk_os, void *priv,
+                                    int cpu, int v)
 {
   struct smp_os_data *os = priv;
 
@@ -1669,6 +1770,51 @@ int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
   ihk___smp_cross_call(&cpumask_of_cpu(os->cpu_info.hw_ids[cpu]), v);
 #endif
 
+  return -EINVAL;
+}
+
+int smp_ihk_os_issue_interrupt(ihk_os_t ihk_os, void *priv,
+                               int cpu, int v)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_OS_ISSUE_INTERRUPT)  // Disable test code
+    return smp_ihk_os_issue_interrupt_orig(ihk_os, priv, cpu, v);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid cpu index" },
+    { 0,       "main case" },
+  };
+
+  struct smp_os_data *os = priv;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int ret = 0;
+
+    /* better calcuation or make map */
+    if (ivec == 0 || (cpu < 0 || cpu >= os->cpu_info.n_cpus)) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+  //  printk("smp_ihk_os_issue_interrupt(): %d\n", os->cpu_info.hw_ids[cpu]);
+
+    smp_mb();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+    ihk___smp_cross_call(cpumask_of(os->cpu_info.hw_ids[cpu]), v);
+#else
+    ihk___smp_cross_call(&cpumask_of_cpu(os->cpu_info.hw_ids[cpu]), v);
+#endif
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return 0;
+ err:
   return -EINVAL;
 }
 

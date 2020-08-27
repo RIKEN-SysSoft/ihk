@@ -50,7 +50,7 @@ struct ihk_ikc_listen_param **ihk_ikc_get_listener_entry(ihk_os_t os,
 
 struct ihk_ikc_channel_desc *ihk_os_get_master_channel(ihk_os_t __os);
 
-int ihk_ikc_listen_port(ihk_os_t os, struct ihk_ikc_listen_param *param)
+int ihk_ikc_listen_port_orig(ihk_os_t os, struct ihk_ikc_listen_param *param)
 {
   struct ihk_ikc_listen_param **p;
   ihk_spinlock_t *lock;
@@ -78,6 +78,75 @@ int ihk_ikc_listen_port(ihk_os_t os, struct ihk_ikc_listen_param *param)
   ihk_ikc_spinlock_unlock(lock, flags);
 
   return 0;
+}
+
+int ihk_ikc_listen_port(ihk_os_t os, struct ihk_ikc_listen_param *param)
+{
+  if (g_ihk_test_mode != TEST_IHK_IKC_LISTEN_PORT)  // Disable test code
+    return ihk_ikc_listen_port_orig(os, param);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid param" },
+    { -EINVAL, "invalid port" },
+    { -EBUSY,  "specified port is busy" },
+    { 0,       "main case" },
+  };
+
+  unsigned long flags;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+  	struct ihk_ikc_listen_param **p = NULL;
+  	ihk_spinlock_t *lock;
+  	int port;
+    int ret = 0;
+
+  	if (ivec == 0 || !param) {
+  		ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+  	}
+
+  	port = param->port;
+  	if (ivec == 1 || (port < 0 || port >= IHK_IKC_MAX_PORT)) {
+  		ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+  	}
+
+  	lock = ihk_ikc_get_listener_lock(os);
+
+  	flags = ihk_ikc_spinlock_lock(lock);
+  	p = ihk_ikc_get_listener_entry(os, port);
+  	if (ivec == 2 || *p) {
+  		ihk_ikc_spinlock_unlock(lock, flags);
+  		ret = -EBUSY;
+      if (ivec != 2) return ret;
+      goto out;
+  	}
+  	*p = param;
+  	ihk_ikc_spinlock_unlock(lock, flags);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(*p == param, "listen param is set\n");
+    } else {
+      if (ivec == 2) {
+        OKNG(*p != param, "listen param is not set\n");
+      } else {
+        OKNG(!p, "listen param is not set\n");
+      }
+    }
+  }
+	return 0;
+ err:
+  return -EINVAL;
 }
 IHK_EXPORT_SYMBOL(ihk_ikc_listen_port);
 

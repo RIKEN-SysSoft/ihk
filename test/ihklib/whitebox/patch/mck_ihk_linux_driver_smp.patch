@@ -1,5 +1,5 @@
---- old_CMakeLists.txt	2020-08-18 22:23:19.174983993 +0700
-+++ new_CMakeLists.txt	2020-08-18 22:23:06.247111454 +0700
+--- old_CMakeLists.txt	2020-09-01 18:34:03.664086651 +0700
++++ new_CMakeLists.txt	2020-09-01 18:33:58.640131106 +0700
 @@ -11,11 +11,12 @@
  		-I${CMAKE_CURRENT_SOURCE_DIR}/arch/${ARCH}
  		-I${CMAKE_CURRENT_BINARY_DIR}/arch/${ARCH}
