@@ -514,7 +514,7 @@ static struct ihk_ikc_listen_param lp_ikc2mckernel = {
   .magic = 0x1329,
 };
 
-int prepare_ikc_channels(ihk_os_t os)
+int prepare_ikc_channels_orig(ihk_os_t os)
 {
   struct mcctrl_usrdata *usrdata;
   int i;
@@ -532,7 +532,7 @@ int prepare_ikc_channels(ihk_os_t os)
 
   if (!usrdata->cpu_info || !usrdata->mem_info) {
     printk("%s: cannot obtain OS CPU and memory information.\n",
-      __FUNCTION__);
+           __FUNCTION__);
     ret = -EINVAL;
     goto error;
   }
@@ -545,8 +545,8 @@ int prepare_ikc_channels(ihk_os_t os)
 
   usrdata->num_channels = usrdata->cpu_info->n_cpus;
   usrdata->channels = kzalloc(sizeof(struct mcctrl_channel) *
-      usrdata->num_channels,
-      GFP_ATOMIC);
+                              usrdata->num_channels,
+                              GFP_ATOMIC);
 
   if (!usrdata->channels) {
     printk("Error: cannot allocate channels.\n");
@@ -555,7 +555,7 @@ int prepare_ikc_channels(ihk_os_t os)
   }
 
   usrdata->ikc2linux = kzalloc(sizeof(struct ihk_ikc_channel_desc *) *
-      nr_cpu_ids, GFP_ATOMIC);
+                               nr_cpu_ids, GFP_ATOMIC);
 
   if (!usrdata->ikc2linux) {
     printk("Error: cannot allocate ikc2linux channels.\n");
@@ -588,7 +588,7 @@ int prepare_ikc_channels(ihk_os_t os)
 
   return 0;
 
-error:
+ error:
   if (usrdata) {
     if (usrdata->channels) kfree(usrdata->channels);
     if (usrdata->ikc2linux) kfree(usrdata->ikc2linux);
@@ -596,6 +596,130 @@ error:
   }
 
   return ret;
+}
+
+int prepare_ikc_channels(ihk_os_t os)
+{
+  if (g_ihk_test_mode != TEST_PREPARE_IKC_CHANNELS)  // Disable test code
+    return prepare_ikc_channels_orig(os);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "cannot get os cpu or mem info" },
+    { -EINVAL, "invalid # of cpus" },
+    { 0,       "main case" },
+  };
+
+  int i;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_usrdata *usrdata;
+    int ret = 0;
+    int should_quit = 0;
+
+    usrdata = kzalloc(sizeof(struct mcctrl_usrdata), GFP_ATOMIC);
+    if (!usrdata) {
+      printk("%s: error: allocating mcctrl_usrdata\n", __FUNCTION__);
+      ret = -ENOMEM;
+      should_quit = 1;
+      goto out;
+    }
+
+    usrdata->cpu_info = ihk_os_get_cpu_info(os);
+    usrdata->mem_info = ihk_os_get_memory_info(os);
+
+    if (ivec == 0 || (!usrdata->cpu_info || !usrdata->mem_info)) {
+      if (ivec != 0) {
+        printk("%s: cannot obtain OS CPU and memory information.\n",
+               __FUNCTION__);
+        should_quit = 1;
+      }
+      ret = -EINVAL;
+      goto out;
+    }
+
+    if (ivec == 1 || usrdata->cpu_info->n_cpus < 1) {
+      if (ivec != 1) {
+        printk("%s: Error: # of cpu is invalid.\n", __FUNCTION__);
+        should_quit = 1;
+      }
+      ret = -EINVAL;
+      goto out;
+    }
+
+    usrdata->num_channels = usrdata->cpu_info->n_cpus;
+    usrdata->channels = kzalloc(sizeof(struct mcctrl_channel) *
+                                usrdata->num_channels,
+                                GFP_ATOMIC);
+
+    if (!usrdata->channels) {
+      printk("Error: cannot allocate channels.\n");
+      ret = -ENOMEM;
+      should_quit = 1;
+      goto out;
+    }
+
+    usrdata->ikc2linux = kzalloc(sizeof(struct ihk_ikc_channel_desc *) *
+                                 nr_cpu_ids, GFP_ATOMIC);
+
+    if (!usrdata->ikc2linux) {
+      printk("Error: cannot allocate ikc2linux channels.\n");
+      ret = -ENOMEM;
+      should_quit = 1;
+      goto out;
+    }
+
+    usrdata->os = os;
+    ihk_host_os_set_usrdata(os, usrdata);
+
+    ihk_ikc_listen_port(os, &lp_ikc2linux);
+    ihk_ikc_listen_port(os, &lp_ikc2mckernel);
+
+    init_waitqueue_head(&usrdata->wq_procfs);
+    mutex_init(&usrdata->reserve_lock);
+
+    for (i = 0; i < MCCTRL_PER_PROC_DATA_HASH_SIZE; ++i) {
+      INIT_LIST_HEAD(&usrdata->per_proc_data_hash[i]);
+      rwlock_init(&usrdata->per_proc_data_hash_lock[i]);
+    }
+
+    INIT_LIST_HEAD(&usrdata->cpu_topology_list);
+    INIT_LIST_HEAD(&usrdata->node_topology_list);
+
+    mutex_init(&usrdata->part_exec.lock);
+    INIT_LIST_HEAD(&usrdata->part_exec.pli_list);
+    usrdata->part_exec.nr_processes = -1;
+    INIT_LIST_HEAD(&usrdata->wakeup_descs_list);
+    spin_lock_init(&usrdata->wakeup_descs_lock);
+
+    ret = 0;
+
+   out:
+    if (ret && usrdata) {
+      if (usrdata->channels) kfree(usrdata->channels);
+      if (usrdata->ikc2linux) kfree(usrdata->ikc2linux);
+      kfree(usrdata);
+    }
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(usrdata->cpu_info && usrdata->mem_info &&
+           usrdata->num_channels && usrdata->channels &&
+           usrdata->ikc2linux, "all data is prepared\n");
+      OKNG(ihk_host_os_get_usrdata(os), "usrdata is set\n");
+    } else {
+      OKNG(!ihk_host_os_get_usrdata(os), "usrdata is not set\n");
+    }
+  }
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 void __destroy_ikc_channel(ihk_os_t os, struct mcctrl_channel *pmc)
