@@ -131,10 +131,9 @@ ihk_os_t osnum_to_os(int n)
   return os[n];
 }
 
-/* OS event notifier implementation */
-int mcctrl_os_boot_notifier(int os_index)
+int mcctrl_os_boot_notifier_orig(int os_index)
 {
-  int  rc;
+  int rc;
 
   os[os_index] = ihk_host_find_os(os_index, NULL);
   if (!os[os_index]) {
@@ -175,6 +174,120 @@ error_cleanup_channels:
 
   os[os_index] = NULL;
   return rc;
+}
+
+/* OS event notifier implementation */
+int mcctrl_os_boot_notifier(int os_index)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_OS_BOOT_NOTIFIER)  // Disable test code
+    return mcctrl_os_boot_notifier_orig(os_index);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 5;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "os instance cache is not set" },
+    { -EFAULT, "prepare_ikc_channels fail" },
+    { -EINVAL, "cannot set kernel call handlers" },
+    { -EINVAL, "cannot register user call handlers" },
+    { 0,       "main case" },
+  };
+
+  int rc;
+  ihk_os_t os_ = ihk_host_find_os(os_index, NULL);
+  struct list_head *ioctl_handlers = ihk_os_get_ioctl_handlers(os_);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int should_quit = 0;
+
+    os[os_index] = os_;
+    if (ivec == 0 || !os[os_index]) {
+      if (ivec != 0) {
+        printk("mcctrl: error: OS ID %d couldn't be found\n", os_index);
+        should_quit = 1;
+      }
+      rc = -EINVAL;
+      os[os_index] = NULL;
+      goto out;
+    }
+
+    if (ivec == 1 || prepare_ikc_channels(os[os_index]) != 0) {
+      if (ivec != 1) {
+        printk("mcctrl: error: preparing IKC channels for OS %d\n", os_index);
+        should_quit = 1;
+      }
+      os[os_index] = NULL;
+      rc = -EFAULT;
+      goto out;
+    }
+
+    memcpy(mcctrl_uc + os_index, &mcctrl_uc_proto, sizeof mcctrl_uc_proto);
+
+    if (ivec > 2)
+      rc = ihk_os_set_kernel_call_handlers(os[os_index], &mcctrl_kernel_handlers);
+    if (ivec == 2 || rc < 0) {
+      if (ivec != 2) {
+        printk("mcctrl: error: setting kernel callbacks for OS %d\n", os_index);
+        should_quit = 1;
+      }
+      rc = -EINVAL;
+      goto error_cleanup_channels;
+    }
+
+    if (ivec > 3)
+      rc = ihk_os_register_user_call_handlers(os[os_index], mcctrl_uc + os_index);
+    if (ivec == 3 || rc < 0) {
+      if (ivec != 3) {
+        printk("mcctrl: error: registering callbacks for OS %d\n", os_index);
+        should_quit = 1;
+      }
+      rc = -EINVAL;
+      goto error_clear_kernel_handlers;
+    }
+
+    procfs_init(os_index);
+    printk("mcctrl: OS ID %d boot event handled\n", os_index);
+
+    rc = 0;
+    goto out;
+
+   error_clear_kernel_handlers:
+    ihk_os_clear_kernel_call_handlers(os[os_index]);
+   error_cleanup_channels:
+    destroy_ikc_channels(os[os_index]);
+
+    os[os_index] = NULL;
+
+   out:
+    if (should_quit) return rc;
+
+    BRANCH_RET_CHK(rc, b_infos[ivec].expected);
+
+     if (ivec == total_branch - 1) {
+      OKNG(os[os_index], "os instance cache is set\n");
+      OKNG(ihk_os_get_kernel_call_handlers(os_),
+           "kernel call handlers should be set\n");
+      OKNG(!list_empty(ioctl_handlers),
+           "user call handlers should be set\n");
+      OKNG(ihk_host_os_get_usrdata(os_), "usrdata is set\n");
+      OKNG(fs_os_procfs_entry_exist(os_index),
+           "os procfs entries should be created\n");
+    } else {
+      OKNG(!os[os_index], "os instance cache is not set\n");
+      OKNG(!ihk_os_get_kernel_call_handlers(os_),
+           "kernel call handlers should not be set\n");
+      OKNG(list_empty(ioctl_handlers),
+           "user call handlers should not be set\n");
+      OKNG(!ihk_host_os_get_usrdata(os_), "usrdata is not set\n");
+      OKNG(!fs_os_procfs_entry_exist(os_index),
+           "os procfs entries should not exist\n");
+     }
+  }
+  return rc;
+ err:
+  return -EINVAL;
 }
 
 int mcctrl_os_shutdown_notifier_orig(int os_index)

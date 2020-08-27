@@ -679,8 +679,8 @@ static void delete_kmsg_buf(struct ihk_kmsg_buf_container* cont) {
   struct ihk_kmsg_buf_container* _cont;
   int count_nbuf_before = 0, count_nbuf_after = 0;
   list_for_each_entry(_cont, &ihk_kmsg_bufs, list) {
-		count_nbuf_before++;
-	}
+    count_nbuf_before++;
+  }
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
@@ -754,8 +754,8 @@ static int release_kmsg_buf(struct ihk_kmsg_buf_container* cont)
   int count_nbuf_before = 0;
   spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
   list_for_each_entry(_cont, &ihk_kmsg_bufs, list) {
-		count_nbuf_before++;
-	}
+    count_nbuf_before++;
+  }
   spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
@@ -1259,7 +1259,7 @@ static int __ihk_os_reserve_mem(struct ihk_host_linux_os_data *data,
   return __ihk_os_alloc_resource(data, &resource);
 }
 
-static int read_kmsg(struct ihk_kmsg_buf *kmsg_buf, char *buf, int shift)
+static int read_kmsg_orig(struct ihk_kmsg_buf *kmsg_buf, char *buf, int shift)
 {
   int len_bottom, len_top;
   unsigned long flags;
@@ -1302,9 +1302,100 @@ static int read_kmsg(struct ihk_kmsg_buf *kmsg_buf, char *buf, int shift)
   return len_bottom + len_top;
 }
 
-/** \brief ioctl handler for reading the kernel message to the buffer */
-static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
-                              char __user *_buf)
+static int read_kmsg(struct ihk_kmsg_buf *kmsg_buf, char *buf, int shift)
+{
+  if (g_ihk_test_mode != TEST_READ_KMSG)  // Disable test code
+    return read_kmsg_orig(kmsg_buf, buf, shift);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid parameter" },
+    { 0,       "main case" },
+  };
+
+  enum exec_path {
+    PATH_HEAD_OVER_TAIL    = 1UL << 0,
+    PATH_TAIL_OVER_HEAD    = 1UL << 1,
+  };
+  unsigned long exec_path = 0UL;
+  int len_bottom = 0, len_top = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    len_bottom = len_top = 0;
+    int ret = 0;
+    unsigned long flags;
+
+    if (ivec == 0 || (!kmsg_buf || !buf)) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    /* Inter-kernel lock for struct ihk_kmsg_buf */
+    local_irq_save(flags);
+    while(__sync_val_compare_and_swap(&kmsg_buf->lock, 0, 1) != 0) {
+      cpu_relax();
+    }
+
+    if (kmsg_buf->head > kmsg_buf->tail) {
+      len_bottom = strnlen(&kmsg_buf->str[kmsg_buf->head], kmsg_buf->len - kmsg_buf->head);
+      len_top = kmsg_buf->tail;
+      exec_path != PATH_HEAD_OVER_TAIL;
+    } else {
+      len_bottom = kmsg_buf->tail - kmsg_buf->head;
+      len_top = 0;
+      exec_path != PATH_TAIL_OVER_HEAD;
+    }
+    dkprintf("kmsg head=%d,tail=%d,len=%d,len_bottom=%d,len_top=%d\n", kmsg_buf->head, kmsg_buf->tail, kmsg_buf->len, len_bottom, len_top);
+
+    /* Print the end of the buffer */
+    if (len_bottom > 0) {
+      memcpy(buf, &kmsg_buf->str[kmsg_buf->head], len_bottom);
+    }
+
+    /* Then the front of it */
+    if (len_top > 0) {
+      memcpy(buf + len_bottom, kmsg_buf->str, len_top);
+    }
+
+    if (shift) {
+      kmsg_buf->head = kmsg_buf->tail;
+    }
+    kmsg_buf->lock = 0;
+    local_irq_restore(flags);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(len_bottom > 0, "can read the end of the buffer\n");
+      if (exec_path & PATH_HEAD_OVER_TAIL) {
+        OKNG(len_bottom <= kmsg_buf->len - kmsg_buf->head,
+             "check size of the end of the buffer\n");
+        OKNG(len_top > 0, "can read the front of the buffer\n");
+      }
+      if (exec_path & PATH_TAIL_OVER_HEAD) {
+        OKNG(len_bottom == kmsg_buf->tail - kmsg_buf->head,
+             "check size of the end of the buffer\n");
+        OKNG(len_top == 0, "nothing to read at the front of the buffer\n");
+      }
+      if (shift)
+        OKNG(kmsg_buf->head == kmsg_buf->tail, "head and tail are equal\n");
+    } else {
+      OKNG(len_bottom + len_top == 0, "nothing to read\n");
+    }
+  }
+  return len_bottom + len_top;
+ err:
+  return -EINVAL;
+}
+
+static int __ihk_os_read_kmsg_orig(struct ihk_host_linux_os_data *data,
+                                   char __user *_buf)
 {
   int ret = 0;
   char *buf;
@@ -1338,6 +1429,78 @@ static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
     kfree(buf);
   }
   return ret;
+}
+
+/** \brief ioctl handler for reading the kernel message to the buffer */
+static int __ihk_os_read_kmsg(struct ihk_host_linux_os_data *data,
+                              char __user *_buf)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_READ_KMSG)  // Disable test code
+    return __ihk_os_read_kmsg_orig(data, _buf);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+  int ret = 0;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid kmsg buffer container" },
+    { -EINVAL, "invalid kmsg buffer" },
+    { -ENOENT, "cannot read kmsg" },
+    { 0,       "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+    ret = 0;
+    char *buf = NULL;
+    int should_quit = 0;
+
+    if (ivec == 0 || !data->kmsg_buf_container) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec == 1 || !data->kmsg_buf_container->kmsg_buf) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+    }
+
+    buf = kmalloc(IHK_KMSG_SIZE, GFP_KERNEL);
+    if (!buf) {
+      return -ENOMEM;
+    }
+
+    ret = read_kmsg(data->kmsg_buf_container->kmsg_buf, buf, 0);
+    if (ivec == 2 || ret < 0) {
+      ret = -ENOENT;
+      if (ivec != 2) should_quit = 1;
+      goto out;
+    }
+
+    if (copy_to_user(_buf, buf, ret)) {
+      dprintf("error: copying string to user-space\n");
+      ret = -EINVAL;
+      should_quit = 1;
+      goto out;
+    }
+   out:
+    if (buf) {
+      kfree(buf);
+    }
+    if (should_quit) return ret;
+    int ret_cp = 0;
+    if (ret > 0) {
+      ret_cp = ret;
+      ret = 0;
+    }
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    ret = ret_cp;
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 static int __ihk_os_set_kargs_orig(struct ihk_host_linux_os_data *data,
@@ -1557,8 +1720,7 @@ static int __ihk_os_status(struct ihk_host_linux_os_data *data)
   return __ihk_os_query_status(data);
 }
 
-/** \brief Clear the kernel message buffer. */
-static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
+static int __ihk_os_clear_kmsg_orig(struct ihk_host_linux_os_data *data)
 {
   struct ihk_kmsg_buf *kmsg_buf;
   unsigned long flags;
@@ -1586,6 +1748,73 @@ static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
   local_irq_restore(flags);
 
   return 0;
+}
+
+/** \brief Clear the kernel message buffer. */
+static int __ihk_os_clear_kmsg(struct ihk_host_linux_os_data *data)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_CLEAR_KMSG)  // Disable test code
+    return __ihk_os_clear_kmsg_orig(data);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid kmsg buffer container" },
+    { -EINVAL, "invalid kmsg buffer" },
+    { 0,       "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_kmsg_buf *kmsg_buf;
+    unsigned long flags;
+    int ret = 0;
+
+    if (ivec == 0 || !data->kmsg_buf_container) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      kmsg_buf = data->kmsg_buf_container->kmsg_buf;
+      goto out;
+    }
+
+    if (ivec == 1 || !data->kmsg_buf_container->kmsg_buf) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      kmsg_buf = data->kmsg_buf_container->kmsg_buf;
+      goto out;
+    }
+
+    kmsg_buf = data->kmsg_buf_container->kmsg_buf;
+
+    local_irq_save(flags);
+    while(__sync_val_compare_and_swap(&kmsg_buf->lock, 0, 1) != 0) {
+      cpu_relax();
+    }
+
+    memset(kmsg_buf->str, 0, kmsg_buf->len);
+    kmsg_buf->head = 0;
+    kmsg_buf->tail = 0;
+
+    kmsg_buf->lock = 0;
+    local_irq_restore(flags);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(!kmsg_buf->head && !kmsg_buf->tail, "head and tail are reset\n");
+      OKNG(!kmsg_buf->lock, "lock is reset\n");
+      OKNG(strlen(kmsg_buf->str) == 0, "content is cleared\n");
+    } else {
+      OKNG(kmsg_buf->tail, "tail is not reset\n");
+      OKNG(strlen(kmsg_buf->str) > 0, "content is not cleared\n");
+    }
+  }
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 static int __ihk_os_register_event_orig(struct ihk_host_linux_os_data *os, void __user *_desc)
@@ -2136,6 +2365,44 @@ static int __test_ihk_os_wait_for_status(struct ihk_host_linux_os_data *os)
   return -EINVAL;
 }
 
+static int __ihk_os_fake_status(struct ihk_host_linux_os_data *os,
+                                const char __user *arg)
+{
+  int ret = 0;
+  os_status_req_t param;
+
+  ret = copy_from_user(&param, arg, sizeof(param));
+  if (ret) return ret;
+
+  setup_monitor(os);
+  if (!os->monitor) return -ENOSYS;
+  int n_cpus = os->monitor->num_processors;
+  os->ops->set_smp_status(os, param.status, param.param_status);
+  if (param.cpu_status >= 0) {
+    int i = 0;
+    for (i = 0; i < n_cpus; i++)
+      os->monitor->cpu[i].status = param.cpu_status;
+  }
+
+  return 0;
+}
+
+static int __ihk_os_get_status(struct ihk_host_linux_os_data *os,
+                               char __user *res)
+{
+  int ret = 0;
+  os_status_req_t param;
+
+  setup_monitor(os);
+  if (!os->monitor) return -ENOSYS;
+
+  ret = os->ops->get_smp_status(os, &param.status, &param.param_status);
+  if (ret) return ret;
+  param.cpu_status = os->monitor->cpu[0].status;
+  ret = copy_to_user(res, &param, sizeof(param));
+  return ret;
+}
+
 /** \brief ioctl handling for a OS file */
 static long ihk_host_os_ioctl(struct file *file, unsigned int request,
                               unsigned long arg)
@@ -2233,6 +2500,14 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
     ret = __test_ihk_os_query_status(data);
     break;
 
+  case IHK_OS_GET_STATUS:
+    ret = __ihk_os_get_status(data, arg);
+    break;
+
+  case IHK_OS_FAKE_STATUS:
+    ret = __ihk_os_fake_status(data, arg);
+    break;
+
   case IHK_OS_DETECT_HUNGUP:
     ret = detect_hungup(data);
     break;
@@ -2256,6 +2531,11 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
   case IHK_OS_READ_KMSG:
     ret = __ihk_os_read_kmsg(data, (char * __user)arg);
+    break;
+
+  case IHK_OS_PRINT_KMSG:
+    ihk_host_print_os_kmsg(data);
+    ret = 0;
     break;
 
   case IHK_OS_STATUS:
@@ -3165,7 +3445,7 @@ static int _check_os_instance_exist(int minor)
 {
   char path[200];
   sprintf(path, "/dev/mcos%d", minor);
-  return fs_file_exist(path);
+  return fs_entry_exist(path);
 }
 
 static struct ihk_kmsg_buf_container *_find_cont(int minor)
@@ -3173,13 +3453,13 @@ static struct ihk_kmsg_buf_container *_find_cont(int minor)
   struct ihk_kmsg_buf_container *cont, *ret = NULL;
   unsigned long flags;
   spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
-	list_for_each_entry_reverse(cont, &ihk_kmsg_bufs, list) {
-		if (cont->os_index == minor) {
+  list_for_each_entry_reverse(cont, &ihk_kmsg_bufs, list) {
+    if (cont->os_index == minor) {
       ret = cont;
       break;
     }
-	}
-	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
+  }
+  spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
   return ret;
 }
 
@@ -3306,8 +3586,8 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
     } else {
       OKNG(os_status_prev == os_status_after, "os status should not be changed\n");
       OKNG(refcnt > 0, "ref count of cdev device should be greater than 0\n");
-      //int exist = _check_os_instance_exist(os->minor);
-      //OKNG(exist, "os device entry should exist\n");
+      int exist = _check_os_instance_exist(os->minor);
+      OKNG(exist, "os device entry should exist\n");
       OKNG(os_data[os->minor] != NULL, "os_data should not be null\n");
       OKNG(count_evt_after == count_evt_prev, "events list should not be changed\n");
       OKNG(cont, "kmsg buf container is still on the list\n");
@@ -3694,12 +3974,12 @@ static int __ihk_device_query_cpu(struct ihk_host_linux_device_data *data,
 }
 
 static int __ihk_device_query_mem_orig(struct ihk_host_linux_device_data *data,
-		unsigned long arg)
+    unsigned long arg)
 {
-	if (!data->ops || !data->ops->query_mem)
-		return -1;
+  if (!data->ops || !data->ops->query_mem)
+    return -1;
 
-	return data->ops->query_mem(data, arg);
+  return data->ops->query_mem(data, arg);
 }
 
 /** \brief Query memory */
@@ -4542,17 +4822,68 @@ ihk_device_t ihk_host_find_dev(int index)
   }
 }
 
-ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
+ihk_os_t ihk_host_find_os_orig(int index, ihk_device_t dev)
 {
   if (!os_data[index] || os_data[index] == DEV_DATA_INVALID) {
     return NULL;
-  } else{
+  } else {
     if (!dev || os_data[index]->dev_data == dev) {
       return os_data[index];
     } else {
       return NULL;
     }
   }
+}
+
+ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
+{
+  if (g_ihk_test_mode != TEST_IHK_HOST_FIND_OS)  // Disable test code
+    return ihk_host_find_os_orig(index, dev);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid index" },
+    { 0, "instance at specified index is not set" },
+    { 0, "dev data mismatch" },
+    { 0, "main case" },
+  };
+
+  ihk_os_t ret = NULL;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (index < 0 || index >= OS_MAX_MINOR)) {
+      ret = NULL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec == 1 ||
+        (ivec > 3 && (!os_data[index] || os_data[index] == DEV_DATA_INVALID))) {
+      ret = NULL;
+      if (ivec != 1) return ret;
+    } else {
+      if (ivec == 3 || (ivec != 2 && (!dev || os_data[index]->dev_data == dev))) {
+        ret = os_data[index];
+      } else {  // ivec = 2 goes here
+        ret = NULL;
+        if (ivec != 2) return ret;
+      }
+    }
+
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(ret, "found a valid os instance\n");
+    } else {
+      OKNG(!ret, "not found the specified os instance\n");
+    }
+  }
+  return ret;
+ err:
+  return NULL;
 }
 
 int ihk_host_validate_os(ihk_os_t os)
@@ -4570,7 +4901,7 @@ int ihk_host_validate_os(ihk_os_t os)
   return found ? 0 : -EINVAL;
 }
 
-void ihk_host_print_os_kmsg(ihk_os_t os)
+void ihk_host_print_os_kmsg_orig(ihk_os_t os)
 {
   int nread;
   char *buf;
@@ -4606,6 +4937,82 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
   if (buf) {
     kfree(buf);
   }
+}
+
+void ihk_host_print_os_kmsg(ihk_os_t os)
+{
+  if (g_ihk_test_mode != TEST_IHK_HOST_PRINT_OS_KMSG)  // Disable test code
+    return ihk_host_print_os_kmsg_orig(os);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid os instance" },
+    { 0, "kmsg buffer is not available" },
+    { 0, "kmsg buffer is empty" },
+    { 0, "main case" },
+  };
+
+  struct ihk_host_linux_os_data *data = (struct ihk_host_linux_os_data *)os;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int nread;
+    char *buf;
+    char *lines, *line;
+    int count_line = 0;
+    int should_quit = 0;
+
+    buf = kmalloc(IHK_KMSG_SIZE, GFP_KERNEL);
+    if (!buf) {
+      return;
+    }
+    if (ivec == 0 || (!os || ihk_host_validate_os(os))) {
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+
+    nread = read_kmsg(data->kmsg_buf_container->kmsg_buf, buf, 0);
+    if (ivec == 1 || nread < 0) {
+      if (ivec != 1) {
+        printk("%s: kmsg_buf is not available\n", __FUNCTION__);
+        should_quit = 1;
+      }
+      goto out;
+    }
+    if (ivec == 2 || nread == 0) {
+      if (ivec != 2) {
+        printk("%s: kmsg buffer is empty\n", __FUNCTION__);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    /* Print line-by-line */
+    lines = buf;
+    line = strsep(&lines, "\n");
+    while (line) {
+      printk("%s\n", line);
+      line = strsep(&lines, "\n");
+      count_line++;
+    }
+
+   out:
+    if (buf) {
+      kfree(buf);
+    }
+    if (should_quit) return;
+
+    if (ivec == total_branch - 1) {
+      OKNG(count_line, "kmsg buffer is printed to the kernel log\n");
+    } else {
+      OKNG(count_line == 0, "kmsg buffer is not printed to the kernel log\n");
+    }
+  }
+ err:
+ return;
 }
 
 void ihk_host_os_set_usrdata(ihk_os_t ihk_os, void *data)
@@ -4750,8 +5157,8 @@ int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
 }
 
 
-int ihk_os_register_user_call_handlers(ihk_os_t ihk_os,
-                                       struct ihk_os_user_call *clist)
+int ihk_os_register_user_call_handlers_orig(ihk_os_t ihk_os,
+                                            struct ihk_os_user_call *clist)
 {
   int i;
   unsigned long flags;
@@ -4770,6 +5177,87 @@ int ihk_os_register_user_call_handlers(ihk_os_t ihk_os,
   spin_unlock_irqrestore(&os->lock, flags);
 
   return 0;
+}
+
+int ihk_os_register_user_call_handlers(ihk_os_t ihk_os,
+                                       struct ihk_os_user_call *clist)
+{
+  if (g_ihk_test_mode != TEST_IHK_OS_REGISTER_USER_CALL_HANDLERS)  // Disable test code
+    return ihk_os_register_user_call_handlers_orig(ihk_os, clist);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid parameter" },
+    { -EINVAL, "num_handlers is zero" },
+    { -EINVAL, "invalid handler id" },
+    { 0,       "main case" },
+  };
+
+  int i;
+  unsigned long flags;
+  struct ihk_host_linux_os_data *os = ihk_os;
+  int count_list_prev = 0;
+  struct ihk_os_user_call *c_it;
+  spin_lock_irqsave(&os->lock, flags);
+  list_for_each_entry(c_it, &os->aux_call_list, list) {
+    count_list_prev++;
+  }
+  spin_unlock_irqrestore(&os->lock, flags);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int ret = 0;
+    int count_list_after = 0;
+
+    if (ivec == 0 || (ihk_host_validate_os(ihk_os) || !clist)) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    INIT_LIST_HEAD(&clist->list);
+    if (ivec == 1 || clist->num_handlers == 0) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+    }
+    for (i = 0; i < clist->num_handlers; i++) {
+      if (ivec == 2 ||
+          (clist->handlers[i].request < IHK_OS_AUX_CALL_START ||
+           clist->handlers[i].request > IHK_OS_AUX_CALL_END)) {
+        ret = -EINVAL;
+        if (ivec != 2) return ret;
+        goto out;
+      }
+    }
+
+    spin_lock_irqsave(&os->lock, flags);
+    list_add_tail(&clist->list, &os->aux_call_list);
+    spin_unlock_irqrestore(&os->lock, flags);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    spin_lock_irqsave(&os->lock, flags);
+    list_for_each_entry(c_it, &os->aux_call_list, list) {
+      count_list_after++;
+    }
+    spin_unlock_irqrestore(&os->lock, flags);
+
+    if (ivec == total_branch - 1) {
+      OKNG(count_list_after == count_list_prev + 1,
+           "call list should be added 1 new entry\n");
+    } else {
+      OKNG(count_list_after == count_list_prev,
+           "call list should not be changed\n");
+    }
+  }
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 void ihk_os_unregister_user_call_handlers(ihk_os_t ihk_os,

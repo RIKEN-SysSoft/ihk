@@ -90,6 +90,9 @@ typedef enum ihklib_test_mode {
   /* ihk_os_boot */
   TEST_IHK_OS_BOOT                                 = 28,
 
+  /* ihk_os_get_status */
+  TEST_IHK_OS_GET_STATUS                           = 29,
+
 } ihklib_test_mode_t;
 
 struct ihk_ioctl_desc {
