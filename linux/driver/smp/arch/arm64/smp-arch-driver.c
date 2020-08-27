@@ -160,6 +160,21 @@ struct gic_chip_data_v3 {
 };
 #else
 /* for linux4.15 - */
+#if defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
+struct gic_chip_data_v3 {
+	struct fwnode_handle	*fwnode;
+	void __iomem		*dist_base;
+	struct redist_region	*redist_regions;
+	struct rdists		rdists;
+	struct irq_domain	*domain;
+	u64			redist_stride;
+	u32			nr_redist_regions;
+	u64			flags;
+	bool			has_rss;
+	unsigned int		ppi_nr;
+	struct partition_desc	**ppi_descs;
+};
+#else
 struct gic_chip_data_v3 {
 	struct fwnode_handle	*fwnode;
 	void __iomem		*dist_base;
@@ -172,6 +187,7 @@ struct gic_chip_data_v3 {
 	unsigned int		irq_nr;
 	struct partition_desc	*ppi_descs[16];
 };
+#endif
 #endif
 static unsigned long ihk_gic_version = ACPI_MADT_GIC_VERSION_NONE;
 static unsigned int ihk_gic_max_vector = 0;
@@ -874,8 +890,11 @@ static int ihk_smp_collect_gic_info(void)
 		result = ihk_smp_dt_get_gic_base();
 	}
 
+#if defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 3)
+	ihk_gic_max_vector = ihk_gic_data_v3->ppi_nr;
+#else
 	ihk_gic_max_vector = ihk_gic_data_v3->irq_nr;
-
+#endif
 	return result;
 }
 
