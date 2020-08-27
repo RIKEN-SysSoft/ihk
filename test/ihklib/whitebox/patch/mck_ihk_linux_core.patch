@@ -1,5 +1,5 @@
---- old_CMakeLists.txt	2020-08-18 22:24:34.550228077 +0700
-+++ new_CMakeLists.txt	2020-08-18 22:24:24.846326555 +0700
+--- old_CMakeLists.txt	2020-09-01 18:34:47.159701753 +0700
++++ new_CMakeLists.txt	2020-09-01 18:34:38.211780939 +0700
 @@ -7,9 +7,10 @@
  		-I${PROJECT_SOURCE_DIR}/linux/include/ihk/arch/${ARCH}
  		-I${PROJECT_SOURCE_DIR}/ikc/include
@@ -9,7 +9,7 @@
 -		host_driver.c mem_alloc.c mm.c mikc.c
 -		../../ikc/linux.c ../../ikc/master.c ../../ikc/queue.c
 +                ../../test/ihklib/whitebox/src/driver/ihk/host_driver.c mem_alloc.c mm.c ../../test/ihklib/whitebox/src/driver/ihk/mikc.c
-+                ../../ikc/linux.c ../../test/ihklib/whitebox/src/driver/ihk/master.c ../../test/ihklib/whitebox/src/driver/ihk/queue.c
++                ../../test/ihklib/whitebox/src/driver/ihk/linux.c ../../test/ihklib/whitebox/src/driver/ihk/master.c ../../test/ihklib/whitebox/src/driver/ihk/queue.c
  	INSTALL_DEST
  		${KMODDIR}
  )

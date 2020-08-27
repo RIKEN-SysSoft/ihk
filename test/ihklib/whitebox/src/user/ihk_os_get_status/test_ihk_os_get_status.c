@@ -16,17 +16,15 @@ int main(int argc, char **argv)
   int os_index;
   params_getopt(argc, argv);
 
+  char mode[6] = "\0";
+  sprintf(mode, "%d", TEST_IHK_OS_GET_STATUS);
+  ret = setenv(IHKLIB_TEST_MODE_ENV_NAME, mode, 1);
+  INTERR(ret, "setenv returned %d. errno=%d\n", ret, -errno);
+
   /* Activate and check */
   /* Precondition */
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
-
-  int fd = ihklib_device_open(0);
-  INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  int test_mode = TEST_IHK_DEVICE_DESTROY_OS;
-  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
-  INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
-  close(fd); fd = -1;
 
   ret = _cpus_reserve(98, -1);
   INTERR(ret, "cpus_reserve returned %d\n", ret);
@@ -69,8 +67,23 @@ int main(int argc, char **argv)
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-  out:
-  if (fd != -1) close(fd);
+  ret = ihk_os_get_status(os_index);
+  INTERR(ret != IHK_OS_STATUS_BOOTED, "ihk_os_get_status returned %d\n", ret);
+
+ out:
+  ret = ihk_os_shutdown(0);
+  INTERR(ret, "return value: %d, expected: %d\n", ret, 0);
+
+  ret = os_wait_for_status(IHK_STATUS_INACTIVE);
+  INTERR(ret, "os status didn't change to %d\n",
+     IHK_STATUS_INACTIVE);
+
+  ret = mems_os_release();
+  INTERR(ret, "mems_os_release returned %d\n", ret);
+
+  ret = cpus_os_release();
+  INTERR(ret, "cpus_os_release returned %d\n", ret);
+
   ret = ihk_destroy_os(0, os_index);
   cpus_release();
   mems_release();

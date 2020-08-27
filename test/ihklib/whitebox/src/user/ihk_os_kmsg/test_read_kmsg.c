@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 
   int fd = ihklib_device_open(0);
   INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  int test_mode = TEST_IHK_DEVICE_DESTROY_OS;
+  int test_mode = TEST_READ_KMSG;
   ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
   INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
   close(fd); fd = -1;
@@ -64,14 +64,32 @@ int main(int argc, char **argv)
   INTERR(ret, "os_load returned %d\n", ret);
 
   ret = os_kargs();
-  INTERR(ret, "os_kargs returned %d\n", ret);
+	INTERR(ret, "os_kargs returned %d\n", ret);
 
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
+  char kmsg_input[IHK_KMSG_SIZE] = {0};
+  ret = ihk_os_kmsg(0, kmsg_input, (ssize_t)IHK_KMSG_SIZE);
+  INTERR(ret <= 0, "ihk_os_kmsg returned %d\n", ret);
+
   out:
-  if (fd != -1) close(fd);
-  ret = ihk_destroy_os(0, os_index);
+  ret = ihk_os_shutdown(0);
+  INTERR(ret, "return value: %d, expected: %d\n", ret, 0);
+
+  ret = os_wait_for_status(IHK_STATUS_INACTIVE);
+  INTERR(ret, "os status didn't change to %d\n",
+         IHK_STATUS_INACTIVE);
+
+  ret = mems_os_release();
+  INTERR(ret, "mems_os_release returned %d\n", ret);
+
+  ret = cpus_os_release();
+  INTERR(ret, "cpus_os_release returned %d\n", ret);
+
+	if (ihk_get_num_os_instances(0)) {
+    ihk_destroy_os(0, os_index);
+  }
   cpus_release();
   mems_release();
   linux_rmmod(0);
