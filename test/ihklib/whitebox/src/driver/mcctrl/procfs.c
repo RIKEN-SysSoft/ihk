@@ -274,11 +274,10 @@ static void delete_procfs_entries(struct procfs_list_entry *top)
    out:
     should_quit = 1;
     path = _find_entry_path(top);
-    if (top->entry) exist = fs_folder_exist(path);
-    else exist = fs_file_exist(path);
+    exist = fs_entry_exist(path);
     kfree(path);
     if (ivec == total_branch - 1) {
-       //OKNG(!exist, "procfs entry is removed\n");
+       OKNG(!exist, "procfs entry is removed\n");
        OKNG(list_empty(&top->children), "all child entries are removed\n");
     } else {
       OKNG(exist, "procfs entry is kept\n");
@@ -294,9 +293,9 @@ static void delete_procfs_entries(struct procfs_list_entry *top)
   }
 }
 
-static struct procfs_list_entry *
-add_procfs_entry(struct procfs_list_entry *parent, const char *name, int mode,
-                 kuid_t uid, kgid_t gid, const void *opaque)
+static struct procfs_list_entry *add_procfs_entry_orig(
+    struct procfs_list_entry *parent, const char *name, int mode,
+    kuid_t uid, kgid_t gid, const void *opaque)
 {
   struct procfs_list_entry *e = find_procfs_entry(parent, name);
   struct proc_dir_entry *pde;
@@ -367,6 +366,139 @@ add_procfs_entry(struct procfs_list_entry *parent, const char *name, int mode,
   return e;
 }
 
+static struct procfs_list_entry *add_procfs_entry(
+    struct procfs_list_entry *parent, const char *name, int mode,
+    kuid_t uid, kgid_t gid, const void *opaque)
+{
+  if (g_ihk_test_mode != TEST_ADD_PROCFS_ENTRY)  // Disable test code
+    return add_procfs_entry_orig(parent, name, mode, uid, gid, opaque);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "cannot create a procfs entry" },
+    { 0, "main case" },
+  };
+
+  struct procfs_list_entry *e = NULL, *e_it;
+  int count_child_prev = 0;
+  struct list_head *elist = parent? &(parent->children): &procfs_file_list;
+  list_for_each_entry(e_it, elist, list) {
+    count_child_prev++;
+  }
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    char *path;
+    int exist_prev = 0, exist_after = 0;
+    int count_child_after = 0;
+    int should_quit = 0;
+
+    e = find_procfs_entry(parent, name);
+    struct proc_dir_entry *pde = NULL;
+    struct proc_dir_entry *parent_pde = NULL;
+    int f_mode = mode & 0777;
+
+    if (e)
+      delete_procfs_entries(e);
+
+    e = kmalloc(sizeof(struct procfs_list_entry) + strlen(name) + 1,
+                GFP_KERNEL);
+    if (!e) {
+      kprintf("ERROR: not enough memory to create PROCFS entry.\n");
+      return NULL;
+    }
+    memset(e, '\0', sizeof(struct procfs_list_entry));
+    INIT_LIST_HEAD(&e->children);
+    strcpy(e->name, name);
+    e->parent = parent;
+    path = _find_entry_path(e);
+    exist_prev = fs_entry_exist(path);
+
+    if (parent)
+      parent_pde = parent->entry;
+
+    if (ivec == 0) goto skip_create;
+
+    if (mode & S_IFDIR) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+      pde = proc_mkdir(name, parent_pde);
+#else
+      pde = proc_mkdir_data(name, f_mode, parent_pde, e);
+#endif
+    } else if ((mode & S_IFLNK) == S_IFLNK) {
+      pde = proc_symlink(name, parent_pde, (char *)opaque);
+    } else {
+      const struct file_operations *fop;
+
+      if (opaque)
+        fop = (const struct file_operations *)opaque;
+      else if (mode & S_IWUSR)
+        fop = &mckernel_forward;
+      else
+        fop = &mckernel_forward_ro;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+      pde = create_proc_entry(name, f_mode, parent_pde);
+      if (pde)
+        pde->proc_fops = fop;
+#else
+      pde = proc_create_data(name, f_mode, parent_pde, fop, e);
+      if (pde)
+        proc_set_user(pde, uid, gid);
+#endif
+    }
+
+   skip_create:
+    if (ivec == 0 || !pde) {
+      if (ivec != 0) {
+        kprintf("ERROR: cannot create a PROCFS entry for %s.\n", name);
+        should_quit = 1;
+      }
+      goto out;
+    }
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+    pde->uid = uid;
+    pde->gid = gid;
+    pde->data = e;
+#endif
+
+    if (parent)
+      e->osnum = parent->osnum;
+    e->entry = pde;
+    e->parent = parent;
+    list_add(&(e->list), parent? &(parent->children): &procfs_file_list);
+
+   out:
+    if (should_quit) {
+      kfree(e);
+      return NULL;
+    }
+
+    exist_after = fs_entry_exist(path);
+    kfree(path);
+
+    list_for_each_entry(e_it, elist, list) {
+      count_child_after++;
+    }
+
+    if (ivec == total_branch - 1) {
+      OKNG(count_child_after = count_child_prev + 1,
+           "new child has been added to list\n");
+    } else {
+      OKNG(exist_prev == exist_after,
+           "procfs entry has not been created if it didn't exist before\n");
+      OKNG(count_child_after == count_child_prev,
+           "childs list has no new member\n");
+    }
+  }
+  return e;
+ err:
+  return NULL;
+}
+
 static void
 add_procfs_entries(struct procfs_list_entry *parent,
                    const struct procfs_entry *entries, kuid_t uid, kgid_t gid)
@@ -429,17 +561,16 @@ find_tid_entry(int osnum, int pid, int tid)
   return find_procfs_entry(e, name);
 }
 
-static struct procfs_list_entry *
-get_base_entry(int osnum)
+static struct procfs_list_entry *get_base_entry_orig(int osnum)
 {
   struct procfs_list_entry *e;
   char name[12];
-  kuid_t uid = KUIDT_INIT(0);
+  kuid_t uid = KUIDT_INIT(0) ;
   kgid_t gid = KGIDT_INIT(0);
 
   sprintf(name, "mcos%d", osnum);
   e = find_procfs_entry(NULL, name);
-  if(!e){
+  if (!e) {
     e = add_procfs_entry(NULL, name, S_IFDIR | 0555,
                          uid, gid, NULL);
     if (!e)
@@ -447,6 +578,59 @@ get_base_entry(int osnum)
     e->osnum = osnum;
   }
   return e;
+}
+
+static struct procfs_list_entry *get_base_entry(int osnum)
+{
+  if (g_ihk_test_mode != TEST_GET_BASE_ENTRY)  // Disable test code
+    return get_base_entry_orig(osnum);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { 0, "could not add procfs entry" },
+    { 0, "add base entry success" },
+    { 0, "base entry exist" },
+  };
+
+  struct procfs_list_entry *e;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    char name[12];
+    kuid_t uid = KUIDT_INIT(0) ;
+    kgid_t gid = KGIDT_INIT(0);
+
+    sprintf(name, "mcos%d", osnum);
+    e = find_procfs_entry(NULL, name);
+    if (ivec <= 1 || !e) {
+      if (ivec > 0)
+        e = add_procfs_entry(NULL, name, S_IFDIR | 0555, uid, gid, NULL);
+      if (ivec == 0 || !e) {
+        e = NULL;
+        if (ivec != 0) return NULL;
+        goto out;
+      }
+      e->osnum = osnum;
+    } else {  // ivec > 1 goes here
+      // through
+    }
+
+   out:
+    if (ivec == 0) {
+      OKNG(e == NULL && !fs_os_procfs_entry_exist(osnum),
+           "os procfs base entry should not be created\n");
+    }
+    if (ivec >= 1) {
+      OKNG(e && fs_os_procfs_entry_exist(osnum),
+           "os procfs base entry should be created\n");
+    }
+  }
+  return e;
+ err:
+  return NULL;
 }
 
 static struct procfs_list_entry *
@@ -661,7 +845,7 @@ void procfs_exit(int osnum)
       OKNG(!fs_os_procfs_entry_exist(osnum),
            "all proc entries of the os instance are removed\n");
     } else {
-      OKNG(1, "nothing to do\n");
+      OKNG(fs_os_procfs_entry_exist(osnum), "nothing to do\n");
     }
   }
  err:

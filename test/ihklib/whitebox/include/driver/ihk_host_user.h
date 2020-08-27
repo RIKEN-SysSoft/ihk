@@ -179,9 +179,33 @@ typedef enum ihk_test_mode {
   TEST__IHK_OS_ISSUE_INTERRUPT                    = 100,
   TEST__IHK_OS_GET_CPU_INFO                       = 101,
   TEST__IHK_OS_GET_MEMORY_INFO                    = 102,
+  TEST_IHK_IKC_INIT_DESC                          = 103,
+  TEST_IHK_HOST_FIND_OS                           = 104,
+  TEST_MCCTRL_OS_BOOT_NOTIFIER                    = 105,
+  TEST_SMP_IHK_OS_ISSUE_INTERRUPT                 = 106,
+  TEST_GET_BASE_ENTRY                             = 107,
+  TEST_IHK_OS_REGISTER_USER_CALL_HANDLERS         = 108,
+  TEST_IHK_IKC_LISTEN_PORT                        = 109,
+  TEST_IHK_IKC_SEND                               = 110,
+  TEST_IHK_IKC_WRITE_QUEUE                        = 111,
+  TEST_IHK_HOST_PRINT_OS_KMSG                     = 112,
+  TEST_PREPARE_IKC_CHANNELS                       = 113,
+  TEST_ADD_PROCFS_ENTRY                           = 114,
+  TEST_SMP_IHK_OS_BOOT                            = 115,
+  TEST_SMP_IHK_SETUP_TRAMPOLINE                   = 116,
 
   /* ihk_os_get_status */
-  TEST__IHK_OS_QUERY_STATUS                       = 103,
+  TEST__IHK_OS_QUERY_STATUS                       = 117,
+
+  /* ihk_os_clear_kmsg */
+  TEST__IHK_OS_CLEAR_KMSG                         = 118,
+
+  /* ihk_os_kmsg */
+  TEST__IHK_OS_READ_KMSG                          = 119,
+  TEST_READ_KMSG                                  = 120,
+
+  /*unknown */
+
 
   // other API here
 } ihk_test_mode_t;
@@ -205,9 +229,12 @@ extern ihk_test_mode_t g_ihk_test_mode;
 #define IHK_OS_REGISTER_EVENT         0x112a15
 #define IHK_OS_EVENTFD                0x112a16
 #define IHK_OS_WAIT_FOR_STATUS        0x112a17
+#define IHK_OS_GET_STATUS             0x112a18
+#define IHK_OS_FAKE_STATUS            0x112a19
 
 #define IHK_OS_READ_KMSG              0x112a20
 #define IHK_OS_CLEAR_KMSG             0x112a21
+#define IHK_OS_PRINT_KMSG             0x112a40
 
 #define IHK_OS_ASSIGN_CPU             0x112a22
 #define IHK_OS_RELEASE_CPU            0x112a23
@@ -281,6 +308,12 @@ typedef struct dumpargs_s {
 } dumpargs_t;
 #define DUMP_ALL_MEM 0
 #define DUMP_CHUNK_MEM 24
+
+typedef struct os_status_req {
+  int status;
+  int param_status;
+  int cpu_status;
+} os_status_req_t;
 
 struct ihk_cpu_req {
   int *cpus;
