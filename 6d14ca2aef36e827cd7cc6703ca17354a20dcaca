@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9d45c20a_2cf50df2",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1834,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-28T03:44:30Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value)",
+      "revId": "6d14ca2aef36e827cd7cc6703ca17354a20dcaca",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8644ebc5_a6dcb8e6",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1834,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-28T03:44:30Z",
+      "side": 1,
+      "message": "ERROR: \"foo* bar\" should be \"foo *bar\"\n+int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value)",
+      "revId": "6d14ca2aef36e827cd7cc6703ca17354a20dcaca",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "81789ab1_1f0d584f",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1871,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-08-28T03:44:30Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+int ihk_pwr_ipi_write_register(void *handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)",
+      "revId": "6d14ca2aef36e827cd7cc6703ca17354a20dcaca",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
