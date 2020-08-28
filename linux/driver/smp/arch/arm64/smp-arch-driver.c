@@ -1831,7 +1831,7 @@ out:
 	return ret;
 }
 
-static int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value)
+int ihk_pwr_ipi_read_register(void *handle, int mck_cpu, u32 sys_reg, u64* value)
 {
 	int ret;
 	unsigned long flags;
@@ -1868,7 +1868,7 @@ out:
 	return ret;
 }
 
-static int ihk_pwr_ipi_write_register(void *handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)
+int ihk_pwr_ipi_write_register(void *handle, int mck_cpu, u32 sys_reg, u64 set_bit, u64 clear_bit)
 {
 	int ret;
 	unsigned long flags;
