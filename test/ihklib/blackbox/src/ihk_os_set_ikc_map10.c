@@ -81,8 +81,9 @@ int main(int argc, char **argv)
 {
 	int ret;
 	int i;
+	char *logdir = argv[1];
 
-	params_getopt(argc, argv);
+	INTERR(argc != 2, "<logdir> is not specified\n");
 
 	/* Precondition */
 	ret = linux_insmod(0);
@@ -206,7 +207,8 @@ int main(int argc, char **argv)
 		INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
 		if (map_expected[i]) {
-			ret = ikc_cpu_map_check_channels(map_input[i].ncpus);
+			ret = ikc_cpu_map_check_channels(map_input[i].ncpus,
+							 logdir);
 			OKNG(ret == 0, "IKCs from all cpus succeeded\n");
 
 			ret = ikc_cpu_map_check(map_expected[i]);
@@ -232,7 +234,7 @@ int main(int argc, char **argv)
 
 	ret = 0;
  out:
-	if (ihk_get_num_os_instances(0)) {
+	if (ihk_get_num_os_instances(0) > 0) {
 		ihk_os_shutdown(0);
 		os_wait_for_status(IHK_STATUS_INACTIVE);
 		cpus_os_release();

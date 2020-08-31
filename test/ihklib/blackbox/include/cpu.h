@@ -59,6 +59,6 @@ void ikc_cpu_map_max_src_cpu(struct ikc_cpu_map *map, int *src_cpu,
 int ikc_cpu_map_push(struct ikc_cpu_map *map, int src_cpu, int dst_cpu);
 int ikc_cpu_map_pop(struct ikc_cpu_map *map, int n);
 
-int ikc_cpu_map_check_channels(int nchannels);
+int ikc_cpu_map_check_channels(int nchannels, char *logdir);
 
 #endif
