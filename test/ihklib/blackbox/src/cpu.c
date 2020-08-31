@@ -862,7 +862,7 @@ int ikc_cpu_map_pop(struct ikc_cpu_map *map, int n)
 	return ret;
 }
 
-int ikc_cpu_map_check_channels(int nchannels)
+int ikc_cpu_map_check_channels(int nchannels, char *logdir)
 {
 	int ret;
 	FILE *fp = NULL;
@@ -870,17 +870,15 @@ int ikc_cpu_map_check_channels(int nchannels)
 	char cmd[4096];
 
 	sprintf(cmd, "%s/bin/mcexec %s/bin/ikc_map.sh %d |"
-		" sort | uniq | wc -l",
+		" sort -n | tee %s/ikc_map.log | uniq | wc -l",
 		QUOTE(WITH_MCK), QUOTE(CMAKE_INSTALL_PREFIX),
-		nchannels);
+		nchannels, logdir);
 	fp = popen(cmd, "r");
 
 	if (fp == NULL) {
-		int errno_save = errno;
-
+		ret = -errno;
 		printf("%s: popen returned %d\n",
-		       __func__, errno);
-		ret = -errno_save;
+		       __func__, -ret);
 		goto out;
 	}
 

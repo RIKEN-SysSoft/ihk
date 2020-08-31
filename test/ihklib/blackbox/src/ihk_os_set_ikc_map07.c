@@ -19,15 +19,22 @@ int main(int argc, char **argv)
 	int ret;
 	int i;
 	FILE *fp = NULL;
+	char *logdir = argv[1];
 
-	params_getopt(argc, argv);
+	INTERR(argc != 2, "<logdir> is not specified\n");
 
 	/* Precondition */
 	ret = linux_insmod(0);
 	INTERR(ret, "linux_insmod returned %d\n", ret);
 
-	ret = cpus_reserve();
-	INTERR(ret, "cpus_reserve returned %d\n", ret);
+	/* reserve all cpus to test as many channels as possible */
+	struct cpus cpus = { 0 };
+
+	ret = _cpus_ls(&cpus, "online", 2, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
+
+	ret = ihk_reserve_cpu(0, cpus.cpus, cpus.ncpus);
+	INTERR(ret, "ihk_reserve_cpu returned %d\n", ret);
 
 	ret = mems_reserve();
 	INTERR(ret, "mems_reserve returned %d\n", ret);
@@ -74,7 +81,8 @@ int main(int argc, char **argv)
 		ret = ihk_os_boot(0);
 		INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-		ret = ikc_cpu_map_check_channels(map_expected[i]->ncpus);
+		ret = ikc_cpu_map_check_channels(map_expected[i]->ncpus,
+						 logdir);
 		OKNG(ret == 0, "all IKC channels are active\n");
 
 		ret = linux_kill_mcexec();
@@ -108,7 +116,7 @@ int main(int argc, char **argv)
 		fclose(fp);
 	}
 	linux_kill_mcexec();
-	if (ihk_get_num_os_instances(0)) {
+	if (ihk_get_num_os_instances(0) > 0) {
 		ihk_os_shutdown(0);
 		os_wait_for_status(IHK_STATUS_INACTIVE);
 		cpus_os_release();

@@ -194,7 +194,7 @@ int main(int argc, char **argv)
 
 	ret = 0;
  out:
-	if (ihk_get_num_os_instances(0)) {
+	if (ihk_get_num_os_instances(0) > 0) {
 		ihk_os_shutdown(0);
 		os_wait_for_status(IHK_STATUS_INACTIVE);
 		cpus_os_release();
