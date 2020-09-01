@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "e431995d_26bb2cd9",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 1313,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-01T04:49:40Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintf(\"%s: IHK_DEVICE_RELEASE_MEM_PARTIALLY returned %d\\n\",",
+      "revId": "424e90a9d7523904897ef4a72bd5d72e19e8ee0f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b1fb7bf1_5a52c03d",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 2922,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-01T04:49:40Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\teprintf(\"%s: error: actual # of NUMA nodes (%d) !\u003d requested (%d)\\n\",",
+      "revId": "424e90a9d7523904897ef4a72bd5d72e19e8ee0f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "76c1c980_540e70f9",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 4290,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-01T04:49:40Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: ihk_reserve_cpu_str failed with %d\\n\",",
+      "revId": "424e90a9d7523904897ef4a72bd5d72e19e8ee0f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f01a73c5_2c062a41",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 4300,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-01T04:49:40Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: ihk_reserve_mem_str failed with %d\\n\",",
+      "revId": "424e90a9d7523904897ef4a72bd5d72e19e8ee0f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "df83bc8c_b532003e",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 4336,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-01T04:49:40Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: ihk_os_set_ikc_map_str failed with %d\\n\",",
+      "revId": "424e90a9d7523904897ef4a72bd5d72e19e8ee0f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
