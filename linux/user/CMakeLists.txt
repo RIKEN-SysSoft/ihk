@@ -35,6 +35,12 @@ target_link_libraries(ihkmond ihklib ${LIBUDEV} pthread)
 configure_file(ihkconfig.1in ihkconfig.1 @ONLY)
 configure_file(ihkosctl.1in ihkosctl.1 @ONLY)
 
+option(ENABLE_GCOV "Enable GCOV" OFF)
+if (ENABLE_GCOV)
+	add_compile_options("-fprofile-arcs" "-ftest-coverage")
+	add_link_options("-lgcov" "--coverage")
+endif(ENABLE_GCOV)
+
 install(TARGETS "ihkconfig" "ihkosctl" "ihkmond" "ihklib"
 	RUNTIME DESTINATION "${CMAKE_INSTALL_SBINDIR}"
 	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
