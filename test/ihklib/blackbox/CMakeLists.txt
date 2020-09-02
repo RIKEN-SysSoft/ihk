@@ -59,6 +59,12 @@ endif()
 add_definitions(-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX})
 
 # CFLAGS
+option(ENABLE_GCOV "Enable GCOV" OFF)
+if (ENABLE_GCOV)
+	add_compile_options("-fprofile-arcs" "-ftest-coverage")
+	add_link_options("-lgcov" "--coverage")
+endif(ENABLE_GCOV)
+
 set(CFLAGS_WARNING "-Wall" "-Wextra" "-Wno-unused-parameter" "-Wno-sign-compare" "-Wno-unused-function" ${EXTRA_WARNINGS} CACHE STRING "Warning flags")
 add_compile_options(
   -O2
