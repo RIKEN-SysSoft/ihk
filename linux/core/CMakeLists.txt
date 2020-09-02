@@ -14,6 +14,12 @@ kmod(ihk
 		${KMODDIR}
 )
 
+option(ENABLE_GCOV "Enable GCOV" OFF)
+if (ENABLE_GCOV)
+	add_compile_options("-fprofile-arcs" "-ftest-coverage")
+	add_link_options("-lgcov" "--coverage")
+endif(ENABLE_GCOV)
+
 install(FILES ../include/ihk/arch/${ARCH}/ihk/archdefs.h
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ihk")
 

@@ -1,0 +1,56 @@
+* How to check coverage of the black box test using Gcov
+
+1. Use Linux kernel that supports Gcov for Linux kernel modules
+
+  a. See following links:
+
+    i. http://techvolve.blogspot.com/2014/03/how-to-gcovlcov-for-linux-kernel-modules.html
+    ii. http://lwn.net/2002/0214/a/gcov.php3
+
+2. Build Mckernel/IHK enabling Gcov options
+
+  To make Gcov enable, use the following compile/link options.
+
+  a. Compile time:
+
+    i. -fprofile-arcs
+    ii. -ftest-coverage
+
+  b. Link time:
+
+    i. -lgcov
+    ii. --coverage
+
+  The latest CMakeLists.txt supports the option named ENABLE_GCOV.
+  Add "-DENABLE_GCOV=ON" to the command line option when running cmake.
+
+  GCC generates *.gcno files for each source when specifying above options.
+
+3. Build the black box test enabling Gcov options.
+
+  The latest CMakeLists.txt for the blackbox test also supports
+  the ENABLE_GCOV option. Add "-DENABLE_GCOV=ON" when running cmake.
+
+4. Run the black box test.
+
+  Gcov runtime generates *.gcda files where the *.gcno files are located.
+  For the code running kernel space, the runtime generates *.gcda under
+  "/sys/kernel/debug/gcov".
+
+5. Gather *.gcda and *.gcno
+
+  The script "gcov/gather-gcda.sh" helps to gather *.gcda and *.gcno.
+  Run the script with arguments that specifies the build directory for
+  McKernel and the tar archive name to generate. for example:
+
+  $ sudo ./gather-gcda.sh /home/toshi/build/wb1-mckernel mckernel-gcda-20200819a.tgz
+
+  It gathers *.{gcda,gcno} and creates tar-ball for them.
+
+6. Untar the tar-ball and run gcov
+
+  $ mkdir tmp; cd tmp
+  $ tar xvf ../mckernel-cgda-20200819a.tgz
+  $ find . -name "*.gcda" -exec gcov -p -o {} {} \;
+
+7. Check *.gcov files. They show coverage of the source code.
