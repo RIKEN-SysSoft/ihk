@@ -110,6 +110,7 @@ const struct option longopt[] = {
 static ssize_t reap_event(int evfd) {
 	uint64_t counter;
 	ssize_t ret = read(evfd, &counter, sizeof(counter));
+
 	CHKANDJUMP(ret == 0, -1, "EOF detected\n");
 	CHKANDJUMP(ret == -1, -1, "error: %s\n", strerror(errno));
  out:
@@ -163,7 +164,20 @@ static void* detect_hungup(void* _arg) {
 	dprintf("next\n");
 
 	osfd = ihklib_os_open(arg->os_index);
-	CHKANDJUMP(osfd < 0, -errno, "ihklib_os_open failed\n");
+
+	if (osfd < 0) {
+		if (osfd == -ENOENT) {
+			dprintf("%s: detect removal before parent\n",
+				__func__);
+		} else {
+			dprintf("%s: warning: ihklib_os_open failed with %d\n",
+				__func__, errno);
+		}
+		/* don't go to wait_for_add since
+		 * removal-notification would be missed
+		 */
+		goto wait_for_removal;
+	}
 
 	ret_lib = ioctl(osfd, IHK_OS_DETECT_HUNGUP);
 	if(ret_lib == -1) {
@@ -178,6 +192,7 @@ static void* detect_hungup(void* _arg) {
 	close(osfd);
 	osfd = -1;
 
+ wait_for_removal:
 	do {
 		int nfd = epoll_wait(epfd, events, 1, arg->interval * 1000);
 		if (nfd < 0 && errno == EINTR)
@@ -189,6 +204,11 @@ static void* detect_hungup(void* _arg) {
 		for (i = 0; i < nfd; i++) {
 			if (events[i].data.fd == arg->evfd_mcos_removed) {
 				dprintf("mcos remove event detected\n");
+				ret = reap_event(events[i].data.fd);
+				if (ret) {
+					dprintf("%s: warning: reap_event failed with %d\n",
+						__func__, ret);
+				}
 				goto wait_for_add;
 			}
 		}
