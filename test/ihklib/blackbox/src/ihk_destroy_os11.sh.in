@@ -1,0 +1,31 @@
+#!/usr/bin/bash
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+# patch to change interval unit to ms
+# and wait 10 usec
+patch_and_build "" ihkmond_ihk || exit 1
+
+sudo dmesg --clear
+
+# let ihkmond open /dev/mcos0 every 1 msec,
+# creating 1% chance to conflict
+@WITH_MCK@/sbin/mcstop+release.sh
+pgrep -x ihkmond | xargs -r sudo kill -9
+sudo @WITH_MCK@/sbin/ihkmond -f LOG_LOCAL6 -k 0 -i 1
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_destroy_os11
+ret=$?
+
+pgrep -x ihkmond | xargs -r sudo kill -9
+
+exit $ret

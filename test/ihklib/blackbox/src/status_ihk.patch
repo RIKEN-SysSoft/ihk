@@ -27,7 +27,7 @@ index 8de22ff..7691e64 100644
  		return 0;
  	}
  	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
-+	mdelay(1000);
++	mdelay(3000);
  
  	/* Reset CPU cores used by this OS */
  	for (i = 0; i < SMP_MAX_CPUS; ++i) {
