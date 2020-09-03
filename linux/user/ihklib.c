@@ -36,7 +36,7 @@ char **__argv;
 
 int loglevel = IHKLIB_LOGLEVEL_ERR;
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define dprintf(fmt, args...) do {	\
@@ -1689,6 +1689,7 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 int ihk_destroy_os(int dev_index, int os_index)
 {
 	int ret;
+	int i;
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -1701,12 +1702,19 @@ int ihk_destroy_os(int dev_index, int os_index)
 		goto out;
 	}
 
-	ret = ioctl(fd, IHK_DEVICE_DESTROY_OS, os_index);
-	if (ret) {
-		ret = -errno;
-		dprintf("%s: error: IHK_DEVICE_DESTROY_OS returned %d\n",
-			__func__, -ret);
-		goto out;
+	for (i = 0; i < 10; i++) {
+		ret = ioctl(fd, IHK_DEVICE_DESTROY_OS, os_index);
+		if (ret == 0) {
+			break;
+		}
+		if (errno != EBUSY) {
+			ret = -errno;
+			dprintf("%s: error: IHK_DEVICE_DESTROY_OS returned %d\n",
+				__func__, -ret);
+			goto out;
+		}
+		dprintf("%s: EBUSY case, retrying...\n", __func__);
+		usleep(100000);
 	}
  out:
 	if (fd != -1) {
