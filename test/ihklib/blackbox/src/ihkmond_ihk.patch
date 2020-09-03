@@ -1,0 +1,22 @@
+diff --git a/linux/user/ihkmond.c b/linux/user/ihkmond.c
+index a5ba85a..a2d2649 100644
+--- a/linux/user/ihkmond.c
++++ b/linux/user/ihkmond.c
+@@ -165,6 +165,8 @@ static void* detect_hungup(void* _arg) {
+ 
+ 	osfd = ihklib_os_open(arg->os_index);
+ 
++	usleep(10);
++
+ 	if (osfd < 0) {
+ 		if (osfd == -ENOENT) {
+ 			dprintf("%s: detect removal before parent\n",
+@@ -194,7 +196,7 @@ static void* detect_hungup(void* _arg) {
+ 
+  wait_for_removal:
+ 	do {
+-		int nfd = epoll_wait(epfd, events, 1, arg->interval * 1000);
++		int nfd = epoll_wait(epfd, events, 1, arg->interval);
+ 		if (nfd < 0 && errno == EINTR)
+ 			continue;
+ 		CHKANDJUMP(nfd < 0, -EINVAL, "epoll_wait failed\n");

@@ -19,6 +19,10 @@ execute_process(COMMAND bash -c "awk -v keyword=nr_free_pages -f ${CMAKE_CURRENT
 message("FIRST_USER_NUMA: ${FIRST_USER_NUMA}")
 add_definitions(-DFIRST_USER_NUMA=${FIRST_USER_NUMA})
 
+if (FIRST_USER_NUMA STREQUAL "4")
+  execute_process(COMMAND sudo bash -c "echo 0-7 > /sys/fs/cgroup/cpuset/system.slice/cpuset.mems")
+endif()
+
 cmake_policy(SET CMP0005 NEW)
 
 # Options: -DWITH_MCK=<McKernel install directory>
@@ -403,6 +407,7 @@ foreach(target IN ITEMS
     ihk_create_os_str14
     ihk_create_os_str15
     ihk_create_os_str06
+    ihk_destroy_os11
     )
 
   # Add target
@@ -457,6 +462,7 @@ foreach(target IN ITEMS
     consume_cpu_time
     delay_with_interrupt_disabled_mckernel
     str
+    ihkmond_ihk
     )
   install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/src/${target}.patch DESTINATION bin)
 endforeach()
