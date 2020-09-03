@@ -403,6 +403,7 @@ foreach(target IN ITEMS
     ihk_create_os_str14
     ihk_create_os_str15
     ihk_create_os_str06
+    ihk_destroy_os11
     )
 
   # Add target
@@ -457,6 +458,7 @@ foreach(target IN ITEMS
     consume_cpu_time
     delay_with_interrupt_disabled_mckernel
     str
+    ihkmond_ihk
     )
   install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/src/${target}.patch DESTINATION bin)
 endforeach()
