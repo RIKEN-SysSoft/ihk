@@ -36,7 +36,7 @@ char **__argv;
 
 int loglevel = IHKLIB_LOGLEVEL_ERR;
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define dprintf(fmt, args...) do {	\
