@@ -1692,7 +1692,12 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 		return -EBUSY;
 	}
 
-	__ihk_os_shutdown(os, FLAG_IHK_OS_SHUTDOWN_FORCE);
+	ret = __ihk_os_shutdown(os, FLAG_IHK_OS_SHUTDOWN_FORCE);
+	if (ret) {
+		pr_err("%s: error: __ihk_os_shutdown failed with %d\n",
+		       __func__, ret);
+		return ret;
+	}
 
 	if (data->ops->destroy_os) {
 		ret = data->ops->destroy_os(data, data->priv, os, os->priv);
