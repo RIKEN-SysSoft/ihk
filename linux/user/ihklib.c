@@ -101,7 +101,10 @@ struct ihklib_reserve_mem_conf reserve_mem_conf = {
 	.balanced_best_effort = 0,
 	.balanced_variance_limit = 0,
 	.min_chunk_size = PAGE_SIZE,
-	.max_size_ratio_all = 100,
+
+	/* XXX: Fugaku hack to skip step with IHK_SMP_MEM_ALL request */
+	.max_size_ratio_all = 98,
+
 	.timeout = 30,
 };
 
