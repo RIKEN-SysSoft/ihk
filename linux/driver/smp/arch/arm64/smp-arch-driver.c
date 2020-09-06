@@ -1067,6 +1067,33 @@ void smp_ihk_setup_trampoline(void *priv)
 		kprintf("%s: tof_core_cq_addr: 0x%lx\n",
 				__func__, tg->tof_core_cq_addr);
 
+		tg->tof_core_bg_addr =
+			(unsigned long)kallsyms_lookup_name("tof_core_bg");
+		if (WARN_ON(!tg->tof_core_bg_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_core_bg\n",
+				__func__);
+		}
+		kprintf("%s: tof_core_bg_addr: 0x%lx\n",
+				__func__, tg->tof_core_bg_addr);
+
+		tg->tof_utofu_bg_addr =
+			(unsigned long)kallsyms_lookup_name("tof_utofu_bg");
+		if (WARN_ON(!tg->tof_utofu_bg_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_utofu_bg\n",
+				__func__);
+		}
+		kprintf("%s: tof_utofu_bg_addr: 0x%lx\n",
+				__func__, tg->tof_utofu_bg_addr);
+
+		tg->tof_utofu_handler_bg_signal_addr =
+			(unsigned long)kallsyms_lookup_name("tof_utofu_handler_bg_signal");
+		if (WARN_ON(!tg->tof_utofu_handler_bg_signal_addr)) {
+			kprintf("%s: WARNING: couldn't resolve tof_utofu_handler_bg_signal\n",
+				__func__);
+		}
+		kprintf("%s: tof_utofu_handler_bg_signal_addr: 0x%lx\n",
+				__func__, tg->tof_utofu_handler_bg_signal_addr);
+
 		tg->linux_vmalloc_start = VMALLOC_START;
 		tg->linux_vmalloc_end = VMALLOC_END;
 	}
