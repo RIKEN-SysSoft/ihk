@@ -3159,7 +3159,8 @@ static void sort_pagelists(struct zone *zone)
 }
 
 #define RESERVE_MEM_FAILED_ATTEMPTS 1
-//#define USE_TRY_TO_FREE_PAGES
+#define USE_TRY_TO_FREE_PAGES
+#define USE_TRY_TO_FREE_PAGES_TIME_LIMIT 3
 
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 				 int min_chunk_size,
@@ -3180,6 +3181,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 #ifdef USE_TRY_TO_FREE_PAGES
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
+	int try_free_pages_secs = 0;
 #endif // USE_TRY_TO_FREE_PAGES
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	void (*__drain_all_pages)(struct zone *) = NULL;
@@ -3355,6 +3357,7 @@ retry:
 		if (!pg) {
 #ifdef USE_TRY_TO_FREE_PAGES
 			int freed_pages;
+			int try_free_pages_start_sec;
 #endif // USE_TRY_TO_FREE_PAGES
 
 			if (__drain_all_pages) {
@@ -3366,23 +3369,29 @@ retry:
 			}
 
 #ifdef USE_TRY_TO_FREE_PAGES
+
 			/*
 			 * Don't stress NUMA node 0, unless it is the only one
 			 */
 			if ((num_online_nodes() > 1 && numa_id > 0) &&
 					(__try_to_free_pages &&
-					 failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS)) {
+					 failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS) &&
+					 (try_free_pages_secs <
+						USE_TRY_TO_FREE_PAGES_TIME_LIMIT)) {
 
+				try_free_pages_start_sec = get_seconds();
 				freed_pages = __try_to_free_pages(
 						node_zonelist(numa_id, GFP_KERNEL),
 						order,
 						GFP_KERNEL, NULL);
+				try_free_pages_secs +=
+					(get_seconds() - try_free_pages_start_sec);
 
 				if (freed_pages <= 1)
 					++failed_free_attempts;
 
-				printk("%s: freed %d pages with order %d..\n",
-						__FUNCTION__, freed_pages, order);
+				printk("%s: freed %d pages with order %d @ NUMA %d\n",
+						__FUNCTION__, freed_pages, order, numa_id);
 				goto retry;
 			}
 #endif // USE_TRY_TO_FREE_PAGES
@@ -3521,8 +3530,8 @@ pre_out:
 		allocated += max;
 	}
 
-	pr_info("%s: want: %ld, allocated: %ld\n",
-	       __func__, want, allocated);
+	pr_info("%s: want: %ld, allocated: %ld (time: %lu secs)\n",
+	       __func__, want, allocated, (get_seconds() - res_start));
 
 
 	ret = 0;
