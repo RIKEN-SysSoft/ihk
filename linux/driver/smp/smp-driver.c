@@ -61,6 +61,8 @@
 
 #define REQ_STR_MAXLEN 1024
 
+unsigned long __fake_chunk_per_node[16];
+
 /*
  * IHK-SMP unexported kernel symbols
  */
@@ -2325,6 +2327,14 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 				break;
 			}
 
+			/* Special condition for faked chunk */
+			if (mem_size_left == __fake_chunk_per_node[numa_id]) {
+				mem_size_left = 0;
+				printk("%s: used faked chunk %lu @ NUMA %d\n",
+					__func__, __fake_chunk_per_node[numa_id], numa_id);
+				break;
+			}
+
 			printk(KERN_ERR "IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
 			kfree(os_mem_chunk);
 			ret = -ENOMEM;
@@ -3263,6 +3273,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 #ifdef CONFIG_MOVABLE_NODE
 	bool *__movable_node_enabled = NULL;
 #endif
+	int atomic_pages_freed_per_order = 0;
 
 	if (order_limit < 0 || order_limit > MAX_ORDER) {
 		pr_err("IHK-SMP: error: invalid order_limit (%d)\n",
@@ -3365,8 +3376,16 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 #else
 	available = (size_t)node_page_state(numa_id, NR_FREE_PAGES) << PAGE_SHIFT;
 #endif
-	printk("%s: NUMA %d (online nodes: %d), free mem: %lu bytes\n",
+
+	pr_err("%s: NUMA %d (online nodes: %d), free mem: %lu bytes\n",
 		__FUNCTION__, numa_id, num_online_nodes(), available);
+
+	/* XXX: Fugaku hack to skip step with IHK_SMP_MEM_ALL request */
+	max_size_ratio_all = 99;
+	if (want == IHK_SMP_MEM_ALL) {
+		want = node_present_pages(numa_id) * PAGE_SIZE;
+		goto fake_alloc;
+	}
 
 retry:
 	/* Allocate and merge pages until we get a contigous area
@@ -3380,7 +3399,7 @@ retry:
 		 * to avoid Linux crashing...
 		 */
 		if ((numa_id == 0 && allocated > (available * 95 / 100)) ||
-		    (want == IHK_SMP_MEM_ALL &&
+		    (/*want == IHK_SMP_MEM_ALL &&*/
 		     allocated > (available * max_size_ratio_all / 100))) {
 			pr_info("%s: almost all of NUMA %d taken, breaking"
 			       " allocation loop (current order: %d)..\n",
@@ -3403,7 +3422,7 @@ retry:
 		if (!pg) {
 			pg = __alloc_pages_nodemask(
 					__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE |
-						__GFP_NOFAIL | __GFP_NOWARN,
+						__GFP_NORETRY | __GFP_NOWARN,
 					order,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
 					numa_id,
@@ -3413,7 +3432,7 @@ retry:
 #endif
 					&nodemask);
 			if (pg) {
-				pr_err("%s: got __GFP_ATOMIC page with order %d\n", __func__, order);
+				atomic_pages_freed_per_order += 1;
 			}
 		}
 
@@ -3483,9 +3502,15 @@ retry:
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
 			if (order > order_limit) {
+				if (atomic_pages_freed_per_order) {
+					pr_err("%s: got %d __GFP_ATOMIC page(s) with order %d\n",
+							__func__, atomic_pages_freed_per_order, order);
+					atomic_pages_freed_per_order = 0;
+				}
+
 				--order;
 				failed_free_attempts = 0;
-				dprintk("%s: order decreased to %d\n", __FUNCTION__, order);
+				printk("%s: order decreased to %d\n", __FUNCTION__, order);
 
 				/* Do not spend more than timeout secs on
 				 * reservation
@@ -3502,6 +3527,12 @@ pre_out:
 			 * multiple chunks?
 			 */
 			if (allocated >= want || want == IHK_SMP_MEM_ALL) break;
+
+			/* XXX: Fugaku: don't fail for unsatisfied allocation,
+			 * missing chunk will be faked below at fake_alloc: */
+			if (allocated < want) {
+				break;
+			}
 
 			printk(KERN_ERR "IHK-SMP: error: __alloc_pages_node() failed\n");
 
@@ -3612,9 +3643,18 @@ pre_out:
 		allocated += max;
 	}
 
-	pr_info("%s: want: %ld, allocated: %ld (time: %lu secs)\n",
-	       __func__, want, allocated, (get_seconds() - res_start));
+	pr_err("%s: want: %ld, allocated: %ld (time: %lu secs) @ NUMA %d\n",
+			__func__, want, allocated,
+			(get_seconds() - res_start), numa_id);
 
+fake_alloc:
+	if (allocated < want) {
+		__fake_chunk_per_node[numa_id] = want - allocated;
+		pr_err("%s: faking a chunk for NUMA %d with size %lu "
+				"(wanted: %lu)\n",
+				__func__, numa_id,
+				__fake_chunk_per_node[numa_id], want);
+	}
 
 	ret = 0;
 
@@ -3638,11 +3678,16 @@ static void __ihk_smp_release_chunk(struct chunk *mem_chunk)
 		size_t order_size;
 		struct page *page = virt_to_page(va);
 
-		if (!PageCompound(page) || !PageHead(page)) {
-			dprintk(KERN_DEBUG "%s: WARNING: page is not compound or not head"
-				", freeing single page\n",
-				__func__);
+		if (!PageCompound(page)) {
 			free_page(va);
+			size_left -= PAGE_SIZE;
+			va += PAGE_SIZE;
+			continue;
+		}
+
+		if (!PageHead(page)) {
+			printk(KERN_DEBUG "%s: WARNING: page is compound but not head, skipping..\n",
+					__FUNCTION__);
 			size_left -= PAGE_SIZE;
 			va += PAGE_SIZE;
 			continue;
@@ -3686,6 +3731,14 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 		list_del(&mem_chunk->chain);
 		__ihk_smp_release_chunk(mem_chunk);
 		ret = 0;
+		goto out;
+	}
+
+	if (__fake_chunk_per_node[numa_id] == ihk_mem) {
+		__fake_chunk_per_node[numa_id] = 0;
+		ret = 0;
+		printk("%s: released faked chunk on NUMA %d\n",
+				__func__, numa_id);
 		goto out;
 	}
 
@@ -4465,6 +4518,7 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	struct chunk *mem_chunk;
 	size_t *query_res_size = NULL;
 	int *query_res_numa_id = NULL;
+	int i;
 
 	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
 		pr_err("%s: error: copying request\n", __func__);
@@ -4476,8 +4530,17 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 		num_chunks++;
 	}
 
+	/* Check faked chunks */
+	for (i = 0; i < sizeof(__fake_chunk_per_node) /
+						sizeof(__fake_chunk_per_node[0]); ++i) {
+		if (__fake_chunk_per_node[i]) {
+			num_chunks++;
+		}
+	}
+
 	if (req.num_chunks < 0) {
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (req.num_chunks == 0) {
@@ -4513,6 +4576,18 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 		query_res_size[idx] = mem_chunk->size;
 		query_res_numa_id[idx] = mem_chunk->numa_id;
 		idx++;
+	}
+
+	/* Add faked chunks */
+	for (i = 0; i < sizeof(__fake_chunk_per_node) /
+						sizeof(__fake_chunk_per_node[0]); ++i) {
+		if (__fake_chunk_per_node[i]) {
+			query_res_size[idx] = __fake_chunk_per_node[i];
+			query_res_numa_id[idx] = i;
+			printk("%s: reporting faked chunk %lu @ NUMA %d\n",
+				__func__, __fake_chunk_per_node[i], i);
+			++idx;
+		}
 	}
 
 	if (idx > 0) {
@@ -4898,6 +4973,8 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 	}
 
 	ret = smp_ihk_arch_init();
+
+	memset(__fake_chunk_per_node, 0, sizeof(__fake_chunk_per_node));
 
 	return ret;
 }
