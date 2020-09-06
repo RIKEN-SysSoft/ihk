@@ -3386,6 +3386,23 @@ retry:
 #endif
 				&nodemask);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0) /* __GFP_ATOMIC */
+		if (!pg && order == 0) {
+			pg = __alloc_pages_nodemask(
+					__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE | __GFP_NOFAIL,
+					order,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+					numa_id,
+#else
+					node_zonelist(numa_id,
+						__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE),
+#endif
+					&nodemask);
+	if (pg)
+		kprintf("%s: got a page via __GFP_ATOMIC..\n", __func__);
+		}
+#endif
+
 #ifdef CONFIG_MOVABLE_NODE
 		/* Try movable pages if supported */
 		if (!pg && __movable_node_enabled && *__movable_node_enabled) {
