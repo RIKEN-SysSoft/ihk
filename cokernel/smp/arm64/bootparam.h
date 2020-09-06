@@ -79,6 +79,9 @@ struct tofu_globals {
 	unsigned long tof_ib_steering_addr;
 	unsigned long tof_ib_mb_addr;
 	unsigned long tof_core_cq_addr;
+	unsigned long tof_core_bg_addr;
+	unsigned long tof_utofu_bg_addr;
+	unsigned long tof_utofu_handler_bg_signal_addr;
 	unsigned long linux_vmalloc_start;
 	unsigned long linux_vmalloc_end;
 };
