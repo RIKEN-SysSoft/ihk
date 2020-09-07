@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7e0d0a97_51554922",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 12
+      },
+      "lineNbr": 1712,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-07T02:05:43Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintf(\"%s: error: IHK_DEVICE_DESTROY_OS returned %d\\n\",",
+      "revId": "d7bd2f710f60f30d2321cba08ccbdccd0985d7a4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f7980f4c_f0356b42",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 12
+      },
+      "lineNbr": 209,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-07T02:05:43Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tdprintf(\"%s: warning: reap_event failed with %d\\n\",",
+      "revId": "d7bd2f710f60f30d2321cba08ccbdccd0985d7a4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0298afad_5cadb069",
+        "filename": "test/ihklib/blackbox/src/ihkmond_ihk.patch",
+        "patchSetId": 12
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-07T02:05:43Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "d7bd2f710f60f30d2321cba08ccbdccd0985d7a4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7d314ef5_ad38ac2a",
+        "filename": "test/ihklib/blackbox/src/ihkmond_ihk.patch",
+        "patchSetId": 12
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-07T02:05:43Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "d7bd2f710f60f30d2321cba08ccbdccd0985d7a4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "75cdfa3a_beac136a",
+        "filename": "test/ihklib/blackbox/src/ihkmond_ihk.patch",
+        "patchSetId": 12
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-09-07T02:05:43Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "d7bd2f710f60f30d2321cba08ccbdccd0985d7a4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
