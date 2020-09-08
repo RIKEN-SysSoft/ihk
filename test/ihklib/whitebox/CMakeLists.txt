@@ -1088,6 +1088,142 @@ foreach(target IN ITEMS
 #  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
 endforeach()
 
+foreach(target IN ITEMS
+    test_ihk_os_setperfevent
+    test_mcctrl_perf_num
+    test_mcctrl_ikc_send
+    test_mcctrl_perf_set
+    test__mcctrl_control
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_setperfevent/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test__ihk_os_get_num_numa_nodes
+    test_ihk_os_get_num_numa_nodes
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_get_num_numa_nodes/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test_ihk_os_getrusage
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_getrusage/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test_ihklib_os_query_mem
+    test_ihklib_os_query_mem_sysfs
+    )
+  # Add target
+  add_executable(${target} src/user/ihklib_os_query_mem/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test_rusage_pgtype_to_pgsize
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_get_pagesizes/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
 # programs needing fcc and mckernel.h
 if(CPU_MODEL STREQUAL "a64fx")
   foreach(target IN ITEMS
