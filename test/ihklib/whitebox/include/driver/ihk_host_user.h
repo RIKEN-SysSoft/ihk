@@ -204,9 +204,17 @@ typedef enum ihk_test_mode {
   TEST__IHK_OS_READ_KMSG                          = 119,
   TEST_READ_KMSG                                  = 120,
 
-  /*unknown */
+  /* ihk_os_get_num_numa_nodes */
+  TEST__IHK_OS_GET_NUM_NUMA_NODES                 = 121,
 
+  /* ihk_os_getrusage */
+  TEST_MCCTRL_GETRUSAGE                           = 122,
 
+  /* ihk_os_setperfevent */
+  TEST_MCCTRL_PERF_NUM                            = 123,
+  TEST_MCCTRL_PERF_SET                            = 124,
+  TEST_MCCTRL_IKC_SEND                            = 125,
+  TEST__MCCTRL_CONTROL                            = 126,
   // other API here
 } ihk_test_mode_t;
 extern ihk_test_mode_t g_ihk_test_mode;

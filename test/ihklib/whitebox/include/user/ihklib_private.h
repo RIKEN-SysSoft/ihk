@@ -93,6 +93,19 @@ typedef enum ihklib_test_mode {
   /* ihk_os_get_status */
   TEST_IHK_OS_GET_STATUS                           = 29,
 
+  /* ihk_os_get_num_numa_nodes */
+  TEST_IHK_OS_GET_NUM_NUMA_NODES                   = 30,
+
+  /* ihklib_os_query_mem */
+  TEST_IHKLIB_OS_QUERY_MEM                         = 31,
+  TEST_IHKLIB_OS_QUERY_MEM_SYSFS                   = 32,
+
+  /* ihk_os_get_pagesizes */
+  TEST_RUSAGE_PGTYPE_TO_PGSIZE                     = 33,
+
+  /* ihk_os_setperfevent */
+  TEST_IHK_OS_SETPERFEVENT                         = 34,
+
 } ihklib_test_mode_t;
 
 struct ihk_ioctl_desc {

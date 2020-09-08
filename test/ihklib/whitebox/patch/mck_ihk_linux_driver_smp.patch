@@ -1,5 +1,5 @@
---- old_CMakeLists.txt	2020-09-01 18:34:03.664086651 +0700
-+++ new_CMakeLists.txt	2020-09-01 18:33:58.640131106 +0700
+--- old_CMakeLists.txt	2020-09-08 18:11:29.428989647 +0700
++++ new_CMakeLists.txt	2020-09-08 18:11:20.165113824 +0700
 @@ -11,11 +11,12 @@
  		-I${CMAKE_CURRENT_SOURCE_DIR}/arch/${ARCH}
  		-I${CMAKE_CURRENT_BINARY_DIR}/arch/${ARCH}
@@ -10,8 +10,8 @@
  		arch/${ARCH}/smp-${ARCH}-trampoline.c
 -		arch/${ARCH}/smp-arch-driver.c
 -		smp-driver.c
-+		../../../test/ihklib/whitebox/src/driver/smp/arch/arm64/smp-arch-driver.c
-+		../../../test/ihklib/whitebox/src/driver/smp/smp-driver.c
++                ../../../test/ihklib/whitebox/src/driver/smp/arch/arm64/smp-arch-driver.c
++                ../../../test/ihklib/whitebox/src/driver/smp/smp-driver.c
  	EXTRA_SYMBOLS
  		${PROJECT_BINARY_DIR}/linux/core/Module.symvers
  	DEPENDS

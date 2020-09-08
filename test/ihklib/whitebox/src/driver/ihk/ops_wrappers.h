@@ -779,9 +779,44 @@ IHK_OS_OPS_BEGIN_NOARG(void, notify_hungup)
   IHK_OPS_BODY_VOID_NOARG(notify_hungup);
 }
 
-IHK_OS_OPS_BEGIN_NOARG(int, get_num_numa_nodes)
+IHK_OS_OPS_BEGIN_NOARG(int, get_num_numa_nodes_orig)
 {
   IHK_OPS_BODY_NOARG(get_num_numa_nodes);
+}
+
+IHK_OS_OPS_BEGIN_NOARG(int, get_num_numa_nodes)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_GET_NUM_NUMA_NODES)  // Disable test code
+    return __ihk_os_get_num_numa_nodes_orig(data);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+  int ret;
+
+  branch_info_t b_infos[] = {
+    { -1, "invalid handler" },
+    { 0,  "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+    int output = -1;
+    if (ivec == 0 || (!data->ops || !data->ops->get_num_numa_nodes)) {
+      ret = -1;
+      if (ivec == 0) goto out;
+      goto err;
+    }
+
+    output = data->ops->get_num_numa_nodes(data, data->priv);
+    ret = 0;
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    ret = output;
+  }
+
+  return ret;
+ err:
+  return -1;
 }
 
 IHK_OS_OPS_BEGIN_NOARG(int, query_free_mem)
