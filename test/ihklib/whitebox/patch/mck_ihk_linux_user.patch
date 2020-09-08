@@ -1,11 +1,11 @@
---- old_CMakeLists.txt	2020-09-01 18:33:31.000375660 +0700
-+++ new_CMakeLists.txt	2020-09-01 18:33:25.080428037 +0700
+--- old_CMakeLists.txt	2020-09-08 18:10:12.518021887 +0700
++++ new_CMakeLists.txt	2020-09-08 18:10:03.234146699 +0700
 @@ -3,6 +3,10 @@
  	"${PROJECT_SOURCE_DIR}/linux/include/ihk/arch/${ARCH}"
  	"${PROJECT_BINARY_DIR}/linux/include"
  	"${PROJECT_BINARY_DIR}"
 +        "${PROJECT_SOURCE_DIR}/test/ihklib/whitebox/include"
-+	"${PROJECT_SOURCE_DIR}/test/ihklib/blackbox/include"
++        "${PROJECT_SOURCE_DIR}/test/ihklib/blackbox/include"
 +        "${PROJECT_SOURCE_DIR}/test/ihklib/"
 +        "${PROJECT_SOURCE_DIR}/linux/include/ihk/"
  )
@@ -16,9 +16,9 @@
  message("PAGE_SIZE: ${PAGE_SIZE}")
  
 -add_library(ihklib SHARED ihklib.c)
-+#add_library(ihklib SHARED ihklib.c)
 +add_library(ihklib SHARED ../../test/ihklib/whitebox/src/user/ihklib.c ../../test/ihklib/blackbox/src/cpu.c 
 +                          ../../test/ihklib/blackbox/src/mem.c ../../test/ihklib/blackbox/src/os.c
++                          ../../test/ihklib/blackbox/src/user.c
 +                          ../../test/ihklib/blackbox/src/linux.c)
  target_compile_definitions(ihklib PRIVATE -DPAGE_SIZE=${PAGE_SIZE})
  SET_TARGET_PROPERTIES(ihklib PROPERTIES OUTPUT_NAME ihk)

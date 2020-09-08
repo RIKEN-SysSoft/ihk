@@ -334,7 +334,7 @@ static int dummy_packet_handler(struct ihk_ikc_channel_desc *c,
   return 0;
 }
 
-int mcctrl_ikc_send(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp)
+int mcctrl_ikc_send_orig(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp)
 {
   struct mcctrl_usrdata *usrdata;
 
@@ -348,6 +348,58 @@ int mcctrl_ikc_send(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp)
     return -EINVAL;
   }
   return ihk_ikc_send(usrdata->channels[cpu].c, pisp, 0);
+}
+
+int mcctrl_ikc_send(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_IKC_SEND)  // Disable test code
+    return mcctrl_ikc_send_orig(os, cpu, pisp);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance or invalid packet" },
+    { -EINVAL, "invalid cpu" },
+    { -EINVAL, "invalid usrdata or invalid channel" },
+    { 0,       "main case" },
+  };
+
+  int ret = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_usrdata *usrdata;
+
+    if (ivec == 0 || (!os || ihk_host_validate_os(os) || !pisp)) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec == 1 || cpu < 0 || cpu >= 512) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+    }
+
+    usrdata = ihk_host_os_get_usrdata(os);
+    if (ivec == 2 ||
+        (!usrdata || cpu >= usrdata->num_channels ||
+         !usrdata->channels[cpu].c)) {
+      ret = -EINVAL;
+      if (ivec != 2) return ret;
+      goto out;
+    }
+
+    ret = ihk_ikc_send(usrdata->channels[cpu].c, pisp, 0);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+ err:
+  return ret;
 }
 
 int mcctrl_ikc_send_msg(ihk_os_t os, int cpu, int msg, int ref, unsigned long arg)

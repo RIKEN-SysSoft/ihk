@@ -26,13 +26,13 @@ int main(int argc, char **argv)
   ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
   INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
   close(fd); fd = -1;
-  
+
   ret = _cpus_reserve(98, -1);
   INTERR(ret, "cpus_reserve returned %d\n", ret);
 
   struct mems mems = { 0 };
   int excess;
-  ret = mems_ls(&mems, "MemFree", 0.02);
+  ret = _mems_ls(&mems, "MemFree", 0.02, 1UL << 30);
   INTERR(ret, "mems_ls returned %d\n", ret);
   excess = mems.num_mem_chunks - 4;
   if (excess > 0) {
