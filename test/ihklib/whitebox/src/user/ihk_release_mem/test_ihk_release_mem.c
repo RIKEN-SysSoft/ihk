@@ -19,7 +19,7 @@ int main(int argc, char **argv)
   struct mems mems_input = { 0 };
 
   int excess;
-  ret = mems_ls(&mems_input, "MemFree", 0.02);
+  ret = _mems_ls(&mems_input, "MemFree", 0.02, 1UL << 30);
   INTERR(ret, "mems_ls returned %d\n", ret);
 
   excess = mems_input.num_mem_chunks - 4;
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 
   ret = mems_shift(&_mems_release, 1);
   INTERR(ret, "mems_shift returned %d\n", ret);
-  
+
   ret = ihk_release_mem(0, _mems_release.mem_chunks, _mems_release.num_mem_chunks);
 	INTERR(ret != 0, "return value: %d, expected: %d\n", ret, 0);
 
