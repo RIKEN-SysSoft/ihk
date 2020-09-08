@@ -38,6 +38,7 @@
 
 #include "blackbox/include/cpu.h"
 #include "blackbox/include/mem.h"
+#include "blackbox/include/user.h"
 
 int __argc;
 char **__argv;
@@ -4617,7 +4618,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
         ret = ihk_os_boot(0);
         OKNG(ret == 0, "boot os success\n");
       }
-      ret = ikc_cpu_map_check_channels(num_cpus);
+      ret = ikc_cpu_map_check_channels(num_cpus, "/tmp/ikc/ikc.log");
       OKNG(ret == 0, "all IKC channels are active\n");
       {
         // cleanup environment
@@ -6471,7 +6472,7 @@ int ihk_os_clear_kmsg(int index)
   return ret;
 }
 
-int ihk_os_get_num_numa_nodes(int index)
+int ihk_os_get_num_numa_nodes_orig(int index)
 {
   int ret;
   int fd = -1;
@@ -6479,8 +6480,7 @@ int ihk_os_get_num_numa_nodes(int index)
   dprintk("%s: enter\n", __func__);
 
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open\n",
-      __func__);
+    dprintf("%s: error: ihklib_os_open\n", __func__);
     ret = fd;
     goto out;
   }
@@ -6489,7 +6489,7 @@ int ihk_os_get_num_numa_nodes(int index)
   if (ret < 0) {
     ret = -errno;
     dprintf("%s: IHK_OS_GET_NUM_NUMA_NODES returned %d\n",
-      __func__, -ret);
+            __func__, -ret);
     goto out;
   }
 
@@ -6500,6 +6500,64 @@ int ihk_os_get_num_numa_nodes(int index)
   return ret;
 }
 
+int ihk_os_get_num_numa_nodes(int index)
+{
+  if (get_test_mode() != TEST_IHK_OS_GET_NUM_NUMA_NODES)
+    return ihk_os_get_num_numa_nodes_orig(index);
+
+  dprintk("%s: enter\n", __func__);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "cannot get # of numa nodes" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+  int fd = -1;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int num;
+    int should_quit = 0;
+
+    if ((fd = ihklib_os_open(index)) < 0) {
+      dprintf("%s: error: ihklib_os_open\n", __func__);
+      ret = fd;
+      should_quit = 1;
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_GET_NUM_NUMA_NODES);
+    if (ivec == 0 || ret < 0) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        ret = -errno;
+        dprintf("%s: IHK_OS_GET_NUM_NUMA_NODES returned %d\n",
+                __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+    num = ret;
+    ret = 0;
+
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    ret = num;
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
 static int get_meminfo_path(char *path, int os_index, int node)
 {
   return snprintf(path, PATH_MAX,
@@ -6508,8 +6566,8 @@ static int get_meminfo_path(char *path, int os_index, int node)
       os_index, node);
 }
 
-int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,
-            const char *type)
+int ihklib_os_query_mem_sysfs_orig(int index, char *result,
+                                   ssize_t sz_result, const char *type)
 {
   int ret;
   int node = 0;
@@ -6538,24 +6596,20 @@ int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,
       int scanfmt_len;
 
       scanfmt_len = snprintf(scanfmt, sizeof(scanfmt),
-                 "Node %%d %s:%%16lu kB",
-                 type);
+                             "Node %%d %s:%%16lu kB", type);
       if (scanfmt_len >= sizeof(scanfmt)) {
         eprintf("%s: error: type string (%s) is too long\n",
-          __func__, type);
+                __func__, type);
         ret = -1;
         goto out;
       }
 
-      if (sscanf(line, scanfmt,
-           &scan_node, &free_kb) == 2) {
+      if (sscanf(line, scanfmt, &scan_node, &free_kb) == 2) {
         if (node > 0)
-          len += snprintf(&result[len],
-              sz_result - len, ",");
+          len += snprintf(&result[len], sz_result - len, ",");
 
-        len += snprintf(&result[len], sz_result - len,
-            "%lu@%d",
-            free_kb * 1024, node);
+        len += snprintf(&result[len], sz_result - len, "%lu@%d",
+                        free_kb * 1024, node);
       }
 
       free(line);
@@ -6579,8 +6633,148 @@ out:
   return ret;
 }
 
-static int ihklib_os_query_mem(int index, unsigned long *result,
-     int num_numa_nodes, enum ihklib_os_query_mem_type type)
+int ihklib_os_query_mem_sysfs(int index, char *result,
+                              ssize_t sz_result, const char *type)
+{
+  if (get_test_mode() != TEST_IHKLIB_OS_QUERY_MEM_SYSFS)
+    return ihklib_os_query_mem_sysfs_orig(index, result, sz_result, type);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 7;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid result string" },
+    { -EACCES, "cannot get meminfo" },
+    { -ENOENT, "cannot open file to read" },
+    { -EINVAL, "cannot read line from file" },
+    { -EFAULT, "type string is too long" },
+    { -EINVAL, "sscanf fail" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+
+  dprintk("%s: enter\n", __func__);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int node = 0;
+    char path[PATH_MAX];
+    int len = 0;
+    struct stat sb;
+    FILE *fp = NULL;
+    int should_quit = 0;
+
+    if (ivec == 0 || (!result || sz_result <= 0 || !type)) {
+      ret = -EINVAL;
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+
+    memset(result, 0, sz_result);
+
+    get_meminfo_path(path, index, node);
+
+    ret = stat(path, &sb);
+    if (ivec == 1 || ret == -1) {
+      ret = -EACCES;
+      if (ivec != 1) should_quit = 1;
+      goto out;
+    }
+
+    while (stat(path, &sb) != -1) {
+      unsigned long free_kb = 0;
+      char *line = NULL;
+      size_t line_len;
+
+      fp = fopen(path, "r");
+      if (ivec == 2 || !fp) {
+        ret = -ENOENT;
+        if (ivec != 2) {
+          eprintf("%s: error: opening %s\n", __func__, path);
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      ret = getline(&line, &line_len, fp);
+      if (ivec == 3 || ret == -1) {
+        ret = -EINVAL;
+        if (ivec != 3) should_quit = 1;
+        goto out;
+      }
+      while (ret != -1) {
+        int scan_node;
+        char scanfmt[1024];
+        int scanfmt_len;
+
+        scanfmt_len = snprintf(scanfmt, sizeof(scanfmt),
+                               "Node %%d %s:%%16lu kB", type);
+        if (ivec == 4 || scanfmt_len >= sizeof(scanfmt)) {
+          ret = -EFAULT;
+          if (ivec != 4) {
+            eprintf("%s: error: type string (%s) is too long\n",
+                    __func__, type);
+            should_quit = 1;
+          }
+          free(line);
+          goto out;
+        }
+
+        ret = sscanf(line, scanfmt, &scan_node, &free_kb);
+        if (ivec == 5) {
+          ret = -EINVAL;
+          if (ivec != 5) should_quit = 1;
+          free(line);
+          goto out;
+        }
+        if (ret == 2) {
+          if (node > 0)
+            len += snprintf(&result[len], sz_result - len, ",");
+
+          len += snprintf(&result[len], sz_result - len, "%lu@%d",
+                        free_kb * 1024, node);
+        }
+
+        free(line);
+        line = NULL;
+
+        ret = getline(&line, &line_len, fp);
+      }
+
+      fclose(fp);
+      fp = NULL;
+
+      ++node;
+      get_meminfo_path(path, index, node);
+    }
+
+    ret = 0;
+  out:
+    if (fp) {
+      fclose(fp);
+    }
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(len > 0, "check # of chars copied\n");
+      OKNG(strlen(result) > 0, "result string should be valid\n");
+    } else {
+      OKNG(len == 0, "# of chars copied is zero\n");
+      OKNG(strlen(result) == 0, "result string should be empty\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+static int ihklib_os_query_mem_orig(int index, unsigned long *result,
+                                    int num_numa_nodes,
+                                    enum ihklib_os_query_mem_type type)
 {
   int i, ret;
   char result_str[16 * IHK_MAX_NUM_NUMA_NODES];
@@ -6591,29 +6785,28 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
   dprintk("%s: enter\n", __func__);
 
   if ((fd = ihklib_os_open(index)) < 0) {
-    eprintf("%s: error: ihklib_os_open\n",
-      __func__);
+    eprintf("%s: error: ihklib_os_open\n", __func__);
     ret = fd;
     goto out;
   }
 
   ret = ihklib_os_query_mem_sysfs(index, result_str,
-          sizeof(result_str),
-          ihklib_os_query_mem_type_str[type]);
-  CHKANDJUMP(ret != 0, -EINVAL,
-       "ihklib_os_query_total_mem failed\n");
+                                  sizeof(result_str),
+                                  ihklib_os_query_mem_type_str[type]);
+  CHKANDJUMP(ret != 0, -EINVAL, "ihklib_os_query_total_mem failed\n");
 
   memset(mem_chunks, 0, sizeof(mem_chunks));
   mem_str2array(result_str, &num_mem_chunks, mem_chunks);
 
-  CHKANDJUMP(num_mem_chunks != num_numa_nodes, -EINVAL,
-       "actual number of NUMA nodes (%d) is different than requested (%d)\n",
-       num_mem_chunks, num_numa_nodes);
+  CHKANDJUMP(
+    num_mem_chunks != num_numa_nodes, -EINVAL,
+    "actual number of NUMA nodes (%d) is different than requested (%d)\n",
+    num_mem_chunks, num_numa_nodes);
 
   for (i = 0; i < num_mem_chunks; i++) {
     CHKANDJUMP(mem_chunks[i].numa_node_number >= num_numa_nodes ||
-         mem_chunks[i].numa_node_number < 0, -EINVAL,
-         "NUMA node number out of range\n");
+               mem_chunks[i].numa_node_number < 0, -EINVAL,
+               "NUMA node number out of range\n");
     result[mem_chunks[i].numa_node_number] = mem_chunks[i].size;
   }
 
@@ -6623,6 +6816,108 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
     close(fd);
   }
   return ret;
+}
+
+static int ihklib_os_query_mem(int index, unsigned long *result,
+                               int num_numa_nodes,
+                               enum ihklib_os_query_mem_type type)
+{
+  if (get_test_mode() != TEST_IHKLIB_OS_QUERY_MEM)
+    return ihklib_os_query_mem_orig(index, result, num_numa_nodes, type);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 6;
+
+  branch_info_t b_infos[] = {
+    { -ENOENT, "ihklib_os_open fail" },
+    { -EINVAL, "ihklib_os_query_mem_sysfs fail" },
+    { -EINVAL, "# of numa nodes mismatch" },
+    { -EINVAL, "invalid # of mem chunks or result is null" },
+    { -EINVAL, "NUMA node number out of range" },
+    { 0,       "main case" },
+  };
+
+  int i, ret;
+
+  dprintk("%s: enter\n", __func__);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    char result_str[16 * IHK_MAX_NUM_NUMA_NODES];
+    struct ihk_mem_chunk mem_chunks[IHK_MAX_NUM_NUMA_NODES];
+    int num_mem_chunks = num_numa_nodes;
+    int fd = -1;
+    int should_quit = 0;
+
+    if (ivec == 0 || (fd = ihklib_os_open(index)) < 0) {
+      ret = -ENOENT;
+      if (ivec != 0) {
+        eprintf("%s: error: ihklib_os_open\n", __func__);
+        ret = fd;
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ret = ihklib_os_query_mem_sysfs(index, result_str,
+                                    sizeof(result_str),
+                                    ihklib_os_query_mem_type_str[type]);
+    if (ivec == 1 || ret) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        eprintf("%s: error: ihklib_os_query_total_mem failed\n", __func__);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    memset(mem_chunks, 0, sizeof(mem_chunks));
+    mem_str2array(result_str, &num_mem_chunks, mem_chunks);
+
+    if (ivec == 2 || num_mem_chunks != num_numa_nodes) {
+      ret = -EINVAL;
+      if (ivec != 2) {
+        eprintf("%s: error: actual number of NUMA nodes"
+                " (%d) is different than requested (%d)\n",
+                __func__, num_mem_chunks, num_numa_nodes);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    if (ivec == 3 || (num_mem_chunks <= 0 || result == NULL)) {
+      ret = -EINVAL;
+      if (ivec != 3) should_quit = 1;
+      goto out;
+    }
+    for (i = 0; i < num_mem_chunks; i++) {
+      if (ivec == 4 ||
+          (mem_chunks[i].numa_node_number >= num_numa_nodes ||
+           mem_chunks[i].numa_node_number < 0)) {
+        ret = -EINVAL;
+        if (ivec != 4) {
+          eprintf("%s: error: NUMA node number out of range\n", __func__);
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      result[mem_chunks[i].numa_node_number] = mem_chunks[i].size;
+    }
+
+    ret = 0;
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 int ihk_os_query_total_mem(int index, unsigned long *result,
@@ -6649,8 +6944,7 @@ int ihk_os_get_num_pagesizes(int index)
   dprintk("%s: enter\n", __func__);
 
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open returned %d\n",
-      __func__, fd);
+    dprintf("%s: error: ihklib_os_open returned %d\n", __func__, fd);
     ret = fd;
     goto out;
   }
@@ -6663,6 +6957,20 @@ int ihk_os_get_num_pagesizes(int index)
   }
   dprintk("%s: returning %d\n", __func__, ret);
   return ret;
+}
+
+static long _rusage_pgtype_to_pgsize(enum ihk_os_pgsize pgtype)
+{
+  if (get_test_mode() != TEST_RUSAGE_PGTYPE_TO_PGSIZE)
+    return rusage_pgtype_to_pgsize(pgtype);
+
+  long ret = rusage_pgtype_to_pgsize(IHK_MAX_NUM_PGSIZES);
+  OKNG(ret == -1, "unknow page type\n");
+
+  ret = rusage_pgtype_to_pgsize(pgtype);
+  return ret;
+  err:
+  return 0;
 }
 
 int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
@@ -6691,7 +6999,7 @@ int ihk_os_get_pagesizes(int index, long *pgsizes, int num_pgsizes)
   }
 
   for (i = 0; i < num_pgsizes; i++) {
-    pgsizes[i] = rusage_pgtype_to_pgsize((enum ihk_os_pgsize)i);
+    pgsizes[i] = _rusage_pgtype_to_pgsize((enum ihk_os_pgsize)i);
   }
 
   ret = 0;
@@ -6713,15 +7021,13 @@ int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
   dprintk("%s: enter\n", __func__);
 
   if (!rusage) {
-    dprintf("%s: error: output buffer is NULL\n",
-      __func__);
+    dprintf("%s: error: output buffer is NULL\n", __func__);
     ret = -EFAULT;
     goto out;
   }
 
   if (size_rusage != sizeof(struct ihk_os_rusage)) {
-    dprintf("%s: error: size of output buffer is invalid\n",
-      __func__);
+    dprintf("%s: error: size of output buffer is invalid\n", __func__);
     ret = -EINVAL;
     goto out;
   }
@@ -6732,8 +7038,7 @@ int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
   };
 
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open returned %d\n",
-      __func__, fd);
+    dprintf("%s: error: ihklib_os_open returned %d\n", __func__, fd);
     ret = fd;
     goto out;
   }
@@ -6741,8 +7046,7 @@ int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
   ret = ioctl(fd, IHK_OS_GETRUSAGE, &desc);
   if (ret) {
     ret = -errno;
-    dprintf("%s: IHK_OS_GETRUSAGE returned %d\n",
-      __func__, -ret);
+    dprintf("%s: IHK_OS_GETRUSAGE returned %d\n", __func__, -ret);
     goto out;
   }
 
@@ -6762,7 +7066,7 @@ int ihk_os_getrusage(int index, struct ihk_os_rusage *rusage,
 }
 #endif
 
-int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
+int ihk_os_setperfevent_orig(int index, ihk_perf_event_attr *attr, int n)
 {
   int ret;
   int fd = -1;
@@ -6770,15 +7074,13 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
   dprintk("%s: enter\n", __func__);
 
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open returned %d\n",
-      __func__, fd);
+    dprintf("%s: error: ihklib_os_open returned %d\n", __func__, fd);
     ret = fd;
     goto out;
   }
 
   if (n <= 0) {
-    dprintf("%s: invalid number(%d) of events\n",
-      __func__, n);
+    dprintf("%s: invalid number(%d) of events\n", __func__, n);
     ret = -EINVAL;
     goto out;
   }
@@ -6786,16 +7088,14 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
   ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
   if (ret) {
     ret = -errno;
-    dprintf("%s: IHK_OS_AUX_PERF_NUM returned %d\n",
-      __func__, -ret);
+    dprintf("%s: IHK_OS_AUX_PERF_NUM returned %d\n", __func__, -ret);
     goto out;
   }
 
   ret = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
   if (ret < 0) {
     ret = -errno;
-    dprintf("%s: IHK_OS_AUX_PERF_SET returned %d\n",
-      __func__, -ret);
+    dprintf("%s: IHK_OS_AUX_PERF_SET returned %d\n", __func__, -ret);
     goto out;
   }
 
@@ -6805,6 +7105,119 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
   }
   dprintk("%s: returning %d\n", __func__, ret);
   return ret;
+}
+
+int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
+{
+  if (get_test_mode() != TEST_IHK_OS_SETPERFEVENT)
+    return ihk_os_setperfevent_orig(index, attr, n);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid attr" },
+    { -EINVAL, "cannot set perf event" },
+    { 1,       "main case" },
+  };
+
+  int ret;
+  int fd = -1;
+
+  dprintk("%s: enter\n", __func__);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int wstatus;
+    pid_t pid = -1;
+    unsigned long *counts = NULL;
+    int should_quit = 0;
+
+    if (ivec == 0 || !attr) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if ((fd = ihklib_os_open(index)) < 0) {
+      dprintf("%s: error: ihklib_os_open returned %d\n", __func__, fd);
+      ret = fd;
+      should_quit = 1;
+      goto out;
+    }
+
+    if (n <= 0) {
+      dprintf("%s: invalid number(%d) of events\n", __func__, n);
+      ret = -EINVAL;
+      should_quit = 1;
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_AUX_PERF_NUM, n);
+    if (ret) {
+      ret = -errno;
+      dprintf("%s: IHK_OS_AUX_PERF_NUM returned %d\n", __func__, -ret);
+      should_quit = 1;
+      goto out;
+    }
+
+    ret = ioctl(fd, IHK_OS_AUX_PERF_SET, attr);
+    if (ivec == 1 || ret < 0) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        ret = -errno;
+        dprintf("%s: IHK_OS_AUX_PERF_SET returned %d\n", __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+    if (should_quit) return ret;
+    should_quit = 1;
+    int ret_cp = ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    /* try to get perf events */
+    counts = calloc(n, sizeof(unsigned long));
+    if (!counts) return -ENOMEM;
+    ret = ihk_os_perfctl(index, PERF_EVENT_ENABLE);
+    if (ret) goto err;
+    ret = user_fork_exec("nop", &pid);
+    if (ret < 0) goto err;
+    ret = waitpid(pid, &wstatus, 0);
+    if (ret < 0) goto err;
+    pid = -1;
+    ret = ihk_os_perfctl(index, PERF_EVENT_DISABLE);
+    if (ret) goto err;
+    ret = ihk_os_getperfevent(index, counts, n);
+    if (ivec == total_branch - 1) {
+      OKNG(ret == 0, "can get perf event success\n");
+      int fail = 0, i;
+      int count_expected = 1000000;
+      for (i = 0; i < n; i++) {
+        if (counts[i] < count_expected || counts[i] >= count_expected * 1.1) {
+          fail = 1; break;
+        }
+      }
+      OKNG(!fail, "all events counts is within expected range\n");
+    } else {
+      OKNG(!ret, "cannot get perf event\n");
+    }
+
+    should_quit = 0;
+    ret = ret_cp;
+   err:
+    free(counts);
+    if (pid != -1) { user_wait(&pid); linux_kill_mcexec(); }
+    if (should_quit || ivec == total_branch - 1)
+      return ret;
+  }
+  return 0;
 }
 
 int ihk_os_perfctl(int index, int comm)
@@ -6858,15 +7271,13 @@ int ihk_os_getperfevent(int index, unsigned long *counter, int n)
 
   dprintk("%s: enter\n", __func__);
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open returned %d\n",
-      __func__, fd);
+    dprintf("%s: error: ihklib_os_open returned %d\n", __func__, fd);
     ret = fd;
     goto out;
   }
 
   if (n <= 0) {
-    dprintf("%s: invalid number(%d) of events\n",
-      __func__, n);
+    dprintf("%s: invalid number(%d) of events\n", __func__, n);
     ret = -EINVAL;
     goto out;
   }
@@ -6874,8 +7285,7 @@ int ihk_os_getperfevent(int index, unsigned long *counter, int n)
   ret = ioctl(fd, IHK_OS_AUX_PERF_GET, counter);
   if (ret) {
     ret = -errno;
-    dprintf("%s: IHK_OS_AUX_PERF_GET returned %d\n",
-      __func__, -ret);
+    dprintf("%s: IHK_OS_AUX_PERF_GET returned %d\n", __func__, -ret);
     goto out;
   }
 

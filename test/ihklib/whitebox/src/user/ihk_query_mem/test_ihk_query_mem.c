@@ -20,7 +20,7 @@ int main(int argc, char **argv)
   struct mems mems_query = { 0 };
 
   int excess;
-  ret = mems_ls(&mems_input, "MemFree", 0.02);
+  ret = _mems_ls(&mems_input, "MemFree", 0.02, 1UL << 30);
   INTERR(ret, "mems_ls returned %d\n", ret);
 
   excess = mems_input.num_mem_chunks - 4;

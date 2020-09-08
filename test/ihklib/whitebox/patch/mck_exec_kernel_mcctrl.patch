@@ -1,6 +1,6 @@
---- old_CMakeLists.txt	2020-09-01 18:35:56.911084404 +0700
-+++ new_CMakeLists.txt	2020-09-01 18:36:47.386637585 +0700
-@@ -20,9 +20,13 @@
+--- old_CMakeLists.txt	2020-09-08 18:13:36.287292949 +0700
++++ new_CMakeLists.txt	2020-09-08 18:13:23.415464811 +0700
+@@ -20,9 +20,14 @@
  		-I${PROJECT_SOURCE_DIR}/kernel/include
  		-DMCEXEC_PATH=\\"${MCEXEC_PATH}\\"
  		${ARCH_C_FLAGS}
@@ -9,7 +9,8 @@
  	SOURCES
 -		driver.c control.c ikc.c syscall.c procfs.c binfmt_mcexec.c
 -		sysfs.c sysfs_files.c arch/${ARCH}/archdeps.c
-+                ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/driver.c control.c ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/ikc.c 
++                ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/driver.c 
++                ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/control.c ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/ikc.c 
 +                ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/syscall.c ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/procfs.c binfmt_mcexec.c
 +                ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/sysfs.c ../../../ihk/test/ihklib/whitebox/src/driver/mcctrl/sysfs_files.c 
 +                arch/${ARCH}/archdeps.c
