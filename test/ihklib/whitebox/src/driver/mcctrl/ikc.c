@@ -151,8 +151,7 @@ static void mcctrl_wakeup_cb(ihk_os_t os, struct ikc_scd_packet *packet)
 
     /* destroy_ikc_channels must have cleaned up descs */
     if (!usrdata) {
-      pr_err("%s: error: mcctrl_usrdata not found\n",
-        __func__);
+      pr_err("%s: error: mcctrl_usrdata not found\n", __func__);
       return;
     }
 
@@ -241,10 +240,8 @@ out:
   return ret;
 }
 
-
-/* XXX: this runs in atomic context! */
-static int syscall_packet_handler(struct ihk_ikc_channel_desc *c,
-                                  void *__packet, void *__os)
+static int syscall_packet_handler_orig(struct ihk_ikc_channel_desc *c,
+                                       void *__packet, void *__os)
 {
   int ret = 0;
   struct ikc_scd_packet *pisp = __packet;
@@ -285,13 +282,13 @@ static int syscall_packet_handler(struct ihk_ikc_channel_desc *c,
   case SCD_MSG_SYSFS_RESP_STORE:
   case SCD_MSG_SYSFS_RESP_RELEASE:
     sysfsm_packet_handler(__os, pisp->msg, pisp->err,
-        pisp->sysfs_arg1, pisp->sysfs_arg2);
+                          pisp->sysfs_arg1, pisp->sysfs_arg2);
     break;
 
   case SCD_MSG_PROCFS_TID_CREATE:
   case SCD_MSG_PROCFS_TID_DELETE:
     procfsm_packet_handler(__os, pisp->msg, pisp->pid, pisp->arg,
-               pisp->resp_pa);
+                           pisp->resp_pa);
     break;
 
   case SCD_MSG_GET_VDSO_INFO:
@@ -299,7 +296,8 @@ static int syscall_packet_handler(struct ihk_ikc_channel_desc *c,
     break;
 
   case SCD_MSG_EVENTFD:
-    dkprintf("%s: SCD_MSG_EVENTFD,pisp->eventfd_type=%d\n", __FUNCTION__, pisp->eventfd_type);
+    dkprintf("%s: SCD_MSG_EVENTFD,pisp->eventfd_type=%d\n",
+             __FUNCTION__, pisp->eventfd_type);
     mcctrl_eventfd(__os, pisp);
     break;
 
@@ -309,9 +307,10 @@ static int syscall_packet_handler(struct ihk_ikc_channel_desc *c,
 
   default:
     printk(KERN_ERR "mcctrl:syscall_packet_handler:"
-        "unknown message (%d.%d.%d.%d.%d.%#lx)\n",
-        pisp->msg, pisp->ref, pisp->osnum, pisp->pid,
-        pisp->err, pisp->arg);
+           "unknown message (%d.%d.%d.%d.%d.%#lx)\n",
+           pisp->msg, pisp->ref, pisp->osnum, pisp->pid,
+           pisp->err, pisp->arg);
+    ret = -EINVAL;
     break;
   }
 
@@ -320,10 +319,68 @@ out:
    * SCD_MSG_SYSCALL_ONESIDE holds the packet and frees is it
    * mcexec_ret_syscall(), for the rest, free it here.
    */
-  if (msg != SCD_MSG_SYSCALL_ONESIDE) {
+  if (!ret && msg != SCD_MSG_SYSCALL_ONESIDE) {
     ihk_ikc_release_packet((struct ihk_ikc_free_packet *)__packet);
   }
   return ret;
+}
+
+/* XXX: this runs in atomic context! */
+static int syscall_packet_handler(struct ihk_ikc_channel_desc *c,
+                                  void *__packet, void *__os)
+{
+  if (g_ihk_test_mode != TEST_SYSCALL_PACKET_HANDLER)  // Disable test code
+    return syscall_packet_handler_orig(c, __packet, __os);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid parameter" },
+    { -EINVAL, "usrdata not found" },
+    { -EINVAL, "invalid msg" },
+    { 0,       "main case" },
+  };
+
+  int msg_prev = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int ret = 0;
+    struct ikc_scd_packet *pisp = __packet;
+    struct mcctrl_usrdata *usrdata = NULL;
+
+    if (ivec == 0 || (!c || !pisp || !__os || ihk_host_validate_os(__os))) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec <= 2)
+      msg_prev = pisp->msg;
+    else
+      pisp->msg = msg_prev;
+    usrdata = ihk_host_os_get_usrdata(__os);
+    if (ivec == 1 || !usrdata) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        pr_err("%s: error: mcctrl_usrdata not found\n", __func__);
+        return ret;
+      }
+      goto out;
+    }
+
+    if (ivec == 2) pisp->msg = 0;  // fake invalid msg
+    ret = syscall_packet_handler_orig(c, __packet, __os);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 static int dummy_packet_handler(struct ihk_ikc_channel_desc *c,
@@ -366,7 +423,7 @@ int mcctrl_ikc_send(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp)
   };
 
   int ret = 0;
-  
+
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
 
