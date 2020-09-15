@@ -27,6 +27,9 @@ execute_process(COMMAND ${patch_cmd} ${patch_arg})
 set (patch_arg ${mckernel_root}/executer/kernel/mcctrl/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihklib/whitebox/patch/mck_exec_kernel_mcctrl.patch)
 execute_process(COMMAND ${patch_cmd} ${patch_arg})
 
+set (patch_arg ${mckernel_root}/kernel/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihklib/whitebox/patch/mck_kernel.patch)
+execute_process(COMMAND ${patch_cmd} ${patch_arg})
+
 set (cmake_cmd cmake)
 set (cmake_arg -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${WITH_MCK} -DUNAME_R=4.14.0-115.13.1.1chaos.el7a.aarch64 ${mckernel_root})
 execute_process(COMMAND ${cmake_cmd} ${cmake_arg})
@@ -50,6 +53,9 @@ set (patch_arg ${mckernel_root}/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihkl
 execute_process(COMMAND ${patch_cmd} ${patch_arg})
 
 set (patch_arg ${mckernel_root}/executer/kernel/mcctrl/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihklib/whitebox/patch/mck_exec_kernel_mcctrl.patch)
+execute_process(COMMAND ${patch_cmd} ${patch_arg})
+
+set (patch_arg ${mckernel_root}/kernel/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihklib/whitebox/patch/mck_kernel.patch)
 execute_process(COMMAND ${patch_cmd} ${patch_arg})
 
 
@@ -1094,6 +1100,26 @@ foreach(target IN ITEMS
     test_mcctrl_ikc_send
     test_mcctrl_perf_set
     test__mcctrl_control
+    test___ihk_mc_alloc_aligned_pages_node
+    test___kmalloc_consolidate_list
+    test__clear_pt_page
+    test__ihk_mc_alloc_aligned_pages_node
+    test__ihk_mc_perfctr_init
+    test__ihk_pagealloc_large
+    test__page_alloc_rbtree_alloc_pages
+    test__page_alloc_rbtree_free_range
+    test__pagealloc_track_find_entry
+    test__set_pt_page
+    test_ihk_ikc_release_packet
+    test_ihk_mc_get_numa_id
+    test_ihk_mc_map_virtual
+    test_ihk_mc_unmap_virtual
+    test_ihk_numa_alloc_pages
+    test_ihk_pagealloc
+    test_rusage_page_add
+    test_syscall_packet_handler
+    test_vm_range_policy_search
+
     )
   # Add target
   add_executable(${target} src/user/ihk_os_setperfevent/${target}.c)
