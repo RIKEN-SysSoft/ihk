@@ -3681,7 +3681,7 @@ static int __ihk_device_reserve_cpu(struct ihk_host_linux_device_data *data,
   return -1;
 }
 
-ihk_test_mode_t g_ihk_test_mode;
+int g_ihk_test_mode;
 
 /** \brief Set Test mode for IHK API */
 static int __ihk_device_set_test_mode(struct ihk_host_linux_device_data *data,

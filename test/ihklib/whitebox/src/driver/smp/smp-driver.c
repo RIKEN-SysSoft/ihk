@@ -8443,7 +8443,7 @@ static int smp_ihk_online_cpu(int cpu_id)
   return _smp_ihk_write_cpu_sys_file(cpu_id, "1");
 }
 
-ihk_test_mode_t g_ihk_test_mode;
+int g_ihk_test_mode;
 
 static int smp_ihk_set_test_mode(ihk_device_t ihk_dev, unsigned long arg)
 {

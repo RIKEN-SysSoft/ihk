@@ -1,0 +1,58 @@
+--- old_CMakeLists.txt	2020-09-15 19:30:35.513506298 +0700
++++ new_CMakeLists.txt	2020-09-15 19:30:19.977623211 +0700
+@@ -20,6 +20,7 @@
+ 	"${IHK_FULL_SOURCE_DIR}/linux/include"
+ 	"${PROJECT_SOURCE_DIR}/lib/include"
+ 	"${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/include"
++	"${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/include"
+ )
+ if (${ARCH} STREQUAL "x86_64")
+ 	add_compile_options(-mcmodel=large -mno-red-zone -mno-sse)
+@@ -30,25 +31,29 @@
+ endif()
+ 
+ set(MCKERNEL_SRCS
+-	init.c mem.c debug.c mikc.c listeners.c ap.c syscall.c cls.c host.c process.c
++	init.c debug.c mikc.c listeners.c ap.c cls.c process.c
+ 	copy.c waitq.c futex.c timer.c plist.c fileobj.c shmobj.c zeroobj.c
+-	procfs.c devobj.c sysfs.c xpmem.c profile.c freeze.c rbtree.c pager.c
++	procfs.c devobj.c sysfs.c xpmem.c freeze.c rbtree.c pager.c
+ 	gencore.c hugefileobj.c llist.c
+ 
++        ${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/mckernel/host.c
++        ${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/mckernel/mem.c
++	${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/mckernel/profile.c
++	${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/mckernel/syscall.c
+ 	${IHK_FULL_SOURCE_DIR}/ikc/manycore.c
+ 	${IHK_FULL_SOURCE_DIR}/ikc/master.c
+-	${IHK_FULL_SOURCE_DIR}/ikc/queue.c
++	${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/ihk/queue.c
+ 
+ 	${PROJECT_SOURCE_DIR}/lib/abort.c
+ 	${PROJECT_SOURCE_DIR}/lib/bitmap.c
+ 	${PROJECT_SOURCE_DIR}/lib/bitops.c
+-	${PROJECT_SOURCE_DIR}/lib/page_alloc.c
++	${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/mckernel/page_alloc.c
+ 	${PROJECT_SOURCE_DIR}/lib/string.c
+ 	${PROJECT_SOURCE_DIR}/lib/vsprintf.c
+ 
+ 	${IHK_FULL_SOURCE_DIR}/cokernel/smp/ikc.c
+ 	${IHK_FULL_SOURCE_DIR}/cokernel/smp/${ARCH}/dma.c
+-	${IHK_FULL_SOURCE_DIR}/cokernel/smp/${ARCH}/setup.c
++	${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/mckernel/cokernel/smp/arm64/setup.c
+ )
+ 
+ if (ENABLE_UBSAN)
+@@ -97,10 +102,10 @@
+ 		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/irq-gic-v3.c
+ 		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/local.c
+ 		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/memcpy.S
+-		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/memory.c
++		${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/mckernel/arch/arm64/memory.c
+ 		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/memset.S
+ 		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/mikc.c
+-		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/perfctr.c
++		${IHK_FULL_SOURCE_DIR}/test/ihklib/whitebox/src/driver/mckernel/arch/arm64/perfctr.c
+ 		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/perfctr_armv8pmu.c
+ 		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/proc-macros.S
+ 		${PROJECT_SOURCE_DIR}/arch/${ARCH}/kernel/proc.S

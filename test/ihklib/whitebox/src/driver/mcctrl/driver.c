@@ -43,6 +43,8 @@
 
 #define OS_MAX_MINOR 64
 
+#define SCD_MSG_SET_TEST_MODE           0x21
+
 extern long __mcctrl_control(ihk_os_t, unsigned int, unsigned long,
                              struct file *);
 extern int prepare_ikc_channels(ihk_os_t os);
@@ -362,11 +364,20 @@ int mcctrl_os_shutdown_notifier(int os_index)
   return -1;
 }
 
-ihk_test_mode_t g_ihk_test_mode;
+int g_ihk_test_mode;
 
 void mcctrl_os_set_test_mode(int mode)
 {
+  struct ikc_scd_packet isp;
+  memset(&isp, '\0', sizeof isp);
+  isp.msg = SCD_MSG_SET_TEST_MODE;
+  isp.arg = (unsigned long)mode;
+
   g_ihk_test_mode = mode;
+  if (os && os[0]) {
+    mcctrl_ikc_send(os[0], 0, &isp);
+  }
+
   printk("[IHK] mcctrl: set test mode to %d\n", mode);
 }
 
