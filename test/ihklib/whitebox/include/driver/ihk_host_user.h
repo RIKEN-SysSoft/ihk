@@ -215,9 +215,30 @@ typedef enum ihk_test_mode {
   TEST_MCCTRL_PERF_SET                            = 124,
   TEST_MCCTRL_IKC_SEND                            = 125,
   TEST__MCCTRL_CONTROL                            = 126,
+  TEST_SYSCALL_PACKET_HANDLER                     = 127,
+  TEST_IHK_MC_MAP_VIRTUAL                         = 128,
+  TEST_IHK_PAGEALLOC_ALLOC                        = 129,
+  TEST__IHK_PAGEALLOC_LARGE                       = 130,
+  TEST__SET_PT_PAGE                               = 131,
+  TEST__IHK_MC_ALLOC_ALIGNED_PAGES_NODE           = 132,
+  TEST___IHK_MC_ALLOC_ALIGNED_PAGES_NODE          = 133,
+  TEST_VM_RANGE_POLICY_SEARCH                     = 134,
+  TEST_IHK_MC_GET_NUMA_ID                         = 135,
+  TEST_IHK_NUMA_ALLOC_PAGES                       = 136,
+  TEST__PAGE_ALLOC_RBTREE_ALLOC_PAGES             = 137,
+  TEST__PAGE_ALLOC_RBTREE_FREE_RANGE              = 138,
+  TEST_RUSAGE_PAGE_ADD                            = 139,
+  TEST_PROFILE_EVENT_ADD                          = 140,
+  TEST__PAGEALLOC_TRACK_FIND_ENTRY                = 141,
+  TEST__KMALLOC_CONSOLIDATE_LIST                  = 142,
+  TEST_IHK_MC_UNMAP_VIRTUAL                       = 143,
+  TEST__IHK_MC_PERFCTR_INIT                       = 144,
+  TEST_IHK_IKC_RELEASE_PACKET                     = 145,
+  TEST__CLEAR_PT_PAGE                             = 146,
+
   // other API here
 } ihk_test_mode_t;
-extern ihk_test_mode_t g_ihk_test_mode;
+extern int g_ihk_test_mode;
 
 #define IHK_DEVICE_DEBUG_START        0x122900
 #define IHK_DEVICE_DEBUG_END          0x1229ff
