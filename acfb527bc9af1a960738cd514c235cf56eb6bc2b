@@ -1,0 +1,244 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "45de0cf3_091446af",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1688,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "add upper limit check",
+      "range": {
+        "startLine": 1688,
+        "startChar": 0,
+        "endLine": 1688,
+        "endChar": 25
+      },
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "aa30441c_b69a939f",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1773,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "add upper limit check",
+      "range": {
+        "startLine": 1773,
+        "startChar": 0,
+        "endLine": 1773,
+        "endChar": 25
+      },
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "6f84c7a9_9b504ded",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1950,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "add upper limit check",
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "dbde6a2e_70fe204c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2095,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "add upper limit check as well",
+      "range": {
+        "startLine": 2095,
+        "startChar": 0,
+        "endLine": 2095,
+        "endChar": 25
+      },
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "527930f1_e9f48fdf",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 809,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "it\u0027s okay to return EFAULT, since the following ioctl would return -EFAULT if this line doesn\u0027t exist.\nit also follows the convention in which the glibc interface functions of system calls, e.g., read(2), fail with EFAULT when invalid pointer is passed",
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f71d4a07_7fe63e36",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1799,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "it\u0027s okay to return EFAULT, since the following ioctl would return -EFAULT if this line doesn\u0027t exist",
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "2670505c_d2588a52",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1881,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "it\u0027s okay to return EFAULT, since the following ioctl would return -EFAULT if this line doesn\u0027t exist",
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9cdee16d_fe7521ed",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1997,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "it\u0027s okay to return EFAULT, since the following ioctl would return -EFAULT if this line doesn\u0027t exist",
+      "range": {
+        "startLine": 1997,
+        "startChar": 0,
+        "endLine": 1997,
+        "endChar": 16
+      },
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "35dd6bb6_d1d3e776",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2077,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "it\u0027s okay to return EFAULT, since the following ioctl would return -EFAULT if this line doesn\u0027t exist",
+      "range": {
+        "startLine": 2077,
+        "startChar": 0,
+        "endLine": 2077,
+        "endChar": 16
+      },
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "ccacace4_aafa907d",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2268,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "it\u0027s okay to return EFAULT, since the following ioctl would return -EFAULT if this line doesn\u0027t exist",
+      "range": {
+        "startLine": 2268,
+        "startChar": 0,
+        "endLine": 2268,
+        "endChar": 16
+      },
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "8ecc5df0_422e3990",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2302,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "you don\u0027t need to free() here because there\u0027s a free() after \"out:\"",
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "447f9b83_6e4ceb70",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3116,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-09-18T05:39:06Z",
+      "side": 1,
+      "message": "return -EFAULT;\nit also follows the convention in which the glibc interface functions of system calls, e.g., read(2), fail with EFAULT when invalid pointer is passed",
+      "revId": "acfb527bc9af1a960738cd514c235cf56eb6bc2b",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
