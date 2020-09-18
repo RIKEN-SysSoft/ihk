@@ -2315,6 +2315,7 @@ ihk_device_t ihk_register_device(struct ihk_register_device_data *param)
 	}
 
 	dev_data[minor] = data;
+	data->minor = minor;
 
 	printk("IHK: Device %s registered. /dev/%s%d created.\n",
 	       data->name, DEV_DEV_NAME, minor);
