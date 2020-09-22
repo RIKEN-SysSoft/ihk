@@ -106,6 +106,19 @@ typedef enum ihklib_test_mode {
   /* ihk_os_setperfevent */
   TEST_IHK_OS_SETPERFEVENT                         = 34,
 
+  /* ihk_os_perfctl */
+  TEST_IHK_OS_PERFCTL                              = 35,
+
+  /* ihk_os_freeze */
+  TEST_IHK_OS_FREEZE                               = 36,
+
+  /* ihk_os_thaw */
+  TEST_IHK_OS_THAW                                 = 37,
+
+  /* ihk_os_makedumpfile */
+  TEST_IHK_OS_MAKEDUMPFILE                         = 38,
+  TEST_SMP_IHK_OS_DUMP                             = 39,
+
 } ihklib_test_mode_t;
 
 struct ihk_ioctl_desc {

@@ -1,6 +1,7 @@
 #include <errno.h>
-
+#include <sys/wait.h>
 #include <ihklib.h>
+
 #include <user/ihklib_private.h>
 #include <user/okng_user.h>
 
@@ -9,6 +10,7 @@
 #include <blackbox/include/mem.h>
 #include <blackbox/include/params.h>
 #include <blackbox/include/linux.h>
+#include <blackbox/include/msr.h>
 
 int main(int argc, char **argv)
 {
@@ -21,8 +23,19 @@ int main(int argc, char **argv)
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
 
+  int fd = ihklib_device_open(0);
+  INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
+  int test_mode = TEST_IHK_OS_READ_CPU_REGISTER;
+  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
+  INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
+  close(fd); fd = -1;
+
+  struct cpus cpus = { 0 };
   ret = _cpus_reserve(98, -1);
   INTERR(ret, "cpus_reserve returned %d\n", ret);
+
+  ret = cpus_reserved(&cpus);
+  INTERR(ret, "cpus_reserved returned %d\n", ret);
 
   struct mems mems = { 0 };
   int excess;
@@ -57,20 +70,36 @@ int main(int argc, char **argv)
   INTERR(ret, "os_load returned %d\n", ret);
 
   ret = os_kargs();
-  INTERR(ret, "os_kargs returned %d\n", ret);
+	INTERR(ret, "os_kargs returned %d\n", ret);
 
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-  // int fd = ihklib_device_open(0);
-  // INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  // int test_mode = TEST_SMP_IHK_OS_SET_IKC_MAP;
-  // ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
-  // INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
-  // close(fd); fd = -1;
+  fd = ihklib_os_open(0);
+  INTERR(fd < 0, "ihklib_os_open returned %d\n", fd);
+  ret = ioctl(fd, IHK_OS_READ_CPU_REGISTER);
+  INTERR(ret, "ioctl IHK_OS_READ_CPU_REGISTER returned: %d\n", ret);
+  close(fd); fd = -1;
 
- out:
+  out:
+  ret = ihk_os_shutdown(0);
+  INTERR(ret, "return value: %d, expected: %d\n", ret, 0);
 
-//  linux_rmmod(0);
+  ret = os_wait_for_status(IHK_STATUS_INACTIVE);
+  INTERR(ret, "os status didn't change to %d\n",
+         IHK_STATUS_INACTIVE);
+
+  ret = mems_os_release();
+  INTERR(ret, "mems_os_release returned %d\n", ret);
+
+  ret = cpus_os_release();
+  INTERR(ret, "cpus_os_release returned %d\n", ret);
+
+	if (ihk_get_num_os_instances(0)) {
+    ihk_destroy_os(0, os_index);
+  }
+  cpus_release();
+  mems_release();
+  linux_rmmod(0);
   return ret;
 }

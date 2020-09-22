@@ -2902,7 +2902,7 @@ static int smp_ihk_os_set_kargs(ihk_os_t ihk_os, void *priv, char *buf)
   return 0;
 }
 
-int ihk_smp_set_multi_intr_mode(ihk_os_t ihk_os, void *priv, int mode)
+int ihk_smp_set_multi_intr_mode_orig(ihk_os_t ihk_os, void *priv, int mode)
 {
   unsigned long rpa;
   unsigned long size;
@@ -2910,21 +2910,94 @@ int ihk_smp_set_multi_intr_mode(ihk_os_t ihk_os, void *priv, int mode)
   unsigned long pa;
   unsigned long psize;
 
-  if (smp_ihk_os_get_special_addr(ihk_os, priv,
-  IHK_SPADDR_MULTI_INTR_MODE,
-  &rpa, &size)) {
-  return -EINVAL;
+  if (smp_ihk_os_get_special_addr(
+        ihk_os, priv, IHK_SPADDR_MULTI_INTR_MODE, &rpa, &size)) {
+    return -EINVAL;
   }
 
   psize = PAGE_SIZE;
   pa = smp_ihk_os_map_memory(ihk_os, priv, rpa, psize);
-  multi_intr_mode = smp_ihk_map_virtual(ihk_os, priv, pa, psize,
-    NULL, 0);
+  multi_intr_mode = smp_ihk_map_virtual(ihk_os, priv, pa, psize, NULL, 0);
   *multi_intr_mode = mode;
   smp_ihk_unmap_virtual(ihk_os, priv, multi_intr_mode, psize);
   smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
 
   return 0;
+}
+
+int ihk_smp_set_multi_intr_mode(ihk_os_t ihk_os, void *priv, int mode)
+{
+  if (g_ihk_test_mode != TEST_IHK_SMP_SET_MULTI_INTR_MODE)  // Disable test code
+    return ihk_smp_set_multi_intr_mode_orig(ihk_os, priv, mode);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "smp_ihk_os_get_special_addr fail" },
+    { -EINVAL, "smp_ihk_os_map_memory fail" },
+    { -EINVAL, "smp_ihk_map_virtual fail" },
+    { 0,       "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int ret;
+    unsigned long rpa;
+    unsigned long size;
+    int *multi_intr_mode = NULL;
+    unsigned long pa;
+    unsigned long psize;
+
+    if (ivec == 0 ||
+        smp_ihk_os_get_special_addr(
+          ihk_os, priv, IHK_SPADDR_MULTI_INTR_MODE, &rpa, &size)) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    psize = PAGE_SIZE;
+    pa = smp_ihk_os_map_memory(ihk_os, priv, rpa, psize);
+    if (ivec == 1 || !pa) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
+      goto out;
+    }
+
+    multi_intr_mode = smp_ihk_map_virtual(ihk_os, priv, pa, psize, NULL, 0);
+    if (ivec == 2 || !multi_intr_mode) {
+      ret = -EINVAL;
+      if (ivec != 2) {
+        smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
+        return ret;
+      }
+      smp_ihk_unmap_virtual(ihk_os, priv, multi_intr_mode, psize);
+      smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
+      multi_intr_mode = NULL;
+      goto out;
+    }
+
+    *multi_intr_mode = mode;
+    smp_ihk_unmap_virtual(ihk_os, priv, multi_intr_mode, psize);
+    smp_ihk_unmap_memory(ihk_os, priv, pa, psize);
+    ret = 0;
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(multi_intr_mode, "memory mapping succeed\n");
+    } else {
+      OKNG(!multi_intr_mode, "memory mapping fail\n");
+    }
+  }
+
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 int ihk_smp_set_nmi_mode_orig(ihk_os_t ihk_os, void *priv, int mode)
