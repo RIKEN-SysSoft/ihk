@@ -7220,15 +7220,14 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
   return 0;
 }
 
-int ihk_os_perfctl(int index, int comm)
+int ihk_os_perfctl_orig(int index, int comm)
 {
   int ret;
   int fd = -1;
 
   dprintk("%s: enter\n", __func__);
   if ((fd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open returned %d\n",
-      __func__, fd);
+    dprintf("%s: error: ihklib_os_open returned %d\n", __func__, fd);
     ret = fd;
     goto out;
   }
@@ -7241,8 +7240,8 @@ int ihk_os_perfctl(int index, int comm)
     ret = ioctl(fd, IHK_OS_AUX_PERF_DISABLE, 0);
     break;
   case PERF_EVENT_DESTROY: /* stop PA event and
-          * reset # of counters
-          */
+                            * reset # of counters
+                            */
     ret = ioctl(fd, IHK_OS_AUX_PERF_DESTROY, 0);
     break;
   default:
@@ -7250,9 +7249,8 @@ int ihk_os_perfctl(int index, int comm)
     goto out;
   }
   if (ret) {
-    ret = -errno;
-    dprintf("%s: IHK_OS_AUX_PERF_* returned %d\n",
-      __func__, -ret);
+    if (ret != -EINVAL) ret = -errno;
+    dprintf("%s: IHK_OS_AUX_PERF_* returned %d\n", __func__, -ret);
     goto out;
   }
 
@@ -7262,6 +7260,37 @@ int ihk_os_perfctl(int index, int comm)
   }
   dprintk("%s: returning %d\n", __func__, ret);
   return ret;
+}
+
+int ihk_os_perfctl(int index, int comm)
+{
+  if (get_test_mode() != TEST_IHK_OS_PERFCTL)
+    return ihk_os_perfctl_orig(index, comm);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid event type" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+  int comm_prev = comm;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    comm = comm_prev;
+    if (ivec == 0) comm = 1000;  // fake invalid event type
+    ret = ihk_os_perfctl_orig(index, comm);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+  return ret;
+  err:
+  return -EINVAL;
 }
 
 int ihk_os_getperfevent(int index, unsigned long *counter, int n)
@@ -7296,7 +7325,7 @@ int ihk_os_getperfevent(int index, unsigned long *counter, int n)
   return ret;
 }
 
-int ihk_os_freeze(unsigned long *os_set, int n)
+int ihk_os_freeze_orig(unsigned long *os_set, int n)
 {
   int ret;
   int index;
@@ -7312,8 +7341,7 @@ int ihk_os_freeze(unsigned long *os_set, int n)
   for (index = 0; index < n; index++) {
     if (*(os_set + index / 64) & (1ULL << (index % 64))) {
       if ((fd = ihklib_os_open(index)) < 0) {
-        dprintf("%s: error: ihklib_os_open\n",
-          __func__);
+        dprintf("%s: error: ihklib_os_open\n", __func__);
         ret = fd;
         goto out;
       }
@@ -7321,9 +7349,134 @@ int ihk_os_freeze(unsigned long *os_set, int n)
       ret = ioctl(fd, IHK_OS_FREEZE, 0);
       if (ret) {
         ret = -errno;
-        dprintf("%s: IHK_OS_FREEZE "
-          "returned %d\n",
-          __func__, -ret);
+        dprintf("%s: IHK_OS_FREEZE eturned %d\n", __func__, -ret);
+        goto out;
+      }
+
+      close(fd);
+      fd = -1;
+    }
+  }
+  ret = 0;
+ out:
+  if (fd != -1) {
+    close(fd);
+  }
+  return ret;
+}
+
+int ihk_os_freeze(unsigned long *os_set, int n)
+{
+  if (get_test_mode() != TEST_IHK_OS_FREEZE)
+    return ihk_os_freeze_orig(os_set, n);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os_set" },
+    { -EINVAL, "cannot freeze os instance" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+  int index;
+
+  dprintk("%s: enter\n", __func__);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int fd = -1;
+    int should_quit = 0;
+
+    if (n <= 0) {
+      dprintf("%s: invalid length of os bitset(%d)\n", __func__, n);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    if (ivec == 0 || !os_set) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    for (index = 0; index < n; index++) {
+      if (*(os_set + index / 64) & (1ULL << (index % 64))) {
+        if ((fd = ihklib_os_open(index)) < 0) {
+          dprintf("%s: error: ihklib_os_open\n", __func__);
+          ret = fd;
+          goto out;
+        }
+
+        ret = ioctl(fd, IHK_OS_FREEZE, 0);
+        if (ivec == 1 || ret) {
+          ret = -EINVAL;
+          if (ivec != 1) {
+            ret = -errno;
+            dprintf("%s: IHK_OS_FREEZE eturned %d\n", __func__, -ret);
+            should_quit = 1;
+          }
+          goto out;
+        }
+
+        close(fd);
+        fd = -1;
+      }
+    }
+    ret = 0;
+   out:
+    if (fd != -1) {
+      close(fd);
+    }
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    if (ivec != 1)
+      ret = os_wait_for_status(IHK_STATUS_FROZEN);
+    else {
+      ihk_os_thaw(os_set, n);
+      os_wait_for_status(IHK_STATUS_RUNNING);
+    }
+
+    if (ivec == total_branch - 1) {
+      OKNG(ret == 0, "os status is frozen\n");
+    } else {
+      OKNG(ret, "os status is not frozen\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+int ihk_os_thaw_orig(unsigned long *os_set, int n)
+{
+  int ret;
+  int index;
+  int fd = -1;
+
+  dprintk("%s: enter\n", __func__);
+
+  if (n <= 0) {
+    dprintf("%s: invalid length of os bitset(%d)\n", __func__, n);
+    ret = -EINVAL;
+    goto out;
+  }
+
+  for (index = 0; index < n; index++) {
+    if (*(os_set + index / 64) & (1ULL << (index % 64))) {
+      if ((fd = ihklib_os_open(index)) < 0) {
+        dprintf("%s: error: ihklib_os_open\n", __func__);
+        ret = fd;
+        goto out;
+      }
+
+      ret = ioctl(fd, IHK_OS_THAW, 0);
+      if (ret) {
+        ret = -errno;
+        dprintf("%s: IHK_OS_THAW returned %d\n", __func__, -ret);
         goto out;
       }
 
@@ -7341,46 +7494,93 @@ int ihk_os_freeze(unsigned long *os_set, int n)
 
 int ihk_os_thaw(unsigned long *os_set, int n)
 {
+  if (get_test_mode() != TEST_IHK_OS_THAW)
+    return ihk_os_thaw_orig(os_set, n);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os_set" },
+    { -EINVAL, "ioctl fail" },
+    { 0,       "main case" },
+  };
+
   int ret;
   int index;
-  int fd = -1;
 
   dprintk("%s: enter\n", __func__);
 
-  if (n <= 0) {
-    dprintf("%s: invalid length of os bitset(%d)\n", __func__, n);
-    ret = -EINVAL;
-    goto out;
-  }
+  /* try to freeze */
+  ret = ihk_os_freeze(os_set, n);
+  if (ret) return ret;
+  ret = os_wait_for_status(IHK_STATUS_FROZEN);
+  if (ret) return ret;
 
-  for (index = 0; index < n; index++) {
-    if (*(os_set + index / 64) & (1ULL << (index % 64))) {
-      if ((fd = ihklib_os_open(index)) < 0) {
-        dprintf("%s: error: ihklib_os_open\n",
-          __func__);
-        ret = fd;
-        goto out;
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int fd = -1;
+    int should_quit = 0;
+
+    if (ivec == 0 || !os_set) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (n <= 0) {
+      dprintf("%s: invalid length of os bitset(%d)\n", __func__, n);
+      ret = -EINVAL;
+      goto out;
+    }
+
+    for (index = 0; index < n; index++) {
+      if (*(os_set + index / 64) & (1ULL << (index % 64))) {
+        if ((fd = ihklib_os_open(index)) < 0) {
+          dprintf("%s: error: ihklib_os_open\n", __func__);
+          ret = fd;
+          goto out;
+        }
+
+        ret = ioctl(fd, IHK_OS_THAW, 0);
+        if (ivec == 1 || ret) {
+          ret = -EINVAL;
+          if (ivec != 1) {
+            ret = -errno;
+            dprintf("%s: IHK_OS_THAW returned %d\n", __func__, -ret);
+            should_quit = 1;
+          }
+          goto out;
+        }
+
+        close(fd);
+        fd = -1;
       }
-
-      ret = ioctl(fd, IHK_OS_THAW, 0);
-      if (ret) {
-        ret = -errno;
-        dprintf("%s: IHK_OS_THAW "
-          "returned %d\n",
-          __func__, -ret);
-        goto out;
-      }
-
+    }
+    ret = 0;
+   out:
+    if (fd != -1) {
       close(fd);
-      fd = -1;
+    }
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    if (ivec == 1) {
+      ihk_os_freeze(os_set, n);
+      os_wait_for_status(IHK_STATUS_FROZEN);
+    }
+
+    ret = os_wait_for_status(IHK_STATUS_RUNNING);
+
+    if (ivec == total_branch - 1) {
+      OKNG(ret == 0, "frozen os thawed as expected\n");
+    } else {
+      OKNG(ret, "os is not thawed\n");
     }
   }
-  ret = 0;
- out:
-  if (fd != -1) {
-    close(fd);
-  }
   return ret;
+ err:
+  return -EINVAL;
 }
 
 #ifdef ENABLE_MEMDUMP
@@ -7390,7 +7590,154 @@ int ihk_os_thaw(unsigned long *os_set, int n)
 #include <limits.h>
 #include <pwd.h>
 
-int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interactive)
+int test_smp_ihk_os_dump(int index)
+{
+  dumpargs_t args;
+  struct ihk_mem_req req = { 0 };
+  dump_mem_chunks_t *mem_chunks = NULL;
+  int ret, i;
+  int osfd = -1;
+
+  if (get_test_mode() != TEST_SMP_IHK_OS_DUMP)
+    return -EINVAL;
+
+  if ((osfd = ihklib_os_open(index)) < 0) {
+		printf("%s: error: ihklib_os_open returned %d\n", __func__, osfd);
+		return osfd;
+	}
+
+  ret = ihk_os_get_status(index);
+  if (ret < 0) {
+    printf("%s: ihk_os_get_status returned %d\n", __func__, ret);
+    goto err;
+  }
+  if (ret == IHK_STATUS_INACTIVE) {
+    ret = -EINVAL;
+    goto err;
+  }
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 5;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid dump level" },
+    { 0,       "dump query" },
+    { 0,       "dump query all" },
+    { 0,       "dump query phys start" },
+    { 0,       "dump read all" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    long mem_size = 0;
+    int fail = 0;
+
+    if (ivec == 0) {
+      args.cmd = DUMP_SET_LEVEL;
+      args.level = 1000;  // fake level
+      ret = ioctl(osfd, IHK_OS_DUMP, &args);
+    }
+
+    if (ivec == 1) {
+      args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
+      ioctl(osfd, IHK_OS_DUMP, &args);
+      mem_size = args.size;
+
+      mem_chunks = malloc(mem_size);
+      if (!mem_chunks) {
+        ret = -ENOMEM;
+        goto err;
+      }
+      memset(mem_chunks, 0, mem_size);
+      args.cmd = DUMP_QUERY;
+      args.buf = (void *)mem_chunks;
+      ret = ioctl(osfd, IHK_OS_DUMP, &args);
+    }
+
+    if (ivec == 2) {
+      args.cmd = DUMP_QUERY_ALL;
+      ret = ioctl(osfd, IHK_OS_DUMP, &args);
+    }
+
+    if (ivec == 3) {
+      args.cmd = DUMP_QUERY_PHYS_START;
+      args.buf = malloc(sizeof(uint64_t));
+      if (!args.buf) {
+        ret = -ENOMEM;
+        goto err;
+      }
+      ret = ioctl(osfd, IHK_OS_DUMP, &args);
+    }
+
+    if (ivec == 4) {
+      args.cmd = DUMP_QUERY_ALL;
+      ioctl(osfd, IHK_OS_DUMP, &args);
+      args.cmd = DUMP_READ_ALL;
+      args.buf = malloc(args.size);
+      if (!args.buf) {
+        ret = -ENOMEM;
+        goto err;
+      }
+      ret = ioctl(osfd, IHK_OS_DUMP, &args);
+    }
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == 1) {
+      req.num_chunks = 0;
+      ret = ioctl(osfd, IHK_OS_QUERY_MEM, &req);
+      if (ret) goto err;
+      req.sizes = calloc(req.num_chunks, sizeof(size_t));
+      ret = -ENOMEM;
+      if (!req.sizes) goto err;
+      req.numa_ids = calloc(req.num_chunks, sizeof(int));
+      if (!req.numa_ids) goto err;
+      ret = ioctl(osfd, IHK_OS_QUERY_MEM, &req);
+      if (ret) goto err;
+      OKNG(req.num_chunks == mem_chunks->nr_chunks, "check # of mem chunks\n");
+      for (i = 0; i < mem_chunks->nr_chunks; i++) {
+        if (mem_chunks->chunks[i].size != req.sizes[i]) {
+          fail = 1; break;
+        }
+      }
+      OKNG(!fail, "check mem chunks size\n");
+
+      free(mem_chunks); mem_chunks = NULL;
+      free(req.sizes); free(req.numa_ids);
+      memset(&req, 0, sizeof(struct ihk_mem_req));
+    }
+
+    if (ivec == 2) {
+      OKNG(args.size > 0, "check os mem size\n");
+    }
+
+    if (ivec == 3) {
+      uint64_t start_addr = *(uint64_t *)args.buf;
+      free(args.buf);
+      OKNG(start_addr > 0, "check mem start address\n");
+    }
+
+    if (ivec == 4) {
+      OKNG(args.size > 0, "check os mem size\n");
+      OKNG(args.buf, "check buf\n");
+      free(args.buf);
+    }
+
+    memset(&args, 0, sizeof(dumpargs_t));
+  }
+  return 0;
+ err:
+  close(osfd);
+  if (req.sizes) free(req.sizes);
+  if (req.numa_ids) free(req.numa_ids);
+  if (mem_chunks) free(mem_chunks);
+  return ret;
+}
+
+int ihk_os_makedumpfile_orig(
+    int index, char *dump_file, int dump_level, int interactive)
 {
   int ret;
   static char hname[HOST_NAME_MAX+1];
@@ -7414,22 +7761,21 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   char physmem_name[PHYSMEM_NAME_SIZE];
   int osfd = -1;
   char *token;
+  int dump_nmi_sent = 0;
 
   dprintk("%s: enter\n", __func__);
   dprintf("%s: index=%d,dump_file=%s,dump_level=%d,interactive=%d\n",
-    __func__, index, dump_file, dump_level, interactive);
+          __func__, index, dump_file, dump_level, interactive);
 
   if ((osfd = ihklib_os_open(index)) < 0) {
-    dprintf("%s: error: ihklib_os_open returned %d\n",
-      __func__, osfd);
+    dprintf("%s: error: ihklib_os_open returned %d\n", __func__, osfd);
     ret = osfd;
     goto out;
   }
 
   ret = ihk_os_get_status(index);
   if (ret < 0) {
-    dprintf("%s: ihk_os_get_status returned %d\n",
-      __func__, ret);
+    dprintf("%s: ihk_os_get_status returned %d\n", __func__, ret);
     goto out;
   }
 
@@ -7441,24 +7787,21 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   t = time(NULL);
   if (t == (time_t)-1) {
     ret = -errno;
-    dprintf("%s: error: time returned %d\n",
-      __func__, -ret);
+    dprintf("%s: error: time returned %d\n", __func__, -ret);
     goto out;
   }
 
   tm = localtime(&t);
   if (!tm) {
     ret = -EINVAL;
-    dprintf("%s: error: localtime failed\n",
-      __func__);
+    dprintf("%s: error: localtime failed\n", __func__);
     goto out;
   }
 
   error = gethostname(hname, sizeof(hname));
   if (error != 0) {
     ret = -errno;
-    dprintf("%s: error: gethostname returned %d\n",
-      __func__, -ret);
+    dprintf("%s: error: gethostname returned %d\n", __func__, -ret);
     goto out;
   }
 
@@ -7466,8 +7809,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   pw = getpwuid(getuid());
   if (pw == NULL) {
     ret = -errno;
-    dprintf("%s: error: getpwuid returned %d\n",
-      __func__, -ret);
+    dprintf("%s: error: getpwuid returned %d\n", __func__, -ret);
     goto out;
   }
 
@@ -7476,8 +7818,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   error = ioctl(osfd, IHK_OS_DUMP, &args);
   if (error != 0) {
     ret = -errno;
-    dprintf("%s: error: DUMP_SET_LEVEL returned %d\n",
-      __func__, -ret);
+    dprintf("%s: error: DUMP_SET_LEVEL returned %d\n", __func__, -ret);
     goto out;
   }
 
@@ -7485,19 +7826,18 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   error = ioctl(osfd, IHK_OS_DUMP, &args);
   if (error != 0) {
     ret = -errno;
-    dprintf("%s: error: DUMP_NMI returned %d\n",
-      __func__, -ret);
+    dprintf("%s: error: DUMP_NMI returned %d\n", __func__, -ret);
     goto out;
   }
+  dump_nmi_sent = 1;
 
   args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
   args.size = 0;
   error = ioctl(osfd, IHK_OS_DUMP, &args);
   if (error != 0) {
     ret = -errno;
-    dprintf("%s: error: "
-      "DUMP_QUERY_NUM_MEM_AREAS returned %d\n",
-      __func__, -ret);
+    dprintf("%s: error: DUMP_QUERY_NUM_MEM_AREAS returned %d\n",
+            __func__, -ret);
     goto out;
   }
 
@@ -7505,8 +7845,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   mem_chunks = malloc(mem_size);
   if (!mem_chunks) {
     ret = -ENOMEM;
-    dprintf("%s: error: alloating mem_chunks\n",
-      __func__);
+    dprintf("%s: error: alloating mem_chunks\n", __func__);
     goto out;
   }
 
@@ -7517,19 +7856,15 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   error = ioctl(osfd, IHK_OS_DUMP, &args);
   if (error != 0) {
     ret = -errno;
-    dprintf("%s: error: DUMP_QUERY_MEM_AREAS returned %d\n",
-      __func__, -ret);
+    dprintf("%s: error: DUMP_QUERY_MEM_AREAS returned %d\n", __func__, -ret);
     goto out;
   }
 
   phys_size = 0;
-  dprintf("%s: nr chunks: %d\n",
-    __func__, mem_chunks->nr_chunks);
+  dprintf("%s: nr chunks: %d\n", __func__, mem_chunks->nr_chunks);
   for (i = 0; i < mem_chunks->nr_chunks; ++i) {
     dprintf("%s: 0x%lx:%lu\n",
-        __FUNCTION__,
-        mem_chunks->chunks[i].addr,
-        mem_chunks->chunks[i].size);
+            __FUNCTION__, mem_chunks->chunks[i].addr, mem_chunks->chunks[i].size);
     phys_size += mem_chunks->chunks[i].size;
   }
 
@@ -7554,8 +7889,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
     ret = access(dump_file, W_OK);
     if (ret) {
       ret = -errno;
-      dprintf("%s: %s is inaccessible: %d\n",
-        __func__, dump_file, -ret);
+      dprintf("%s: %s is inaccessible: %d\n", __func__, dump_file, -ret);
       token[0] = '/';
       goto out;
     }
@@ -7566,7 +7900,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   if (!abfd) {
     ret = -EINVAL;
     dprintf("%s: bfd_fopen failed: %s\n",
-      __func__, bfd_errmsg(bfd_get_error()));
+            __func__, bfd_errmsg(bfd_get_error()));
     goto out;
   }
 
@@ -7574,7 +7908,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   if (!ok) {
     ret = -EINVAL;
     dprintf("%s: error: bfd_set_format: %s\n",
-      __func__, bfd_errmsg(bfd_get_error()));
+            __func__, bfd_errmsg(bfd_get_error()));
     goto out;
   }
 
@@ -7584,27 +7918,24 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
     scn = bfd_make_section_anyway(abfd, "date");
     if (!scn) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_make_section_anyway(date): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_make_section_anyway(date): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     ok = bfd_set_section_size(abfd, scn, cpsize);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_size: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_size: %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_flags: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_flags: %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
   }
@@ -7614,27 +7945,24 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
     scn = bfd_make_section_anyway(abfd, "hostname");
     if (!scn) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_make_section_anyway(hostname): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_make_section_anyway(hostname): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     ok = bfd_set_section_size(abfd, scn, cpsize);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_size: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_size: %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_flags: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_flags: %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
   }
@@ -7644,27 +7972,24 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
     scn = bfd_make_section_anyway(abfd, "user");
     if (!scn) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_make_section_anyway(user): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_make_section_anyway(user): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     ok = bfd_set_section_size(abfd, scn, cpsize);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_size: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_size: %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_flags: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_flags: %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
   }
@@ -7673,66 +7998,58 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   scn = bfd_make_section_anyway(abfd, "physchunks");
   if (!scn) {
     ret = -EINVAL;
-    dprintf("%s: error: "
-      "bfd_make_section_anyway(physchunks): %s\n",
-      __func__, bfd_errmsg(bfd_get_error()));
+    dprintf("%s: error: bfd_make_section_anyway(physchunks): %s\n",
+            __func__, bfd_errmsg(bfd_get_error()));
     goto out;
   }
 
   ok = bfd_set_section_size(abfd, scn, mem_size);
   if (!ok) {
     ret = -EINVAL;
-    dprintf("%s: error: "
-      "bfd_set_section_size: %s\n",
-      __func__, bfd_errmsg(bfd_get_error()));
+    dprintf("%s: error: bfd_set_section_size: %s\n",
+            __func__, bfd_errmsg(bfd_get_error()));
     goto out;
   }
 
   ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
   if (!ok) {
     ret = -EINVAL;
-    dprintf("%s: error: "
-      "bfd_set_section_flags: %s\n",
-      __func__, bfd_errmsg(bfd_get_error()));
+    dprintf("%s: error: bfd_set_section_flags: %s\n",
+            __func__, bfd_errmsg(bfd_get_error()));
     goto out;
   }
 
   for (i = 0; i < mem_chunks->nr_chunks; ++i) {
-
     physmem_name_buf = malloc(PHYSMEM_NAME_SIZE);
-    memset(physmem_name_buf,0,PHYSMEM_NAME_SIZE);
+    memset(physmem_name_buf, 0, PHYSMEM_NAME_SIZE);
     sprintf(physmem_name_buf, "physmem%d",i);
 
     /* Physical memory contents section */
     scn = bfd_make_section_anyway(abfd, physmem_name_buf);
     if (!scn) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_make_section_anyway(physmem): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_make_section_anyway(physmem): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     if (interactive) {
       ok = bfd_set_section_size(abfd, scn, PAGE_SIZE);
-    }
-    else {
+    } else {
       ok = bfd_set_section_size(abfd, scn, mem_chunks->chunks[i].size);
     }
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_size: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_size: %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_flags: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_flags: %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
@@ -7744,9 +8061,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
     ok = bfd_set_section_contents(abfd, scn, date, 0, scn->size);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_contents(date): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_contents(date): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
   }
@@ -7756,9 +8072,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
     ok = bfd_set_section_contents(abfd, scn, hname, 0, scn->size);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_contents(hostname): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_contents(hostname): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
   }
@@ -7768,9 +8083,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
     ok = bfd_set_section_contents(abfd, scn, pw->pw_name, 0, scn->size);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_contents(user): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_contents(user): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
   }
@@ -7780,9 +8094,8 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
     ok = bfd_set_section_contents(abfd, scn, mem_chunks, 0, mem_size);
     if (!ok) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_set_section_contents(physchunks): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_set_section_contents(physchunks): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
   }
@@ -7793,24 +8106,22 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
   }
 
   for (i = 0; i < mem_chunks->nr_chunks; ++i) {
-
     phys_offset = 0;
 
-    memset(physmem_name,0,sizeof(physmem_name));
-    sprintf(physmem_name, "physmem%d",i);
+    memset(physmem_name, 0, sizeof(physmem_name));
+    sprintf(physmem_name, "physmem%d", i);
 
     scn = bfd_get_section_by_name(abfd, physmem_name);
     if (!scn) {
       ret = -EINVAL;
-      dprintf("%s: error: "
-        "bfd_get_section_by_name(physmem_name): %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+      dprintf("%s: error: bfd_get_section_by_name(physmem_name): %s\n",
+              __func__, bfd_errmsg(bfd_get_error()));
       goto out;
     }
 
     for (addr = mem_chunks->chunks[i].addr;
-        addr < (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size);
-        addr += cpsize) {
+         addr < (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size);
+         addr += cpsize) {
 
       cpsize = (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size) - addr;
       if (cpsize > bsize) {
@@ -7825,17 +8136,15 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
       error = ioctl(osfd, IHK_OS_DUMP, &args);
       if (error != 0) {
         ret = -errno;
-        dprintf("%s: error: DUMP_HEAD returned %d\n",
-          __func__, -ret);
+        dprintf("%s: error: DUMP_HEAD returned %d\n", __func__, -ret);
         goto out;
       }
 
       ok = bfd_set_section_contents(abfd, scn, buf, phys_offset, cpsize);
       if (!ok) {
         ret = -EINVAL;
-        dprintf("%s: error: "
-          "bfd_set_section_contents(physmem): %s\n",
-          __func__, bfd_errmsg(bfd_get_error()));
+        dprintf("%s: error: bfd_set_section_contents(physmem): %s\n",
+                __func__, bfd_errmsg(bfd_get_error()));
         goto out;
       }
 
@@ -7845,26 +8154,698 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
   ret = 0;
  out:
+  if (dump_nmi_sent) {
+    args.cmd = DUMP_NMI_CONT;
+    ioctl(osfd, IHK_OS_DUMP, &args);
+  }
+
   if (abfd) {
     ok = bfd_close(abfd);
     if (!ok) {
       ret = -EINVAL;
       dprintf("%s: error: bfd_close: %s\n",
-        __func__, bfd_errmsg(bfd_get_error()));
+              __func__, bfd_errmsg(bfd_get_error()));
     }
   }
   if (osfd >= 0) {
     error = close(osfd);
     if (error) {
       ret = -errno;
-      dprintf("%s: error: close: %s\n",
-        __func__, strerror(-ret));
+      dprintf("%s: error: close: %s\n", __func__, strerror(-ret));
     }
   }
   return ret;
 }
+
+int ihk_os_makedumpfile(int index, char *dump_file,
+                        int dump_level, int interactive)
+{
+  if (get_test_mode() != TEST_IHK_OS_MAKEDUMPFILE)
+    return ihk_os_makedumpfile_orig(index, dump_file, dump_level, interactive);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 32;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "branch 1" },
+    { -EINVAL, "branch 2" },
+    { -EINVAL, "branch 3" },
+    { -EINVAL, "branch 4" },
+    { -EINVAL, "branch 5" },
+    { -EINVAL, "branch 6" },
+    { -EINVAL, "branch 7" },
+    { -EINVAL, "branch 8" },
+    { -EINVAL, "branch 9" },
+    { -EINVAL, "branch 10" },
+    { -EINVAL, "branch 11" },
+    { -EINVAL, "branch 12" },
+    { -EINVAL, "branch 13" },
+    { -EINVAL, "branch 14" },
+    { -EINVAL, "branch 15" },
+    { -EINVAL, "branch 16" },
+    { -EINVAL, "branch 17" },
+    { -EINVAL, "branch 18" },
+    { -EINVAL, "branch 19" },
+    { -EINVAL, "branch 20" },
+    { -EINVAL, "branch 21" },
+    { -EINVAL, "branch 22" },
+    { -EINVAL, "branch 23" },
+    { -EINVAL, "branch 24" },
+    { -EINVAL, "branch 25" },
+    { -EINVAL, "branch 26" },
+    { -EINVAL, "branch 27" },
+    { -EINVAL, "branch 28" },
+    { -EFAULT, "branch 29" },
+    { -EINVAL, "branch 30" },
+    { -EINVAL, "branch 31" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+  int error, i;
+
+  dprintk("%s: enter\n", __func__);
+  dprintf("%s: index=%d,dump_file=%s,dump_level=%d,interactive=%d\n",
+          __func__, index, dump_file, dump_level, interactive);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    static char hname[HOST_NAME_MAX + 1];
+    bfd *abfd = NULL;
+    bfd_boolean ok;
+    asection *scn;
+    dumpargs_t args;
+    unsigned long phys_size, phys_offset;
+    size_t bsize;
+    void *buf = NULL;
+    uintptr_t addr;
+    size_t cpsize;
+    time_t t;
+    struct tm *tm = NULL;
+    char *date;
+    struct passwd *pw = NULL;
+    dump_mem_chunks_t *mem_chunks = NULL;
+    long mem_size;
+    char *physmem_name_buf = NULL;
+    int osfd = -1;
+    char *token;
+    int dump_nmi_sent = 0;
+    int should_quit = 0;
+
+    if ((osfd = ihklib_os_open(index)) < 0) {
+      dprintf("%s: error: ihklib_os_open returned %d\n", __func__, osfd);
+      ret = osfd;
+      should_quit = 1;
+      goto out;
+    }
+
+    ret = ihk_os_get_status(index);
+    if (ivec == 0 || ret < 0) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        dprintf("%s: ihk_os_get_status returned %d\n", __func__, ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    if (ret == IHK_STATUS_INACTIVE) {
+      ret = -EINVAL;
+      should_quit = 1;
+      goto out;
+    }
+
+    t = time(NULL);
+    if (t == (time_t)-1) {
+      ret = -errno;
+      dprintf("%s: error: time returned %d\n", __func__, -ret);
+      should_quit = 1;
+      goto out;
+    }
+
+    tm = localtime(&t);
+    if (!tm) {
+      ret = -EINVAL;
+      dprintf("%s: error: localtime failed\n", __func__);
+      should_quit = 1;
+      goto out;
+    }
+
+    error = gethostname(hname, sizeof(hname));
+    if (error != 0) {
+      ret = -errno;
+      dprintf("%s: error: gethostname returned %d\n", __func__, -ret);
+      should_quit = 1;
+      goto out;
+    }
+
+    /* TODO: might be redundant */
+    pw = getpwuid(getuid());
+    if (pw == NULL) {
+      ret = -errno;
+      dprintf("%s: error: getpwuid returned %d\n", __func__, -ret);
+      should_quit = 1;
+      goto out;
+    }
+
+    args.cmd = DUMP_SET_LEVEL;
+    args.level = dump_level;
+    error = ioctl(osfd, IHK_OS_DUMP, &args);
+    if (ivec == 1 || error != 0) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        ret = -errno;
+        dprintf("%s: error: DUMP_SET_LEVEL returned %d\n", __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    args.cmd = DUMP_NMI;
+    error = ioctl(osfd, IHK_OS_DUMP, &args);
+    dump_nmi_sent = 1;
+    if (ivec == 2 || error != 0) {
+      ret = -EINVAL;
+      if (ivec != 2) {
+        ret = -errno;
+        dprintf("%s: error: DUMP_NMI returned %d\n", __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
+    args.size = 0;
+    error = ioctl(osfd, IHK_OS_DUMP, &args);
+    if (ivec == 3 || error != 0) {
+      ret = -EINVAL;
+      if (ivec != 3) {
+        ret = -errno;
+        dprintf("%s: error: DUMP_QUERY_NUM_MEM_AREAS returned %d\n",
+                __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    mem_size = args.size;
+    mem_chunks = malloc(mem_size);
+    if (!mem_chunks) {
+      ret = -ENOMEM;
+      dprintf("%s: error: alloating mem_chunks\n", __func__);
+      should_quit = 1;
+      goto out;
+    }
+    memset(mem_chunks, 0, args.size);
+
+    args.cmd = DUMP_QUERY_MEM_AREAS;
+    args.buf = (void *)mem_chunks;
+    error = ioctl(osfd, IHK_OS_DUMP, &args);
+    if (ivec == 4 || error != 0) {
+      ret = -EINVAL;
+      if (ivec != 4) {
+        ret = -errno;
+        dprintf("%s: error: DUMP_QUERY_MEM_AREAS returned %d\n", __func__, -ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    phys_size = 0;
+    dprintf("%s: nr chunks: %d\n", __func__, mem_chunks->nr_chunks);
+    if (ivec == 5 || mem_chunks->nr_chunks < 1) {
+      ret = -EINVAL;
+      if (ivec != 5) should_quit = 1;
+      goto out;
+    }
+    for (i = 0; i < mem_chunks->nr_chunks; ++i) {
+      dprintf("%s: 0x%lx:%lu\n",
+              __FUNCTION__, mem_chunks->chunks[i].addr, mem_chunks->chunks[i].size);
+      phys_size += mem_chunks->chunks[i].size;
+    }
+
+    bsize = 0x100000;
+    buf = malloc(bsize);
+    if (!buf) {
+      ret = -ENOMEM;
+      dprintf("%s: error: allocating buf\n", __func__);
+      should_quit = 1;
+      goto out;
+    }
+
+    bfd_init();
+
+    if (dump_file == NULL) {
+      ret = -EFAULT;
+      should_quit = 1;
+      goto out;
+    }
+
+    token = strrchr(dump_file, '/');
+    if (token) {
+      token[0] = 0;
+      ret = access(dump_file, W_OK);
+      if (ret) {
+        ret = -errno;
+        dprintf("%s: %s is inaccessible: %d\n", __func__, dump_file, -ret);
+        token[0] = '/';
+        goto out;
+      }
+      token[0] = '/';
+    }
+
+    abfd = bfd_fopen(dump_file, NULL, "w", -1);
+    if (ivec == 6 || !abfd) {
+      ret = -EINVAL;
+      if (ivec != 6) {
+        dprintf("%s: bfd_fopen failed: %s\n",
+                __func__, bfd_errmsg(bfd_get_error()));
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ok = bfd_set_format(abfd, bfd_object);
+    if (ivec == 7 || !ok) {
+      ret = -EINVAL;
+      if (ivec != 7) {
+        dprintf("%s: error: bfd_set_format: %s\n",
+                __func__, bfd_errmsg(bfd_get_error()));
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    date = asctime(tm);
+    if (date) {
+      cpsize = strlen(date) - 1;  /* exclude trailing '\n' */
+      scn = bfd_make_section_anyway(abfd, "date");
+      if (ivec == 8 || !scn) {
+        ret = -EINVAL;
+        if (ivec != 8) {
+          dprintf("%s: error: bfd_make_section_anyway(date): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      ok = bfd_set_section_size(abfd, scn, cpsize);
+      if (ivec == 9 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 9) {
+          dprintf("%s: error: bfd_set_section_size: %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
+      if (ivec == 10 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 10) {
+          dprintf("%s: error: bfd_set_section_flags: %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+    } else {
+      ret = -EFAULT;
+      should_quit = 1;
+      goto out;
+    }
+
+    error = gethostname(hname, sizeof(hname));
+    if (!error) {
+      cpsize = strlen(hname);
+      scn = bfd_make_section_anyway(abfd, "hostname");
+      if (ivec == 11 || !scn) {
+        ret = -EINVAL;
+        if (ivec != 11) {
+          dprintf("%s: error: bfd_make_section_anyway(hostname): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      ok = bfd_set_section_size(abfd, scn, cpsize);
+      if (ivec == 12 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 12) {
+          dprintf("%s: error: bfd_set_section_size: %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
+      if (ivec == 13 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 13) {
+          dprintf("%s: error: bfd_set_section_flags: %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+    }
+    pw = getpwuid(getuid());
+    if (pw) {
+      cpsize = strlen(pw->pw_name);
+      scn = bfd_make_section_anyway(abfd, "user");
+      if (ivec == 14 || !scn) {
+        ret = -EINVAL;
+        if (ivec != 14) {
+          dprintf("%s: error: bfd_make_section_anyway(user): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      ok = bfd_set_section_size(abfd, scn, cpsize);
+      if (ivec == 15 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 15) {
+          dprintf("%s: error: bfd_set_section_size: %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      ok = bfd_set_section_flags(abfd, scn, SEC_HAS_CONTENTS);
+      if (ivec == 16 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 16) {
+          dprintf("%s: error: bfd_set_section_flags: %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+    }
+
+    /* Add section for physical memory chunks information */
+    scn = bfd_make_section_anyway(abfd, "physchunks");
+    if (ivec == 17 || !scn) {
+      ret = -EINVAL;
+      if (ivec != 17) {
+        dprintf("%s: error: bfd_make_section_anyway(physchunks): %s\n",
+                __func__, bfd_errmsg(bfd_get_error()));
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ok = bfd_set_section_size(abfd, scn, mem_size);
+    if (ivec == 18 || !ok) {
+      ret = -EINVAL;
+      if (ivec != 18) {
+        dprintf("%s: error: bfd_set_section_size: %s\n",
+                __func__, bfd_errmsg(bfd_get_error()));
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
+    if (ivec == 19 || !ok) {
+      ret = -EINVAL;
+      if (ivec != 19) {
+        dprintf("%s: error: bfd_set_section_flags: %s\n",
+                __func__, bfd_errmsg(bfd_get_error()));
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    for (i = 0; i < mem_chunks->nr_chunks; ++i) {
+      physmem_name_buf = malloc(PHYSMEM_NAME_SIZE);
+      if (!physmem_name_buf) {
+        ret = -ENOMEM;
+        should_quit = 1;
+        goto out;
+      }
+      memset(physmem_name_buf, 0, PHYSMEM_NAME_SIZE);
+      sprintf(physmem_name_buf, "physmem%d", i);
+
+      /* Physical memory contents section */
+      scn = bfd_make_section_anyway(abfd, physmem_name_buf);
+      if (ivec == 20 || !scn) {
+        ret = -EINVAL;
+        if (ivec != 20) {
+          dprintf("%s: error: bfd_make_section_anyway(physmem): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        free(physmem_name_buf); physmem_name_buf = NULL;
+        goto out;
+      }
+
+      free(physmem_name_buf); physmem_name_buf = NULL;
+
+      if (interactive) {
+        ok = bfd_set_section_size(abfd, scn, PAGE_SIZE);
+      } else {
+        ok = bfd_set_section_size(abfd, scn, mem_chunks->chunks[i].size);
+      }
+      if (ivec == 21 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 21) {
+          dprintf("%s: error: bfd_set_section_size: %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      ok = bfd_set_section_flags(abfd, scn, SEC_ALLOC|SEC_HAS_CONTENTS);
+      if (ivec == 22 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 22) {
+          dprintf("%s: error: bfd_set_section_flags: %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      scn->vma = mem_chunks->chunks[i].addr;
+    }
+
+    scn = bfd_get_section_by_name(abfd, "date");
+    if (scn) {
+      ok = bfd_set_section_contents(abfd, scn, date, 0, scn->size);
+      if (ivec == 23 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 23) {
+          dprintf("%s: error: bfd_set_section_contents(date): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+    } else {
+      should_quit = 1;
+      goto out;
+    }
+
+    scn = bfd_get_section_by_name(abfd, "hostname");
+    if (scn) {
+      ok = bfd_set_section_contents(abfd, scn, hname, 0, scn->size);
+      if (ivec == 24 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 24) {
+          dprintf("%s: error: bfd_set_section_contents(hostname): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+    } else {
+      should_quit = 1;
+      goto out;
+    }
+
+    scn = bfd_get_section_by_name(abfd, "user");
+    if (scn) {
+      ok = bfd_set_section_contents(abfd, scn, pw->pw_name, 0, scn->size);
+      if (ivec == 25 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 25) {
+          dprintf("%s: error: bfd_set_section_contents(user): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+    } else {
+      should_quit = 1;
+      goto out;
+    }
+
+    scn = bfd_get_section_by_name(abfd, "physchunks");
+    if (scn) {
+      ok = bfd_set_section_contents(abfd, scn, mem_chunks, 0, mem_size);
+      if (ivec == 26 || !ok) {
+        ret = -EINVAL;
+        if (ivec != 26) {
+          dprintf("%s: error: bfd_set_section_contents(physchunks): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+    } else {
+      should_quit = 1;
+      goto out;
+    }
+
+    if (interactive) {
+      ret = 0;
+      goto out;
+    }
+
+    for (i = 0; i < mem_chunks->nr_chunks; ++i) {
+      phys_offset = 0;
+
+      physmem_name_buf = malloc(PHYSMEM_NAME_SIZE);
+      memset(physmem_name_buf, 0, PHYSMEM_NAME_SIZE);
+      sprintf(physmem_name_buf, "physmem%d", i);
+
+      scn = bfd_get_section_by_name(abfd, physmem_name_buf);
+      free(physmem_name_buf); physmem_name_buf = NULL;
+      if (ivec == 27 || !scn) {
+        ret = -EINVAL;
+        if (ivec != 27) {
+          dprintf("%s: error: bfd_get_section_by_name(physmem_name): %s\n",
+                  __func__, bfd_errmsg(bfd_get_error()));
+          should_quit = 1;
+        }
+        goto out;
+      }
+
+      if (ivec == 28 || mem_chunks->chunks[i].size == 0) {
+        ret = -EFAULT;
+        if (ivec != 28) should_quit = 1;
+        goto out;
+      }
+      for (addr = mem_chunks->chunks[i].addr;
+           addr < (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size);
+           addr += cpsize) {
+
+        cpsize = (mem_chunks->chunks[i].addr + mem_chunks->chunks[i].size) - addr;
+        if (cpsize > bsize) {
+          cpsize = bsize;
+        }
+
+        args.cmd = DUMP_READ;
+        args.start = addr;
+        args.size = cpsize;
+        args.buf = buf;
+
+        error = ioctl(osfd, IHK_OS_DUMP, &args);
+        if (ivec == 29 || error != 0) {
+          ret = -EINVAL;
+          if (ivec != 29) {
+            ret = -errno;
+            dprintf("%s: error: DUMP_HEAD returned %d\n", __func__, -ret);
+            should_quit = 1;
+          }
+          goto out;
+        }
+
+        ok = bfd_set_section_contents(abfd, scn, buf, phys_offset, cpsize);
+        if (ivec == 30 || !ok) {
+          ret = -EINVAL;
+          if (ivec != 30) {
+            dprintf("%s: error: bfd_set_section_contents(physmem): %s\n",
+                    __func__, bfd_errmsg(bfd_get_error()));
+            should_quit = 1;
+          }
+          goto out;
+        }
+
+        phys_offset += cpsize;
+      }
+    }
+
+    ret = 0;
+   out:
+    if (physmem_name_buf) free(physmem_name_buf);
+    should_quit = 1;
+
+    if (dump_nmi_sent) {
+      args.cmd = DUMP_NMI_CONT;
+      ioctl(osfd, IHK_OS_DUMP, &args);
+    }
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec > 8) {
+      OKNG(bfd_get_section_by_name(abfd, "date"), "date section is created\n");
+    }
+    if (ivec > 11) {
+      OKNG(bfd_get_section_by_name(abfd, "hostname"),
+           "hostname section is created\n");
+    }
+    if (ivec > 14) {
+      OKNG(bfd_get_section_by_name(abfd, "user"), "user section is created\n");
+    }
+    if (ivec > 17) {
+      OKNG(bfd_get_section_by_name(abfd, "physchunks"),
+           "physchunks section is created\n");
+    }
+    if (ivec > 20) {
+      for (i = 0; i < mem_chunks->nr_chunks; ++i) {
+        physmem_name_buf = malloc(PHYSMEM_NAME_SIZE);
+        memset(physmem_name_buf, 0, PHYSMEM_NAME_SIZE);
+        sprintf(physmem_name_buf, "physmem%d", i);
+        scn = bfd_get_section_by_name(abfd, physmem_name_buf);
+        free(physmem_name_buf);
+        OKNG(scn, "physmem%d section is created\n", i);
+
+        if (ivec <= 22) break;
+      }
+    }
+    should_quit = 0;
+
+   err:
+    if (mem_chunks) free(mem_chunks);
+    if (buf) free(buf);
+
+    if (abfd) {
+      bfd_set_format(abfd, bfd_object);
+      ok = bfd_close(abfd);
+      if (!ok) {
+        ret = -EINVAL;
+        printf("%s: error: bfd_close: %s\n",
+               __func__, bfd_errmsg(bfd_get_error()));
+        should_quit = 1;
+      }
+    }
+    if (osfd >= 0) {
+      error = close(osfd);
+      if (error) {
+        ret = -errno;
+        printf("%s: error: close: %s\n", __func__, strerror(-ret));
+        should_quit = 1;
+      }
+    }
+
+    if (should_quit) return ret? ret : -EINVAL;
+  }
+  return 0;
+}
 #else /* ENABLE_MEMDUMP */
-int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interactive)
+int ihk_os_makedumpfile(int index, char *dump_file,
+                        int dump_level, int interactive)
 {
   dprintk("%s: enter\n", __func__);
   fprintf(stderr, "dump is not supported.\n");
