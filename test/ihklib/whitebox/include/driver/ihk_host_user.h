@@ -236,6 +236,31 @@ typedef enum ihk_test_mode {
   TEST_IHK_IKC_RELEASE_PACKET                     = 145,
   TEST__CLEAR_PT_PAGE                             = 146,
 
+  /* ihk_os_perfctl */
+  TEST_MCCTRL_PERF_ENABLE                         = 147,
+  TEST_MCCTRL_PERF_DISABLE                        = 148,
+
+  /* ihk_os_getperfevent */
+  TEST_MCCTRL_PERF_GET                            = 149,
+
+  /* ihk_os_freeze */
+  TEST__IHK_OS_FREEZE                             = 150,
+  TEST_SMP_IHK_OS_SEND_MULTI_INTR                 = 151,
+  TEST_IHK_SMP_SET_MULTI_INTR_MODE                = 152,
+  TEST__IHK_OS_IOCTL_PERM                         = 153,
+  TEST_IHK_HOST_OS_IOCTL                          = 154,
+
+  /* ihk_os_thaw */
+  TEST__IHK_OS_THAW                               = 155,
+
+  /* ihk_os_makedumpfile */
+  TEST__IHK_OS_DUMP                               = 156,
+  TEST_GET_DUMP_NUM_MEM_AREAS                     = 157,
+
+  /* ihk_os_read_cpu_register */
+  TEST_IHK_OS_READ_CPU_REGISTER                   = 158,
+  TEST__MCCTRL_OS_READ_WRITE_CPU_REGISTER         = 159,
+
   // other API here
 } ihk_test_mode_t;
 extern int g_ihk_test_mode;
@@ -297,6 +322,7 @@ extern int g_ihk_test_mode;
 #define IHK_OS_AUX_PERF_DISABLE    0x11290104
 #define IHK_OS_AUX_PERF_DESTROY    0x11290105
 #define IHK_OS_GETRUSAGE           0x11290106
+#define IHK_OS_READ_CPU_REGISTER   0x11290107
 
 #define FLAG_IHK_OS_SHUTDOWN_FORCE    0x40000000
 

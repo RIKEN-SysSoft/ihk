@@ -1940,7 +1940,9 @@ void ihk_os_eventfd(ihk_os_t data, int type)
   spin_unlock_irqrestore(&os->event_list_lock, flags);
 }
 
-static int __ihk_os_dump(struct ihk_host_linux_os_data *data, void __user *uargsp) {
+static int __ihk_os_dump_orig(struct ihk_host_linux_os_data *data,
+                              void __user *uargsp)
+{
   dumpargs_t args;
   int error = -EFAULT;
 
@@ -1958,9 +1960,60 @@ static int __ihk_os_dump(struct ihk_host_linux_os_data *data, void __user *uargs
   return error;
 }
 
-static int __ihk_os_freeze(struct ihk_host_linux_os_data *data)
+static int __ihk_os_dump(struct ihk_host_linux_os_data *data,
+                         void __user *uargsp)
 {
-  int ret = 0;
+  if (g_ihk_test_mode != TEST__IHK_OS_DUMP)  // Disable test code
+    return __ihk_os_dump_orig(data, uargsp);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance" },
+    { -EINVAL, "invalid ops dump" },
+    { 0,       "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    dumpargs_t args;
+    int error = -EFAULT;
+
+    if (ivec == 0 || (!data || ihk_host_validate_os(data))) {
+      error = -EINVAL;
+      if (ivec != 0) return error;
+      goto out;
+    }
+
+    if (copy_from_user(&args, uargsp, sizeof(args))) {
+      return -EFAULT;
+    }
+
+    if (ivec == 1 || !data->ops->dump) {
+      error = -EINVAL;
+      if (ivec != 1) return error;
+      goto out;
+    }
+
+    error = (*data->ops->dump)(data, data->priv, &args);
+
+    if (copy_to_user(uargsp, &args, sizeof(args))) {
+      return -EFAULT;
+    }
+
+   out:
+    BRANCH_RET_CHK(error, b_infos[ivec].expected);
+  }
+  return 0;
+ err:
+  return -EINVAL;
+}
+
+static int __ihk_os_freeze_orig(struct ihk_host_linux_os_data *data)
+{
+  int ret = -EINVAL;
 
   enum ihk_os_status status = __ihk_os_status(data);
 
@@ -1993,9 +2046,95 @@ static int __ihk_os_freeze(struct ihk_host_linux_os_data *data)
   return ret;
 }
 
-static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
+static int __ihk_os_freeze(struct ihk_host_linux_os_data *data)
 {
+  if (g_ihk_test_mode != TEST__IHK_OS_FREEZE)  // Disable test code
+    return __ihk_os_freeze_orig(data);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 5;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance" },
+    { -EINVAL, "invalid os status" },
+    { -EBUSY,  "os instance is busy" },
+    { -EINVAL, "invalid freeze handle" },
+    { 0,       "main case" },
+  };
+
   int ret = 0;
+  int status_prev, param_status_prev;
+  void *ops_freeze_prev;
+  int *cpus_status_prev = NULL;
+  int n_cpus;
+  int i = 0;
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data || ihk_host_validate_os(data))) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec == 1) {
+      setup_monitor(data);
+      if (!data->monitor) return -ENOSYS;
+      n_cpus = data->monitor->num_processors;
+      cpus_status_prev = kmalloc(n_cpus * sizeof(int), GFP_KERNEL);
+      if (!cpus_status_prev) return -ENOMEM;
+      for (i = 0; i < n_cpus; i++) {
+        cpus_status_prev[i] = data->monitor->cpu[i].status;
+      }
+      ops_freeze_prev = data->ops->freeze;
+      data->ops->get_smp_status(data, &status_prev, &param_status_prev);
+
+      data->ops->set_smp_status(data, 3, 1);
+    }
+
+    if (ivec == 2) {
+      data->ops->set_smp_status(data, 3, 3);
+      data->monitor->cpu[0].status = IHK_OS_MONITOR_KERNEL_FREEZING;
+    }
+
+    if (ivec == 3) {
+      data->ops->set_smp_status(data, 3, 3);
+      data->ops->freeze = NULL;
+    }
+
+    ret = __ihk_os_freeze_orig(data);
+
+   out:
+    if (ivec > 0 && ivec != total_branch - 1) {
+      /* reset os and cpus status */
+      data->ops->set_smp_status(data, status_prev, param_status_prev);
+      for (i = 0; i < n_cpus; i++) {
+        data->monitor->cpu[i].status = cpus_status_prev[i];
+      }
+      data->ops->freeze = ops_freeze_prev;
+    }
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    ret = ihk_os_wait_for_status((ihk_os_t)data, IHK_OS_STATUS_FROZEN, 0, 100);
+    if (ivec == total_branch - 1) {
+      OKNG(ret == 0, "os status is frozen\n");
+    } else {
+      OKNG(ret, "os status is not frozen\n");
+    }
+  }
+
+ rel:
+  kfree(cpus_status_prev);
+  return ret;
+ err:
+  ret = -EINVAL;
+  goto rel;
+}
+
+static int __ihk_os_thaw_orig(struct ihk_host_linux_os_data *data)
+{
+  int ret = -EINVAL;
   enum ihk_os_status status = __ihk_os_status(data);
 
   switch (status) {
@@ -2007,17 +2146,15 @@ static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
   case IHK_OS_STATUS_SHUTDOWN:
   case IHK_OS_STATUS_FAILED:
   case IHK_OS_STATUS_HUNGUP:
-    pr_err("%s: error: invalid os status: %d\n",
-           __func__, status);
+    pr_err("%s: error: invalid os status: %d\n", __func__, status);
     ret = -EINVAL;
     goto out;
   case IHK_OS_STATUS_FREEZING:
     /* wait 10 sec for frozen */
     pr_info("%s: waiting for frozen...\n", __func__);
-    if (ihk_os_wait_for_status((ihk_os_t)data, IHK_OS_STATUS_FROZEN,
-             0, 100) != 0) {
-      pr_info("%s: warning: wait for frozen timeouted\n",
-             __func__);
+    if (ihk_os_wait_for_status(
+          (ihk_os_t)data, IHK_OS_STATUS_FROZEN, 0, 100) != 0) {
+      pr_info("%s: warning: wait for frozen timeouted\n", __func__);
     }
     break;
   case IHK_OS_STATUS_FROZEN:
@@ -2031,6 +2168,88 @@ static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
 
  out:
   return ret;
+}
+
+static int __ihk_os_thaw(struct ihk_host_linux_os_data *data)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_THAW)  // Disable test code
+     return __ihk_os_thaw_orig(data);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance" },
+    { -EINVAL, "invalid os status" },
+    { -EINVAL, "invalid ops thaw" },
+    { 0,       "main case" },
+  };
+
+  int ret = 0;
+  int status_prev, param_status_prev;
+  void *ops_thaw_prev;
+  int *cpus_status_prev = NULL;
+  int n_cpus;
+  int i = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec == 0 || (!data || ihk_host_validate_os(data))) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec == 1) {
+      setup_monitor(data);
+      if (!data->monitor) return -ENOSYS;
+      n_cpus = data->monitor->num_processors;
+      cpus_status_prev = kmalloc(n_cpus * sizeof(int), GFP_KERNEL);
+      if (!cpus_status_prev) return -ENOMEM;
+      for (i = 0; i < n_cpus; i++) {
+        cpus_status_prev[i] = data->monitor->cpu[i].status;
+      }
+      ops_thaw_prev = data->ops->thaw;
+      data->ops->get_smp_status(data, &status_prev, &param_status_prev);
+
+      data->ops->set_smp_status(data, 3, 1);
+    }
+
+    if (ivec == 2) {
+      data->ops->set_smp_status(data, 3, 3);
+      data->monitor->cpu[0].status = IHK_OS_MONITOR_KERNEL_FREEZING;
+      data->ops->thaw = NULL;
+    }
+
+    ret = __ihk_os_thaw_orig(data);
+
+   out:
+    if (ivec > 0 && ivec != total_branch - 1) {
+      /* reset os and cpus status */
+      data->ops->set_smp_status(data, status_prev, param_status_prev);
+      for (i = 0; i < n_cpus; i++) {
+        data->monitor->cpu[i].status = cpus_status_prev[i];
+      }
+      data->ops->thaw = ops_thaw_prev;
+    }
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    ret = ihk_os_wait_for_status((ihk_os_t)data, IHK_OS_STATUS_RUNNING, 0, 100);
+    if (ivec == total_branch - 1) {
+      OKNG(ret == 0, "os status is thawed successfully\n");
+    } else {
+      OKNG(ret, "os status is not thawed\n");
+    }
+  }
+
+ rel:
+  kfree(cpus_status_prev);
+  return ret;
+ err:
+  ret = -EINVAL;
+  goto rel;
 }
 
 static int __ihk_os_get_usage(struct ihk_host_linux_os_data *data, unsigned long arg)
@@ -2112,7 +2331,7 @@ static long __ihk_os_ioctl_call_aux(struct ihk_host_linux_os_data *os,
   return -EINVAL;
 }
 
-static int __ihk_os_ioctl_perm(unsigned int request)
+static int __ihk_os_ioctl_perm_orig(unsigned int request)
 {
   int ret = 0;
   kuid_t euid;
@@ -2140,15 +2359,13 @@ static int __ihk_os_ioctl_perm(unsigned int request)
     if (request >= IHK_OS_DEBUG_START &&
       request <= IHK_OS_DEBUG_END) {
       break;
-    }
-    else if (request >= IHK_OS_AUX_CALL_START &&
+    } else if (request >= IHK_OS_AUX_CALL_START &&
                request <= IHK_OS_AUX_CALL_END) {
       break;
     }
 
     euid = current_euid();
-    dprintf("%s: request=0x%x, euid=%u\n",
-      __FUNCTION__, request, euid.val);
+    dprintf("%s: request=0x%x, euid=%u\n", __FUNCTION__, request, euid.val);
     if (euid.val) {
       ret = -EPERM;
     }
@@ -2157,6 +2374,38 @@ static int __ihk_os_ioctl_perm(unsigned int request)
   dprintf("%s: request=0x%x, ret=%d\n", __FUNCTION__, request, ret);
 
   return ret;
+}
+
+static int __ihk_os_ioctl_perm(unsigned int request)
+{
+  if (g_ihk_test_mode != TEST__IHK_OS_IOCTL_PERM)  // Disable test code
+    return __ihk_os_ioctl_perm_orig(request);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "debugging request" },
+    { 0, "main case" },
+  };
+
+  int ret;
+  unsigned int request_prev = request;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    request = request_prev;
+    if (ivec == 0) request = IHK_OS_DEBUG_START;
+
+    ret = __ihk_os_ioctl_perm_orig(request);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+  return ret;
+ err:
+  return -EPERM;
 }
 
 static int os_smp_status_target;
@@ -2403,9 +2652,9 @@ static int __ihk_os_get_status(struct ihk_host_linux_os_data *os,
   return ret;
 }
 
-/** \brief ioctl handling for a OS file */
-static long ihk_host_os_ioctl(struct file *file, unsigned int request,
-                              unsigned long arg)
+#define IMP_PF_INJECTION_CTRL1_EL0		sys_reg(3, 3, 11, 6, 1)
+static long ihk_host_os_ioctl_orig(struct file *file, unsigned int request,
+                                   unsigned long arg)
 {
   int ret = -EINVAL;
   struct ihk_host_linux_os_data *data;
@@ -2419,7 +2668,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
   ret = __ihk_os_ioctl_perm(request);
   if (ret) {
     dprintf("%s: __ihk_os_ioctl_perm(0x%x) error(%d)\n",
-      __FUNCTION__, request, ret);
+            __FUNCTION__, request, ret);
     return ret;
   }
 
@@ -2521,6 +2770,15 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
     ret = __ihk_os_get_num_numa_nodes(data);
     break;
 
+  case IHK_OS_READ_CPU_REGISTER:
+    {
+      struct ihk_os_cpu_register desc;
+      memset(&desc, 0, sizeof(desc));
+      desc.addr_ext = IMP_PF_INJECTION_CTRL1_EL0;
+      ret = ihk_os_read_cpu_register(data, 0, &desc);
+    }
+    break;
+
   case IHK_OS_QUERY_FREE_MEM:
     ret = __ihk_os_query_free_mem(data);
     break;
@@ -2562,22 +2820,22 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
   case IHK_OS_FREEZE:
     ret = __ihk_os_freeze(data);
-    dkprintf("__ihk_os_freeze(ret=%d)\n",ret);
+    dkprintf("__ihk_os_freeze(ret=%d)\n", ret);
     break;
 
   case IHK_OS_THAW:
     ret = __ihk_os_thaw(data);
-    dkprintf("__ihk_os_thaw  (ret=%d)\n",ret);
+    dkprintf("__ihk_os_thaw  (ret=%d)\n", ret);
     break;
 
   case IHK_OS_GET_USAGE:
     ret = __ihk_os_get_usage(data, arg);
-    dkprintf("__ihk_os_get_usage  (ret=%d)\n",ret);
+    dkprintf("__ihk_os_get_usage  (ret=%d)\n", ret);
     break;
 
   case IHK_OS_GET_CPU_USAGE:
     ret = __ihk_os_get_cpu_usage(data, arg);
-    dkprintf("__ihk_os_get_cpu_usage  (ret=%d)\n",ret);
+    dkprintf("__ihk_os_get_cpu_usage  (ret=%d)\n", ret);
     break;
 
   case IHK_OS_READ_KADDR:
@@ -2585,10 +2843,8 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
     break;
 
   default:
-    if (request >= IHK_OS_DEBUG_START &&
-        request <= IHK_OS_DEBUG_END) {
-      ret = __ihk_os_ioctl_debug_request(data,
-                                         request, arg);
+    if (request >= IHK_OS_DEBUG_START && request <= IHK_OS_DEBUG_END) {
+      ret = __ihk_os_ioctl_debug_request(data, request, arg);
     } else if (request >= IHK_OS_AUX_CALL_START &&
                request <= IHK_OS_AUX_CALL_END) {
       ret = __ihk_os_ioctl_call_aux(data, request, arg, file);
@@ -2597,6 +2853,65 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
   }
 
   return ret;
+}
+
+/** \brief ioctl handling for a OS file */
+static long ihk_host_os_ioctl(struct file *file, unsigned int request,
+                              unsigned long arg)
+{
+  if (g_ihk_test_mode != TEST_IHK_HOST_OS_IOCTL)  // Disable test code
+    return ihk_host_os_ioctl_orig(file, request, arg);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid file private data" },
+    { -EINVAL, "invalid os data" },
+    { -EINVAL, "os debugging request" },
+    { 0,       "main case" },
+  };
+
+  int ret = -EINVAL;
+  unsigned int request_prev = request;
+  int ret_cp = 0;
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_host_linux_os_data *data;
+    struct ihk_file *ifile;
+
+    request = request_prev;
+
+    ifile = file->private_data;
+    if (ivec == 0 || !ifile) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    data = ifile->osdata;
+    if (ivec == 1 || !data) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+    }
+
+    if (ivec == 2) request = IHK_OS_DEBUG_END;
+
+    ret = ihk_host_os_ioctl_orig(file, request, arg);
+    if (ret > 0) {
+      ret_cp = ret;
+      ret = 0;
+    }
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+    ret = ret_cp;
+  }
+
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 /** \brief write handling for a OS file */
@@ -5076,16 +5391,15 @@ int ihk_os_clear_kernel_call_handlers(ihk_os_t ihk_os)
   return 0;
 }
 
-int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
-    struct ihk_os_cpu_register *desc)
+int ihk_os_read_cpu_register_orig(ihk_os_t ihk_os, int cpu,
+                                  struct ihk_os_cpu_register *desc)
 {
   int ret;
   struct ihk_host_linux_os_data *os = ihk_os;
 
   ret = ihk_host_validate_os((ihk_os_t)os);
   if (ret) {
-    pr_err("%s: error: invalid os: %lx\n",
-           __func__, (unsigned long)os);
+    pr_err("%s: error: invalid os: %lx\n", __func__, (unsigned long)os);
     return ret;
   }
 
@@ -5096,6 +5410,73 @@ int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
 
   return os->kernel_handlers->read_cpu_register(ihk_os, cpu, desc);
 }
+
+int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
+                             struct ihk_os_cpu_register *desc)
+{
+  if (g_ihk_test_mode != TEST_IHK_OS_READ_CPU_REGISTER)  // Disable test code
+    return ihk_os_read_cpu_register_orig(ihk_os, cpu, desc);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance" },
+    { -EINVAL, "invalid parameter" },
+    { -EINVAL, "invalid kernel handlers" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_host_linux_os_data *os = ihk_os;
+    ret = ihk_host_validate_os((ihk_os_t)os);
+
+    if (ivec == 0 || ret) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        pr_err("%s: error: invalid os: %lx\n", __func__, (unsigned long)os);
+        return ret;
+      }
+      goto out;
+    }
+
+    if (ivec == 1 ||
+        (!os || !desc || cpu < 0 ||
+         cpu >= os->ops->get_cpu_info(os, os->priv)->n_cpus)) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+    }
+
+    if (ivec == 2 ||
+        (!os->kernel_handlers ||
+         !os->kernel_handlers->read_cpu_register)) {
+      ret = -EINVAL;
+      if (ivec != 2) return ret;
+      goto out;
+    }
+
+    ret = os->kernel_handlers->read_cpu_register(ihk_os, cpu, desc);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(atomic_read(&desc->sync) == 1, "check sync count\n");
+    } else {
+      OKNG(desc->val == 0, "reading cpu register fail\n");
+      OKNG(atomic_read(&desc->sync) == 0, "check sync count\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
 
 int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
     struct ihk_os_cpu_register *desc)

@@ -580,11 +580,11 @@ void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p)
     ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
 
     if (ivec == total_branch - 1) {
-      OKNG(count_pkt_pool_after == count_pkt_pool_prev + 1,
-           "# of packets in pool should be increased by 1\n");
+      OKNG(count_pkt_pool_after == count_pkt_pool_prev + 1 || count_pkt_pool_after <= 1,
+           "check # of packets in pool.\n");
     } else {
-      OKNG(count_pkt_pool_after == count_pkt_pool_prev,
-           "# of packets in pool should be unchanged\n");
+      OKNG(count_pkt_pool_after == count_pkt_pool_prev || !count_pkt_pool_after,
+           "check # of packets in pool\n");
     }
   }
  err:

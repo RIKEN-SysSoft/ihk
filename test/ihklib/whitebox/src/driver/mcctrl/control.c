@@ -2461,7 +2461,7 @@ long mcctrl_perf_set(ihk_os_t os, struct ihk_perf_event_attr *__user arg)
   return -EINVAL;
 }
 
-long mcctrl_perf_get(ihk_os_t os, unsigned long *__user arg)
+long mcctrl_perf_get_orig(ihk_os_t os, unsigned long *__user arg)
 {
   struct mcctrl_usrdata *usrdata = ihk_host_os_get_usrdata(os);
   struct ikc_scd_packet isp;
@@ -2479,7 +2479,7 @@ long mcctrl_perf_get(ihk_os_t os, unsigned long *__user arg)
 
   for (i = 0; i < usrdata->perf_event_num; i++) {
     perf_desc = kmalloc(sizeof(struct mcctrl_perf_ctrl_desc),
-            GFP_KERNEL);
+                        GFP_KERNEL);
     if (!perf_desc) {
       return -ENOMEM;
     }
@@ -2494,13 +2494,13 @@ long mcctrl_perf_get(ihk_os_t os, unsigned long *__user arg)
     isp.arg = virt_to_phys(perf_desc);
 
     for (j = 0; j < info->n_cpus; j++) {
-      ret = mcctrl_ikc_send_wait(os, j, &isp,
-          msecs_to_jiffies(10000),
-          wakeup_desc_of_perf_desc(perf_desc),
-          &need_free, 1, perf_desc);
+      ret = mcctrl_ikc_send_wait(
+              os, j, &isp,
+              msecs_to_jiffies(10000),
+              wakeup_desc_of_perf_desc(perf_desc),
+              &need_free, 1, perf_desc);
       if (ret < 0) {
-        pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n",
-          __func__, ret);
+        pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n", __func__, ret);
         if (need_free)
           kfree(perf_desc);
         return ret;
@@ -2512,8 +2512,7 @@ long mcctrl_perf_get(ihk_os_t os, unsigned long *__user arg)
     }
     kfree(perf_desc);
     if (copy_to_user(&arg[i], &value_sum, sizeof(unsigned long))) {
-      printk("%s: error: copying read_value to user\n",
-             __func__);
+      printk("%s: error: copying read_value to user\n", __func__);
       return -EINVAL;
     }
     value_sum = 0;
@@ -2522,7 +2521,128 @@ long mcctrl_perf_get(ihk_os_t os, unsigned long *__user arg)
   return 0;
 }
 
-long mcctrl_perf_enable(ihk_os_t os)
+long mcctrl_perf_get(ihk_os_t os, unsigned long *__user arg)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_PERF_GET)  // Disable test code
+    return mcctrl_perf_get_orig(os, arg);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 7;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance" },
+    { -EINVAL, "not found usrdata" },
+    { -EINVAL, "invalid cpu info" },
+    { -EINVAL, "invalid perf_event_num" },
+    { -EINVAL, "mcctrl_ikc_send_wait fail" },
+    { -EFAULT, "perf_desc error" },
+    { 0,       "main case" },
+  };
+
+  int ret = 0;
+  int i = 0, j = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_usrdata *usrdata = NULL;
+    struct ikc_scd_packet isp;
+    struct perf_ctrl_desc *perf_desc = NULL;
+    struct ihk_cpu_info *info = NULL;
+    unsigned long value_sum = 0;
+    int need_free;
+    int should_quit = 0;
+
+    if (ivec == 0 || (!os || ihk_host_validate_os(os))) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    usrdata = ihk_host_os_get_usrdata(os);
+    if (ivec == 1 || !usrdata) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        pr_err("%s: error: mcctrl_usrdata not found\n", __func__);
+        return ret;
+      }
+      goto out;
+    }
+
+    info = ihk_os_get_cpu_info(os);
+    if (ivec == 2 || (!info || info->n_cpus < 1)) {
+      ret = -EINVAL;
+      if (ivec != 2) return ret;
+      goto out;
+    }
+
+    if (ivec == 3 || usrdata->perf_event_num < 1) {
+      ret = -EINVAL;
+      if (ivec != 3) return ret;
+      goto out;
+    }
+    for (i = 0; i < usrdata->perf_event_num; i++) {
+      perf_desc = kmalloc(sizeof(struct mcctrl_perf_ctrl_desc),
+                          GFP_KERNEL);
+      if (!perf_desc) {
+        return -ENOMEM;
+      }
+      memset(perf_desc, '\0', sizeof(struct perf_ctrl_desc));
+
+      perf_desc->ctrl_type = PERF_CTRL_GET;
+      perf_desc->err = 0;
+      perf_desc->target_cntr = i + ARCH_PERF_COUNTER_START;
+
+      memset(&isp, '\0', sizeof(struct ikc_scd_packet));
+      isp.msg = SCD_MSG_PERF_CTRL;
+      isp.arg = virt_to_phys(perf_desc);
+
+      for (j = 0; j < info->n_cpus; j++) {
+        ret = mcctrl_ikc_send_wait(
+                os, j, &isp,
+                msecs_to_jiffies(10000),
+                wakeup_desc_of_perf_desc(perf_desc),
+                &need_free, 1, perf_desc);
+        if (ivec == 4 || ret < 0) {
+          ret = -EINVAL;
+          if (ivec != 4) {
+            pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n", __func__, ret);
+            if (need_free)
+              kfree(perf_desc);
+            return ret;
+          }
+          goto out;
+        }
+
+        if (ivec != 5 && perf_desc->err == 0) {
+          value_sum += perf_desc->read_value;
+        } else {  // ivec = 5 goes here
+          ret = -EFAULT;
+          if (ivec != 5) should_quit = 1;
+          kfree(perf_desc);
+          goto out;
+        }
+      }
+      kfree(perf_desc);
+      if (copy_to_user(&arg[i], &value_sum, sizeof(unsigned long))) {
+        printk("%s: error: copying read_value to user\n", __func__);
+        return -EINVAL;
+      }
+      value_sum = 0;
+    }
+    ret = 0;
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (should_quit) return ret;
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+long mcctrl_perf_enable_orig(ihk_os_t os)
 {
   struct mcctrl_usrdata *usrdata = ihk_host_os_get_usrdata(os);
   struct ikc_scd_packet isp;
@@ -2556,13 +2676,13 @@ long mcctrl_perf_enable(ihk_os_t os)
   isp.arg = virt_to_phys(perf_desc);
 
   for (j = 0; j < info->n_cpus; j++) {
-    ret = mcctrl_ikc_send_wait(os, j, &isp, 0,
-             wakeup_desc_of_perf_desc(perf_desc),
-             &need_free, 1, perf_desc);
+    ret = mcctrl_ikc_send_wait(
+            os, j, &isp, 0,
+            wakeup_desc_of_perf_desc(perf_desc),
+            &need_free, 1, perf_desc);
 
     if (ret < 0) {
-      pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n",
-        __func__, ret);
+      pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n", __func__, ret);
       if (need_free)
         kfree(perf_desc);
       return -EINVAL;
@@ -2580,7 +2700,117 @@ long mcctrl_perf_enable(ihk_os_t os)
   return 0;
 }
 
-long mcctrl_perf_disable(ihk_os_t os)
+long mcctrl_perf_enable(ihk_os_t os)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_PERF_ENABLE)  // Disable test code
+    return mcctrl_perf_enable_orig(os);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 6;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance" },
+    { -EINVAL, "not found usrdata" },
+    { -EINVAL, "invalid cpu info" },
+    { -EINVAL, "mcctrl_ikc_send_wait fail" },
+    { -EFAULT, "perf_desc error" },
+    { 0,       "main case" },
+  };
+
+  int ret = 0;
+  int i = 0, j = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_usrdata *usrdata = NULL;
+    struct ikc_scd_packet isp;
+    struct perf_ctrl_desc *perf_desc = NULL;
+    struct ihk_cpu_info *info = NULL;
+    unsigned long cntr_mask = 0;
+    int need_free;
+    int should_quit = 0;
+
+    if (ivec == 0 || (!os || ihk_host_validate_os(os))) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    usrdata = ihk_host_os_get_usrdata(os);
+    if (ivec == 1 || !usrdata) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        pr_err("%s: error: mcctrl_usrdata not found\n", __func__);
+        return ret;
+      }
+      goto out;
+    }
+
+    for (i = 0; i < usrdata->perf_event_num; i++) {
+      cntr_mask |= 1UL << (i + ARCH_PERF_COUNTER_START);
+    }
+    perf_desc = kmalloc(sizeof(struct mcctrl_perf_ctrl_desc), GFP_KERNEL);
+    if (!perf_desc) {
+      return -ENOMEM;
+    }
+    memset(perf_desc, '\0', sizeof(struct perf_ctrl_desc));
+
+    perf_desc->ctrl_type = PERF_CTRL_ENABLE;
+    perf_desc->err = 0;
+    perf_desc->target_cntr_mask = cntr_mask;
+
+    memset(&isp, '\0', sizeof(struct ikc_scd_packet));
+    isp.msg = SCD_MSG_PERF_CTRL;
+    isp.arg = virt_to_phys(perf_desc);
+
+    info = ihk_os_get_cpu_info(os);
+    if (ivec == 2 || (!info || info->n_cpus < 1)) {
+      ret = -EINVAL;
+      if (ivec != 2) return ret;
+      goto out;
+    }
+    for (j = 0; j < info->n_cpus; j++) {
+      ret = mcctrl_ikc_send_wait(
+              os, j, &isp, 0,
+              wakeup_desc_of_perf_desc(perf_desc),
+              &need_free, 1, perf_desc);
+
+      if (ivec == 3 || ret < 0) {
+        ret = -EINVAL;
+        if (ivec != 3) {
+          pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n", __func__, ret);
+          if (need_free)
+            kfree(perf_desc);
+          return ret;
+        }
+        goto out;
+      }
+
+      if (ivec == 4 || perf_desc->err < 0) {
+        ret = -EFAULT;
+        if (ivec != 4) {
+          ret = perf_desc->err;
+          should_quit = 1;
+        }
+        goto out;
+      }
+    }
+    ret = 0;
+
+   out:
+    if (perf_desc) kfree(perf_desc);
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+long mcctrl_perf_disable_orig(ihk_os_t os)
 {
   struct mcctrl_usrdata *usrdata = ihk_host_os_get_usrdata(os);
   struct ikc_scd_packet isp;
@@ -2614,12 +2844,12 @@ long mcctrl_perf_disable(ihk_os_t os)
   isp.arg = virt_to_phys(perf_desc);
 
   for (j = 0; j < info->n_cpus; j++) {
-    ret = mcctrl_ikc_send_wait(os, j, &isp, 0,
-        wakeup_desc_of_perf_desc(perf_desc),
-        &need_free, 1, perf_desc);
+    ret = mcctrl_ikc_send_wait(
+            os, j, &isp, 0,
+            wakeup_desc_of_perf_desc(perf_desc),
+            &need_free, 1, perf_desc);
     if (ret < 0) {
-      pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n",
-        __func__, ret);
+      pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n", __func__, ret);
       if (need_free)
         kfree(perf_desc);
       return -EINVAL;
@@ -2634,6 +2864,115 @@ long mcctrl_perf_disable(ihk_os_t os)
   kfree(perf_desc);
 
   return 0;
+}
+
+long mcctrl_perf_disable(ihk_os_t os)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_PERF_DISABLE)  // Disable test code
+    return mcctrl_perf_disable_orig(os);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 6;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance" },
+    { -EINVAL, "not found usrdata" },
+    { -EINVAL, "invalid cpu info" },
+    { -EINVAL, "mcctrl_ikc_send_wait fail" },
+    { -EFAULT, "perf_desc error" },
+    { 0,       "main case" },
+  };
+
+  int ret = 0;
+  int i = 0, j = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_usrdata *usrdata = NULL;
+    struct ikc_scd_packet isp;
+    struct perf_ctrl_desc *perf_desc = NULL;
+    struct ihk_cpu_info *info = NULL;
+    unsigned long cntr_mask = 0;
+    int need_free;
+    int should_quit = 0;
+
+
+    if (ivec == 0 || (!os || ihk_host_validate_os(os))) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    usrdata = ihk_host_os_get_usrdata(os);
+    if (ivec == 1 || !usrdata) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        pr_err("%s: error: mcctrl_usrdata not found\n", __func__);
+        return ret;
+      }
+      goto out;
+    }
+
+    for (i = 0; i < usrdata->perf_event_num; i++) {
+      cntr_mask |= 1UL << (i + ARCH_PERF_COUNTER_START);
+    }
+    perf_desc = kmalloc(sizeof(struct mcctrl_perf_ctrl_desc), GFP_KERNEL);
+    if (!perf_desc) {
+      return -ENOMEM;
+    }
+    memset(perf_desc, '\0', sizeof(struct perf_ctrl_desc));
+
+    perf_desc->ctrl_type = PERF_CTRL_DISABLE;
+    perf_desc->err = 0;
+    perf_desc->target_cntr_mask = cntr_mask;
+
+    memset(&isp, '\0', sizeof(struct ikc_scd_packet));
+    isp.msg = SCD_MSG_PERF_CTRL;
+    isp.arg = virt_to_phys(perf_desc);
+
+    info = ihk_os_get_cpu_info(os);
+    if (ivec == 2 || (!info || info->n_cpus < 1)) {
+      ret = -EINVAL;
+      if (ivec != 2) return ret;
+      goto out;
+    }
+    for (j = 0; j < info->n_cpus; j++) {
+      ret = mcctrl_ikc_send_wait(
+              os, j, &isp, 0,
+              wakeup_desc_of_perf_desc(perf_desc),
+              &need_free, 1, perf_desc);
+      if (ivec == 3 || ret < 0) {
+        ret = -EINVAL;
+        if (ivec != 3) {
+          pr_warn("%s: mcctrl_ikc_send_wait ret=%d\n", __func__, ret);
+          if (need_free)
+            kfree(perf_desc);
+          return ret;
+        }
+        goto out;
+      }
+
+      if (ivec == 4 || perf_desc->err < 0) {
+        ret = -EFAULT;
+        if (ivec != 4) {
+          ret = perf_desc->err;
+          should_quit = 1;
+        }
+        goto out;
+      }
+    }
+    ret = 0;
+
+   out:
+    if (perf_desc) kfree(perf_desc);
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 long mcctrl_perf_destroy(ihk_os_t os)
@@ -3894,7 +4233,8 @@ out_put_ppd:
   return ret;
 }
 
-int __mcctrl_os_read_write_cpu_register(ihk_os_t os, int cpu,
+int __mcctrl_os_read_write_cpu_register_orig(
+    ihk_os_t os, int cpu,
     struct ihk_os_cpu_register *desc,
     enum mcctrl_os_cpu_operation op)
 {
@@ -3911,11 +4251,9 @@ int __mcctrl_os_read_write_cpu_register(ihk_os_t os, int cpu,
   }
 
   if (cpu < 0 || cpu >= udp->cpu_info->n_cpus) {
-    pr_err("%s: error: cpu (%d) is out of range\n",
-           __func__, cpu);
+    pr_err("%s: error: cpu (%d) is out of range\n", __func__, cpu);
     ret = -EINVAL;
     goto out;
-
   }
 
   /* Keep a dynamic structure around that can
@@ -3946,16 +4284,128 @@ int __mcctrl_os_read_write_cpu_register(ihk_os_t os, int cpu,
   /* Notify caller (for future async implementation) */
   atomic_set(&desc->sync, 1);
 
-  dprintk("%s: MCCTRL_OS_CPU_%s_REGISTER: CPU: %d, addr_ext: 0x%lx, val: 0x%lx\n",
+  dprintk(
+    "%s: MCCTRL_OS_CPU_%s_REGISTER: CPU: %d, addr_ext: 0x%lx, val: 0x%lx\n",
     __FUNCTION__,
-    (op == MCCTRL_OS_CPU_READ_REGISTER ? "READ" : "WRITE"), cpu,
-    desc->addr_ext, desc->val);
+    (op == MCCTRL_OS_CPU_READ_REGISTER ? "READ" : "WRITE"),
+    cpu, desc->addr_ext, desc->val);
 
 out:
   if (do_free) {
     kfree(ldesc);
   }
   return ret;
+}
+
+int __mcctrl_os_read_write_cpu_register(
+    ihk_os_t os, int cpu,
+    struct ihk_os_cpu_register *desc,
+    enum mcctrl_os_cpu_operation op)
+{
+  if (g_ihk_test_mode != TEST__MCCTRL_OS_READ_WRITE_CPU_REGISTER)  // Disable test code
+    return __mcctrl_os_read_write_cpu_register_orig(os, cpu, desc, op);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "cannot find usrdata" },
+    { -EINVAL, "invalid cpu" },
+    { -EINVAL, "mcctrl_ikc_send_wait fail" },
+    { 0,       "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_usrdata *udp = NULL;
+    struct ikc_scd_packet isp;
+    struct ihk_os_cpu_register *ldesc = NULL;
+    int do_free = 1;
+    int ret = -EINVAL;
+    int should_quit = 0;
+
+    udp = ihk_host_os_get_usrdata(os);
+    if (ivec == 0 || !udp) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        pr_err("%s: error: mcctrl_usrdata not found\n", __func__);
+        return ret;
+      }
+      goto out;
+    }
+
+    if (ivec == 1 || (cpu < 0 || cpu >= udp->cpu_info->n_cpus)) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        pr_err("%s: error: cpu (%d) is out of range\n", __func__, cpu);
+        return ret;
+      }
+      goto out;
+    }
+
+    /* Keep a dynamic structure around that can
+     * survive an early return due to a signal */
+    ldesc = kmalloc(sizeof(*ldesc), GFP_KERNEL);
+    if (!ldesc) {
+      printk("%s: ERROR: allocating cpu register desc\n", __FUNCTION__);
+      return -ENOMEM;
+    }
+    *ldesc = *desc;
+
+    memset(&isp, '\0', sizeof(struct ikc_scd_packet));
+    isp.msg = SCD_MSG_CPU_RW_REG;
+    isp.op = op;
+    isp.pdesc = virt_to_phys(ldesc);
+
+    if (ivec > 2)
+      ret = mcctrl_ikc_send_wait(os, cpu, &isp, 0, NULL, &do_free, 1, ldesc);
+    if (ivec == 2 || ret != 0) {
+      ret = -EINVAL;
+      if (ivec != 2) {
+        printk("%s: ERROR sending IKC msg: %d\n", __FUNCTION__, ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    /* Update if read */
+    if (op == MCCTRL_OS_CPU_READ_REGISTER) {
+      desc->val = ldesc->val;
+    }
+
+    /* Notify caller (for future async implementation) */
+    atomic_set(&desc->sync, 1);
+
+    dprintk(
+      "%s: MCCTRL_OS_CPU_%s_REGISTER: CPU: %d, addr_ext: 0x%lx, val: 0x%lx\n",
+      __FUNCTION__,
+      (op == MCCTRL_OS_CPU_READ_REGISTER ? "READ" : "WRITE"),
+      cpu, desc->addr_ext, desc->val);
+
+  out:
+    if (do_free) {
+      kfree(ldesc);
+    }
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      if (op == MCCTRL_OS_CPU_READ_REGISTER) {
+    //    OKNG(desc->val > 0, "check cpu register value\n");
+      }
+      OKNG(atomic_read(&desc->sync) == 1, "check desc sync\n");
+    } else {
+      if (op == MCCTRL_OS_CPU_READ_REGISTER) {
+        OKNG(desc->val == 0, "reading cpu register fail\n");
+      }
+      OKNG(atomic_read(&desc->sync) == 0, "check desc sync\n");
+    }
+  }
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 int mcctrl_os_read_cpu_register(ihk_os_t os, int cpu,
