@@ -1515,7 +1515,7 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
   return -EINVAL;
 }
 
-int smp_ihk_os_send_multi_intr(ihk_os_t ihk_os, void *priv, int mode)
+int smp_ihk_os_send_multi_intr_orig(ihk_os_t ihk_os, void *priv, int mode)
 {
   struct smp_os_data *os = priv;
   int i, ret;
@@ -1539,7 +1539,68 @@ int smp_ihk_os_send_multi_intr(ihk_os_t ihk_os, void *priv, int mode)
   return 0;
 }
 
-static long get_dump_num_mem_areas(struct smp_os_data *os)
+int smp_ihk_os_send_multi_intr(ihk_os_t ihk_os, void *priv, int mode)
+{
+  if (g_ihk_test_mode != TEST_SMP_IHK_OS_SEND_MULTI_INTR)  // Disable test code
+    return smp_ihk_os_send_multi_intr_orig(ihk_os, priv, mode);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid parameter" },
+    { -EINVAL, "ihk_smp_set_multi_intr_mode fail" },
+    { -EINVAL, "invalid cpu info" },
+    { 0,       "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct smp_os_data *os = priv;
+    int i, ret;
+
+    if (ivec == 0 || (!ihk_os || !os)) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    ret = ihk_smp_set_multi_intr_mode(ihk_os, priv, mode);
+    if (ivec == 1 || ret) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+    }
+
+    if (ivec == 2 || os->cpu_info.n_cpus < 1) {
+      ret = -EINVAL;
+      if (ivec != 2) return ret;
+      goto out;
+    }
+
+    /* mode == 1or2, for FREEZER INTR */
+    for (i = 0; i < os->cpu_info.n_cpus; ++i) {
+      int hwid = os->cpu_info.hw_ids[i];
+
+  #if KERNEL_VERSION(4, 1, 0) <= LINUX_VERSION_CODE
+      ihk___smp_cross_call(cpumask_of(hwid), INTRID_MULTI_INTR);
+  #else
+      ihk___smp_cross_call(&cpumask_of_cpu(hwid), INTRID_MULTI_INTR);
+  #endif
+      dprintk("send to INTR CPU:%d\n", hwid);
+    }
+    ret = 0;
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+  }
+  return 0;
+ err:
+  return -EINVAL;
+}
+
+static long get_dump_num_mem_areas_orig(struct smp_os_data *os)
 {
   struct ihk_dump_page *dump_page = NULL;
   int i, j, k, mem_num;
@@ -1562,8 +1623,7 @@ static long get_dump_num_mem_areas(struct smp_os_data *os)
       for (k = 0; k < 64; k++) {
         if ((dump_page->map[j] >> k) & 0x1) {
           bit_count++;
-        }
-        else {
+        } else {
           if (bit_count) {
             mem_num++;
             bit_count = 0;
@@ -1579,6 +1639,89 @@ static long get_dump_num_mem_areas(struct smp_os_data *os)
   return (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));
 }
 
+static long get_dump_num_mem_areas(struct smp_os_data *os)
+{
+  if (g_ihk_test_mode != TEST_GET_DUMP_NUM_MEM_AREAS)  // Disable test code
+    return get_dump_num_mem_areas_orig(os);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid dump page count" },
+    { -EINVAL, "invalid map count" },
+    { 0,       "main case" },
+  };
+
+  while (1) {
+    if (IHK_DUMP_PAGE_SET_COMPLETED == os->param->dump_page_set.completion_flag) {
+      break;
+    }
+    msleep(10); /* 10ms sleep */
+  }
+
+  long ret = 0;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_dump_page *dump_page = NULL;
+    int i, j, k, mem_num = 0;
+    unsigned long bit_count;
+
+    dump_page = phys_to_virt(os->param->dump_page_set.phy_page);
+
+    if (ivec == 0 || os->param->dump_page_set.count < 1) {
+      ret = -EINVAL;
+      if (ivec != 0) return 0;
+      goto out;
+    }
+    for (i = 0, mem_num = 0; i < os->param->dump_page_set.count; i++) {
+      if (i) {
+        dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+      }
+
+      if (ivec == 1 || dump_page->map_count < 1) {
+        ret = -EINVAL;
+        if (ivec != 1) return 0;
+        goto out;
+      }
+      for (j = 0, bit_count = 0; j < dump_page->map_count; j++) {
+        for (k = 0; k < 64; k++) {
+          if ((dump_page->map[j] >> k) & 0x1) {
+            bit_count++;
+          } else {
+            if (bit_count) {
+              mem_num++;
+              bit_count = 0;
+            }
+          }
+        }
+      }
+
+      if (bit_count) {
+        mem_num++;
+      }
+    }
+
+    ret = 0;
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(mem_num > 0, "check # of mem chunks\n");
+
+      ret = (sizeof(dump_mem_chunks_t) + (sizeof(struct dump_mem_chunk) * mem_num));
+    } else {
+      OKNG(mem_num == 0, "check # of mem chunks\n");
+    }
+  }
+  return ret;
+ err:
+  return 0;
+}
+
 int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
 {
   struct smp_os_data *os = priv;
@@ -1591,8 +1734,9 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
   void *va;
   extern struct list_head ihk_mem_used_chunks;
 
-  if (0) printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
-      args->cmd, args->start, args->size, args->buf);
+  if (0)
+    printk("mcosdump: cmd %d start %lx size %lx buf %p\n",
+           args->cmd, args->start, args->size, args->buf);
 
   switch (args->cmd) {
   case DUMP_SET_LEVEL:
@@ -1609,7 +1753,8 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
     break;
 
   case DUMP_NMI:
-    if (os->param->dump_page_set.completion_flag !=  IHK_DUMP_PAGE_SET_COMPLETED) {
+    if (os->param->dump_page_set.completion_flag !=
+        IHK_DUMP_PAGE_SET_COMPLETED) {
       smp_ihk_os_send_nmi(ihk_os, priv, 0);
     }
     break;
@@ -1722,7 +1867,6 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
     if (copy_to_user(args->buf, va, args->size)) {
       return -EFAULT;
     }
-
     break;
 
   case DUMP_QUERY_ALL:
@@ -1731,11 +1875,9 @@ int smp_ihk_os_dump(ihk_os_t ihk_os, void *priv, dumpargs_t *args)
     break;
 
   case DUMP_QUERY_PHYS_START:
-    if (copy_to_user(args->buf, ihk___memstart_addr,
-          sizeof(uint64_t))) {
+    if (copy_to_user(args->buf, ihk___memstart_addr, sizeof(uint64_t))) {
       return -EFAULT;
     }
-
     break;
 
   case DUMP_READ_ALL:

@@ -4,7 +4,6 @@
 #include <user/ihklib_private.h>
 #include <user/okng_user.h>
 
-#include <blackbox/include/util.h>
 #include <blackbox/include/cpu.h>
 #include <blackbox/include/mem.h>
 #include <blackbox/include/params.h>
@@ -15,6 +14,11 @@ int main(int argc, char **argv)
   int ret;
   int os_index;
   params_getopt(argc, argv);
+
+  char mode[6] = "\0";
+  sprintf(mode, "%d", TEST_IHK_OS_MAKEDUMPFILE);
+  ret = setenv(IHKLIB_TEST_MODE_ENV_NAME, mode, 1);
+  INTERR(ret, "setenv returned %d. errno=%d\n", ret, -errno);
 
   /* Activate and check */
   /* Precondition */
@@ -62,15 +66,30 @@ int main(int argc, char **argv)
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-  // int fd = ihklib_device_open(0);
-  // INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  // int test_mode = TEST_SMP_IHK_OS_SET_IKC_MAP;
-  // ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
-  // INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
-  // close(fd); fd = -1;
+  ret = os_wait_for_status(IHK_STATUS_RUNNING);
+  INTERR(ret, "os_wait_for_status timeout %d\n", ret);
 
- out:
+  char fn[] = "/tmp/test_dump";
+  if (!(access(fn, F_OK))) {
+    unlink(fn);
+  }
+	ret = ihk_os_makedumpfile(0, fn, 24, 0);
+  INTERR(ret, "ihk_os_makedumpfile return %d\n", ret);
+  unlink(fn);
 
-//  linux_rmmod(0);
-  return ret;
-}
+  out:
+  if (!(access(fn, F_OK))) {
+    unlink(fn);
+  }
+
+  ret = ihk_os_shutdown(0);
+  os_wait_for_status(IHK_STATUS_INACTIVE);
+  mems_os_release();
+  cpus_os_release();
+  if (ihk_get_num_os_instances(0))
+    ret = ihk_destroy_os(0, os_index);
+
+  cpus_release();
+  mems_release();
+  linux_rmmod(0);
+ }
