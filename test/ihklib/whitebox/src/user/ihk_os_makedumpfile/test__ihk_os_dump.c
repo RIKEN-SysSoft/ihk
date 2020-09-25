@@ -84,12 +84,12 @@ int main(int argc, char **argv)
     unlink(fn);
   }
 
-  ret = ihk_os_shutdown(0);
+  ihk_os_shutdown(0);
   os_wait_for_status(IHK_STATUS_INACTIVE);
   mems_os_release();
   cpus_os_release();
   if (ihk_get_num_os_instances(0))
-    ret = ihk_destroy_os(0, os_index);
+    ihk_destroy_os(0, os_index);
 
   cpus_release();
   mems_release();

@@ -98,7 +98,7 @@ static void print_dma_lastreq(void)
 }
 #endif
 
-void mcctrl_put_per_thread_data_unsafe(struct mcctrl_per_thread_data *ptd)
+void mcctrl_put_per_thread_data_unsafe_orig(struct mcctrl_per_thread_data *ptd)
 {
   if (!atomic_dec_and_test(&ptd->refcount)) {
     int ret = atomic_read(&ptd->refcount);
@@ -112,7 +112,62 @@ void mcctrl_put_per_thread_data_unsafe(struct mcctrl_per_thread_data *ptd)
   kfree(ptd);
 }
 
-void mcctrl_put_per_thread_data(struct mcctrl_per_thread_data* _ptd)
+void mcctrl_put_per_thread_data_unsafe(struct mcctrl_per_thread_data *ptd)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_PUT_PER_THREAD_DATA_UNSAFE)  // Disable test code
+    return mcctrl_put_per_thread_data_unsafe_orig(ptd);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid refcount" },
+    { 0, "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    int should_quit = 0;
+    int freed = 0;
+    int refcnt = 0;
+
+    if (ivec == 0 || !atomic_dec_and_test(&ptd->refcount)) {
+      refcnt = atomic_read(&ptd->refcount);
+      if (ivec == 0 || refcnt < 0) {
+        if (ivec != 0) {
+          printk("%s: ERROR: invalid refcount=%d\n", __FUNCTION__, refcnt);
+          should_quit = 1;
+        }
+        refcnt = -1;
+        goto out;
+      }
+
+      goto out;
+    }
+
+    list_del(&ptd->hash);
+    kfree(ptd);
+    freed = 1;
+
+   out:
+    if (should_quit) return;
+
+    if (ivec == total_branch - 1) {
+      if (freed) {
+        OKNG(refcnt == 0, "check refcount\n");
+      } else {
+        OKNG(refcnt > 0, "check refcount\n");
+      }
+    } else {
+      OKNG(refcnt < 0, "refcnt is invalid\n");
+    }
+  }
+ err:
+  return;
+}
+
+void mcctrl_put_per_thread_data_orig(struct mcctrl_per_thread_data* _ptd)
 {
   struct mcctrl_per_proc_data *ppd = _ptd->ppd;
   struct mcctrl_per_thread_data *ptd_iter, *ptd = NULL;
@@ -137,6 +192,87 @@ void mcctrl_put_per_thread_data(struct mcctrl_per_thread_data* _ptd)
 
 out:
   write_unlock_irqrestore(&ppd->per_thread_data_hash_lock[hash], flags);
+}
+
+void mcctrl_put_per_thread_data(struct mcctrl_per_thread_data* _ptd)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_PUT_PER_THREAD_DATA)  // Disable test code
+    return mcctrl_put_per_thread_data_orig(_ptd);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { 0, "all threads has no data registered" },
+    { 0, "not found any data registered for the specified task" },
+    { 0, "main case" },
+  };
+
+  unsigned long flags;
+  int count_ptd_hash_prev = 0;
+  struct mcctrl_per_proc_data *ppd = _ptd->ppd;
+  struct mcctrl_per_thread_data *ptd_iter;
+  int hash = (((uint64_t)_ptd->task >> 4) & MCCTRL_PER_THREAD_DATA_HASH_MASK);
+  write_lock_irqsave(&ppd->per_thread_data_hash_lock[hash], flags);
+  list_for_each_entry(ptd_iter, &ppd->per_thread_data_hash[hash], hash) {
+    count_ptd_hash_prev++;
+  }
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_per_thread_data *ptd = NULL;
+    int refcount_prev = 0;
+    int count_ptd_hash_after = 0;
+    int should_quit = 0;
+
+    if (ivec == 0 || list_empty(&ppd->per_thread_data_hash[hash])) {
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+
+    list_for_each_entry(ptd_iter, &ppd->per_thread_data_hash[hash], hash) {
+      if (ivec != 1 && ptd_iter->task == _ptd->task) {
+        ptd = ptd_iter;
+        break;
+      }
+      // ivec = 1 goes here
+    }
+
+    if (!ptd) {
+      if (ivec != 1) {
+        printk("%s: ERROR: ptd not found\n", __FUNCTION__);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    refcount_prev = atomic_read(&ptd->refcount);
+
+    mcctrl_put_per_thread_data_unsafe(ptd);
+
+   out:
+    list_for_each_entry(ptd_iter, &ppd->per_thread_data_hash[hash], hash) {
+      count_ptd_hash_after++;
+    }
+
+    if (should_quit) goto err;
+
+    if (ivec == total_branch - 1) {
+      OKNG(ptd, "found valid per-thread data\n");
+      if (refcount_prev == 1) {
+        OKNG(count_ptd_hash_after == count_ptd_hash_prev - 1,
+             "# of ptd hash should be decreased by 1\n");
+      }
+    } else {
+      OKNG(!ptd, "not found valid per-thread data\n");
+      OKNG(count_ptd_hash_after == count_ptd_hash_prev,
+           "# of ptd hash should be unchanged\n");
+    }
+  }
+ err:
+  write_unlock_irqrestore(&ppd->per_thread_data_hash_lock[hash], flags);
+  return;
 }
 
 int mcctrl_add_per_thread_data(struct mcctrl_per_proc_data *ppd, void *data)
@@ -185,8 +321,8 @@ int mcctrl_add_per_thread_data(struct mcctrl_per_proc_data *ppd, void *data)
   return ret;
 }
 
-struct mcctrl_per_thread_data *mcctrl_get_per_thread_data(struct mcctrl_per_proc_data *ppd,
-                struct task_struct *task)
+struct mcctrl_per_thread_data *mcctrl_get_per_thread_data_orig(
+    struct mcctrl_per_proc_data *ppd, struct task_struct *task)
 {
   struct mcctrl_per_thread_data *ptd_iter, *ptd = NULL;
   int hash = (((uint64_t)task >> 4) & MCCTRL_PER_THREAD_DATA_HASH_MASK);
@@ -204,7 +340,8 @@ struct mcctrl_per_thread_data *mcctrl_get_per_thread_data(struct mcctrl_per_proc
 
   if (ptd) {
     if (atomic_read(&ptd->refcount) <= 0) {
-      printk("%s: ERROR: use-after-free detected (%d)", __FUNCTION__, atomic_read(&ptd->refcount));
+      printk("%s: ERROR: use-after-free detected (%d)",
+             __FUNCTION__, atomic_read(&ptd->refcount));
       ptd = NULL;
       goto out;
     }
@@ -214,6 +351,83 @@ struct mcctrl_per_thread_data *mcctrl_get_per_thread_data(struct mcctrl_per_proc
  out:
   read_unlock_irqrestore(&ppd->per_thread_data_hash_lock[hash], flags);
   return ptd;
+}
+
+struct mcctrl_per_thread_data *mcctrl_get_per_thread_data(
+    struct mcctrl_per_proc_data *ppd, struct task_struct *task)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_GET_PER_THREAD_DATA)  // Disable test code
+    return mcctrl_get_per_thread_data_orig(ppd, task);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { 0, "all threads has no data" },
+    { 0, "not found registered data for the specified task" },
+    { 0, "use-after-free" },
+    { 0, "main case" },
+  };
+
+  struct mcctrl_per_thread_data *ret = NULL;
+  unsigned long flags;
+  struct mcctrl_per_thread_data *ptd_iter;
+  int hash = (((uint64_t)task >> 4) & MCCTRL_PER_THREAD_DATA_HASH_MASK);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_per_thread_data *ptd = NULL;
+    int should_quit = 0;
+
+    /* Check if data for this thread exists */
+    read_lock_irqsave(&ppd->per_thread_data_hash_lock[hash], flags);
+
+    if (ivec == 0 || list_empty(&ppd->per_thread_data_hash[hash])) {
+      ret = NULL;
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+
+    list_for_each_entry(ptd_iter, &ppd->per_thread_data_hash[hash], hash) {
+      if (ivec != 1 && ptd_iter->task == task) {
+        ptd = ptd_iter;
+        break;
+      }
+      // ivec = 1 goes here
+    }
+
+    if (!ptd && ivec != 1) should_quit = 1;
+
+    if (ptd) {
+      if (ivec == 2 || atomic_read(&ptd->refcount) <= 0) {
+        if (ivec != 2) {
+          printk("%s: ERROR: use-after-free detected (%d)",
+                 __FUNCTION__, atomic_read(&ptd->refcount));
+          should_quit = 1;
+        }
+        ptd = NULL;
+        goto out;
+      }
+      atomic_inc(&ptd->refcount);
+    }
+    ret = ptd;
+
+   out:
+    read_unlock_irqrestore(&ppd->per_thread_data_hash_lock[hash], flags);
+
+    if (should_quit) return ret;
+
+    if (ivec == total_branch - 1) {
+      OKNG(ret, "found per-thread data\n");
+      OKNG(atomic_read(&ret->refcount) > 1, "refcount should be increased\n");
+    } else {
+      OKNG(!ret, "not found per-thread data\n");
+    }
+  }
+  return ret;
+ err:
+  return NULL;
 }
 
 static int __notify_syscall_requester(ihk_os_t os, struct ikc_scd_packet *packet,
@@ -1904,20 +2118,19 @@ static long pager_call(ihk_os_t os, struct syscall_request *req)
   return ret;
 }
 
-void __return_syscall(ihk_os_t os, struct ikc_scd_packet *packet,
-    long ret, int stid)
+void __return_syscall_orig(ihk_os_t os, struct ikc_scd_packet *packet,
+                           long ret, int stid)
 {
   unsigned long phys;
   struct syscall_response *res;
 
   phys = ihk_device_map_memory(ihk_os_to_dev(os),
-      packet->resp_pa, sizeof(*res));
+                               packet->resp_pa, sizeof(*res));
   res = ihk_device_map_virtual(ihk_os_to_dev(os),
-      phys, sizeof(*res), NULL, 0);
+                               phys, sizeof(*res), NULL, 0);
 
   if (!res) {
-    printk("%s: ERROR: invalid response structure address\n",
-      __FUNCTION__);
+    printk("%s: ERROR: invalid response structure address\n", __FUNCTION__);
     return;
   }
 
@@ -1927,7 +2140,7 @@ void __return_syscall(ihk_os_t os, struct ikc_scd_packet *packet,
 
   if (__notify_syscall_requester(os, packet, res) < 0) {
     printk("%s: WARNING: failed to notify PID %d\n",
-      __FUNCTION__, packet->pid);
+           __FUNCTION__, packet->pid);
   }
 
   mb();
@@ -1935,6 +2148,91 @@ void __return_syscall(ihk_os_t os, struct ikc_scd_packet *packet,
 
   ihk_device_unmap_virtual(ihk_os_to_dev(os), res, sizeof(*res));
   ihk_device_unmap_memory(ihk_os_to_dev(os), phys, sizeof(*res));
+}
+
+void __return_syscall(ihk_os_t os, struct ikc_scd_packet *packet,
+                      long ret, int stid)
+{
+  if (g_ihk_test_mode != TEST__RETURN_SYSCALL)  // Disable test code
+    return __return_syscall_orig(os, packet, ret, stid);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid parameter" },
+    { 0, "ihk_device_map_memory fail" },
+    { 0, "ihk_device_map_virtual fail" },
+    { 0, "main case" },
+  };
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    unsigned long phys;
+    struct syscall_response *res = NULL;
+    int should_quit = 0;
+
+    if (ivec == 0 ||
+        (!os || ihk_host_validate_os(os) || !packet)) {
+      if (ivec != 0) return;
+      goto out;
+    }
+
+    phys = ihk_device_map_memory(ihk_os_to_dev(os),
+                                 packet->resp_pa, sizeof(*res));
+    if (ivec == 1 || !phys) {
+      if (ivec != 1) return;
+      ihk_device_unmap_memory(ihk_os_to_dev(os), phys, sizeof(*res));
+      goto out;
+    }
+
+    res = ihk_device_map_virtual(ihk_os_to_dev(os),
+                                 phys, sizeof(*res), NULL, 0);
+
+    if (ivec == 2 || !res) {
+      if (ivec != 2) {
+        printk("%s: ERROR: invalid response structure address\n", __FUNCTION__);
+        should_quit = 1;
+        ihk_device_unmap_memory(ihk_os_to_dev(os), phys, sizeof(*res));
+        goto out;
+      }
+      ihk_device_unmap_virtual(ihk_os_to_dev(os), res, sizeof(*res));
+      ihk_device_unmap_memory(ihk_os_to_dev(os), phys, sizeof(*res));
+      res = NULL;
+      goto out;
+    }
+
+    /* Map response structure and notify offloading thread */
+    res->ret = ret;
+    res->stid = stid;
+
+    if (__notify_syscall_requester(os, packet, res) < 0) {
+      printk("%s: WARNING: failed to notify PID %d\n",
+             __FUNCTION__, packet->pid);
+    }
+
+    mb();
+    res->status = 1;
+
+   out:
+    if (should_quit) return;
+    should_quit = 1;
+
+    if (ivec == total_branch - 1) {
+      OKNG(res && res->ret == ret && res->stid == stid && res->status == 1,
+           "check response structure\n");
+    } else {
+      OKNG(!res, "no response\n");
+    }
+    should_quit = 0;
+
+   err:
+    if (should_quit || ivec == total_branch - 1) {
+      ihk_device_unmap_virtual(ihk_os_to_dev(os), res, sizeof(*res));
+      ihk_device_unmap_memory(ihk_os_to_dev(os), phys, sizeof(*res));
+    }
+  }
 }
 
 static int remap_user_space(uintptr_t rva, size_t len, int prot)

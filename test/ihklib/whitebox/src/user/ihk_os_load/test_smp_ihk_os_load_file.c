@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 
   struct mems mems = { 0 };
   int excess;
-  ret = _mems_ls(&mems, "MemFree", 0.02, 1UL << 30);
+  ret = _mems_ls(&mems, "MemFree", 0.02, -1);
   INTERR(ret, "mems_ls returned %d\n", ret);
   excess = mems.num_mem_chunks - 4;
   if (excess > 0) {
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 
   char fn[4096];
 	sprintf(fn, "%s/%s/kernel/mckernel.img",
-		QUOTE(WITH_MCK), QUOTE(BUILD_TARGET));
+		QUOTE(MCK_INSTALL_PREFIX), QUOTE(BUILD_TARGET));
   ret = ihk_os_load(0, fn);
   INTERR(ret, "ihk_os_load returned %d\n", ret);
 
