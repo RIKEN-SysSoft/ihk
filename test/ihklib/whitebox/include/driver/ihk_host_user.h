@@ -261,6 +261,19 @@ typedef enum ihk_test_mode {
   TEST_IHK_OS_READ_CPU_REGISTER                   = 158,
   TEST__MCCTRL_OS_READ_WRITE_CPU_REGISTER         = 159,
 
+  /* ihk_os_write_cpu_register */
+  TEST_IHK_OS_WRITE_CPU_REGISTER                  = 160,
+
+  /* ihk_get_request_os_cpu */
+  TEST_IHK_GET_REQUEST_OS_CPU                     = 161,
+  TEST_MCCTRL_GET_REQUEST_OS_CPU                  = 162,
+  TEST_MCCTRL_GET_PER_THREAD_DATA                 = 163,
+  TEST_MCCTRL_PUT_PER_THREAD_DATA                 = 164,
+  TEST_MCCTRL_PUT_PER_THREAD_DATA_UNSAFE          = 165,
+  TEST_MCCTRL_GET_PER_PROC_DATA                   = 166,
+  TEST_MCCTRL_PUT_PER_PROC_DATA                   = 167,
+  TEST__RETURN_SYSCALL                            = 168,
+
   // other API here
 } ihk_test_mode_t;
 extern int g_ihk_test_mode;
@@ -323,6 +336,7 @@ extern int g_ihk_test_mode;
 #define IHK_OS_AUX_PERF_DESTROY    0x11290105
 #define IHK_OS_GETRUSAGE           0x11290106
 #define IHK_OS_READ_CPU_REGISTER   0x11290107
+#define IHK_OS_WRITE_CPU_REGISTER  0x11290108
 
 #define FLAG_IHK_OS_SHUTDOWN_FORCE    0x40000000
 

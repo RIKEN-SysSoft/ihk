@@ -61,8 +61,7 @@ int main(int argc, char **argv)
   INTERR(ret != 0, "ihk_query_mem return value: %d, expected: %d\n", ret, 0);
  out:
  /* Clean up */
-  ret = mems_release();
-  if (ret) PRINT("mems_release returned %d\n", ret);
+  mems_release();
 
   linux_rmmod(0);
   return ret;
