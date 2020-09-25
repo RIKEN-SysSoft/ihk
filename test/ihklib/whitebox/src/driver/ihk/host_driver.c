@@ -2779,6 +2779,15 @@ static long ihk_host_os_ioctl_orig(struct file *file, unsigned int request,
     }
     break;
 
+  case IHK_OS_WRITE_CPU_REGISTER:
+    {
+      struct ihk_os_cpu_register desc;
+      memset(&desc, 0, sizeof(desc));
+      desc.addr_ext = IMP_PF_INJECTION_CTRL1_EL0;
+      ret = ihk_os_write_cpu_register(data, 0, &desc);
+    }
+    break;
+
   case IHK_OS_QUERY_FREE_MEM:
     ret = __ihk_os_query_free_mem(data);
     break;
@@ -2868,13 +2877,14 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
   branch_info_t b_infos[] = {
     { -EINVAL, "invalid file private data" },
     { -EINVAL, "invalid os data" },
-    { -EINVAL, "os debugging request" },
+    { -EINVAL,       "os debugging request" },
     { 0,       "main case" },
   };
 
   int ret = -EINVAL;
   unsigned int request_prev = request;
   int ret_cp = 0;
+
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
 
@@ -5433,8 +5443,8 @@ int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
     START(b_infos[ivec].name);
 
     struct ihk_host_linux_os_data *os = ihk_os;
-    ret = ihk_host_validate_os((ihk_os_t)os);
 
+    ret = ihk_host_validate_os((ihk_os_t)os);
     if (ivec == 0 || ret) {
       ret = -EINVAL;
       if (ivec != 0) {
@@ -5466,6 +5476,7 @@ int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
 
     if (ivec == total_branch - 1) {
+      OKNG(desc->val > 0, "check cpu register value\n");
       OKNG(atomic_read(&desc->sync) == 1, "check sync count\n");
     } else {
       OKNG(desc->val == 0, "reading cpu register fail\n");
@@ -5478,8 +5489,8 @@ int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
 }
 
 
-int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
-    struct ihk_os_cpu_register *desc)
+int ihk_os_write_cpu_register_orig(
+    ihk_os_t ihk_os, int cpu, struct ihk_os_cpu_register *desc)
 {
   int ret;
   struct ihk_host_linux_os_data *os = ihk_os;
@@ -5499,17 +5510,85 @@ int ihk_os_write_cpu_register(ihk_os_t ihk_os, int cpu,
   return os->kernel_handlers->write_cpu_register(ihk_os, cpu, desc);
 }
 
-/*
- *  Returns LWK OS instance and CPU number of the system call offload
- *  origin.
- *  Arguments:
- *    ihk_os (OUTPUT):  LWK OS instance of system call offload origin
- *    cpu (OUTPUT):  CPU number of the system call offload origin
- *  Return value:
- *    0:    Caller is performing system call offload
- *    -EINVAL:    Caller isn't performing system call offload
- */
-int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
+int ihk_os_write_cpu_register(
+    ihk_os_t ihk_os, int cpu, struct ihk_os_cpu_register *desc)
+{
+  if (g_ihk_test_mode != TEST_IHK_OS_WRITE_CPU_REGISTER)  // Disable test code
+    return ihk_os_write_cpu_register_orig(ihk_os, cpu, desc);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid os instance" },
+    { -EINVAL, "invalid parameter" },
+    { -EINVAL, "invalid kernel handlers" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+  /* save previous state */
+  struct ihk_os_cpu_register desc_prev = { 0 };
+  desc_prev.addr_ext = desc->addr_ext;
+  ret = ihk_os_read_cpu_register(ihk_os, cpu, &desc_prev);
+  if (ret) return ret;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_host_linux_os_data *os = ihk_os;
+    struct ihk_os_cpu_register desc_after = { 0 };
+
+    ret = ihk_host_validate_os((ihk_os_t)os);
+    if (ivec == 0 || ret) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        pr_err("%s: error: invalid os: %lx\n",
+               __func__, (unsigned long)os);
+        return ret;
+      }
+      goto out;
+    }
+
+    if (ivec == 1 ||
+        (!os || !desc || cpu < 0 ||
+         cpu >= os->ops->get_cpu_info(os, os->priv)->n_cpus)) {
+      ret = -EINVAL;
+      if (ivec != 1) return ret;
+      goto out;
+    }
+
+    if (ivec == 2 ||
+        (!os || !os->kernel_handlers ||
+         !os->kernel_handlers->write_cpu_register)) {
+      ret = -EINVAL;
+      if (ivec != 2) return ret;
+      goto out;
+    }
+
+    ret = os->kernel_handlers->write_cpu_register(ihk_os, cpu, desc);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    desc_after.addr_ext = desc->addr_ext;
+    ret = ihk_os_read_cpu_register(ihk_os, cpu, &desc_after);
+    if (ret) return ret;
+
+    if (ivec == total_branch - 1) {
+      OKNG(desc_after.val == desc->val, "check cpu register value\n");
+      OKNG(atomic_read(&desc->sync) == 1, "check sync count\n");
+    } else {
+      OKNG(desc_prev.val == desc->val, "cpu register value should be unchanged\n");
+      OKNG(atomic_read(&desc->sync) == 0, "check sync count\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
+}
+
+int ihk_get_request_os_cpu_orig(ihk_os_t *ihk_os, int *cpu)
 {
   struct ihk_host_linux_os_data *os;
 
@@ -5523,8 +5602,7 @@ int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
    */
   os = (struct ihk_host_linux_os_data *)ihk_host_find_os(0, NULL);
   if (!os) {
-    dprintf("%s: not on system call offloading path\n",
-      __func__);
+    dprintf("%s: not on system call offloading path\n", __func__);
     return -EINVAL;
   }
 
@@ -5533,8 +5611,93 @@ int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
     return -EINVAL;
   }
 
-  *ihk_os = (ihk_os_t *)os;
+  *ihk_os = (ihk_os_t)os;
   return os->kernel_handlers->get_request_cpu(os, cpu);
+}
+
+/*
+ *  Returns LWK OS instance and CPU number of the system call offload
+ *  origin.
+ *  Arguments:
+ *    ihk_os (OUTPUT):  LWK OS instance of system call offload origin
+ *    cpu (OUTPUT):  CPU number of the system call offload origin
+ *  Return value:
+ *    0:    Caller is performing system call offload
+ *    -EINVAL:    Caller isn't performing system call offload
+ */
+int ihk_get_request_os_cpu(ihk_os_t *ihk_os, int *cpu)
+{
+  if (g_ihk_test_mode != TEST_IHK_GET_REQUEST_OS_CPU)  // Disable test code
+    return ihk_get_request_os_cpu_orig(ihk_os, cpu);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EFAULT, "invalid parameter" },
+    { -EINVAL, "not found a valid os instance" },
+    { -EINVAL, "invalid kernel handler" },
+    { 0,       "main case" },
+  };
+
+  int ret;
+  if (cpu) *cpu = -1;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct ihk_host_linux_os_data *os = NULL;
+
+    if (ivec == 0 || (!ihk_os || !cpu)) {
+      ret = -EFAULT;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    /*
+     * Look up IHK OS structure
+     * TODO: iterate all possible indeces, currently only for OS 0
+     */
+    os = (struct ihk_host_linux_os_data *)ihk_host_find_os(0, NULL);
+
+    if (ivec == 1 || !os) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        dprintf("%s: not on system call offloading path\n", __func__);
+        return ret;
+      }
+      os = NULL;
+      goto out;
+    }
+
+    if (ivec == 2 ||
+        (!os->kernel_handlers ||
+         !os->kernel_handlers->get_request_cpu)) {
+      ret = -EINVAL;
+      if (ivec != 2) return ret;
+      goto out;
+    }
+
+    *ihk_os = (ihk_os_t)os;
+
+    ret = os->kernel_handlers->get_request_cpu(os, cpu);
+
+   out:
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(os, "found a valid os instance\n");
+      OKNG(*cpu >= 0, "cpu number is valid\n");
+    } else {
+      if (ivec < 2) {
+        OKNG(!os, "not found a valid os instance\n");
+      }
+      OKNG(*cpu == -1, "cpu number is not valid\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 

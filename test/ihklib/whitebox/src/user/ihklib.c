@@ -7632,14 +7632,19 @@ int test_smp_ihk_os_dump(int index)
 
     long mem_size = 0;
     int fail = 0;
+    ret = 0;
 
     if (ivec == 0) {
       args.cmd = DUMP_SET_LEVEL;
       args.level = 1000;  // fake level
       ret = ioctl(osfd, IHK_OS_DUMP, &args);
+      if (ret) ret = -errno;
     }
 
     if (ivec == 1) {
+      args.cmd = DUMP_NMI;
+      ioctl(osfd, IHK_OS_DUMP, &args);
+
       args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
       ioctl(osfd, IHK_OS_DUMP, &args);
       mem_size = args.size;
@@ -7653,11 +7658,15 @@ int test_smp_ihk_os_dump(int index)
       args.cmd = DUMP_QUERY;
       args.buf = (void *)mem_chunks;
       ret = ioctl(osfd, IHK_OS_DUMP, &args);
+
+      args.cmd = DUMP_NMI_CONT;
+      ioctl(osfd, IHK_OS_DUMP, &args);
     }
 
     if (ivec == 2) {
       args.cmd = DUMP_QUERY_ALL;
       ret = ioctl(osfd, IHK_OS_DUMP, &args);
+      if (ret) ret = -errno;
     }
 
     if (ivec == 3) {
@@ -7668,18 +7677,33 @@ int test_smp_ihk_os_dump(int index)
         goto err;
       }
       ret = ioctl(osfd, IHK_OS_DUMP, &args);
+      if (ret) ret = -errno;
     }
 
     if (ivec == 4) {
+      args.cmd = DUMP_NMI;
+      ioctl(osfd, IHK_OS_DUMP, &args);
+
+      args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
+      ioctl(osfd, IHK_OS_DUMP, &args);
+
       args.cmd = DUMP_QUERY_ALL;
       ioctl(osfd, IHK_OS_DUMP, &args);
+
       args.cmd = DUMP_READ_ALL;
       args.buf = malloc(args.size);
       if (!args.buf) {
         ret = -ENOMEM;
-        goto err;
       }
-      ret = ioctl(osfd, IHK_OS_DUMP, &args);
+      if (!ret) {
+        ret = ioctl(osfd, IHK_OS_DUMP, &args);
+        if (ret) ret = -errno;
+      }
+
+      sleep(2);
+      args.cmd = DUMP_NMI_CONT;
+      ioctl(osfd, IHK_OS_DUMP, &args);
+      if (ret) goto err;
     }
 
    out:
@@ -7705,7 +7729,8 @@ int test_smp_ihk_os_dump(int index)
       OKNG(!fail, "check mem chunks size\n");
 
       free(mem_chunks); mem_chunks = NULL;
-      free(req.sizes); free(req.numa_ids);
+      free(req.sizes); req.sizes = NULL;
+      free(req.numa_ids); req.numa_ids = NULL;
       memset(&req, 0, sizeof(struct ihk_mem_req));
     }
 
@@ -7721,13 +7746,13 @@ int test_smp_ihk_os_dump(int index)
 
     if (ivec == 4) {
       OKNG(args.size > 0, "check os mem size\n");
-      OKNG(args.buf, "check buf\n");
-      free(args.buf);
+      //OKNG(args.buf, "check buf\n");
+      //free(args.buf);
     }
 
     memset(&args, 0, sizeof(dumpargs_t));
   }
-  return 0;
+  ret = 0;
  err:
   close(osfd);
   if (req.sizes) free(req.sizes);

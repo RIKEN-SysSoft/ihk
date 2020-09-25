@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
   struct mems mems = { 0 };
   int excess;
-  ret = _mems_ls(&mems, "MemFree", 0.02, 1UL << 30);
+  ret = _mems_ls(&mems, "MemFree", 0.02, -1);
   INTERR(ret, "mems_ls returned %d\n", ret);
   excess = mems.num_mem_chunks - 4;
   if (excess > 0) {
@@ -101,7 +101,7 @@ int main(int argc, char **argv)
   ret = ihk_os_kmsg(0, kmsg_input, (ssize_t)IHK_KMSG_SIZE);
   INTERR(ret <= 0, "ihk_os_kmsg returned %d\n", ret);
   INFO("Log from ihkosctl %s\n", kmsg_input);
-  
+
  out:
   ret = ihk_os_perfctl(0, PERF_EVENT_DISABLE);
   INTERR(ret, "PERF_EVENT_DISABLE returned %d\n", ret);

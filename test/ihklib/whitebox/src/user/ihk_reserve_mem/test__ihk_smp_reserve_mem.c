@@ -55,8 +55,7 @@ int main(int argc, char **argv)
  out:
  /* Clean up */
   if (fd >= 0) close(fd);
-  ret = mems_release();
-  if (ret) PRINT("mems_release returned %d\n", ret);
+  mems_release();
 
   linux_rmmod(0);
   return ret;

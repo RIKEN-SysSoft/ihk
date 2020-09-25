@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
   struct mems mems = { 0 };
   int excess;
-  ret = _mems_ls(&mems, "MemFree", 0.02, 1UL << 30);
+  ret = _mems_ls(&mems, "MemFree", 0.02, -1);
   INTERR(ret, "mems_ls returned %d\n", ret);
   excess = mems.num_mem_chunks - 4;
   if (excess > 0) {
@@ -101,35 +101,18 @@ int main(int argc, char **argv)
   ret = ihk_os_kmsg(0, kmsg_input, (ssize_t)IHK_KMSG_SIZE);
   INTERR(ret <= 0, "ihk_os_kmsg returned %d\n", ret);
   INFO("Log from ihkosctl %s\n", kmsg_input);
-  
+
  out:
-  ret = ihk_os_perfctl(0, PERF_EVENT_DISABLE);
-  INTERR(ret, "PERF_EVENT_DISABLE returned %d\n", ret);
-
-  ret = ihk_os_getperfevent(0, &counts, 1);
-  INTERR(ret < 0, "ihk_os_getperfevent returned %d\n",
-        ret);
-
-  ret = ihk_os_perfctl(0, PERF_EVENT_DESTROY);
-  INTERR(ret, "PERF_EVENT_DESTROY returned %d\n", ret);
-
-  ret = ihk_os_shutdown(0);
-  INTERR(ret, "return value: %d, expected: %d\n", ret, 0);
-
-  ret = os_wait_for_status(IHK_STATUS_INACTIVE);
-  INTERR(ret, "os status didn't change to %d\n",
-     IHK_STATUS_INACTIVE);
-
-  ret = mems_os_release();
-  INTERR(ret, "mems_os_release returned %d\n", ret);
-
-  ret = cpus_os_release();
-  INTERR(ret, "cpus_os_release returned %d\n", ret);
-
-//  if (fd != -1) close(fd);
+  ihk_os_perfctl(0, PERF_EVENT_DISABLE);
+  ihk_os_getperfevent(0, &counts, 1);
+  ihk_os_perfctl(0, PERF_EVENT_DESTROY);
+  ihk_os_shutdown(0);
+  os_wait_for_status(IHK_STATUS_INACTIVE);
+  mems_os_release();
+  cpus_os_release();
 
   if (ihk_get_num_os_instances(0))
-    ret = ihk_destroy_os(0, os_index);
+    ihk_destroy_os(0, os_index);
 
   cpus_release();
   mems_release();
