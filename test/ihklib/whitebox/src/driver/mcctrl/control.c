@@ -1161,10 +1161,7 @@ out:
   return ret;
 }
 
-
-/* NOTE: per-process data is refcounted.
- * For every get call the user should call put. */
-struct mcctrl_per_proc_data *mcctrl_get_per_proc_data(
+struct mcctrl_per_proc_data *mcctrl_get_per_proc_data_orig(
     struct mcctrl_usrdata *ud, int pid)
 {
   struct mcctrl_per_proc_data *ppd_iter, *ppd = NULL;
@@ -1189,8 +1186,80 @@ struct mcctrl_per_proc_data *mcctrl_get_per_proc_data(
   return ppd;
 }
 
-/* Drop reference. If zero, remove and deallocate */
-void mcctrl_put_per_proc_data(struct mcctrl_per_proc_data *ppd)
+/* NOTE: per-process data is refcounted.
+ * For every get call the user should call put. */
+struct mcctrl_per_proc_data *mcctrl_get_per_proc_data(
+    struct mcctrl_usrdata *ud, int pid)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_GET_PER_PROC_DATA)  // Disable test code
+    return mcctrl_get_per_proc_data_orig(ud, pid);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 3;
+
+  branch_info_t b_infos[] = {
+    { 0, "all procs have no data registered" },
+    { 0, "not found any registered data of the specified pid" },
+    { 0, "main case" },
+  };
+
+  struct mcctrl_per_proc_data *ret = NULL;
+  unsigned long flags;
+  struct mcctrl_per_proc_data *ppd_iter;
+  int hash = (pid & MCCTRL_PER_PROC_DATA_HASH_MASK);
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_per_proc_data *ppd = NULL;
+    int found = 0;
+    int should_quit = 0;
+
+    /* Check if data for this process exists and return it */
+    read_lock_irqsave(&ud->per_proc_data_hash_lock[hash], flags);
+
+    if (ivec == 0 || list_empty(&ud->per_proc_data_hash[hash])) {
+      ret = NULL;
+      if (ivec != 0) should_quit = 1;
+      goto out;
+    }
+
+    list_for_each_entry(ppd_iter, &ud->per_proc_data_hash[hash], hash) {
+      if (ivec != 1 && ppd_iter->pid == pid) {
+        found = 1;
+        ppd = ppd_iter;
+        break;
+      }
+      // ivec = 1 goes here
+    }
+
+    if (!ppd && ivec != 1) should_quit = 1;
+
+    if (ppd) {
+      atomic_inc(&ppd->refcount);
+    }
+    ret = ppd;
+
+   out:
+    read_unlock_irqrestore(&ud->per_proc_data_hash_lock[hash], flags);
+
+    if (ivec == total_branch - 1) {
+      if (found) {
+        OKNG(ret, "found per-proc data\n");
+        OKNG(atomic_read(&ret->refcount) > 1, "refcount should be increased\n");
+      } else {
+        OKNG(!ret, "not found per-proc data\n");
+      }
+    } else {
+      OKNG(!ret, "not found per-proc data\n");
+    }
+  }
+  return ret;
+ err:
+  return NULL;
+}
+
+void mcctrl_put_per_proc_data_orig(struct mcctrl_per_proc_data *ppd)
 {
   int hash;
   unsigned long flags;
@@ -1227,16 +1296,17 @@ void mcctrl_put_per_proc_data(struct mcctrl_per_proc_data *ppd)
       /* We use ERESTARTSYS to tell the LWK that the proxy
          process is gone and the application should be terminated. */
       packet = (struct ikc_scd_packet *)ptd->data;
-      dprintk("%s: calling __return_syscall (hash),target pid=%d,tid=%d\n", __FUNCTION__, ppd->pid, packet->req.rtid);
-      __return_syscall(ppd->ud->os, packet, -ERESTARTSYS,
-           packet->req.rtid);
+      dprintk("%s: calling __return_syscall (hash),target pid=%d,tid=%d\n",
+              __FUNCTION__, ppd->pid, packet->req.rtid);
+      __return_syscall(ppd->ud->os, packet, -ERESTARTSYS, packet->req.rtid);
       ihk_ikc_release_packet((struct ihk_ikc_free_packet *)packet);
 
       /* Note that uti ptd needs another put by mcexec_terminate_thread()
          (see mcexec_syscall_wait()).
          TODO: Detect tracer has died before calling mcexec_terminate_thread() and put uti ptd */
       if (atomic_read(&ptd->refcount) != 1) {
-        printk("%s: WARNING: ptd->refcount != 1 but %d\n", __FUNCTION__, atomic_read(&ptd->refcount));
+        printk("%s: WARNING: ptd->refcount != 1 but %d\n",
+               __FUNCTION__, atomic_read(&ptd->refcount));
       }
       mcctrl_put_per_thread_data_unsafe(ptd);
       pr_ptd("put", ptd->tid, ptd);
@@ -1252,14 +1322,163 @@ void mcctrl_put_per_proc_data(struct mcctrl_per_proc_data *ppd)
 
     /* We use ERESTARTSYS to tell the LWK that the proxy
      * process is gone and the application should be terminated */
-    __return_syscall(ppd->ud->os, packet, -ERESTARTSYS,
-        packet->req.rtid);
+    __return_syscall(ppd->ud->os, packet, -ERESTARTSYS, packet->req.rtid);
     ihk_ikc_release_packet((struct ihk_ikc_free_packet *)packet);
   }
   ihk_ikc_spinlock_unlock(&ppd->wq_list_lock, flags);
 
   pager_remove_process(ppd);
   kfree(ppd);
+}
+
+/* Drop reference. If zero, remove and deallocate */
+void mcctrl_put_per_proc_data(struct mcctrl_per_proc_data *ppd)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_PUT_PER_PROC_DATA)  // Disable test code
+    return mcctrl_put_per_proc_data_orig(ppd);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid per-proc data" },
+    { 0, "main case" },
+  };
+
+  unsigned long flags;
+  int i;
+  int hash;
+  int count_ppd_hash_prev = 0;
+  struct mcctrl_per_proc_data *ppd_iter;
+
+  /* save previous state */
+  if (ppd) {
+    hash = (ppd->pid & MCCTRL_PER_PROC_DATA_HASH_MASK);
+    write_lock_irqsave(&ppd->ud->per_proc_data_hash_lock[hash], flags);
+    list_for_each_entry(ppd_iter, &ppd->ud->per_proc_data_hash[hash], hash) {
+      count_ppd_hash_prev++;
+    }
+    write_unlock_irqrestore(&ppd->ud->per_proc_data_hash_lock[hash], flags);
+  }
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct wait_queue_head_list_node *wqhln;
+    struct wait_queue_head_list_node *wqhln_next;
+    struct ikc_scd_packet *packet;
+    struct mcctrl_per_thread_data *ptd;
+    struct mcctrl_per_thread_data *next;
+    int count_ppd_hash_after = 0;
+    int wq_list_empty = 0, all_ptd_list_empty = 1;
+    int refcnt_after = 0;
+    int should_free = 0;
+    int should_quit = 0;
+
+    if (ivec == 0 || !ppd) {
+      if (ivec != 0) return;
+      goto out;
+    }
+
+    /* Removal from hash table and the refcount reaching zero
+     * have to happen atomically */
+    write_lock_irqsave(&ppd->ud->per_proc_data_hash_lock[hash], flags);
+    if (!atomic_dec_and_test(&ppd->refcount)) {
+      write_unlock_irqrestore(&ppd->ud->per_proc_data_hash_lock[hash], flags);
+      should_quit = 1;
+      goto out;
+    }
+
+    list_del(&ppd->hash);
+    write_unlock_irqrestore(&ppd->ud->per_proc_data_hash_lock[hash], flags);
+
+    dprintk("%s: deallocating PPD for pid %d\n", __FUNCTION__, ppd->pid);
+
+    for (i = 0; i < MCCTRL_PER_THREAD_DATA_HASH_SIZE; i++) {
+      write_lock_irqsave(&ppd->per_thread_data_hash_lock[i], flags);
+      list_for_each_entry_safe(ptd, next,
+                               ppd->per_thread_data_hash + i, hash) {
+
+        /* We use ERESTARTSYS to tell the LWK that the proxy
+           process is gone and the application should be terminated. */
+        packet = (struct ikc_scd_packet *)ptd->data;
+        dprintk("%s: calling __return_syscall (hash),target pid=%d,tid=%d\n",
+                __FUNCTION__, ppd->pid, packet->req.rtid);
+        __return_syscall(ppd->ud->os, packet, -ERESTARTSYS, packet->req.rtid);
+        ihk_ikc_release_packet((struct ihk_ikc_free_packet *)packet);
+
+        /* Note that uti ptd needs another put by mcexec_terminate_thread()
+           (see mcexec_syscall_wait()).
+           TODO: Detect tracer has died before calling mcexec_terminate_thread() and put uti ptd */
+        if (atomic_read(&ptd->refcount) != 1) {
+          printk("%s: WARNING: ptd->refcount != 1 but %d\n",
+                 __FUNCTION__, atomic_read(&ptd->refcount));
+        }
+        mcctrl_put_per_thread_data_unsafe(ptd);
+        pr_ptd("put", ptd->tid, ptd);
+      }
+      write_unlock_irqrestore(&ppd->per_thread_data_hash_lock[i], flags);
+    }
+
+    flags = ihk_ikc_spinlock_lock(&ppd->wq_list_lock);
+    list_for_each_entry_safe(wqhln, wqhln_next, &ppd->wq_req_list, list) {
+      list_del(&wqhln->list);
+      packet = wqhln->packet;
+      kfree(wqhln);
+
+      /* We use ERESTARTSYS to tell the LWK that the proxy
+       * process is gone and the application should be terminated */
+      __return_syscall(ppd->ud->os, packet, -ERESTARTSYS, packet->req.rtid);
+      ihk_ikc_release_packet((struct ihk_ikc_free_packet *)packet);
+    }
+    ihk_ikc_spinlock_unlock(&ppd->wq_list_lock, flags);
+
+    pager_remove_process(ppd);
+    should_free = 1;
+
+   out:
+    if (should_quit) return;
+
+    write_lock_irqsave(&ppd->ud->per_proc_data_hash_lock[hash], flags);
+    refcnt_after = atomic_read(&ppd->refcount);
+    list_for_each_entry(ppd_iter, &ppd->ud->per_proc_data_hash[hash], hash) {
+      count_ppd_hash_after++;
+    }
+    write_unlock_irqrestore(&ppd->ud->per_proc_data_hash_lock[hash], flags);
+
+    flags = ihk_ikc_spinlock_lock(&ppd->wq_list_lock);
+    wq_list_empty = list_empty(&ppd->wq_req_list);
+    ihk_ikc_spinlock_unlock(&ppd->wq_list_lock, flags);
+
+    for (i = 0; i < MCCTRL_PER_THREAD_DATA_HASH_SIZE; i++) {
+      write_lock_irqsave(&ppd->per_thread_data_hash_lock[i], flags);
+      int empty = list_empty(ppd->per_thread_data_hash + i);
+      write_unlock_irqrestore(&ppd->per_thread_data_hash_lock[i], flags);
+      if (!empty) {
+        all_ptd_list_empty = 0;
+        break;
+      }
+    }
+
+    if (ivec == total_branch - 1) {
+      if (!should_free) {
+        OKNG(refcnt_after >= 1, "check refcount\n");
+      } else {
+        OKNG(refcnt_after == 0, "check refcount\n");
+        OKNG(count_ppd_hash_after == count_ppd_hash_prev - 1,
+             "# of ppd hash should be decreased by 1\n");
+        OKNG(all_ptd_list_empty, "all ptd hash list should be empty\n");
+        OKNG(wq_list_empty, "wq list should be empty\n");
+      }
+    } else {
+      OKNG(refcnt_after >= 1, "check refcount\n");
+      OKNG(count_ppd_hash_after == count_ppd_hash_prev,
+           "# of ppd hash should be unchanged\n");
+    }
+  }
+ err:
+  kfree(ppd);
+  return;
 }
 
 
@@ -1385,7 +1604,6 @@ retry_alloc:
   wqhln->req = 1;
   wake_up(&wqhln->wq_syscall);
   ihk_ikc_spinlock_unlock(&ppd->wq_list_lock, flags);
-
   mcctrl_put_per_proc_data(ppd);
 
   return 0;
@@ -4170,7 +4388,7 @@ long __mcctrl_control(ihk_os_t os, unsigned int req,
   return -EINVAL;
 }
 
-int mcctrl_get_request_os_cpu(ihk_os_t os, int *ret_cpu)
+int mcctrl_get_request_os_cpu_orig(ihk_os_t os, int *ret_cpu)
 {
   struct mcctrl_usrdata *usrdata;
   struct mcctrl_per_proc_data *ppd;
@@ -4195,7 +4413,7 @@ int mcctrl_get_request_os_cpu(ihk_os_t os, int *ret_cpu)
   ppd = mcctrl_get_per_proc_data(usrdata, task_tgid_vnr(current));
   if (!ppd) {
     kprintf("%s: ERROR: no per-process structure for PID %d??\n",
-        __FUNCTION__, task_tgid_vnr(current));
+            __FUNCTION__, task_tgid_vnr(current));
     return -EINVAL;
   }
 
@@ -4210,7 +4428,7 @@ int mcctrl_get_request_os_cpu(ihk_os_t os, int *ret_cpu)
   packet = (struct ikc_scd_packet *)ptd->data;
   if (!packet) {
     printk("%s: ERROR: no packet registered for TID %d\n",
-        __FUNCTION__, task_pid_vnr(current));
+           __FUNCTION__, task_pid_vnr(current));
     ret = -EINVAL;
     goto out_put_ppd;
   }
@@ -4221,8 +4439,7 @@ int mcctrl_get_request_os_cpu(ihk_os_t os, int *ret_cpu)
   *ret_cpu = ch->send.queue->read_cpu;
   ret = 0;
 
-  pr_info("%s: OS: %lx, CPU: %d\n",
-    __func__, (unsigned long)os, *ret_cpu);
+  pr_info("%s: OS: %lx, CPU: %d\n", __func__, (unsigned long)os, *ret_cpu);
 
 out_put_ppd:
   mcctrl_put_per_thread_data(ptd);
@@ -4231,6 +4448,128 @@ out_put_ppd:
   mcctrl_put_per_proc_data(ppd);
 
   return ret;
+}
+
+int mcctrl_get_request_os_cpu(ihk_os_t os, int *ret_cpu)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_GET_REQUEST_OS_CPU)  // Disable test code
+    return mcctrl_get_request_os_cpu_orig(os, ret_cpu);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 7;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "invalid parameter" },
+    { -EINVAL, "not found usrdata" },
+    { -EINVAL, "not found per-process data" },
+    { -EINVAL, "not found per-thread data" },
+    { -EINVAL, "not packet registered" },
+    { -EINVAL, "no channel initialized" },
+    { 0,       "main case" },
+  };
+
+  if (ret_cpu) *ret_cpu = -1;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    struct mcctrl_usrdata *usrdata = NULL;
+    struct mcctrl_per_proc_data *ppd = NULL;
+    struct mcctrl_per_thread_data *ptd = NULL;
+    struct ikc_scd_packet *packet = NULL;
+    struct ihk_ikc_channel_desc *ch = NULL;
+    int ret = 0;
+    int should_quit = 0;
+
+    if (ivec == 0 || (!os || ihk_host_validate_os(os) || !ret_cpu)) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    /* Look up per-OS mcctrl structure */
+    usrdata = ihk_host_os_get_usrdata(os);
+    if (ivec == 1 || !usrdata) {
+      ret = -EINVAL;
+      if (ivec != 1) {
+        pr_err("%s: ERROR: mcctrl_usrdata not found for OS %p\n",
+               __func__, os);
+        return ret;
+      }
+      goto out;
+    }
+
+    /* Look up per-process structure */
+    ppd = mcctrl_get_per_proc_data(usrdata, task_tgid_vnr(current));
+    if (ivec == 2 || !ppd) {
+      ret = -EINVAL;
+      if (ivec != 2) {
+        kprintf("%s: ERROR: no per-process structure for PID %d??\n",
+                __FUNCTION__, task_tgid_vnr(current));
+        return ret;
+      }
+      goto out;
+    }
+
+    /* Look up per-thread structure */
+    ptd = mcctrl_get_per_thread_data(ppd, current);
+    if (ivec == 3 || !ptd) {
+      ret = -EINVAL;
+      if (ivec != 3) {
+        printk("%s: ERROR: mcctrl_get_per_thread_data failed\n", __FUNCTION__);
+        should_quit = 1;
+      }
+      goto no_ptd;
+    }
+    pr_ptd("get", task_pid_vnr(current), ptd);
+    packet = (struct ikc_scd_packet *)ptd->data;
+    if (ivec == 4 || !packet) {
+      ret = -EINVAL;
+      if (ivec != 4) {
+        printk("%s: ERROR: no packet registered for TID %d\n",
+               __FUNCTION__, task_pid_vnr(current));
+        should_quit = 1;
+      }
+      goto out_put_ppd;
+    }
+
+    if (ivec == 5 ||
+        (!usrdata->channels || !(usrdata->channels + packet->ref) ||
+         !(usrdata->channels + packet->ref)->c)) {
+      ret = -EINVAL;
+      if (ivec != 5) should_quit = 1;
+      goto out_put_ppd;
+    }
+    /* TODO: define a new IHK query function instead of
+     * accessing internals directly */
+    ch = (usrdata->channels + packet->ref)->c;
+    *ret_cpu = ch->send.queue->read_cpu;
+    ret = 0;
+
+    pr_info("%s: OS: %lx, CPU: %d\n", __func__, (unsigned long)os, *ret_cpu);
+
+   out_put_ppd:
+    mcctrl_put_per_thread_data(ptd);
+    pr_ptd("put", task_pid_vnr(current), ptd);
+   no_ptd:
+    mcctrl_put_per_proc_data(ppd);
+   out:
+    if (should_quit) return ret;
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == total_branch - 1) {
+      OKNG(ch, "found a valid channel\n");
+      OKNG(*ret_cpu >= 0 && *ret_cpu < usrdata->cpu_info->n_cpus,
+           "return a valid cpu\n");
+    } else {
+      OKNG(!ch, "not found a valid channel\n");
+      OKNG(*ret_cpu == -1, "not found a valid cpu\n");
+    }
+  }
+  return 0;
+ err:
+  return -EINVAL;
 }
 
 int __mcctrl_os_read_write_cpu_register_orig(
@@ -4392,9 +4731,6 @@ int __mcctrl_os_read_write_cpu_register(
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
 
     if (ivec == total_branch - 1) {
-      if (op == MCCTRL_OS_CPU_READ_REGISTER) {
-    //    OKNG(desc->val > 0, "check cpu register value\n");
-      }
       OKNG(atomic_read(&desc->sync) == 1, "check desc sync\n");
     } else {
       if (op == MCCTRL_OS_CPU_READ_REGISTER) {

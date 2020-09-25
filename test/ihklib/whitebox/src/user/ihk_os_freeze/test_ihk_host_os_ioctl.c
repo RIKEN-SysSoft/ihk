@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 
   struct mems mems = { 0 };
   int excess;
-  ret = _mems_ls(&mems, "MemFree", 0.02, 1UL << 30);
+  ret = _mems_ls(&mems, "MemFree", 0.02, -1);
   INTERR(ret, "mems_ls returned %d\n", ret);
   excess = mems.num_mem_chunks - 4;
   if (excess > 0) {
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
   ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
   INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
   close(fd); fd = -1;
-  
+
   unsigned long os_set[1] = {1};
   INFO("trying to freeze os\n");
   ret = ihk_os_freeze(os_set, 8 * sizeof(unsigned long));
@@ -80,21 +80,13 @@ int main(int argc, char **argv)
   INTERR(ret, "os status didn't change to %d\n",
      IHK_STATUS_FROZEN);
   out:
-
-  ret = ihk_os_shutdown(0);
-  INTERR(ret, "return value: %d, expected: %d\n", ret, 0);
-  ret = os_wait_for_status(IHK_STATUS_INACTIVE);
-  INTERR(ret, "os status didn't change to %d\n",
-     IHK_STATUS_INACTIVE);
-
-  ret = mems_os_release();
-  INTERR(ret, "mems_os_release returned %d\n", ret);
-
-  ret = cpus_os_release();
-  INTERR(ret, "cpus_os_release returned %d\n", ret);
+  ihk_os_shutdown(0);
+  os_wait_for_status(IHK_STATUS_INACTIVE);
+  mems_os_release();
+  cpus_os_release();
 
   if (ihk_get_num_os_instances(0))
-    ret = ihk_destroy_os(0, os_index);
+    ihk_destroy_os(0, os_index);
 
   cpus_release();
   mems_release();
