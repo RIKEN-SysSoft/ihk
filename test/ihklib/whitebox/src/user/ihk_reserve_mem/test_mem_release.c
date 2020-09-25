@@ -80,15 +80,6 @@ int main(int argc, char **argv)
 
   ret = 0;
  out:
- /* Clean up */
-  //ret = mems_release();
-  /*struct ihk_mem_chunk mem_chunks[1] = {
-    { .size = -1UL, .numa_node_number = 0 }
-  };
-
-  ret = ihk_release_mem(0, mem_chunks, 1);*/
-
-  //if (ret) PRINT("ihk_release_mem returned %d\n", ret);
 
   linux_rmmod(0);
   return ret;

@@ -52,8 +52,7 @@ int main(int argc, char **argv)
  out:
   /* Clean up */
   if (reserved) {
-    ret = ihk_release_cpu(0, cpus_input.cpus, cpus_input.ncpus);
-    if (ret) PRINT("ihk_release_cpu returned %d\n", ret);
+    ihk_release_cpu(0, cpus_input.cpus, cpus_input.ncpus);
   }
 
   linux_rmmod(0);
