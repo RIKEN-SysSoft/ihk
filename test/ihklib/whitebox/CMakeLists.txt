@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-# Options: -DWITH_MCK=<McKernel install directory>
-add_definitions(-DWITH_MCK=${WITH_MCK})
+add_definitions(-DMCK_INSTALL_PREFIX=${MCK_INSTALL_PREFIX})
 
 execute_process(COMMAND readlink -f ../../../../../
                 OUTPUT_VARIABLE mckernel_root)
@@ -31,7 +30,7 @@ set (patch_arg ${mckernel_root}/kernel/CMakeLists.txt -i ${mckernel_root}/ihk/te
 execute_process(COMMAND ${patch_cmd} ${patch_arg})
 
 set (cmake_cmd cmake)
-set (cmake_arg -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${WITH_MCK} -DUNAME_R=4.14.0-115.13.1.1chaos.el7a.aarch64 ${mckernel_root})
+set (cmake_arg -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${MCK_INSTALL_PREFIX} -DUNAME_R=4.14.0-115.13.1.1chaos.el7a.aarch64 ${mckernel_root})
 execute_process(COMMAND ${cmake_cmd} ${cmake_arg})
 execute_process(COMMAND make -j install)
 
@@ -78,10 +77,8 @@ endif()
 
 cmake_policy(SET CMP0005 NEW)
 
-# Options: -DWITH_MCK=<McKernel install directory>
-add_definitions(-DWITH_MCK=${WITH_MCK})
+add_definitions(-DMCK_INSTALL_PREFIX=${MCK_INSTALL_PREFIX})
 
-# Options: -DWITH_MCK_SRC=<McKernel source directory>
 add_definitions(-DWITH_MCK_SRC=${WITH_MCK_SRC})
 
 # for autotest
@@ -130,11 +127,11 @@ add_compile_options(
 
 
 # -L, this must be done before adding dependants
-link_directories("${WITH_MCK}/lib64")
+link_directories("${MCK_INSTALL_PREFIX}/lib64")
 
 # -Wl,--rpath=, this must be done before adding dependants
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH "${WITH_MCK}/lib64")
+set(CMAKE_INSTALL_RPATH "${MCK_INSTALL_PREFIX}/lib64")
 
 
 # Add libraries
@@ -149,7 +146,7 @@ foreach(target IN ITEMS
     )
   target_include_directories(${target}
     PRIVATE "${PROJECT_SOURCE_DIR}/../blackbox/include"
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     )
   target_link_libraries(${target}
     PUBLIC ihk
@@ -164,7 +161,17 @@ foreach(target IN ITEMS
   add_library(${target} STATIC ../blackbox/src/${target}.c)
   target_include_directories(${target}
     PRIVATE "${PROJECT_SOURCE_DIR}/../blackbox/include"
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
+    )
+endforeach()
+
+# library used by program running on McKernel
+foreach(target IN ITEMS
+    mckernel
+    )
+  add_library(${target} STATIC ../blackbox/src/${target}.c)
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/../blackbox/include"
     )
 endforeach()
 
@@ -187,7 +194,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
 
@@ -220,7 +227,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
 
@@ -253,7 +260,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
 
@@ -293,7 +300,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
 
@@ -331,7 +338,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
 
@@ -359,7 +366,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -385,7 +392,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -413,7 +420,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -443,7 +450,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -476,7 +483,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -502,7 +509,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -528,7 +535,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -591,7 +598,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -619,7 +626,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -649,7 +656,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -677,7 +684,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -703,7 +710,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -729,7 +736,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -757,7 +764,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -784,7 +791,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -811,7 +818,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -840,7 +847,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -867,7 +874,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -894,7 +901,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -924,7 +931,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -950,7 +957,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1003,7 +1010,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1030,7 +1037,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1056,7 +1063,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1082,7 +1089,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1132,7 +1139,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1159,7 +1166,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1185,7 +1192,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1212,7 +1219,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1238,7 +1245,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1269,7 +1276,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1295,7 +1302,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1323,7 +1330,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1350,7 +1357,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1379,7 +1386,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1406,7 +1413,7 @@ foreach(target IN ITEMS
     PRIVATE "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
     PRIVATE "${PROJECT_SOURCE_DIR}/.."
-    PRIVATE "${WITH_MCK}/include"
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
     PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
     )
   # -l
@@ -1416,6 +1423,107 @@ foreach(target IN ITEMS
   # Install
   install(TARGETS ${target} DESTINATION bin)
 #  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+    test_ihk_os_write_cpu_register
+    )
+  # Add target
+  add_executable(${target} src/user/ihk_os_write_cpu_register/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+foreach(target IN ITEMS
+  test_ihk_get_request_os_cpu
+  test_mcctrl_get_per_proc_data
+  test_mcctrl_put_per_proc_data
+  test_mcctrl_put_per_thread_data_unsafe
+  test_mcctrl_get_request_os_cpu
+  test_mcctrl_get_per_thread_data
+  test_mcctrl_put_per_thread_data
+  test__return_syscall
+  check_cpu_register
+  )
+  # Add target
+  add_executable(${target} src/user/ihk_get_request_os_cpu/${target}.c)
+  # -D
+  target_compile_definitions(${target}
+    PRIVATE -DPAGE_SIZE=${PAGE_SIZE}
+    )
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE "${PROJECT_SOURCE_DIR}/include/user"
+    PRIVATE "${PROJECT_SOURCE_DIR}/.."
+    PRIVATE "${MCK_INSTALL_PREFIX}/include"
+    PRIVATE "${WITH_MCK_SRC}/ihk/linux/include"
+    )
+  # -l
+  target_link_libraries(${target}
+    PRIVATE params cpu mem os user linux numa
+    )
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+#  install(PROGRAMS ${CMAKE_BINARY_DIR}/ihklib-${target} DESTINATION ${CMAKE_INSTALL_PREFIX_SCRIPTS})
+endforeach()
+
+add_custom_target(test_driver ALL COMMAND cp ${MCK_INSTALL_PREFIX}/kmod/ihk/linux/core/Module.symvers
+                  ./ && make EXTRA_CFLAGS=\"-I${MCK_INSTALL_PREFIX}/include -I${WITH_MCK_SRC}/ihk/linux/include\"
+                  && mv test_driver.ko ${CMAKE_BINARY_DIR} && make clean
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../blackbox/driver
+  )
+
+if (NOT EXISTS "${MCK_INSTALL_PREFIX}/kmod/test_driver.ko")
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/test_driver.ko DESTINATION kmod)
+endif()
+
+foreach(target IN ITEMS
+    zoneinfo.awk
+    check_dump.awk
+    )
+  install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/../blackbox/src/${target} DESTINATION bin)
+endforeach()
+
+foreach(target IN ITEMS
+    nop
+    nop_ldr
+    consume_cpu_time
+    )
+
+  # Add target
+  add_executable(${target} ../blackbox/src/${target}.c)
+
+  # -I
+  target_include_directories(${target}
+    PRIVATE "${PROJECT_SOURCE_DIR}/../blackbox/include"
+    )
+
+  # -l
+  target_link_libraries(${target}
+    PRIVATE mckernel
+    )
+
+  # Install
+  install(TARGETS ${target} DESTINATION bin)
+
 endforeach()
 
 # programs needing fcc and mckernel.h
@@ -1456,7 +1564,7 @@ endif()
 cmake_policy(SET CMP0005 NEW)
 
 # Options: -DWITH_MCK=<McKernel install directory>
-add_definitions(-DWITH_MCK=${WITH_MCK})
+add_definitions(-DWITH_MCK=${MCK_INSTALL_PREFIX})
 
 # Options: -DWITH_MCK_SRC=<McKernel source directory>
 add_definitions(-DWITH_MCK_SRC=${WITH_MCK_SRC})
@@ -1507,11 +1615,11 @@ add_compile_options(
 
 
 # -L, this must be done before adding dependants
-link_directories("${WITH_MCK}/lib64")
+link_directories("${MCK_INSTALL_PREFIX}/lib64")
 
 # -Wl,--rpath=, this must be done before adding dependants
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH "${WITH_MCK}/lib64")
+set(CMAKE_INSTALL_RPATH "${MCK_INSTALL_PREFIX}/lib64")
 
 # programs needing fcc and mckernel.h
 if(CPU_MODEL STREQUAL "a64fx")

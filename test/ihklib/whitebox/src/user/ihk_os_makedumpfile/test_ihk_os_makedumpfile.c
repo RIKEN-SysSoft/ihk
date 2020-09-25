@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 
   struct mems mems = { 0 };
   int excess;
-  ret = _mems_ls(&mems, "MemFree", 0.02, 1UL << 30);
+  ret = _mems_ls(&mems, "MemFree", 0.02, -1);
   INTERR(ret, "mems_ls returned %d\n", ret);
   excess = mems.num_mem_chunks - 4;
   if (excess > 0) {
@@ -82,12 +82,12 @@ int main(int argc, char **argv)
     unlink(fn);
   }
 
-  ret = ihk_os_shutdown(0);
+  ihk_os_shutdown(0);
   os_wait_for_status(IHK_STATUS_INACTIVE);
   mems_os_release();
   cpus_os_release();
   if (ihk_get_num_os_instances(0))
-    ret = ihk_destroy_os(0, os_index);
+    ihk_destroy_os(0, os_index);
 
   cpus_release();
   mems_release();
