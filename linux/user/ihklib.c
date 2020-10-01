@@ -3111,6 +3111,11 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 
 	dprintk("%s: enter\n", __func__);
 
+	if (!attr) {
+		ret = -EFAULT;
+		goto out;
+	}
+
 	if ((fd = ihklib_os_open(index)) < 0) {
 		dprintf("%s: error: ihklib_os_open returned %d\n",
 			__func__, fd);
