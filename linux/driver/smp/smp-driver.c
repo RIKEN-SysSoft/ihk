@@ -2524,6 +2524,12 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 		goto out;
 	}
 
+	if (req.num_chunks < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+
 	if (req.num_chunks == 0) {
 		ret = 0;
 		goto out;
