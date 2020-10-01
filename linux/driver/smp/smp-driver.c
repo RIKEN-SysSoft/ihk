@@ -1770,7 +1770,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 		return -EFAULT;
 	}
 
-	if (req.num_cpus == 0) {
+	if (req.num_cpus <= 0 || req.num_cpus > SMP_MAX_CPUS) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
