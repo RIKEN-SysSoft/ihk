@@ -881,6 +881,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	if (!elf64) {
 		printk("error: ioremap() returns NULL\n");
 		ret = -EINVAL;
+		fput(file);
 		goto revert_state;
 	}
 
@@ -943,17 +944,26 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
-				return -E2BIG;
+				ret = -E2BIG;
+				ihk_smp_unmap_virtual(elf64);
+				fput(file);
+				goto revert_state;
 			}
 
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
+			if (!buf) {
+				ret = -EFAULT;
+				ihk_smp_unmap_virtual(elf64);
+				fput(file);
+				goto revert_state;
+			}
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 			r = kernel_read(file, buf, l, &pos);
 #else
 			r = kernel_read(file, pos, buf, l);
 			pos += r;
 #endif
-			if(r != PAGE_SIZE){
+			if (r > 0 && r != PAGE_SIZE) {
 				memset(buf + r, '\0', PAGE_SIZE - r);
 			}
 			ihk_smp_unmap_virtual(buf);
@@ -961,7 +971,8 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 				pr_err("kernel_read failed: %ld\n", r);
 				ihk_smp_unmap_virtual(elf64);
 				fput(file);
-				return (int)r;
+				ret = (int)r;
+				goto revert_state;
 			}
 			offset += PAGE_SIZE;
 		}
@@ -971,7 +982,10 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
-				return -E2BIG;
+				ret = -E2BIG;
+				ihk_smp_unmap_virtual(elf64);
+				fput(file);
+				goto revert_state;
 			}
 
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
