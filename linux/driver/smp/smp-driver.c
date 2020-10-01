@@ -791,14 +791,14 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 {
 	int ret;
 	struct smp_os_data *os = priv;
-	struct file *file;
+	struct file *file = NULL;
 	loff_t pos = 0;
 	long r;
 	unsigned long phys;
 	unsigned long offset;
 	unsigned long maxoffset;
 	unsigned long flags;
-	Elf64_Ehdr *elf64;
+	Elf64_Ehdr *elf64 = NULL;
 	Elf64_Phdr *elf64p;
 	int i;
 	unsigned long entry;
@@ -894,8 +894,6 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 #endif
 	if (r <= 0) {
 		pr_err("kernel_read failed: %ld\n", r);
-		ihk_smp_unmap_virtual(elf64);
-		fput(file);
 		ret = r;
 		goto revert_state;
 	}
@@ -905,8 +903,6 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	   elf64->e_ident[3] != 'F' ||
 	   elf64->e_phoff + sizeof(Elf64_Phdr) * elf64->e_phnum > PAGE_SIZE){
 		printk("kernel: BAD ELF\n");
-		ihk_smp_unmap_virtual(elf64);
-		fput(file);
 		ret = -EINVAL;
 		goto revert_state;
 	}
@@ -943,25 +939,29 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
-				return -E2BIG;
+				ret = -E2BIG;
+				goto revert_state;
 			}
 
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
+			if (!buf) {
+				ret = -EFAULT;
+				goto revert_state;
+			}
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 			r = kernel_read(file, buf, l, &pos);
 #else
 			r = kernel_read(file, pos, buf, l);
 			pos += r;
 #endif
-			if(r != PAGE_SIZE){
+			if (r > 0 && r != PAGE_SIZE) {
 				memset(buf + r, '\0', PAGE_SIZE - r);
 			}
 			ihk_smp_unmap_virtual(buf);
 			if (r <= 0) {
 				pr_err("kernel_read failed: %ld\n", r);
-				ihk_smp_unmap_virtual(elf64);
-				fput(file);
-				return (int)r;
+				ret = (int)r;
+				goto revert_state;
 			}
 			offset += PAGE_SIZE;
 		}
@@ -971,7 +971,8 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
-				return -E2BIG;
+				ret = -E2BIG;
+				goto revert_state;
 			}
 
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
@@ -984,8 +985,6 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 			maxoffset = offset;
 	}
 
-	fput(file);
-	ihk_smp_unmap_virtual(elf64);
 
 	if ((ret = smp_ihk_os_map_lwk(phys))) {
 		pr_info("%s: WARNING: smp_ihk_os_map_lwk failed: %d\n",
@@ -997,11 +996,16 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 		goto revert_state;
 	}
 
-
 	dump_bootstrap_mem_start = os->bootstrap_mem_start;
 	ret = 0;
 
  revert_state:
+	if (elf64) {
+		ihk_smp_unmap_virtual(elf64);
+	}
+	if (file) {
+		fput(file);
+	}
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
  out:
 	return ret;
