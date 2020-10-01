@@ -2525,7 +2525,8 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 	}
 
 	if (req.num_chunks < 0) {
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 
@@ -2606,6 +2607,10 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		num_chunks++;
 	}
 
+	if (req.num_chunks < 0) {
+		return -EINVAL;
+	}
+
 	if (req.num_chunks == 0) {
 		/* Get assigned num chunks */
 		if (copy_to_user(&res->num_chunks, &num_chunks, sizeof(int))) {
@@ -2617,8 +2622,8 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		ret = 0;
 		goto out;
 	}
-	else if (num_chunks > req.num_chunks) {
-		pr_err("%s: error: query_space is not large enough\n",
+	else if (num_chunks != req.num_chunks) {
+		pr_err("%s: error: # of chunks in output array != that of assigned\n",
 			__func__);
 		ret = -EINVAL;
 		goto out;
