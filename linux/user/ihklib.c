@@ -2915,6 +2915,10 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
 
 	dprintk("%s: enter\n", __func__);
 
+	if (!result) {
+		return -EFAULT;
+	}
+
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
 			__func__);
