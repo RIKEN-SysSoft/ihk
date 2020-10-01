@@ -2494,6 +2494,10 @@ ihk_device_t ihk_host_find_dev(int index)
 
 ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
 {
+	if (index < 0 || index >= OS_MAX_MINOR) {
+		return NULL;
+	}
+
 	if (!os_data[index] || os_data[index] == DEV_DATA_INVALID) {
 		return NULL;
 	} else{
