@@ -881,7 +881,6 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 	if (!elf64) {
 		printk("error: ioremap() returns NULL\n");
 		ret = -EINVAL;
-    fput(file);
 		goto revert_state;
 	}
 
@@ -944,26 +943,17 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
-        ret = -E2BIG;
-        ihk_smp_unmap_virtual(elf64);
-        fput(file);
-        goto revert_state;
+				return -E2BIG;
 			}
 
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
-      if (!buf) {
-        ret = -EFAULT;
-        ihk_smp_unmap_virtual(elf64);
-        fput(file);
-        goto revert_state;
-      }
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 			r = kernel_read(file, buf, l, &pos);
 #else
 			r = kernel_read(file, pos, buf, l);
 			pos += r;
 #endif
-			if (r > 0 && r != PAGE_SIZE) {
+			if(r != PAGE_SIZE){
 				memset(buf + r, '\0', PAGE_SIZE - r);
 			}
 			ihk_smp_unmap_virtual(buf);
@@ -971,8 +961,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 				pr_err("kernel_read failed: %ld\n", r);
 				ihk_smp_unmap_virtual(elf64);
 				fput(file);
-				ret = (int)r;
-        goto revert_state;
+				return (int)r;
 			}
 			offset += PAGE_SIZE;
 		}
@@ -982,10 +971,7 @@ static int smp_ihk_os_load_file(ihk_os_t ihk_os, void *priv, const char *fn)
 
 			if (offset + PAGE_SIZE > os->bootstrap_mem_end) {
 				printk("builtin: OS is too big to load.\n");
-				ret = -E2BIG;
-        ihk_smp_unmap_virtual(elf64);
-        fput(file);
-        goto revert_state;
+				return -E2BIG;
 			}
 
 			buf = ihk_smp_map_virtual(offset, PAGE_SIZE);
@@ -1685,7 +1671,7 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_cpus <= 0) {
+	if (req.num_cpus == 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -1770,7 +1756,7 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 		return -EFAULT;
 	}
 
-	if (req.num_cpus <= 0) {
+	if (req.num_cpus == 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -1947,7 +1933,7 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		return -EFAULT;
 	}
 
-	if (req.num_cpus <= 0) {
+	if (req.num_cpus == 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -1976,7 +1962,6 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	req_dst_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
 	if (!req_dst_cpus) {
 		pr_err("%s: error: allocating request dst_cpus\n", __func__);
-    kfree(req_src_cpus);
 		return -EINVAL;
 	}
 
@@ -2092,7 +2077,7 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		return -EFAULT;
 	}
 
-	if (req.num_cpus <= 0) {
+	if (req.num_cpus == 0) {
 		pr_err("%s: invalid request length\n", __func__);
 		return -EINVAL;
 	}
@@ -2186,7 +2171,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		 size_t mem_size, int numa_id)
 {
 	int ret = 0;
-	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
+	struct ihk_os_mem_chunk *os_mem_chunk;
 	struct ihk_os_mem_chunk *os_mem_chunk_tba_iter;
 	struct ihk_os_mem_chunk *os_mem_chunk_tba_next = NULL;
 	struct ihk_os_mem_chunk *os_mem_chunk_iter;
@@ -2307,12 +2292,6 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		mem_size_left -= os_mem_chunk->size;
 	}
 
-  if (os_mem_chunk && list_empty(&to_be_assigned_chunks)) {
-    /* want = IHK_SMP_MEM_ALL && invalid numa_id */
-    kfree(os_mem_chunk);
-    return -EINVAL;
-  }
-
 	/* We got all pieces we need, add them to the OS instance */
 	list_for_each_entry_safe(os_mem_chunk_tba_iter, os_mem_chunk_tba_next,
 			&to_be_assigned_chunks, list) {
@@ -2405,7 +2384,7 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_chunks <= 0) {
+	if (req.num_chunks == 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -2420,7 +2399,6 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	if (!req_numa_ids) {
 		pr_err("%s: error: allocating request numa_ids\n",
 			__func__);
-    kfree(req_sizes);
 		return -EINVAL;
 	}
 
@@ -2524,10 +2502,6 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 		goto out;
 	}
 
-  if (req.num_chunks < 0) {
-    return -EINVAL;
-  }
-
 	if (req.num_chunks == 0) {
 		ret = 0;
 		goto out;
@@ -2605,10 +2579,6 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		num_chunks++;
 	}
 
-  if (req.num_chunks < 0) {
-    return -EINVAL;
-  }
-
 	if (req.num_chunks == 0) {
 		/* Get assigned num chunks */
 		if (copy_to_user(&res->num_chunks, &num_chunks, sizeof(int))) {
@@ -2620,8 +2590,8 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		ret = 0;
 		goto out;
 	}
-	else if (num_chunks != req.num_chunks) {
-		pr_err("%s: error: num_chunks requested mismatch\n",
+	else if (num_chunks > req.num_chunks) {
+		pr_err("%s: error: query_space is not large enough\n",
 			__func__);
 		ret = -EINVAL;
 		goto out;
