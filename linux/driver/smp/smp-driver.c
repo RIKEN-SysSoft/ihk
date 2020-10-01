@@ -2186,7 +2186,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		 size_t mem_size, int numa_id)
 {
 	int ret = 0;
-	struct ihk_os_mem_chunk *os_mem_chunk;
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 	struct ihk_os_mem_chunk *os_mem_chunk_tba_iter;
 	struct ihk_os_mem_chunk *os_mem_chunk_tba_next = NULL;
 	struct ihk_os_mem_chunk *os_mem_chunk_iter;
@@ -2305,6 +2305,12 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 
 		list_add_tail(&os_mem_chunk->list, &to_be_assigned_chunks);
 		mem_size_left -= os_mem_chunk->size;
+	}
+
+	if (os_mem_chunk && list_empty(&to_be_assigned_chunks)) {
+		/* want = IHK_SMP_MEM_ALL && invalid numa_id */
+		kfree(os_mem_chunk);
+		return -EINVAL;
 	}
 
 	/* We got all pieces we need, add them to the OS instance */
