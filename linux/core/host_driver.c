@@ -305,6 +305,7 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 	 * return on a signal..
 	 */
 	if (down_interruptible(&ihk_os_notifiers_lock)) {
+		atomic_dec(&cont->count);
 		return -ERESTARTSYS;
 	}
 
@@ -318,13 +319,24 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 		if (ret == 0) {
 			struct ihk_os_notifier *_ion;
 			list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
-				if (_ion->ops && _ion->ops->boot)
-					_ion->ops->boot(index);
+				if (_ion->ops && _ion->ops->boot) {
+					ret = _ion->ops->boot(index);
+					if (ret) {
+						ikc_master_finalize(data);
+						data->ops->shutdown(data,
+							data->priv, flag);
+						break;
+					}
+				}
 			}
 		}
 	}
 
 	up(&ihk_os_notifiers_lock);
+
+	if (ret)
+		atomic_dec(&cont->count);
+
 	return ret;
 }
 
