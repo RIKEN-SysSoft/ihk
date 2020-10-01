@@ -2396,31 +2396,36 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
 		spin_unlock_irqrestore(&os->lock, flags);
-		return -EBUSY;
+		ret = -EBUSY;
+		goto out;
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
 	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
 		printk("%s: error: copying request\n", __FUNCTION__);
-		return -EFAULT;
+		ret = -EFAULT;
+		goto out;
 	}
 
-	if (req.num_chunks == 0) {
+	if (req.num_chunks <= 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
 	if (!req_sizes) {
 		pr_err("%s: error: allocating request sizes\n", __func__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	req_numa_ids = kmalloc(sizeof(int) * req.num_chunks, GFP_KERNEL);
 	if (!req_numa_ids) {
 		pr_err("%s: error: allocating request numa_ids\n",
 			__func__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (copy_from_user(req_sizes, req.sizes,
