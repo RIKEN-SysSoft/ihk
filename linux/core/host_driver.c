@@ -2545,6 +2545,11 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
 		goto out;
 	}
 
+	if (nread == 0) {
+		pr_info("%s: kmsg buffer is empty\n", __func__);
+		goto out;
+	}
+
 	/* Print line-by-line */
 	lines = buf;
 	line = strsep(&lines, "\n");
@@ -2553,9 +2558,6 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
 		line = strsep(&lines, "\n");
 	}
 
-	if (nread == 0) {
-		printk("%s: kmsg buffer is empty\n", __FUNCTION__);
-	}
  out:
 	if (buf) {
 		kfree(buf);
