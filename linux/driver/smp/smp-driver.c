@@ -1977,7 +1977,8 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	if (!req_dst_cpus) {
 		pr_err("%s: error: allocating request dst_cpus\n", __func__);
 		kfree(req_src_cpus);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (copy_from_user(req_dst_cpus, req.dst_cpus,
@@ -2089,24 +2090,28 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 
 	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
 		pr_err("%s: error: copying request\n", __func__);
-		return -EFAULT;
+		ret = -EFAULT;
+		goto out;
 	}
 
-	if (req.num_cpus == 0) {
+	if (req.num_cpus <= 0 || req.num_cpus > SMP_MAX_CPUS) {
 		pr_err("%s: invalid request length\n", __func__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	res_src_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
 	if (!res_src_cpus) {
 		pr_err("%s: error: allocating request src_cpus\n", __func__);
-		return -EINVAL;
+		ret = -ENOMEM;
+		goto out;
 	}
 
 	res_dst_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
 	if (!res_dst_cpus) {
 		pr_err("%s: error: allocating request dst_cpus\n", __func__);
-		return -EINVAL;
+		ret = -ENOMEM;
+		goto out;
 	}
 
 	if (copy_from_user(res_src_cpus, req.src_cpus,
