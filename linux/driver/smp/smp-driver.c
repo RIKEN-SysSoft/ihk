@@ -2179,7 +2179,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		 size_t mem_size, int numa_id)
 {
 	int ret = 0;
-	struct ihk_os_mem_chunk *os_mem_chunk;
+	struct ihk_os_mem_chunk *os_mem_chunk = NULL;
 	struct ihk_os_mem_chunk *os_mem_chunk_tba_iter;
 	struct ihk_os_mem_chunk *os_mem_chunk_tba_next = NULL;
 	struct ihk_os_mem_chunk *os_mem_chunk_iter;
@@ -2231,6 +2231,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		if (!mem_chunk_max && !mem_chunk_match) {
 			/* Special condition for "all" */
 			if (want == IHK_SMP_MEM_ALL) {
+				kfree(os_mem_chunk);
 				break;
 			}
 
@@ -2298,6 +2299,13 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 
 		list_add_tail(&os_mem_chunk->list, &to_be_assigned_chunks);
 		mem_size_left -= os_mem_chunk->size;
+	}
+
+	/* IHK_SMP_MEM_ALL failed to find a chunk with specified NUMA-node */
+	if (list_empty(&to_be_assigned_chunks)) {
+		printk(KERN_ERR "IHK-SMP: error: chunk not found in specified NUMA-node\n");
+		ret = -ENOMEM;
+		goto out;
 	}
 
 	/* We got all pieces we need, add them to the OS instance */
