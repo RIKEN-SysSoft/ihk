@@ -305,7 +305,6 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 	 * return on a signal..
 	 */
 	if (down_interruptible(&ihk_os_notifiers_lock)) {
-    atomic_dec(&cont->count);
 		return -ERESTARTSYS;
 	}
 
@@ -319,20 +318,13 @@ static int  __ihk_os_boot(struct ihk_host_linux_os_data *data, int flag)
 		if (ret == 0) {
 			struct ihk_os_notifier *_ion;
 			list_for_each_entry(_ion, &ihk_os_notifiers, nlist) {
-				if (_ion->ops && _ion->ops->boot) {
-					ret = _ion->ops->boot(index);
-          if (ret) {
-            ikc_master_finalize(data);
-            data->ops->shutdown(data, data->priv, flag);
-            break;
-          }
-        }
+				if (_ion->ops && _ion->ops->boot)
+					_ion->ops->boot(index);
 			}
 		}
 	}
 
 	up(&ihk_os_notifiers_lock);
-  if (ret) atomic_dec(&cont->count);
 	return ret;
 }
 
@@ -1664,7 +1656,6 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	 * the device before it's useable
 	 */
 	os_data[minor] = os;
-  os->minor = minor;
 
 	os->lindev = device_create(mcos_class, NULL, os->dev_num, NULL,
 			OS_DEV_NAME "%d", minor);
@@ -1676,10 +1667,8 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 
 	return minor;
 
- error:
-  spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
+error:
 	delete_kmsg_buf(cont);
-  spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
 	__ihk_device_destroy_os(data, os);
 	return ret;
 }
@@ -2490,10 +2479,6 @@ ihk_device_t ihk_host_find_dev(int index)
 
 ihk_os_t ihk_host_find_os(int index, ihk_device_t dev)
 {
-  if (index < 0 || index >= OS_MAX_MINOR) {
-    return NULL;
-  }
-
 	if (!os_data[index] || os_data[index] == DEV_DATA_INVALID) {
 		return NULL;
 	} else{
@@ -2541,11 +2526,6 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
 		goto out;
 	}
 
-  if (nread == 0) {
-		printk("%s: kmsg buffer is empty\n", __FUNCTION__);
-    goto out;
-	}
-
 	/* Print line-by-line */
 	lines = buf;
 	line = strsep(&lines, "\n");
@@ -2554,6 +2534,9 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
 		line = strsep(&lines, "\n");
 	}
 
+	if (nread == 0) {
+		printk("%s: kmsg buffer is empty\n", __FUNCTION__);
+	}
  out:
 	if (buf) {
 		kfree(buf);

@@ -806,7 +806,7 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	}
 
 	if (num_cpus != 0 && cpus == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -1796,7 +1796,7 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 	}
 
 	if (num_cpus != 0 && cpus == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -1878,7 +1878,7 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 	}
 
 	if (num_cpus != 0 && cpus == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -1986,7 +1986,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 		goto out;
 	}
 
-	if (num_cpus <= 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: error: invalid # of cpus (%d)\n",
 			__func__, num_cpus);
 		ret = -EINVAL;
@@ -1994,7 +1994,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	}
 
 	if (num_cpus != 0 && map == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -2066,7 +2066,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 		goto out;
 	}
 
-	if (num_cpus <= 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: error: invalid # of cpus (%d)\n",
 			__func__, num_cpus);
 		ret = -EINVAL;
@@ -2074,7 +2074,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 	}
 
 	if (num_cpus != 0 && map == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -2257,7 +2257,7 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		goto out;
 	}
 
-	if (_num_mem_chunks <= 0 || _num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
+	if (_num_mem_chunks < 0 || _num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
 		dprintf("%s: error: invalid # of chunks (%d)\n",
 			__func__, _num_mem_chunks);
 		ret = -EINVAL;
@@ -2265,7 +2265,7 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	}
 
 	if (_num_mem_chunks != 0 && mem_chunks == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -2299,7 +2299,6 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		dprintf("%s: error: allocating request numa_ids\n",
 			__func__);
 		ret = -ENOMEM;
-    free(req.sizes);
 		goto out;
 	}
 
@@ -2851,10 +2850,6 @@ int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,
 
 	dprintk("%s: enter\n", __func__);
 
-  if (!result || sz_result <= 0 || !type) {
-    return -EINVAL;
-  }
-
 	memset(result, 0, sz_result);
 
 	get_meminfo_path(path, index, node);
@@ -2924,10 +2919,6 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
-
-  if (!result) {
-    return -EINVAL;
-  }
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		eprintf("%s: error: ihklib_os_open\n",
@@ -3111,10 +3102,6 @@ int ihk_os_setperfevent(int index, ihk_perf_event_attr *attr, int n)
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
-
-  if (!attr) {
-    return -EINVAL;
-  }
 
 	if ((fd = ihklib_os_open(index)) < 0) {
 		dprintf("%s: error: ihklib_os_open returned %d\n",
