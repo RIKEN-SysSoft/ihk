@@ -2104,7 +2104,7 @@ int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 		goto out;
 	}
 
-	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+	if (num_cpus <= 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: error: invalid # of cpus (%d)\n",
 			__func__, num_cpus);
 		ret = -EINVAL;
