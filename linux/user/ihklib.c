@@ -2850,6 +2850,10 @@ int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,
 
 	dprintk("%s: enter\n", __func__);
 
+	if (!result || sz_result <= 0 || !type) {
+		return -EINVAL;
+	}
+
 	memset(result, 0, sz_result);
 
 	get_meminfo_path(path, index, node);
