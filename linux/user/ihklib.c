@@ -2257,7 +2257,7 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		goto out;
 	}
 
-	if (_num_mem_chunks < 0 || _num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
+	if (_num_mem_chunks <= 0 || _num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
 		dprintf("%s: error: invalid # of chunks (%d)\n",
 			__func__, _num_mem_chunks);
 		ret = -EINVAL;
