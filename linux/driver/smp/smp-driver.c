@@ -1676,24 +1676,28 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	spin_lock_irqsave(&os->lock, flags);
 	if (os->status != BUILTIN_OS_STATUS_INITIAL) {
 		spin_unlock_irqrestore(&os->lock, flags);
-		return -EBUSY;
+		ret = -EBUSY;
+		goto out;
 	}
 	spin_unlock_irqrestore(&os->lock, flags);
 
 	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
 		printk("%s: error: copying request\n", __FUNCTION__);
-		return -EFAULT;
+		ret = -EFAULT;
+		goto out;
 	}
 
-	if (req.num_cpus == 0) {
+	if (req.num_cpus <= 0 || req.num_cpus > SMP_MAX_CPUS) {
 		printk("%s: invalid request length\n", __FUNCTION__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	req_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
 	if (!req_cpus) {
 		pr_err("%s: error: allocating request cpus\n", __func__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (copy_from_user(req_cpus, req.cpus, sizeof(int) * req.num_cpus)) {
