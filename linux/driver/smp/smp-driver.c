@@ -2405,7 +2405,7 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_chunks == 0) {
+	if (req.num_chunks <= 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -2420,6 +2420,7 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 	if (!req_numa_ids) {
 		pr_err("%s: error: allocating request numa_ids\n",
 			__func__);
+		kfree(req_sizes);
 		return -EINVAL;
 	}
 
