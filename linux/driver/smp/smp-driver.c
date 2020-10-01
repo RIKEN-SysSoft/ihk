@@ -1947,7 +1947,7 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		return -EFAULT;
 	}
 
-	if (req.num_cpus == 0) {
+	if (req.num_cpus <= 0 || req.num_cpus > SMP_MAX_CPUS) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
 	}
@@ -1976,6 +1976,7 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 	req_dst_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
 	if (!req_dst_cpus) {
 		pr_err("%s: error: allocating request dst_cpus\n", __func__);
+		kfree(req_src_cpus);
 		return -EINVAL;
 	}
 
