@@ -1668,6 +1668,7 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	 * the device before it's useable
 	 */
 	os_data[minor] = os;
+	os->minor = minor;
 
 	os->lindev = device_create(mcos_class, NULL, os->dev_num, NULL,
 			OS_DEV_NAME "%d", minor);
@@ -1680,7 +1681,9 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	return minor;
 
 error:
+	spin_lock_irqsave(&ihk_kmsg_bufs_lock, flags);
 	delete_kmsg_buf(cont);
+	spin_unlock_irqrestore(&ihk_kmsg_bufs_lock, flags);
 	__ihk_device_destroy_os(data, os);
 	return ret;
 }
