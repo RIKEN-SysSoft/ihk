@@ -4164,7 +4164,7 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	ret_internal = copy_from_user(&req, (void *)arg, sizeof(req));
 	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
 
-	ARCHDRV_CHKANDJUMP(req.num_chunks < 0, "invalid request length",
+	ARCHDRV_CHKANDJUMP(req.num_chunks <= 0, "invalid request length",
 			-EINVAL);
 
 	req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
