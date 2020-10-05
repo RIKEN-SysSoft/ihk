@@ -4219,7 +4219,7 @@ static int smp_ihk_release_mem_partially(ihk_device_t ihk_dev,
 		goto out;
 	}
 
-	if (req.num_chunks < 0) {
+	if (req.num_chunks <= 0) {
 		pr_err("%s: invalid number of chunks (%d)\n",
 		       __func__, req.num_chunks);
 		ret = -EINVAL;
