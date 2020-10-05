@@ -1500,9 +1500,15 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 		goto out;
 	};
 
+	if (num_mem_chunks < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
 	if (mem_chunks[0].size == IHK_SMP_MEM_ALL) {
 		/* Special case for releasing all memory */
 		num_mem_chunks = ihk_get_num_reserved_mem_chunks(index);
+
 		query_mem_chunks = calloc(num_mem_chunks,
 					  sizeof(struct ihk_mem_chunk));
 		if (query_mem_chunks == NULL) {
