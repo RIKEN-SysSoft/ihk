@@ -1673,6 +1673,11 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 		goto out;
 	}
 
+	if (!indices) {
+		ret = -EFAULT;
+		goto out;
+	}
+
 	dir = opendir(PATH_DEV);
 	if (dir == NULL) {
 		ret = -errno;
