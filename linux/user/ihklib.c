@@ -984,6 +984,9 @@ int ihk_reserve_mem_conf(int index, int key, void *value)
 {
 	int ret;
 
+	if (value == NULL)
+		return -EFAULT;
+
 	ret = ihklib_device_readable(index);
 	if (ret) {
 		goto out;
