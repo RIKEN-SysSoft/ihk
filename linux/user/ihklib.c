@@ -881,7 +881,7 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
-	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+	if (cpus == NULL || num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: invalid number of cpus (%d)\n",
 			__func__, num_cpus);
 		ret = -EINVAL;
