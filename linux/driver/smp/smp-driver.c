@@ -2793,6 +2793,10 @@ static int smp_ihk_create_os(ihk_device_t ihk_dev, void *priv,
 	struct builtin_device_data *data = priv;
 	struct smp_os_data *os;
 
+	if (!priv || !regdata) {
+		return -EFAULT;
+	}
+
 	*regdata = builtin_os_reg_data;
 
 	os = kzalloc(sizeof(struct smp_os_data), GFP_KERNEL);
