@@ -1115,8 +1115,12 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	}
 
 	close(fd);
+	fd = -1;
 
 	if (reserve_mem_conf.total) {
+		/* for error-case detected by CHKANDJUMP */
+		release = 1;
+
 		dprintk("%s: total requested: %ld\n",
 			__func__, total_requested);
 
@@ -1180,7 +1184,6 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 				__func__,
 				total_missing, total_missing >> 20,
 				total_excess, total_excess >> 20);
-			release = 1;
 			ret = -ENOMEM;
 			goto out;
 		}
@@ -1254,9 +1257,12 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			    ave_compensate + ave_compensate2) {
 				req.sizes[i] = reserved[i] - ave_requested -
 					ave_compensate - ave_compensate2;
-				CHKANDJUMP(reserved[i] < ave_requested +
-					   ave_compensate + ave_compensate2,
-					   -EINVAL, "negative release size\n");
+				if (req.sizes[i] < 0) {
+					dprintk("%s: negative release size\n",
+						__func__, req.sizes[i]);
+					ret = -EINVAL;
+					goto out;
+				}
 			} else {
 				req.sizes[i] = 0;
 			}
@@ -1310,6 +1316,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			ret = fd;
 			dprintf("%s: ihklib_device_open returned %d\n",
 				__func__, fd);
+			goto out;
 		}
 
 		ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM_PARTIALLY, &req);
@@ -1321,6 +1328,8 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		}
 
 		close(fd);
+		fd = -1;
+		release = 0;
 	}
 
 	ret = 0;
