@@ -2569,7 +2569,8 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 
 	if (copy_from_user(&req, (void *)arg, sizeof(req))) {
 		pr_err("%s: error: copying request\n", __func__);
-		return -EFAULT;
+		ret = -EFAULT;
+		goto out;
 	}
 
 	/* Count memory chunks */
@@ -2577,6 +2578,11 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		if (os_mem_chunk->os != ihk_os)
 			continue;
 		num_chunks++;
+	}
+
+	if (req.num_chunks < 0) {
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (req.num_chunks == 0) {
@@ -4288,6 +4294,19 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	/* Count memory chunks */
 	list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
 		num_chunks++;
+	}
+
+	/* Check faked chunks */
+	for (i = 0; i < sizeof(__fake_chunk_per_node) /
+						sizeof(__fake_chunk_per_node[0]); ++i) {
+		if (__fake_chunk_per_node[i]) {
+			num_chunks++;
+		}
+	}
+
+	if (req.num_chunks < 0) {
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (req.num_chunks == 0) {
