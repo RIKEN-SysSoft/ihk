@@ -4321,6 +4321,10 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 		num_chunks++;
 	}
 
+	if (req.num_chunks < 0) {
+		return -EINVAL;
+	}
+
 	if (req.num_chunks == 0) {
 		/* Get reserved mem chunks */
 		if (copy_to_user(&res->num_chunks, &num_chunks, sizeof(int))) {
