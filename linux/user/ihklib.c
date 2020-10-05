@@ -881,7 +881,7 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
-	if (cpus == NULL || num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
+	if (num_cpus < 0 || num_cpus > IHK_MAX_NUM_CPUS) {
 		dprintf("%s: invalid number of cpus (%d)\n",
 			__func__, num_cpus);
 		ret = -EINVAL;
@@ -947,7 +947,7 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 	}
 
 	if (num_cpus != 0 && cpus == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -983,8 +983,6 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 int ihk_reserve_mem_conf(int index, int key, void *value)
 {
 	int ret;
-
-	if (value == NULL) return -EINVAL;
 
 	ret = ihklib_device_readable(index);
 	if (ret) {
@@ -1056,7 +1054,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	}
 
 	if (num_mem_chunks != 0 && mem_chunks == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -1111,11 +1109,9 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		goto out;
 	}
 
-	close(fd); fd = -1;
+	close(fd);
 
 	if (reserve_mem_conf.total) {
-		release = 1;
-
 		dprintk("%s: total requested: %ld\n",
 			__func__, total_requested);
 
@@ -1253,7 +1249,9 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			    ave_compensate + ave_compensate2) {
 				req.sizes[i] = reserved[i] - ave_requested -
 					ave_compensate - ave_compensate2;
-				CHKANDJUMP(req.sizes[i] > 0, -EINVAL, "invalid release size\n");
+				CHKANDJUMP(reserved[i] < ave_requested +
+					   ave_compensate + ave_compensate2,
+					   -EINVAL, "negative release size\n");
 			} else {
 				req.sizes[i] = 0;
 			}
@@ -1307,7 +1305,6 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			ret = fd;
 			dprintf("%s: ihklib_device_open returned %d\n",
 				__func__, fd);
-			goto out;
 		}
 
 		ret = ioctl(fd, IHK_DEVICE_RELEASE_MEM_PARTIALLY, &req);
@@ -1318,11 +1315,10 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			goto out;
 		}
 
-		close(fd); fd = -1;
+		close(fd);
 	}
 
 	ret = 0;
-	release = 0;
 out:
 	if (release) {
 		struct ihk_mem_chunk mem_chunks[1] = {
@@ -1399,7 +1395,7 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 	}
 
 	if (_num_mem_chunks != 0 && mem_chunks == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -1489,7 +1485,7 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 	}
 
 	if (num_mem_chunks != 0 && mem_chunks == NULL) {
-		ret = -EINVAL;
+		ret = -EFAULT;
 		goto out;
 	}
 
@@ -1501,7 +1497,6 @@ int ihk_release_mem(int index, struct ihk_mem_chunk* mem_chunks, int num_mem_chu
 	if (mem_chunks[0].size == IHK_SMP_MEM_ALL) {
 		/* Special case for releasing all memory */
 		num_mem_chunks = ihk_get_num_reserved_mem_chunks(index);
-		if (num_mem_chunks <= 0) return -EINVAL;
 		query_mem_chunks = calloc(num_mem_chunks,
 					  sizeof(struct ihk_mem_chunk));
 		if (query_mem_chunks == NULL) {
@@ -1666,10 +1661,6 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
 			__func__, num_os_instances, _num_os_instances);
 		ret = -EINVAL;
 		goto out;
-	}
-
-	if (!indices) {
-		return -EINVAL;
 	}
 
 	dir = opendir(PATH_DEV);
