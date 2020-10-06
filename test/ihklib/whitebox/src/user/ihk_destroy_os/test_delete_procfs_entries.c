@@ -26,7 +26,7 @@ int main(int argc, char **argv)
   ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
   INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
   close(fd); fd = -1;
-  
+
   ret = _cpus_reserve(98, -1);
   INTERR(ret, "cpus_reserve returned %d\n", ret);
 
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 
   out:
   if (fd != -1) close(fd);
-  ret = ihk_destroy_os(0, os_index);
+  ihk_destroy_os(0, os_index);
   cpus_release();
   mems_release();
 

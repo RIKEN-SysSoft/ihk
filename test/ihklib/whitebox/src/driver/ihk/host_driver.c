@@ -335,6 +335,15 @@ static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
     if (ivec <= 5) data->ops->load_file = NULL;
     if (ivec == 0) data->ops->load_mem = NULL;
 
+    if (ivec == 0 || (!data->ops->load_file && !data->ops->load_mem)) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        dprintf("IHK: No loading function is defined.\n");
+        return ret;
+      }
+      goto out;
+    }
+
     if (data->ops->load_file) {  // main case
       dprintf("IHK: os_load_file is defined. Use it.\n");
 
@@ -398,13 +407,6 @@ static int __ihk_os_load_file(struct ihk_host_linux_os_data *data, char *fn)
       }
 
       fput(file);
-    } else {  // ivec = 0
-      ret = -EINVAL;
-      if (ivec != 0) {
-        dprintf("IHK: No loading function is defined.\n");
-        return ret;
-      }
-      goto out;
     }
 
    out:
@@ -1046,6 +1048,9 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
     }
   }
   up(&ihk_os_notifiers_lock);
+  if (!(exec_path & PATH_NOTIFY_SHUTDOWN)) {
+    goto out;  // skip shutdown & release data
+  }
 
   ikc_master_finalize(data);
 
@@ -1057,6 +1062,8 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
       goto out;
     }
     exec_path |= PATH_OS_OPS_SHUTDOWN;
+  } else {
+    goto out;  // skip release kmsg_buf
   }
 
   /* Release kmsg_buf */
@@ -1123,11 +1130,15 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
   }
 
   if (exec_path & PATH_OS_OPS_SHUTDOWN_FAILED
+      || !(exec_path & PATH_NOTIFY_SHUTDOWN)
+      || !(exec_path & PATH_OS_OPS_SHUTDOWN)
       || exec_path & PATH_OS_STATUS_SHUTDOWN
       || !(exec_path & PATH_NOTIFIER_LOCK_ACQUIRED)) {
     OKNG(!cont, "kmsg buf container should not be released\n");
 
     if (exec_path & PATH_OS_STATUS_SHUTDOWN
+        || !(exec_path & PATH_NOTIFY_SHUTDOWN)
+        || !(exec_path & PATH_OS_OPS_SHUTDOWN)
         || !(exec_path & PATH_NOTIFIER_LOCK_ACQUIRED)) {
       OKNG(ncpus_after == ncpus_prev, "the number of cpus should be unchanged\n");
       int suc = arr_equals(cpus_status_prev, cpus_status_after, ncpus_prev);
@@ -2420,7 +2431,8 @@ static void _timer_handler_for_os_wait_status(unsigned long data)
   os->ops->set_smp_status(os, os_smp_status_target, os_smp_param_status_target);
 }
 
-static int __test_ihk_os_query_status(struct ihk_host_linux_os_data *os)
+/* test code for smp_ihk_os_query_status() */
+static int __test_smp_ihk_os_query_status(struct ihk_host_linux_os_data *os)
 {
   g_ihk_test_mode = TEST_SMP_IHK_OS_QUERY_STATUS;
 
@@ -2546,7 +2558,8 @@ static int __test_ihk_os_query_status(struct ihk_host_linux_os_data *os)
   goto rel;
 }
 
-static int __test_ihk_os_wait_for_status(struct ihk_host_linux_os_data *os)
+/* test code for smp_ihk_os_wait_for_status() */
+static int __test_smp_ihk_os_wait_for_status(struct ihk_host_linux_os_data *os)
 {
   onesec = msecs_to_jiffies(1000 * 1);
   os_wait_status_timer.data = (unsigned long) os;
@@ -2602,7 +2615,6 @@ static int __test_ihk_os_wait_for_status(struct ihk_host_linux_os_data *os)
       ret = os->ops->wait_for_status(os, os->priv, IHK_OS_STATUS_BOOTED, 0, 40);
     }
 
-
    out:
     os->ops->set_smp_status(os, status_prev, param_status_prev);
 
@@ -2610,7 +2622,7 @@ static int __test_ihk_os_wait_for_status(struct ihk_host_linux_os_data *os)
   }
 
   return 0;
-  err:
+ err:
   return -EINVAL;
 }
 
@@ -2686,7 +2698,7 @@ static long ihk_host_os_ioctl_orig(struct file *file, unsigned int request,
     break;
 
   case IHK_OS_WAIT_FOR_STATUS:
-    ret = __test_ihk_os_wait_for_status(data);
+    ret = __test_smp_ihk_os_wait_for_status(data);
     break;
 
   case IHK_OS_ALLOC_CPU:
@@ -2746,7 +2758,7 @@ static long ihk_host_os_ioctl_orig(struct file *file, unsigned int request,
     break;
 
   case IHK_OS_QUERY_STATUS:
-    ret = __test_ihk_os_query_status(data);
+    ret = __test_smp_ihk_os_query_status(data);
     break;
 
   case IHK_OS_GET_STATUS:
@@ -2785,6 +2797,12 @@ static long ihk_host_os_ioctl_orig(struct file *file, unsigned int request,
       memset(&desc, 0, sizeof(desc));
       desc.addr_ext = IMP_PF_INJECTION_CTRL1_EL0;
       ret = ihk_os_write_cpu_register(data, 0, &desc);
+    }
+    break;
+
+  case IHK_OS_SEND_NMI:
+    {
+      ret = ihk_os_send_nmi(data, arg);
     }
     break;
 
@@ -5270,12 +5288,13 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
     return ihk_host_print_os_kmsg_orig(os);
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 4;
+  unsigned long total_branch = 5;
 
   branch_info_t b_infos[] = {
     { 0, "invalid os instance" },
     { 0, "kmsg buffer is not available" },
     { 0, "kmsg buffer is empty" },
+    { 0, "not found any new-line characters" },
     { 0, "main case" },
   };
 
@@ -5318,6 +5337,10 @@ void ihk_host_print_os_kmsg(ihk_os_t os)
     /* Print line-by-line */
     lines = buf;
     line = strsep(&lines, "\n");
+    if (ivec == 3 || !line) {
+      if (ivec != 3) should_quit = 1;
+      goto out;
+    }
     while (line) {
       printk("%s\n", line);
       line = strsep(&lines, "\n");

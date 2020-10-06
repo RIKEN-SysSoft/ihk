@@ -49,9 +49,7 @@ int main(int argc, char **argv)
 	INTERR(ret, "return value: %d, expected: %d\n", ret, 0);
 
  out:
-
-  ret = mems_os_release();
-  INTERR(ret, "mems_os_release returned %d\n", ret);
+  mems_os_release();
   if (ihk_get_num_os_instances(0)) {
     ihk_destroy_os(0, os_index);
   }

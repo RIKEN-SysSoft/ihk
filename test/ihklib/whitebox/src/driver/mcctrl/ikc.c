@@ -164,8 +164,8 @@ static void mcctrl_wakeup_cb(ihk_os_t os, struct ikc_scd_packet *packet)
   wake_up_interruptible(&desc->wq);
 }
 
-/* do_frees: 1 when caller should free free_addrs[], 0 otherwise */
-int mcctrl_ikc_send_wait(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp,
+int mcctrl_ikc_send_wait_orig(
+    ihk_os_t os, int cpu, struct ikc_scd_packet *pisp,
     long int timeout, struct mcctrl_wakeup_desc *desc,
     int *do_frees, int free_addrs_count, ...)
 {
@@ -204,8 +204,7 @@ int mcctrl_ikc_send_wait(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp,
   }
 
   if (timeout) {
-    ret = wait_event_interruptible_timeout(desc->wq,
-      desc->status, timeout);
+    ret = wait_event_interruptible_timeout(desc->wq, desc->status, timeout);
   } else {
     ret = wait_event_interruptible(desc->wq, desc->status);
   }
@@ -219,8 +218,7 @@ int mcctrl_ikc_send_wait(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp,
     unsigned long flags;
 
     if (!usrdata) {
-      pr_err("%s: error: mcctrl_usrdata not found\n",
-        __func__);
+      pr_err("%s: error: mcctrl_usrdata not found\n", __func__);
       ret = ret < 0 ? ret : -EINVAL;
       goto out;
     }
@@ -234,10 +232,144 @@ int mcctrl_ikc_send_wait(ihk_os_t os, int cpu, struct ikc_scd_packet *pisp,
   }
 
   ret = READ_ONCE(desc->err);
-out:
+ out:
   if (alloc_desc)
     kfree(desc);
   return ret;
+}
+
+/* do_frees: 1 when caller should free free_addrs[], 0 otherwise */
+int mcctrl_ikc_send_wait(
+    ihk_os_t os, int cpu, struct ikc_scd_packet *pisp,
+    long int timeout, struct mcctrl_wakeup_desc *desc,
+    int *do_frees, int free_addrs_count, ...)
+{
+  if (g_ihk_test_mode != TEST_MCCTRL_IKC_SEND_WAIT)  // Disable test code
+    return mcctrl_ikc_send_wait_orig(os, cpu, pisp, timeout, desc, do_frees, free_addrs_count);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 4;
+
+  branch_info_t b_infos[] = {
+    { -EINVAL, "mcctrl_ikc_send fail" },
+    { -EINVAL, "usrdata not found" },
+    { -ETIME,  "xchg desc status" },
+    { 0,       "main case" },
+  };
+
+  int ret, i;
+  int alloc_desc = (desc == NULL);
+  int count_wakeup_list_prev = 0;
+  int free_addrs_count_prev = free_addrs_count;
+  struct mcctrl_usrdata *usrdata = NULL;
+  struct mcctrl_wakeup_desc *it;
+  unsigned long flags;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    va_list ap;
+    int count_wakeup_list_after = 0;
+    int should_quit = 0;
+    free_addrs_count = free_addrs_count_prev;
+
+    if (free_addrs_count)
+      *do_frees = 1;
+
+    if (alloc_desc)
+      desc = kmalloc(sizeof(struct mcctrl_wakeup_desc) +
+               (free_addrs_count + 1) * sizeof(void *),
+               GFP_KERNEL);
+
+    if (!desc) {
+      pr_warn("%s: Could not allocate wakeup descriptor", __func__);
+      return -ENOMEM;
+    }
+
+    pisp->reply = desc;
+    va_start(ap, free_addrs_count);
+    for (i = 0; i < free_addrs_count; i++) {
+      desc->free_addrs[i] = va_arg(ap, void*);
+    }
+    va_end(ap);
+    if (alloc_desc)
+      desc->free_addrs[free_addrs_count++] = desc;
+    desc->free_addrs_count = free_addrs_count;
+
+    init_waitqueue_head(&desc->wq);
+    WRITE_ONCE(desc->err, 0);
+    WRITE_ONCE(desc->status, 0);
+
+    if (ivec > 0)
+      ret = mcctrl_ikc_send(os, cpu, pisp);
+
+    if (ivec == 0 || ret < 0) {
+      ret = -EINVAL;
+      if (ivec != 0) {
+        pr_warn("%s: mcctrl_ikc_send failed: %d\n", __func__, ret);
+        should_quit = 1;
+      }
+      goto out;
+    }
+
+    if (timeout) {
+      ret = wait_event_interruptible_timeout(desc->wq, desc->status, timeout);
+    } else {
+      ret = wait_event_interruptible(desc->wq, desc->status);
+    }
+
+    /*
+     * Check if wait aborted (signal..) or timed out, and notify
+     * the callback it will need to free things for us
+     */
+    if (ivec <= 2 || !cmpxchg(&desc->status, 0, 1)) {
+      usrdata = ihk_host_os_get_usrdata(os);
+      if (ivec == 1 || !usrdata) {
+        ret = -EINVAL;
+        if (ivec != 1) {
+          pr_err("%s: error: mcctrl_usrdata not found\n", __func__);
+          should_quit = 1;
+        }
+        ret = ret < 0 ? ret : -EINVAL;
+        goto out;
+      }
+
+      spin_lock_irqsave(&usrdata->wakeup_descs_lock, flags);
+      list_for_each_entry(it, &usrdata->wakeup_descs_list, chain) {
+        count_wakeup_list_prev++;
+      }
+      list_add(&desc->chain, &usrdata->wakeup_descs_list);
+      spin_unlock_irqrestore(&usrdata->wakeup_descs_lock, flags);
+      if (do_frees)
+        *do_frees = 0;
+      ret = -ETIME;
+      goto out;
+    }
+
+    ret = READ_ONCE(desc->err);
+   out:
+    if (ivec == 2) {
+      spin_lock_irqsave(&usrdata->wakeup_descs_lock, flags);
+      list_for_each_entry(it, &usrdata->wakeup_descs_list, chain) {
+        count_wakeup_list_after++;
+      }
+      list_del(&desc->chain);  // reset
+      spin_unlock_irqrestore(&usrdata->wakeup_descs_lock, flags);
+    }
+
+    if (alloc_desc)
+      kfree(desc);
+
+    BRANCH_RET_CHK(ret, b_infos[ivec].expected);
+
+    if (ivec == 2) {
+      OKNG(count_wakeup_list_after == count_wakeup_list_prev + 1,
+           "new desc should be added to wakeup list\n");
+    }
+  }
+  return ret;
+ err:
+  return -EINVAL;
 }
 
 static int syscall_packet_handler_orig(struct ihk_ikc_channel_desc *c,
