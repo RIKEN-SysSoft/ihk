@@ -568,7 +568,7 @@ foreach(target IN ITEMS
     test_ihk_ikc_free_channels
     test_ihk_os_get_special_addr
     test_ihk_os_query_status
-    test_ihk_os_send_nmi
+    test__ihk_os_send_nmi
     test_ihk_os_shutdown
     test_ihk_smp_cpu_kill
     test_ihk_smp_get_cpu_affinity
@@ -586,6 +586,10 @@ foreach(target IN ITEMS
     test_smp_ihk_os_shutdown
     test_smp_ihk_os_unmap_lwk
     test_sysfsm_cleanup
+    test_ihk_smp_set_nmi_mode
+    test_lwk_cpu_2_linux_cpu
+    test__ihk_device_unmap_memory
+    test__ihk_os_wait_for_status
     )
   # Add target
   add_executable(${target} src/user/ihk_destroy_os/${target}.c)
@@ -1126,7 +1130,7 @@ foreach(target IN ITEMS
     test_rusage_page_add
     test_syscall_packet_handler
     test_vm_range_policy_search
-
+    test_mcctrl_ikc_send_wait
     )
   # Add target
   add_executable(${target} src/user/ihk_os_setperfevent/${target}.c)
