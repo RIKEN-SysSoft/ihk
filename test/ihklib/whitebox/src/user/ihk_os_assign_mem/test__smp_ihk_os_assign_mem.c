@@ -52,8 +52,7 @@ int main(int argc, char **argv)
 
  out:
 
-  ret = mems_os_release();
-  INTERR(ret, "mems_os_release returned %d\n", ret);
+  mems_os_release();
 
   if (fd != -1) close(fd);
   if (ihk_get_num_os_instances(0)) {

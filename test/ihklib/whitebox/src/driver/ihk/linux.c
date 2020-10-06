@@ -221,7 +221,7 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
   branch_info_t b_infos[] = {
     { -EINVAL, "invalid channel or packet" },
     { -EINVAL, "channel is disabled" },
-    { -EBUSY, "write to queue fail" },
+    { -EBUSY,  "write to queue fail" },
     { 0,       "main case" },
   };
 

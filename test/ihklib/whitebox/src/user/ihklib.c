@@ -872,7 +872,7 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
     { -EINVAL, "num_cpus is zero" },
     { -ENOENT, "device is not opened" },
     { -ENOENT, "cannot reserve cpus" },
-    { 0, "main case" }
+    { 0,       "main case" }
   };
 
   int ncpus_before = get_nprocs();
@@ -959,7 +959,8 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
       if ((ncpus_before - ncpus_after) == num_cpus) {
         // reserved cpus should not intersect remain Linux cpus
         fail = arr_is_intersect(cpus, num_cpus, cpus_after.cpus, cpus_after.ncpus);
-        OKNG(!fail, "list of reserved cpus doesn't intersect with list of online cpus\n");
+        OKNG(!fail,
+             "list of reserved cpus doesn't intersect with list of online cpus\n");
 
         int *cpus_merge = calloc(ncpus_before, sizeof(int));
         if (!cpus_merge) return -ENOMEM;
@@ -978,17 +979,18 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
         free(cpus_merge);
         OKNG(!fail, "checking list of online cpus\n");
       } else {
-        OKNG(0, "invalid number of reserved cpus. before: %d, after: %d\n", ncpus_before, ncpus_after);
+        OKNG(0, "invalid number of reserved cpus. before: %d, after: %d\n",
+             ncpus_before, ncpus_after);
       }
     } else {  // other branches should not affect the system
-      OKNG(ncpus_after == ncpus_before, "ncpus_before: %d, ncpus_after: %d\n", ncpus_before, ncpus_after);
+      OKNG(ncpus_after == ncpus_before, "ncpus_before: %d, ncpus_after: %d\n",
+           ncpus_before, ncpus_after);
     }
 
     if (should_quit) return ret;
   }
 
   return ret;
-
  err:
   return -ENOENT;
 }
@@ -1037,7 +1039,7 @@ int ihk_get_num_reserved_cpus(int index)
   branch_info_t b_infos[] = {
     { -ENOENT, "cannot open device" },
     { -EINVAL, "cannot get number of reserved cpus" },
-    { 0, "main case" }
+    { 0,       "main case" }
   };
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
@@ -1050,8 +1052,7 @@ int ihk_get_num_reserved_cpus(int index)
     if (ivec == 0 || fd < 0) {
       ret = -ENOENT;
       if (ivec != 0) {
-        dprintf("%s: ihklib_device_open returned %d\n",
-          __func__, fd);
+        dprintf("%s: ihklib_device_open returned %d\n", __func__, fd);
         should_quit = 1;
         ret = fd;
       }
@@ -1063,8 +1064,7 @@ int ihk_get_num_reserved_cpus(int index)
       ret = -EINVAL;
       if (ivec != 1) {
         ret = -errno;
-        dprintf("%s: IHK_DEVICE_GET_NUM_CPUS returned %d\n",
-          __func__, -ret);
+        dprintf("%s: IHK_DEVICE_GET_NUM_CPUS returned %d\n", __func__, -ret);
         should_quit = 1;
       }
       goto out;
@@ -1161,7 +1161,7 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
     { -EINVAL, "cannot get num cpus" },
     { -EINVAL, "cannot match #cpus" },
     { -EINVAL, "query cpu fail" },
-    { 0, "main case" }
+    { 0,       "main case" }
   };
 
   dprintk("%s: enter\n", __func__);
@@ -5487,9 +5487,10 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
   int ret, i;
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 3;
+  unsigned long total_branch = 4;
 
   branch_info_t b_infos[] = {
+    { -EINVAL, "cannot get # of assigned mem chunks" },
     { -EINVAL, "cannot query mem" },
     { -ENOENT, "ihklib_os_open fail" },
     { 0,       "main case" },
@@ -5550,11 +5551,17 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
       goto out;
     }
 
-    if (ivec == 0) mem_chunks[0].size = IHK_SMP_MEM_ALL;
+    if (ivec <= 1) mem_chunks[0].size = IHK_SMP_MEM_ALL;
 
     if (mem_chunks[0].size == IHK_SMP_MEM_ALL) {
       /* Special case for releasing all memory */
       num_mem_chunks = ihk_os_get_num_assigned_mem_chunks(index);
+      if (ivec == 0 || num_mem_chunks < 1) {
+        ret = -EINVAL;
+        if (ivec != 0) return ret;
+        goto out;
+      }
+
       query_mem_chunks = calloc(num_mem_chunks,
                                 sizeof(struct ihk_mem_chunk));
       if (query_mem_chunks == NULL) {
@@ -5565,9 +5572,9 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
       }
 
       ret = ihk_os_query_mem(index, query_mem_chunks, num_mem_chunks);
-      if (ivec == 0 || ret) {
+      if (ivec == 1 || ret) {
         ret = -EINVAL;
-        if (ivec != 0) {
+        if (ivec != 1) {
           dprintf("%s: error: ihk_os_query_mem returned %d\n", __func__, ret);
           should_quit = 1;
         }
@@ -5600,9 +5607,9 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
     req.num_chunks = num_mem_chunks;
 
     fd = ihklib_os_open(index);
-    if (ivec == 1 || fd < 0) {
+    if (ivec == 2 || fd < 0) {
       ret = -ENOENT;
-      if (ivec != 1) {
+      if (ivec != 2) {
         eprintf("%s: error: ihklib_os_open\n", __func__);
         ret = fd;
         should_quit = 1;
@@ -5724,6 +5731,8 @@ int ihk_os_get_eventfd(int index, int type)
 
   int ret;
 
+  dprintk("%s: enter\n", __func__);
+
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
 
@@ -5731,7 +5740,6 @@ int ihk_os_get_eventfd(int index, int type)
     int should_quit = 0;
     struct ihk_os_ioctl_eventfd_desc desc;
 
-    dprintk("%s: enter\n", __func__);
     memset(&desc, 0, sizeof(desc));
 
     if ((fd = ihklib_os_open(index)) < 0) {
@@ -6193,22 +6201,24 @@ int ihk_os_get_status_orig(int index)
   }
 
   switch (ret) {
-  case IHK_OS_STATUS_NOT_BOOTED: /* before smp_ihk_os_boot or
-          * after smp_ihk_destroy_os
-          */
+  case IHK_OS_STATUS_NOT_BOOTED:
+    /* before smp_ihk_os_boot or
+     * after smp_ihk_destroy_os
+     */
     ret = IHK_STATUS_INACTIVE;
     break;
   case IHK_OS_STATUS_BOOTING:  /* smp_ihk_os_boot -- arch_init */
-  case IHK_OS_STATUS_BOOTED:  /* arch_init -- arch_ready */
-  case IHK_OS_STATUS_READY:  /* arch_ready -- done_init */
+  case IHK_OS_STATUS_BOOTED:   /* arch_init -- arch_ready */
+  case IHK_OS_STATUS_READY:    /* arch_ready -- done_init */
     ret = IHK_STATUS_BOOTING;
     break;
   case IHK_OS_STATUS_RUNNING:  /* after done_init */
     ret = IHK_STATUS_RUNNING;
     break;
-  case IHK_OS_STATUS_SHUTDOWN:  /* smp_ihk_os_shutdown --
-           * smp_ihk_destroy_os
-           */
+  case IHK_OS_STATUS_SHUTDOWN:
+    /* smp_ihk_os_shutdown --
+     * smp_ihk_destroy_os
+     */
     ret = IHK_STATUS_SHUTDOWN;
     break;
   case IHK_OS_STATUS_FAILED:
@@ -6326,22 +6336,24 @@ int ihk_os_get_status(int index)
     }
 
     switch (ret) {
-    case IHK_OS_STATUS_NOT_BOOTED: /* before smp_ihk_os_boot or
-            * after smp_ihk_destroy_os
-            */
+    case IHK_OS_STATUS_NOT_BOOTED:
+      /* before smp_ihk_os_boot or
+       * after smp_ihk_destroy_os
+       */
       ret = IHK_STATUS_INACTIVE;
       break;
     case IHK_OS_STATUS_BOOTING:  /* smp_ihk_os_boot -- arch_init */
-    case IHK_OS_STATUS_BOOTED:  /* arch_init -- arch_ready */
-    case IHK_OS_STATUS_READY:  /* arch_ready -- done_init */
+    case IHK_OS_STATUS_BOOTED:   /* arch_init -- arch_ready */
+    case IHK_OS_STATUS_READY:    /* arch_ready -- done_init */
       ret = IHK_STATUS_BOOTING;
       break;
     case IHK_OS_STATUS_RUNNING:  /* after done_init */
       ret = IHK_STATUS_RUNNING;
       break;
-    case IHK_OS_STATUS_SHUTDOWN:  /* smp_ihk_os_shutdown --
-             * smp_ihk_destroy_os
-             */
+    case IHK_OS_STATUS_SHUTDOWN:
+      /* smp_ihk_os_shutdown --
+       * smp_ihk_destroy_os
+       */
       ret = IHK_STATUS_SHUTDOWN;
       break;
     case IHK_OS_STATUS_FAILED:
@@ -6826,9 +6838,10 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
     return ihklib_os_query_mem_orig(index, result, num_numa_nodes, type);
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 6;
+  unsigned long total_branch = 7;
 
   branch_info_t b_infos[] = {
+    { -EINVAL, "invalid num_numa_nodes" },
     { -ENOENT, "ihklib_os_open fail" },
     { -EINVAL, "ihklib_os_query_mem_sysfs fail" },
     { -EINVAL, "# of numa nodes mismatch" },
@@ -6850,9 +6863,15 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
     int fd = -1;
     int should_quit = 0;
 
-    if (ivec == 0 || (fd = ihklib_os_open(index)) < 0) {
+    if (ivec == 0 || num_numa_nodes < 1) {
+      ret = -EINVAL;
+      if (ivec != 0) return ret;
+      goto out;
+    }
+
+    if (ivec == 1 || (fd = ihklib_os_open(index)) < 0) {
       ret = -ENOENT;
-      if (ivec != 0) {
+      if (ivec != 1) {
         eprintf("%s: error: ihklib_os_open\n", __func__);
         ret = fd;
         should_quit = 1;
@@ -6863,9 +6882,9 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
     ret = ihklib_os_query_mem_sysfs(index, result_str,
                                     sizeof(result_str),
                                     ihklib_os_query_mem_type_str[type]);
-    if (ivec == 1 || ret) {
+    if (ivec == 2 || ret) {
       ret = -EINVAL;
-      if (ivec != 1) {
+      if (ivec != 2) {
         eprintf("%s: error: ihklib_os_query_total_mem failed\n", __func__);
         should_quit = 1;
       }
@@ -6875,9 +6894,9 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
     memset(mem_chunks, 0, sizeof(mem_chunks));
     mem_str2array(result_str, &num_mem_chunks, mem_chunks);
 
-    if (ivec == 2 || num_mem_chunks != num_numa_nodes) {
+    if (ivec == 3 || num_mem_chunks != num_numa_nodes) {
       ret = -EINVAL;
-      if (ivec != 2) {
+      if (ivec != 3) {
         eprintf("%s: error: actual number of NUMA nodes"
                 " (%d) is different than requested (%d)\n",
                 __func__, num_mem_chunks, num_numa_nodes);
@@ -6886,17 +6905,17 @@ static int ihklib_os_query_mem(int index, unsigned long *result,
       goto out;
     }
 
-    if (ivec == 3 || (num_mem_chunks <= 0 || result == NULL)) {
+    if (ivec == 4 || (num_mem_chunks <= 0 || result == NULL)) {
       ret = -EINVAL;
-      if (ivec != 3) should_quit = 1;
+      if (ivec != 4) should_quit = 1;
       goto out;
     }
     for (i = 0; i < num_mem_chunks; i++) {
-      if (ivec == 4 ||
+      if (ivec == 5 ||
           (mem_chunks[i].numa_node_number >= num_numa_nodes ||
            mem_chunks[i].numa_node_number < 0)) {
         ret = -EINVAL;
-        if (ivec != 4) {
+        if (ivec != 5) {
           eprintf("%s: error: NUMA node number out of range\n", __func__);
           should_quit = 1;
         }
