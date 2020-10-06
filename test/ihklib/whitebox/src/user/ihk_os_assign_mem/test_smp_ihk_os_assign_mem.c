@@ -52,8 +52,7 @@ int main(int argc, char **argv)
 
  out:
   if (fd != -1) close(fd);
-  ret = mems_os_release();
-  INTERR(ret, "mems_os_release returned %d\n", ret);
+  mems_os_release();
 
   ihk_destroy_os(0, os_index);
   mems_release();

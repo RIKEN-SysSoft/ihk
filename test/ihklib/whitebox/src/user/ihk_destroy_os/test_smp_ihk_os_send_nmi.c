@@ -67,10 +67,30 @@ int main(int argc, char **argv)
 
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
+  os_wait_for_status(IHK_STATUS_RUNNING);
 
- out:
-  if (fd != -1) close(fd);
-  ret = ihk_destroy_os(0, os_index);
+  fd = ihklib_os_open(0);
+  INTERR(fd < 0, "ihklib_os_open returned %d\n", fd);
+  int mode = 3;
+  ret = ioctl(fd, IHK_OS_SEND_NMI, mode);
+  INTERR(ret, "ioctl IHK_OS_SEND_NMI returned: %d\n", ret);
+
+  sleep(3);
+
+  mode = 4;
+  ret = ioctl(fd, IHK_OS_SEND_NMI, mode);
+  INTERR(ret, "ioctl IHK_OS_SEND_NMI returned: %d\n", ret);
+  close(fd); fd = -1;
+
+  out:
+  ihk_os_shutdown(0);
+  os_wait_for_status(IHK_STATUS_INACTIVE);
+  mems_os_release();
+  cpus_os_release();
+
+  if (ihk_get_num_os_instances(0)) {
+    ihk_destroy_os(0, os_index);
+  }
   cpus_release();
   mems_release();
   linux_rmmod(0);

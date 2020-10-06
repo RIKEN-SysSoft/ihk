@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 
   int fd = ihklib_device_open(0);
   INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  int test_mode = TEST_REMOVE;
+  int test_mode = TEST_LWK_CPU_2_LINUX_CPU;
   ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
   INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
   close(fd); fd = -1;

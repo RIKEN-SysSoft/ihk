@@ -1151,7 +1151,7 @@ void smp_ihk_setup_trampoline(void *priv)
   unsigned long total_branch = 2;
 
   branch_info_t b_infos[] = {
-    { 0, "invalid container" },
+    { 0, "invalid # of irqs" },
     { 0, "main case" },
   };
 
@@ -1481,7 +1481,7 @@ int smp_ihk_os_send_nmi(ihk_os_t ihk_os, void *priv, int mode)
 
   branch_info_t b_infos[] = {
     { -EINVAL, "cannot set nmi mode" },
-    { 0, "main case" },
+    { 0,       "main case" },
   };
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
