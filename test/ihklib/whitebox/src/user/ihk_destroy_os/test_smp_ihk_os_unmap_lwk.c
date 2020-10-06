@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 
  out:
   if (fd != -1) close(fd);
-  ret = ihk_destroy_os(0, os_index);
+  ihk_destroy_os(0, os_index);
   cpus_release();
   mems_release();
 

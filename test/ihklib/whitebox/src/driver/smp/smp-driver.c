@@ -157,7 +157,7 @@ static unsigned long dump_bootstrap_mem_start;
 
 
 static int truncate_snprintf_orig(char *str, size_t size,
-  const char *format, va_list args)
+                                  const char *format, va_list args)
 {
   int n;
   va_list ap;
@@ -175,8 +175,7 @@ static int truncate_snprintf_orig(char *str, size_t size,
   return n;
 }
 
-static int truncate_snprintf(char *str, size_t size,
-  const char *format, ...)
+static int truncate_snprintf(char *str, size_t size, const char *format, ...)
 {
   int n;
   va_list ap;
@@ -227,7 +226,6 @@ static int truncate_snprintf(char *str, size_t size,
   }
 
   return (size <= 1)? size : n;
-
  err:
   return 0;
 }
@@ -352,12 +350,49 @@ static void __build_os_info(struct smp_os_data *os)
   os->cpu_info.ikc_mapped = os->cpu_ikc_mapped;
 }
 
+static int lwk_cpu_2_linux_cpu_orig(struct smp_os_data *os, int cpu_id)
+{
+  return (cpu_id < os->nr_cpus) ? os->cpu_mapping[cpu_id] : -1;
+}
+
 /*
  * CPU and NUMA node mapping conversion functions.
  */
 static int lwk_cpu_2_linux_cpu(struct smp_os_data *os, int cpu_id)
 {
-  return (cpu_id < os->nr_cpus) ? os->cpu_mapping[cpu_id] : -1;
+  if (g_ihk_test_mode != TEST_LWK_CPU_2_LINUX_CPU)  // Disable test code
+    return lwk_cpu_2_linux_cpu_orig(os, cpu_id);
+
+  unsigned long ivec = 0;
+  unsigned long total_branch = 2;
+
+  branch_info_t b_infos[] = {
+    { 0, "invalid cpu_id" },
+    { 0, "main case" },
+  };
+
+  int ret = -1;
+
+  for (ivec = 0; ivec < total_branch; ++ivec) {
+    START(b_infos[ivec].name);
+
+    if (ivec != 0 && cpu_id < os->nr_cpus) {
+      ret = os->cpu_mapping[cpu_id];
+    } else {  // ivec = 0 goes here
+      ret = -1;
+      goto out;
+    }
+
+   out:
+    if (ivec == total_branch - 1) {
+      OKNG(ret >= 0, "return a valid cpu_id\n");
+    } else {
+      OKNG(ret == -1, "not found the mapping\n");
+    }
+  }
+  return ret;
+ err:
+  return -1;
 }
 
 static int linux_cpu_2_lwk_cpu(struct smp_os_data *os, int cpu_id)
@@ -365,8 +400,8 @@ static int linux_cpu_2_lwk_cpu(struct smp_os_data *os, int cpu_id)
   int i;
 
   for (i = 0; i < os->nr_cpus; ++i) {
-  if (os->cpu_mapping[i] == cpu_id)
-  return i;
+    if (os->cpu_mapping[i] == cpu_id)
+      return i;
   }
 
   return -1;
@@ -374,8 +409,7 @@ static int linux_cpu_2_lwk_cpu(struct smp_os_data *os, int cpu_id)
 
 static int lwk_numa_2_linux_numa(struct smp_os_data *os, int numa_id)
 {
-  return (numa_id < os->nr_numa_nodes) ?
-  os->numa_mapping[numa_id] : -1;
+  return (numa_id < os->nr_numa_nodes) ? os->numa_mapping[numa_id] : -1;
 }
 
 static int linux_numa_2_lwk_numa_orig(struct smp_os_data *os, int numa_id)
@@ -396,9 +430,10 @@ static int linux_numa_2_lwk_numa(struct smp_os_data *os, int numa_id)
     return linux_numa_2_lwk_numa_orig(os, numa_id);
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 2;
+  unsigned long total_branch = 3;
 
   branch_info_t b_infos[] = {
+    { 0, "invalid # of numa nodes" },
     { 0, "not found node numa_id" },
     { 0, "main case" },
   };
@@ -408,8 +443,12 @@ static int linux_numa_2_lwk_numa(struct smp_os_data *os, int numa_id)
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
 
+    if (ivec == 0 || os->nr_numa_nodes < 1) {
+      if (ivec != 0) return -1;
+      goto out;
+    }
     for (i = 0; i < os->nr_numa_nodes; ++i) {
-      if (ivec == 0 || os->numa_mapping[i] != numa_id) continue;
+      if (ivec == 1 || os->numa_mapping[i] != numa_id) continue;
       ret = i;
       break;
     }
@@ -427,7 +466,7 @@ static int linux_numa_2_lwk_numa(struct smp_os_data *os, int numa_id)
 }
 
 static int cpu_array2str_orig(char *str, ssize_t len,
-  int num_cpus, int *cpus)
+                              int num_cpus, int *cpus)
 {
   /* prev_cpu should be < -1 so that "if (prev_cpu != cpus[i] - 1)"
    * won't misunderstand that the cursor is pointing to "0"
@@ -441,15 +480,13 @@ static int cpu_array2str_orig(char *str, ssize_t len,
   for (i = 0; i < num_cpus; i++) {
     if (prev_cpu != cpus[i] - 1) {
       if (prev_cpu > 0) {
-        n += truncate_snprintf(str + n, len - n,
-        "%d,", prev_cpu);
+        n += truncate_snprintf(str + n, len - n, "%d,", prev_cpu);
       }
       in_seq = 0;
     }
     else {
       if (!in_seq) {
-        n += truncate_snprintf(str + n, len - n,
-        "%d-", prev_cpu);
+        n += truncate_snprintf(str + n, len - n, "%d-", prev_cpu);
         in_seq = 1;
       }
     }
@@ -464,8 +501,7 @@ static int cpu_array2str_orig(char *str, ssize_t len,
   return n;
 }
 
-static int cpu_array2str(char *str, ssize_t len,
-  int num_cpus, int *cpus)
+static int cpu_array2str(char *str, ssize_t len, int num_cpus, int *cpus)
 {
   if (g_ihk_test_mode != TEST_CPU_ARRAY2STR)  // Disable test code
     return cpu_array2str_orig(str, len, num_cpus, cpus);
@@ -5054,10 +5090,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
           }
         } else if (ivec == 3) {
           os_mem_chunk->size = mem_chunk_max->size;
-
         }
-
-
       }
       memcpy(os_mem_chunk_bk, os_mem_chunk, sizeof(struct ihk_os_mem_chunk));
 
@@ -6049,31 +6082,28 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 
   while (os->param->dump_page_set.completion_flag !=
          IHK_DUMP_PAGE_SET_COMPLETED) {
-
-  cpu_relax();
-
+    cpu_relax();
   }
 
   if (os->param->dump_level == DUMP_LEVEL_USER_UNUSED_EXCLUDE) {
+    dump_page = phys_to_virt((unsigned long)os->param->dump_page_set.phy_page);
 
-  dump_page = phys_to_virt((unsigned long)os->param->dump_page_set.phy_page);
+    for (i = 0; i < os->param->dump_page_set.count; i++) {
+      if (i) {
+        dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
+      }
 
-  for (i = 0; i < os->param->dump_page_set.count; i++) {
-  if (i) {
-  dump_page = (struct ihk_dump_page *)((char *)dump_page + ((dump_page->map_count * sizeof(unsigned long)) + sizeof(struct ihk_dump_page)));
-  }
-
-  for (j = 0; j < dump_page->map_count; j++) {
-  for (k = 0; k < 64; k++) {
-  if (!((dump_page->map[j] >> k) & 0x1)) {
-  map_start = (unsigned long)(dump_page->start + (j << (PAGE_SHIFT+6)));
-  map_start = map_start + (k << PAGE_SHIFT);
-  pg = virt_to_page(phys_to_virt(map_start));
-  pg->mapping += PAGE_MAPPING_ANON;
-  }
-  }
-  }
-  }
+      for (j = 0; j < dump_page->map_count; j++) {
+        for (k = 0; k < 64; k++) {
+          if (!((dump_page->map[j] >> k) & 0x1)) {
+            map_start = (unsigned long)(dump_page->start + (j << (PAGE_SHIFT+6)));
+            map_start = map_start + (k << PAGE_SHIFT);
+            pg = virt_to_page(phys_to_virt(map_start));
+            pg->mapping += PAGE_MAPPING_ANON;
+          }
+        }
+      }
+    }
   }
 
   return;
@@ -6537,8 +6567,7 @@ static int __smp_ihk_free_mem_from_rbtree(struct rb_root *root)
           size_left -= order_size;
           va += order_size;
           exec_path |= PATH_GO_TO_NEXT_PAGE;
-        }
-        else {
+        } else {
           dprintk("%s: order_size - size_left: %lu\n",
           __FUNCTION__, order_size - size_left);
           size_left = 0;
@@ -7093,10 +7122,9 @@ static void _release_mem(int numa_id)
 	}
 }
 
-static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
-   int min_chunk_size,
-   int max_size_ratio_all,
-   int timeout)
+static int __ihk_smp_reserve_mem(
+    size_t ihk_mem, int numa_id, int min_chunk_size,
+    int max_size_ratio_all, int timeout)
 {
   if (g_ihk_test_mode != TEST_IHK_SMP_RESERVE_MEM)  // Disable test code
     return __ihk_smp_reserve_mem_orig(ihk_mem, numa_id, min_chunk_size,
@@ -7119,21 +7147,21 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
   branch_info_t b_infos[] = {
     { -EINVAL, "invalid order_limit" },
     { -EINVAL, "node is offline" },
-    { 0, "skip draining pages" },
-    { 0, "skip shrinking pages" },
-    { 0, "breaking loop condition" },
+    { 0,       "skip draining pages" },
+    { 0,       "skip shrinking pages" },
+    { 0,       "breaking loop condition" },
 #ifdef CONFIG_MOVABLE_NODE
-    { 0, "movable page" },
+    { 0,       "movable page" },
 #endif
 #ifdef USE_TRY_TO_FREE_PAGES
-    { 0, "try to free pages" },
+    { 0,       "try to free pages" },
 #endif
-    { 0, "reduce page compound order" },
-    { 0, "timeout" },
-    { 0, "chunk structure is in front of physical memory" },
-    { 0, "chunk is bigger than what we need" },
-    { 0, "want != IHK_SMP_MEM_ALL" },
-    { 0, "want = IHK_SMP_MEM_ALL" },
+    { 0,       "reduce page compound order" },
+    { 0,       "timeout" },
+    { 0,       "chunk structure is in front of physical memory" },
+    { 0,       "chunk is bigger than what we need" },
+    { 0,       "want != IHK_SMP_MEM_ALL" },
+    { 0,       "want = IHK_SMP_MEM_ALL" },
   };
 
   int ret, i;
@@ -7592,8 +7620,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
       }
       if ((void *)q == &ihk_mem_free_chunks) {
         list_add_tail(&p->chain, &ihk_mem_free_chunks);
-      }
-      else {
+      } else {
         list_add_tail(&p->chain, &q->chain);
       }
 
@@ -8063,13 +8090,14 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
   int ret = -1;
 
   unsigned long ivec = 0;
-  unsigned long total_ivec = 4;
+  unsigned long total_ivec = 5;
 
   branch_info_t b_infos[] = {
     { 0,  "branch 1" },
     { 0,  "branch 2" },
-    { -1, "branch 3" },
-    { 0,  "branch 4" },
+    { 0,  "branch 3" },
+    { -1, "branch 4" },
+    { 0,  "branch 5" },
   };
 
   typedef struct chunk_info {
@@ -8118,6 +8146,11 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
     pr_info("IHK-SMP: partial release size: %ld, numa_id: %d\n",
       ihk_mem, numa_id);
 
+    if (ivec == 0 || list_empty(&ihk_mem_free_chunks)) {
+      ret = 0;
+      if (ivec != 0) return 0;
+      goto out;
+    }
     list_for_each_entry(mem_chunk, &ihk_mem_free_chunks, chain) {
       __mem_chunk_insert(&tmp_chunks, mem_chunk);
     }
@@ -8131,29 +8164,29 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
 
       for (node = rb_first(&tmp_chunks); node; node = rb_next(node)) {
         struct chunk *q = container_of(node, struct chunk, node);
-        if (ivec == 0 || q->numa_id != numa_id)
+        if (ivec == 1 || q->numa_id != numa_id)
           continue;
 
-        if (ivec == 1 || q->size < min) {
+        if (ivec == 2 || q->size < min) {
           mem_chunk = q;
           min = mem_chunk->size;
         }
       }
 
       /* test code for ivec = 0-1 */
-      if (ivec == 0) {
+      if (ivec == 1) {
         OKNG(min == -1UL, "not found min size\n");
         OKNG(mem_chunk == NULL, "not found min chunk\n");
         goto out;
       }
-      if (ivec == 1) {
+      if (ivec == 2) {
         OKNG(mem_chunk != NULL, "min chunk is not null\n");
         OKNG(min > 0, "checking min size\n");
         goto out;
       }
 
-      if (ivec == 2 || !mem_chunk) {
-        if (ivec == 2) mem_chunk = NULL;
+      if (ivec == 3 || !mem_chunk) {
+        if (ivec == 3) mem_chunk = NULL;
         break;
       }
 
@@ -8269,7 +8302,7 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
     }
 
    out:
-    if (ivec == 2) {
+    if (ivec == 3) {
       OKNG(mem_chunk == NULL, "not found min chunk\n");
     }
 
@@ -8287,8 +8320,8 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
 
       if (ivec == total_ivec-1) {  // some memory chunks must be released or be shrunk
         OKNG(chunk_count_before == chunk_count_after + count_cut,
-          "number of chunks. expected: %lu, real: %lu\n",
-          chunk_count_before, chunk_count_after+count_cut);
+             "number of chunks. expected: %lu, real: %lu\n",
+             chunk_count_before, chunk_count_after+count_cut);
 
         /* check whether final list contains any chunks cut */
         int fail = 0;
@@ -8301,7 +8334,7 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
         }
         OKNG(!fail, "chunks cut should not exist in the final list\n");
         OKNG(total_size_cut <= size_left_before,
-          "total size has been cut should not excess the size to be left\n");
+             "total size has been cut should not excess the size to be left\n");
 
         /* chunks has been cut or shrunk should belong to Numa node numa_id */
         list_for_each_entry(c_it, &chunks_cut, chain) {
@@ -8309,9 +8342,12 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
             fail = 1; break;
           }
         }
-        OKNG(!fail, "chunks have been cut should belong to Numa node id=%d\n", numa_id);
+        OKNG(!fail, "chunks have been cut should belong to Numa node id=%d\n",
+             numa_id);
         if (chunk_shrunk) {
-          OKNG(chunk_shrunk->numa_id == numa_id, "the chunk has been shrunk should belong to Numa node id=%d\n", numa_id);
+          OKNG(chunk_shrunk->numa_id == numa_id,
+               "the chunk has been shrunk should belong to Numa node id=%d\n",
+               numa_id);
         }
 
         /* check execution path */
@@ -8320,35 +8356,42 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
             || exec_path & PATH_SKIP_FOR_ALIGNMENT) {
           OKNG(exec_path & PATH_CHECK_SIZE_LEFT_NEXT_COMPOUND
             && exec_path & PATH_CHECK_SIZE_LEFT_NEXT_CHUNK,
-            "stop shrinking chunk to skip splitting compound page or for better alignment\n");
+            "stop shrinking chunk to skip splitting "
+            "compound page or for better alignment\n");
           OKNG(size_left_before > total_size_cut + size_taken,
-            "if skip freeing page then the total of size cut and size shrunk must be less than size_to_be_left\n");
+            "if skip freeing page then the total of size cut "
+            "and size shrunk must be less than size_to_be_left\n");
         }
         if (exec_path & PATH_FREE_COMPOUND_PAGE) {
           if (!(exec_path & PATH_NOT_COMPOUND_NOT_HEAD_PAGE))
             OKNG(total_size_cut + size_taken <= size_left_before,
-              "if all pages are neither compound nor head, total size cut and shrunk must be less than size_to_be_left\n");
+              "if all pages are neither compound nor head, "
+              "total size cut and shrunk must be less than size_to_be_left\n");
         }
         if (exec_path & PATH_CUT_CHUNK
             || exec_path & PATH_NOT_COMPOUND_NOT_HEAD_PAGE
             || exec_path & PATH_FREE_COMPOUND_PAGE) {
-          OKNG(total_size_after < total_size_before, "total size of the final list must be decreased\n");
+          OKNG(total_size_after < total_size_before,
+               "total size of the final list must be decreased\n");
           OKNG(total_size_after + total_size_cut + size_taken == total_size_before,
-            "amount of size decreased must equal to the total of size cut and size schrunk\n");
+               "amount of size decreased must equal to "
+               "the total of size cut and size schrunk\n");
         }
         if (exec_path & PATH_NOT_COMPOUND_NOT_HEAD_PAGE
             || exec_path & PATH_SKIP_SPLIT_COMPOUND_PAGE
             || exec_path & PATH_SKIP_FOR_ALIGNMENT
             || exec_path & PATH_FREE_COMPOUND_PAGE)
-          OKNG(exec_path & PATH_CHECK_SIZE_LEFT_NEXT_COMPOUND, "check size to stop finding pages\n");
-        OKNG(exec_path & PATH_CHECK_SIZE_LEFT_NEXT_CHUNK, "check size to stop finding chunks\n");
+          OKNG(exec_path & PATH_CHECK_SIZE_LEFT_NEXT_COMPOUND,
+               "check size to stop finding pages\n");
+        OKNG(exec_path & PATH_CHECK_SIZE_LEFT_NEXT_CHUNK,
+             "check size to stop finding chunks\n");
       } else {  // state must be unchanged
         OKNG(chunk_count_before == chunk_count_after,
-          "number of chunks. expected: %lu, real: %lu\n",
-          chunk_count_before, chunk_count_after);
+             "number of chunks. expected: %lu, real: %lu\n",
+             chunk_count_before, chunk_count_after);
         OKNG(total_size_before == total_size_after,
-          "total size of chunks. expected: %lu, real: %lu\n",
-          total_size_before, total_size_after);
+             "total size of chunks. expected: %lu, real: %lu\n",
+             total_size_before, total_size_after);
         OKNG(count_cut == 0, "no chunks has been cut\n");
         OKNG(chunk_shrunk == NULL, "no chunks has been shrunk\n");
       }
@@ -8445,7 +8488,7 @@ static int _smp_ihk_write_cpu_sys_file(int cpu_id, char *val)
   branch_info_t b_infos[] = {
     { -1, "open error" },
     { -1, "write error" },
-    { 0, "main case" }
+    { 0,  "main case" }
   };
 
   char status_before[2] = "\0", status_after[2] = "\0";
@@ -8496,12 +8539,15 @@ static int _smp_ihk_write_cpu_sys_file(int cpu_id, char *val)
 
     ret = _read_cpu_sys_file(cpu_id, status_after);
     if (ret) return -1;
-    if (ivec == total_branch-1) OKNG(strcmp(val, status_after) == 0, "cpu status must be updated");
-    else OKNG(strcmp(status_before, status_after) == 0, "cpu status must be unchanged");
+    if (ivec == total_branch-1)
+      OKNG(strcmp(val, status_after) == 0,
+           "cpu status must be updated\n");
+    else
+      OKNG(strcmp(status_before, status_after) == 0,
+           "cpu status must be unchanged\n");
   }
 
   return 0;
-
  err:
   return -1;
 }
@@ -9248,9 +9294,7 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
   #else
     for_each_cpu_mask(cpu, cpus_to_online) {
   #endif
-
       if (ivec == 2 || cpu > SMP_MAX_CPUS) {
-
         if (ivec != 2) {
           printk("IHK-SMP: error: CPU %d is out of limit\n", cpu);
           should_quit = 1;
