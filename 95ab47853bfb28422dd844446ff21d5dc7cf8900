@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "84ae520d_bbc318c8",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2853,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-07T02:43:57Z",
+      "side": 1,
+      "message": "Checking if copy to desc.rusage isn\u0027t done is enough for these cases because that\u0027s the main side effect of this function.",
+      "range": {
+        "startLine": 2853,
+        "startChar": 0,
+        "endLine": 2853,
+        "endChar": 13
+      },
+      "revId": "95ab47853bfb28422dd844446ff21d5dc7cf8900",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
