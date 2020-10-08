@@ -3374,6 +3374,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 	char physmem_name[PHYSMEM_NAME_SIZE];
 	int osfd = -1;
 	char *token;
+	int dump_nmi_sent = 0;
 
 	dprintk("%s: enter\n", __func__);
 	dprintf("%s: index=%d,dump_file=%s,dump_level=%d,interactive=%d\n",
@@ -3449,6 +3450,7 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 			__func__, -ret);
 		goto out;
 	}
+	dump_nmi_sent = 1;
 
 	args.cmd = DUMP_QUERY_NUM_MEM_AREAS;
 	args.size = 0;
@@ -3805,6 +3807,11 @@ int ihk_os_makedumpfile(int index, char *dump_file, int dump_level, int interact
 
 	ret = 0;
  out:
+	if (dump_nmi_sent) {
+		args.cmd = DUMP_NMI_CONT;
+		ioctl(osfd, IHK_OS_DUMP, &args);
+	}
+
 	if (abfd) {
 		ok = bfd_close(abfd);
 		if (!ok) {
