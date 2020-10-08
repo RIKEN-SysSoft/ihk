@@ -1,0 +1,101 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5d3531ea_a13c19b8",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2388,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-08T04:36:35Z",
+      "side": 1,
+      "message": "you need to add the following cases:\n{ 0, \"IHK_OS_AUX_CALL_START\" },\n{ -EPERM, \"IHK_OS_ASSIGN_CPU\" },\n{ -EPERM, \"invalid ioctl number (0x122b00)\" }",
+      "range": {
+        "startLine": 2388,
+        "startChar": 0,
+        "endLine": 2388,
+        "endChar": 32
+      },
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9243462d_b9b77ad8",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2772,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-08T04:36:35Z",
+      "side": 1,
+      "message": "you don\u0027t need to fix it, but ihk_os_read_cpu_register had better be called from device drivers. see ihk/test/ihklib/blackbox/driver/test_driver.c",
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "80b2b9fe_3d449dab",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2871,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-08T04:36:35Z",
+      "side": 1,
+      "message": "you should add the following case:\n{ -EINVAL, \"invalid ioctl num (0x122b00)\" }",
+      "range": {
+        "startLine": 2871,
+        "startChar": 0,
+        "endLine": 2871,
+        "endChar": 41
+      },
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "852ec152_3b942dd6",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 584,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-08T04:36:35Z",
+      "side": 1,
+      "message": "why \" || count_pkt_pool_after \u003c\u003d 1\" is added?",
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "79c7039b_83cbab2a",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 587,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-08T04:36:35Z",
+      "side": 1,
+      "message": "why \"|| !count_pkt_pool_after\" is added?",
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
