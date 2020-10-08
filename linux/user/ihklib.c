@@ -2404,6 +2404,10 @@ int ihk_os_release_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	if (mem_chunks[0].size == IHK_SMP_MEM_ALL) {
 		/* Special case for releasing all memory */
 		num_mem_chunks = ihk_os_get_num_assigned_mem_chunks(index);
+		if (num_mem_chunks < 1) {
+			ret = -EINVAL;
+			goto out;
+		}
 		query_mem_chunks = calloc(num_mem_chunks,
 					  sizeof(struct ihk_mem_chunk));
 		if (query_mem_chunks == NULL) {
