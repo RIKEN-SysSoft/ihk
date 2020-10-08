@@ -1,0 +1,73 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "63a636dd_31c6ec82",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1386,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-08T06:09:27Z",
+      "side": 1,
+      "message": "you can add a test-case for this branch if you need more branch-coverage counts.",
+      "range": {
+        "startLine": 1386,
+        "startChar": 0,
+        "endLine": 1386,
+        "endChar": 48
+      },
+      "revId": "4bc3f7d67e06c0f1d3736349f9c1e6eab32e7070",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "999bb953_7cb35e1a",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1400,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-08T06:09:27Z",
+      "side": 1,
+      "message": "you can add test-cases for the cases where this loop never iterates / iterates at least once, if you need more branch-coverage counts.",
+      "range": {
+        "startLine": 1400,
+        "startChar": 0,
+        "endLine": 1400,
+        "endChar": 70
+      },
+      "revId": "4bc3f7d67e06c0f1d3736349f9c1e6eab32e7070",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "1a197348_efc4be32",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1413,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-08T06:09:27Z",
+      "side": 1,
+      "message": "you can add a test-case for this branch if you need more branch-coverage counts.",
+      "range": {
+        "startLine": 1413,
+        "startChar": 0,
+        "endLine": 1413,
+        "endChar": 48
+      },
+      "revId": "4bc3f7d67e06c0f1d3736349f9c1e6eab32e7070",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
