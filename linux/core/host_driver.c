@@ -2625,7 +2625,15 @@ int ihk_os_read_cpu_register(ihk_os_t ihk_os, int cpu,
 		return ret;
 	}
 
-	if (!os || !os->kernel_handlers ||
+	if (!os || !desc) {
+		return -EFAULT;
+	}
+
+	if (cpu < 0 || cpu >= os->ops->get_cpu_info(os, os->priv)->n_cpus) {
+		return -EINVAL;
+	}
+
+	if (!os->kernel_handlers ||
 			!os->kernel_handlers->read_cpu_register) {
 		return -EINVAL;
 	}
