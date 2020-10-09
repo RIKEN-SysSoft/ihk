@@ -3015,8 +3015,15 @@ static int __smp_ihk_free_mem_from_list(struct list_head *list)
 			size_t order_size;
 			struct page *page = virt_to_page(va);
 
-			if (!PageCompound(page) || !PageHead(page)) {
-				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
+			if (!PageCompound(page)) {
+				free_page(va);
+				size_left -= PAGE_SIZE;
+				va += PAGE_SIZE;
+				continue;
+			}
+
+			if (!PageHead(page)) {
+				printk(KERN_DEBUG "%s: WARNING: page is compound but not head, skipping..\n",
 					__FUNCTION__);
 				size_left -= PAGE_SIZE;
 				va += PAGE_SIZE;
@@ -3075,8 +3082,15 @@ static int __smp_ihk_free_mem_from_rbtree(struct rb_root *root)
 			size_t order_size;
 			struct page *page = virt_to_page(va);
 
-			if (!PageCompound(page) || !PageHead(page)) {
-				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
+			if (!PageCompound(page)) {
+				free_page(va);
+				size_left -= PAGE_SIZE;
+				va += PAGE_SIZE;
+				continue;
+			}
+
+			if (!PageHead(page)) {
+				printk(KERN_DEBUG "%s: WARNING: page is compound but not head, skipping..\n",
 					__FUNCTION__);
 				size_left -= PAGE_SIZE;
 				va += PAGE_SIZE;
@@ -3209,7 +3223,7 @@ static void sort_pagelists(struct zone *zone)
 
 #define RESERVE_MEM_FAILED_ATTEMPTS 1
 #define USE_TRY_TO_FREE_PAGES
-#define USE_TRY_TO_FREE_PAGES_TIME_LIMIT 3
+#define USE_TRY_TO_FREE_PAGES_TIME_LIMIT 2
 
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 				 int min_chunk_size,
@@ -3385,9 +3399,10 @@ retry:
 #endif
 				&nodemask);
 
-		if (!pg && order == 0) {
+		if (!pg) {
 			pg = __alloc_pages_nodemask(
-					__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE | __GFP_NOFAIL,
+					__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE |
+						__GFP_NOFAIL | __GFP_NOWARN,
 					order,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
 					numa_id,
@@ -3396,8 +3411,9 @@ retry:
 						__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE),
 #endif
 					&nodemask);
-	if (pg)
-		kprintf("%s: got a page via __GFP_ATOMIC..\n", __func__);
+			if (pg) {
+				pr_err("%s: got __GFP_ATOMIC page with order %d\n", __func__, order);
+			}
 		}
 
 #ifdef CONFIG_MOVABLE_NODE
@@ -3441,7 +3457,7 @@ retry:
 					(__try_to_free_pages &&
 					 failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS) &&
 					 (try_free_pages_secs <
-						USE_TRY_TO_FREE_PAGES_TIME_LIMIT)) {
+						USE_TRY_TO_FREE_PAGES_TIME_LIMIT) && order > 0) {
 
 				try_free_pages_start_sec = get_seconds();
 				freed_pages = __try_to_free_pages(
@@ -3454,8 +3470,9 @@ retry:
 				if (freed_pages <= 1)
 					++failed_free_attempts;
 
-				printk("%s: freed %d pages with order %d @ NUMA %d\n",
-						__FUNCTION__, freed_pages, order, numa_id);
+				if (freed_pages)
+					printk("%s: freed %d pages with order %d @ NUMA %d\n",
+							__FUNCTION__, freed_pages, order, numa_id);
 				goto retry;
 			}
 #endif // USE_TRY_TO_FREE_PAGES
@@ -3621,7 +3638,7 @@ static void __ihk_smp_release_chunk(struct chunk *mem_chunk)
 		struct page *page = virt_to_page(va);
 
 		if (!PageCompound(page) || !PageHead(page)) {
-			dprintk(KERN_ERR "%s: WARNING: page is not compound or not head"
+			dprintk(KERN_DEBUG "%s: WARNING: page is not compound or not head"
 				", freeing single page\n",
 				__func__);
 			free_page(va);
@@ -3660,13 +3677,13 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 			continue;
 		}
 
-		list_del(&mem_chunk->chain);
-		__ihk_smp_release_chunk(mem_chunk);
 		pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
 			" (len: %lu) @ NUMA node: %d is released\n",
 			mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 			mem_chunk->size, mem_chunk->numa_id);
 
+		list_del(&mem_chunk->chain);
+		__ihk_smp_release_chunk(mem_chunk);
 		ret = 0;
 		goto out;
 	}
