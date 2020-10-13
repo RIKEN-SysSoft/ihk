@@ -541,7 +541,6 @@ void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p)
 	list_for_each_entry(p_iter, &p->header.channel->packet_pool, list) {
     count_pkt_pool_prev++;
 	}
-	ihk_ikc_spinlock_unlock(&p->header.channel->packet_pool_lock, flags);
 
  skip_count_prev:
   for (ivec = 0; ivec < total_branch; ++ivec) {
@@ -560,34 +559,32 @@ void ihk_ikc_release_packet(struct ihk_ikc_free_packet *p)
       if (ivec != 1) {
     		kprintf("%s: WARNING: channel of packet (%p) is NULL\n", __func__, p);
     		ihk_ikc_free(p);
+        ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
     		return;
       }
       goto out;
   	}
 
-  	flags = ihk_ikc_spinlock_lock(&c->packet_pool_lock);
   	list_add_tail(&p->list, &c->packet_pool);
-  	ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
+
   	dkprintf("%s: packet %p released to pool on channel %p %s\n",
   			     __FUNCTION__, p, c, c == c->master ? "(master)" : "");
 
    out:
-    c = p->header.channel;
-    flags = ihk_ikc_spinlock_lock(&c->packet_pool_lock);
-    list_for_each_entry(p_iter, &c->packet_pool, list) {
+    list_for_each_entry(p_iter, &p->header.channel->packet_pool, list) {
       count_pkt_pool_after++;
     }
-    ihk_ikc_spinlock_unlock(&c->packet_pool_lock, flags);
 
     if (ivec == total_branch - 1) {
-      OKNG(count_pkt_pool_after == count_pkt_pool_prev + 1 || count_pkt_pool_after <= 1,
+      OKNG(count_pkt_pool_after == count_pkt_pool_prev + 1,
            "check # of packets in pool.\n");
     } else {
-      OKNG(count_pkt_pool_after == count_pkt_pool_prev || !count_pkt_pool_after,
+      OKNG(count_pkt_pool_after == count_pkt_pool_prev,
            "check # of packets in pool\n");
     }
   }
  err:
+  ihk_ikc_spinlock_unlock(&p->header.channel->packet_pool_lock, flags);
   return;
 }
 
