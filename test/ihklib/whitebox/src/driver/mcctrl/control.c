@@ -3294,16 +3294,18 @@ long mcctrl_getrusage(ihk_os_t ihk_os,
 
   int ret = 0;
   int i;
+  struct ihk_os_rusage *rusage = NULL;
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
 
     struct mcctrl_ioctl_getrusage_desc desc;
     struct rusage_global *rusage_global = NULL;
-    struct ihk_os_rusage *rusage = NULL;
     unsigned long ut;
     unsigned long st;
     int should_quit = 0;
+
+    memset(&desc, 0, sizeof(struct mcctrl_ioctl_getrusage_desc));
 
     if (ivec == 0 || (!ihk_os || ihk_host_validate_os(ihk_os))) {
       ret = -EINVAL;
@@ -3312,6 +3314,7 @@ long mcctrl_getrusage(ihk_os_t ihk_os,
     }
 
     rusage_global = ihk_os_get_rusage(ihk_os);
+    
     if (ivec == 1 || !rusage_global) {
       ret = -EFAULT;
       if (ivec != 1) should_quit = 1;
@@ -3348,6 +3351,7 @@ long mcctrl_getrusage(ihk_os_t ihk_os,
       if (ivec != 2) should_quit = 1;
       goto out;
     }
+
     for (i = 0; i < rusage_global->num_numa_nodes; i++) {
       rusage->memory_numa_stat[i] = rusage_global->memory_numa_stat[i];
     }
@@ -3391,40 +3395,30 @@ long mcctrl_getrusage(ihk_os_t ihk_os,
     }
 
    out:
-    if (rusage) {
-      kfree(rusage);
-    }
-    if (should_quit) return ret;
+    if (should_quit) goto err;
 
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
 
-    if (ivec == 4 || ivec == total_branch - 1) {
-      OKNG(rusage->num_threads == rusage_global->num_threads,
-           "check num_threads\n");
-      OKNG(rusage->max_num_threads == rusage_global->max_num_threads,
-           "check max_num_threads\n");
-      OKNG(rusage->cpuacct_usage > 0 && rusage->cpuacct_stat_user > 0 &&
-           rusage->cpuacct_stat_system > 0, "check cpu usage and stats\n");
-      OKNG(rusage->memory_max_usage > 0 && rusage->memory_kmem_usage > 0 &&
-           rusage->memory_kmem_max_usage > 0, "check memory usage\n");
+    if (ivec == total_branch - 1) {
+      OKNG(rusage && desc.rusage && ret == 0, "rusage is copied to user\n");
     } else {
       if (ivec == 0 || ivec == 1) {
-        OKNG(!rusage, "rusage must be NULL\n");
+        OKNG(!desc.rusage, "rusage is not set\n");
       }
-      if (ivec == 2 || ivec == 3) {
-        OKNG(rusage->num_threads == 0, "num_threads is zero\n");
-        OKNG(rusage->max_num_threads == 0, "max_num_threads is zero\n");
-        OKNG(rusage->cpuacct_usage == 0 && rusage->cpuacct_stat_user == 0 &&
-             rusage->cpuacct_stat_system == 0, "cpu usage and stats are zero\n");
-        OKNG(rusage->memory_max_usage > 0 && rusage->memory_kmem_usage > 0 &&
-             rusage->memory_kmem_max_usage > 0, "check memory usage\n");
-      }
+      OKNG(ret, "rusage is not copied to user\n");
+    }
+
+    if (rusage) {
+      kfree(rusage); rusage = NULL;
     }
   }
 
   return ret;
  err:
-  return -EINVAL;
+  if (rusage) {
+    kfree(rusage);
+  }
+  return (ret) ? ret : -EINVAL;
 }
 
 extern void *get_user_sp(void);

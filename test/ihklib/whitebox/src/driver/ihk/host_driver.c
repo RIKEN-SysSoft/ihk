@@ -2375,6 +2375,11 @@ static int __ihk_os_ioctl_perm_orig(unsigned int request)
       break;
     }
 
+    if (request >= 0x122b00) {
+      ret = -EPERM;
+      break;
+    }
+
     euid = current_euid();
     dprintf("%s: request=0x%x, euid=%u\n", __FUNCTION__, request, euid.val);
     if (euid.val) {
@@ -2393,11 +2398,13 @@ static int __ihk_os_ioctl_perm(unsigned int request)
     return __ihk_os_ioctl_perm_orig(request);
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 2;
+  unsigned long total_branch = 4;
 
   branch_info_t b_infos[] = {
-    { 0, "debugging request" },
-    { 0, "main case" },
+    { 0,      "debugging request" },
+    { 0,      "IHK_OS_AUX_CALL_START" },
+    { -EPERM, "invalid ioctl number (0x122b00)" },
+    { 0,      "main case" },
   };
 
   int ret;
@@ -2408,6 +2415,8 @@ static int __ihk_os_ioctl_perm(unsigned int request)
 
     request = request_prev;
     if (ivec == 0) request = IHK_OS_DEBUG_START;
+    if (ivec == 1) request = IHK_OS_AUX_CALL_START;
+    if (ivec == 2) request = 0x122b00;
 
     ret = __ihk_os_ioctl_perm_orig(request);
 
@@ -2890,12 +2899,13 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
     return ihk_host_os_ioctl_orig(file, request, arg);
 
   unsigned long ivec = 0;
-  unsigned long total_branch = 4;
+  unsigned long total_branch = 5;
 
   branch_info_t b_infos[] = {
     { -EINVAL, "invalid file private data" },
     { -EINVAL, "invalid os data" },
     { -EINVAL, "os debugging request" },
+    { -EPERM,  "invalid ioctl num (0x122b00)" },
     { 0,       "main case" },
   };
 
@@ -2926,6 +2936,7 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
     }
 
     if (ivec == 2) request = IHK_OS_DEBUG_END;
+    if (ivec == 3) request = 0x122b00;
 
     ret = ihk_host_os_ioctl_orig(file, request, arg);
     if (ret > 0) {
