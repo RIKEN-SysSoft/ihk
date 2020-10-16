@@ -1,0 +1,142 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "56afdbb6_87bfc5fe",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1347,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-16T04:42:39Z",
+      "side": 1,
+      "message": "is the driver code (which calls this function) written in the way it calls this function twice so that both of PATH_HEAD_OVER_TAIL and PATH_TAIL_OVER_HEAD cases are covered?",
+      "range": {
+        "startLine": 1347,
+        "startChar": 19,
+        "endLine": 1347,
+        "endChar": 38
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "b41b4a5b_4e3f473d",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 4869,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-16T04:42:39Z",
+      "side": 1,
+      "message": "you can remove \"ivec \u003d\u003d 3 ||\"",
+      "range": {
+        "startLine": 4869,
+        "startChar": 36,
+        "endLine": 4869,
+        "endChar": 37
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a40366e8_a7fbbd0a",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 274,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-16T04:42:39Z",
+      "side": 1,
+      "message": "I guess this check is not needed.",
+      "range": {
+        "startLine": 274,
+        "startChar": 11,
+        "endLine": 274,
+        "endChar": 34
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "601e39e5_53182157",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/procfs.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 848,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-16T04:42:39Z",
+      "side": 1,
+      "message": "OKNG(!fs_os_procfs_entry_exist(osnum), \"base entry doesn\u0027t exist\\n\");",
+      "range": {
+        "startLine": 848,
+        "startChar": 11,
+        "endLine": 848,
+        "endChar": 35
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "783f0f0d_def184d9",
+        "filename": "test/ihklib/whitebox/src/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 4939,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-16T04:42:39Z",
+      "side": 1,
+      "message": "it\u0027s better to check if both exact-match case and non-exact-match case happen by calling this function with different reservation amounts",
+      "range": {
+        "startLine": 4939,
+        "startChar": 0,
+        "endLine": 4939,
+        "endChar": 74
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "19ebc7cf_1aa8285a",
+        "filename": "test/ihklib/whitebox/src/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 4944,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-10-16T04:42:39Z",
+      "side": 1,
+      "message": "it\u0027s better to check if both PageTail(pg)-true and false case happen by calling this function with different reservation amounts",
+      "range": {
+        "startLine": 4944,
+        "startChar": 0,
+        "endLine": 4944,
+        "endChar": 43
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
