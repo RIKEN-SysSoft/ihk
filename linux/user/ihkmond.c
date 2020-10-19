@@ -225,6 +225,23 @@ out:
 	return NULL;
 }
 
+#define dprintk(fmt, args...) do {					\
+	char contents[4096 - 256];					\
+	int fd;								\
+	ssize_t len;							\
+	ssize_t offset = 0;						\
+	if (geteuid()) {						\
+		break;							\
+	}								\
+	sprintf(contents, fmt, ##args);					\
+	fd = open("/dev/kmsg", O_WRONLY);				\
+	len = strlen(contents) + 1;					\
+	while (offset < len) {						\
+		offset += write(fd, contents + offset, len - offset);	\
+	}								\
+	close(fd);							\
+} while (0)
+
 static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, int *sizes, int *prod, int shift) {
 	int ret = 0, ret_lib;
 	int devfd = -1;
@@ -274,9 +291,18 @@ static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, in
 		dprintf("fn=%s\n", fn);
 	}
 
+#if 0
 	ret = fwrite(buf, 1, nread, fps[*prod]); 
 	sizes[*prod] += nread;
 	dprintf("fwrite returned %d\n", ret);
+#else
+	char tmp[IHK_KMSG_SIZE + 1];
+
+	memcpy(tmp, buf, nread);
+	tmp[nread] = 0;
+	dprintk("%s", tmp);
+#endif
+
  out:
 	if (devfd >= 0) {
 		close(devfd);
