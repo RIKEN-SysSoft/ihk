@@ -1501,15 +1501,8 @@ int ihk_get_num_os_instances(int index)
 	DIR *dir = NULL;
 	struct dirent *direp;
 	int num_os_instances = 0;
-	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
-	if ((fd = ihklib_device_open(index)) < 0) {
-		dprintf("%s: error: ihklib_device_open\n",
-			__func__);
-		ret = fd;
-		goto out;
-	}
 
 	dir = opendir(PATH_DEV);
 	if (dir == NULL) {
@@ -1526,9 +1519,6 @@ int ihk_get_num_os_instances(int index)
 	}
 	ret = num_os_instances;
  out:
-	if (fd != -1) {
-		close(fd);
-	}
 	if (dir) {
 		closedir(dir);
 	}
