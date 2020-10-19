@@ -38,7 +38,7 @@
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
-//#define IHK_DEBUG
+#define IHK_DEBUG
 #include <ihk/misc/debug.h>
 #include <ikc/msg.h>
 //#include <linux/shimos.h>

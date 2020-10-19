@@ -36,28 +36,28 @@ char **__argv;
 
 int loglevel = IHKLIB_LOGLEVEL_ERR;
 
-//#define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
 #define dprintf(fmt, args...) do {	\
-	printf(fmt, ##args);		\
+	dprintk(fmt, ##args);		\
 } while (0)
 
 #define dprintk(fmt, args...) do {					\
 	char contents[4096 - 256];					\
-	int fd;								\
+	int _fd;								\
 	ssize_t len;							\
 	ssize_t offset = 0;						\
 	if (geteuid()) {						\
 		break;							\
 	}								\
 	sprintf(contents, fmt, ##args);					\
-	fd = open("/dev/kmsg", O_WRONLY);				\
+	_fd = open("/dev/kmsg", O_WRONLY);				\
 	len = strlen(contents) + 1;					\
 	while (offset < len) {						\
-		offset += write(fd, contents + offset, len - offset);	\
+		offset += write(_fd, contents + offset, len - offset);	\
 	}								\
-	close(fd);							\
+	close(_fd);							\
 } while (0)
 
 #else
@@ -898,6 +898,21 @@ int ihk_reserve_mem_conf(int index, int key, void *value)
 	return ret;
 }
 
+void show_rss()
+{
+	system("(date; "
+	       "ps -o pid,user,\%mem,command -ew | "
+	       "sort -b -k3 -r|head -n10 | "
+	       "awk '$1 ~ /[0-9]+/ {printf($1 \" \" $2 \" \");"
+	       "cmd = \"sudo readlink -f /proc/\"$1\"/exe\";"
+	       "cmd | getline ret; printf(\"\%s\", ret);"
+	       "cmd = \"sudo cat /proc/\"$1\"/statm\";"
+	       "cmd | getline ret;"
+	       "split(ret,statm);"
+	       "printf(\" \%.0fGiB\\n\", statm[1]/64/1024)}') | "
+	       "sudo tee /dev/kmsg");
+}
+
 int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		    int num_mem_chunks)
 {
@@ -922,6 +937,8 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	unsigned long max = 0;
 	unsigned long variance_limit;
 	int release = 0;
+
+	show_rss();
 
 	dprintk("%s: reserve_mem_conf.total=%d\n",
 		__func__, reserve_mem_conf.total);
@@ -1252,6 +1269,8 @@ int ihk_get_num_reserved_mem_chunks(int index)
 	ret = req.num_chunks;
 
  out:
+	show_rss();
+
 	if (fd != -1) {
 		close(fd);
 	}
