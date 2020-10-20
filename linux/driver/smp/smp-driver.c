@@ -2339,7 +2339,13 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 
 #ifdef ENABLE_FUGAKU_HACKS
 			/* Special condition for faked chunk */
-			if (mem_size_left == __fake_chunk_per_node[numa_id]) {
+			if (mem_size_left <= __fake_chunk_per_node[numa_id]) {
+				if (mem_size_left < __fake_chunk_per_node[numa_id]) {
+					printk("%s: WARNING: requested %lu, smaller than"
+							" faked chunk %lu @ NUMA %d\n",
+							__func__, mem_size_left,
+							__fake_chunk_per_node[numa_id], numa_id);
+				}
 				mem_size_left = 0;
 				printk("%s: used faked chunk %lu @ NUMA %d\n",
 					__func__, __fake_chunk_per_node[numa_id], numa_id);
@@ -2348,6 +2354,16 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 #endif
 
 			printk(KERN_ERR "IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
+
+#ifdef ENABLE_FUGAKU_HACKS
+			if (__fake_chunk_per_node[numa_id] > 0) {
+				printk("%s: error: requested %lu, larger than"
+						" faked chunk %lu @ NUMA %d\n",
+						__func__, mem_size_left,
+						__fake_chunk_per_node[numa_id], numa_id);
+			}
+#endif
+
 			kfree(os_mem_chunk);
 			ret = -ENOMEM;
 			goto out;
