@@ -1520,6 +1520,7 @@ int ihk_reserve_mem_conf(int index, int key, void *value)
   if (get_test_mode() != TEST_IHK_RESERVE_MEM_CONF)
     return ihk_reserve_mem_conf_orig(index, key, value);
 
+  int pre_key = key;
   unsigned long ivec = 0;
   unsigned long total_branch = 4;
 
@@ -1535,6 +1536,7 @@ int ihk_reserve_mem_conf(int index, int key, void *value)
     START(b_infos[ivec].name);
 
     int should_quit = 0;
+    key = pre_key;
 
     ret = ihklib_device_readable(index);
     if (ivec == 0 || ret) {
@@ -3281,7 +3283,7 @@ int ihk_get_num_os_instances(int index)
     return ihk_get_num_os_instances_orig(index);
 
   int ret = 0;
-
+  int num_os_instances = 0;
   dprintk("%s: enter\n", __func__);
 
   unsigned long ivec = 0;
@@ -3300,7 +3302,7 @@ int ihk_get_num_os_instances(int index)
 
     DIR *dir = NULL;
     struct dirent *direp;
-    int num_os_instances = 0;
+    num_os_instances = 0;
     int fd = -1;
     int should_quit = 0;
 
@@ -3366,7 +3368,7 @@ int ihk_get_num_os_instances(int index)
       OKNG(num_os_instances == 0, "not found any os instances\n");
     }
   }
-
+  ret = num_os_instances;
   return ret;
  err:
   return (ret < 0)? ret : -EINVAL;
@@ -3496,6 +3498,7 @@ int ihk_get_os_instances(int index, int *indices, int _num_os_instances)
     if (ivec == 3 || !indices) {
       if (ivec != 3) should_quit = 1;
       ret = -EINVAL;
+      goto out;
     }
 
     dir = opendir(PATH_DEV);

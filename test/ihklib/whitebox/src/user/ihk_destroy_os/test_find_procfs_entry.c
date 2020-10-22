@@ -20,13 +20,6 @@ int main(int argc, char **argv)
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
 
-  int fd = ihklib_device_open(0);
-  INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  int test_mode = TEST_FIND_PROCFS_ENTRY;
-  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
-  INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
-  close(fd); fd = -1;
-
   ret = _cpus_reserve(98, -1);
   INTERR(ret, "cpus_reserve returned %d\n", ret);
 
@@ -68,8 +61,22 @@ int main(int argc, char **argv)
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
+  pid_t pid = -1;
+  int wstatus;
+
+  int fd = ihklib_device_open(0);
+  INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
+  int test_mode = TEST_FIND_PROCFS_ENTRY;
+  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
+  INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
+  close(fd); fd = -1;
+
   out:
   if (fd != -1) close(fd);
+  ihk_os_shutdown(0);
+  os_wait_for_status(IHK_STATUS_INACTIVE);
+  mems_os_release();
+  cpus_os_release();
   ihk_destroy_os(0, os_index);
   cpus_release();
   mems_release();
