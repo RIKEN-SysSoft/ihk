@@ -210,6 +210,8 @@ int ihk_ikc_send_orig(struct ihk_ikc_channel_desc *channel, void *p, int opt)
   return r;
 }
 
+DEFINE_SPINLOCK(write_lock);
+
 int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
 {
   if (g_ihk_test_mode != TEST_IHK_IKC_SEND)  // Disable test code
@@ -228,6 +230,12 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
   unsigned long flags;
   /* save previous state */
   if (!channel || !channel->send.queue) return -EINVAL;
+
+  local_irq_save(flags);
+
+  unsigned long w_flags;
+  spin_lock_irqsave(&write_lock, w_flags);
+
   uint64_t write_off_prev = channel->send.queue->write_off;
   uint64_t max_read_off_prev = channel->send.queue->max_read_off;
 
@@ -245,7 +253,6 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
       goto out;
     }
 
-    local_irq_save(flags);
    retry:
     /* Add main packet to target channel */
     if (ivec == 2 ||
@@ -259,7 +266,7 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
             should_quit = 1;
           }
           r = -EBUSY;
-          goto out_unlock;
+          goto out;
         }
         if (ivec == total_branch - 1)
           kprintf("%s: couldn't append packet -> retrying\n", __FUNCTION__);
@@ -274,11 +281,8 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
       if (ivec != 1) should_quit = 1;
     }
 
-   out_unlock:
-    local_irq_restore(flags);
-
    out:
-    if (should_quit) return r;
+    if (should_quit) goto err;
 
     BRANCH_RET_CHK(r, b_infos[ivec].expected);
 
@@ -298,8 +302,13 @@ int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
            "max read offset should not be changed\n");
     }
   }
+
+  spin_unlock_irqrestore(&write_lock, w_flags);
+  local_irq_restore(flags);
   return 0;
  err:
+  spin_unlock_irqrestore(&write_lock, w_flags);
+  local_irq_restore(flags);
   return -EINVAL;
 }
 

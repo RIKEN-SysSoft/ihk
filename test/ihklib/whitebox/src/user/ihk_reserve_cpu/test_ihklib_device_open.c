@@ -17,15 +17,6 @@ int main(int argc, char **argv)
 
   params_getopt(argc, argv);
 
-  struct cpus cpus_input = { 0 };
-
-  /* All of McKernel CPUs */
-  ret = cpus_ls(&cpus_input);
-  INTERR(ret, "cpus_ls returned %d\n", ret);
-
-  ret = cpus_shift(&cpus_input, 4);
-  INTERR(ret, "cpus_shift returned %d\n", ret);
-
   int ret_expected = 0;
 
   /* Precondition */
@@ -36,7 +27,15 @@ int main(int argc, char **argv)
   sprintf(mode, "%d", TEST_IHKLIB_DEVICE_OPEN);
   ret = setenv(IHKLIB_TEST_MODE_ENV_NAME, mode, 1);
   INTERR(ret, "setenv returned %d. errno=%d\n", ret, -errno);
+
+  /* All of McKernel CPUs */
+  struct cpus cpus_input = { 0 };
+
+  ret = _cpus_ls(&cpus_input, "online", 98, -1);
+  INTERR(ret, "_cpus_ls returned %d\n", ret);
+
   int fd = ihklib_device_open(0);
+  
   INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
   close(fd);
 
