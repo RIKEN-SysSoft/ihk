@@ -17,15 +17,6 @@ int main(int argc, char **argv)
 
   params_getopt(argc, argv);
 
-  struct cpus cpus_input = { 0 };
-
-  /* All of McKernel CPUs */
-  ret = cpus_ls(&cpus_input);
-  INTERR(ret, "cpus_ls returned %d\n", ret);
-
-  ret = cpus_shift(&cpus_input, 94);
-  INTERR(ret, "cpus_shift returned %d\n", ret);
-
   /* Precondition */
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
@@ -36,6 +27,12 @@ int main(int argc, char **argv)
   ret = setenv(IHKLIB_TEST_MODE_ENV_NAME, mode, 1);
   INTERR(ret, "setenv returned %d. errno=%d\n", ret, -errno);
 
+  /* All of McKernel CPUs */
+  struct cpus cpus_input = { 0 };
+
+  ret = _cpus_ls(&cpus_input, "online", 98, -1);
+  INTERR(ret, "_cpus_ls returned %d\n", ret);
+
   /* Activate and check */
   ret = ihk_reserve_cpu(0,
             cpus_input.cpus, cpus_input.ncpus);
@@ -43,7 +40,7 @@ int main(int argc, char **argv)
 
   /* check func */
   ret = ihk_get_num_reserved_cpus(0);
-  INTERR(ret <= 0, "ihk_get_num_reserved_cpus returned %d\n", ret);
+  INTERR(ret < 0, "ihk_get_num_reserved_cpus returned %d\n", ret);
 
   /* Clean up */
   ret = ihk_release_cpu(0, cpus_input.cpus,
