@@ -48,6 +48,30 @@
     },
     {
       "key": {
+        "uuid": "9d42c67e_1941c409",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 4869,
+      "author": {
+        "id": 1018213
+      },
+      "writtenOn": "2020-10-22T05:12:26Z",
+      "side": 1,
+      "message": "ivec \u003d 3 is for success case, it helps the function can work normally after finishing other branches. This branch is not included in the done count.",
+      "parentUuid": "b41b4a5b_4e3f473d",
+      "range": {
+        "startLine": 4869,
+        "startChar": 36,
+        "endLine": 4869,
+        "endChar": 37
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "a40366e8_a7fbbd0a",
         "filename": "test/ihklib/whitebox/src/driver/mcctrl/driver.c",
         "patchSetId": 3
@@ -71,6 +95,30 @@
     },
     {
       "key": {
+        "uuid": "5ef2859e_e94befa3",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 274,
+      "author": {
+        "id": 1018213
+      },
+      "writtenOn": "2020-10-22T05:12:26Z",
+      "side": 1,
+      "message": "done",
+      "parentUuid": "a40366e8_a7fbbd0a",
+      "range": {
+        "startLine": 274,
+        "startChar": 11,
+        "endLine": 274,
+        "endChar": 34
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "601e39e5_53182157",
         "filename": "test/ihklib/whitebox/src/driver/mcctrl/procfs.c",
         "patchSetId": 3
@@ -91,6 +139,30 @@
       "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f252b06b_5b59fd63",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/procfs.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 848,
+      "author": {
+        "id": 1018213
+      },
+      "writtenOn": "2020-10-22T05:12:26Z",
+      "side": 1,
+      "message": "This code is for checking when we have skipped deleting procfs entries. But it seems that the code made inconsistency: not found base entry \u003c\u003e procfs entry should exist.\nI will modify the check as below: OKNG(!e, \"base entry doesn\u0027t exist\\n\");",
+      "parentUuid": "601e39e5_53182157",
+      "range": {
+        "startLine": 848,
+        "startChar": 11,
+        "endLine": 848,
+        "endChar": 35
+      },
+      "revId": "9a3dd0703e265aa19fc1faa7b2e703e6d5df2321",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     },
     {
       "key": {
