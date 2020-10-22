@@ -118,6 +118,7 @@ typedef enum ihklib_test_mode {
   /* ihk_os_makedumpfile */
   TEST_IHK_OS_MAKEDUMPFILE                         = 38,
   TEST_SMP_IHK_OS_DUMP                             = 39,
+  TEST_IHK_READ_KMSG                               = 40
 
 } ihklib_test_mode_t;
 
