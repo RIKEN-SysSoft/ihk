@@ -833,6 +833,7 @@ void procfs_exit(int osnum)
     down(&procfs_file_list_lock);
     e = find_base_entry(osnum);
     if (ivec == 0 || !e) {
+      e = NULL;
       goto out;
     }
     if (e) {
@@ -845,7 +846,7 @@ void procfs_exit(int osnum)
       OKNG(!fs_os_procfs_entry_exist(osnum),
            "all proc entries of the os instance are removed\n");
     } else {
-      OKNG(fs_os_procfs_entry_exist(osnum), "nothing to do\n");
+      OKNG(!e, "base entry doesn't exist\n");
     }
   }
  err:

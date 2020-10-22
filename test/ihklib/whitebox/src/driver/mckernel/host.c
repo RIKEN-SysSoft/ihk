@@ -779,7 +779,15 @@ out_remote_pf:
     {
       int mode = packet->arg;
       g_ihk_test_mode = mode;
-      kprintf("ikc send test mode, mode = %d\n", mode);
+
+      if (mode == 2233) {
+        int exp_log_count = 0;
+        while (exp_log_count < 1000) {
+          kprintf("Log for testing read_kmsg function, iter = %d\n", exp_log_count);
+          exp_log_count++;
+        };
+      }
+
     }
     break;
 
