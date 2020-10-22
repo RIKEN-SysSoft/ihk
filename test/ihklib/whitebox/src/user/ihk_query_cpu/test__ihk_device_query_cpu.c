@@ -17,15 +17,6 @@ int main(int argc, char **argv)
 
   params_getopt(argc, argv);
 
-  struct cpus cpus_input = { 0 };
-
-  /* All of McKernel CPUs */
-  ret = cpus_ls(&cpus_input);
-  INTERR(ret, "cpus_ls returned %d\n", ret);
-
-  ret = cpus_shift(&cpus_input, 94);
-  INTERR(ret, "cpus_shift returned %d\n", ret);
-
   /* Precondition */
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
@@ -36,6 +27,12 @@ int main(int argc, char **argv)
   ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
   INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
   close(fd); fd = -1;
+
+  /* All of McKernel CPUs */
+  struct cpus cpus_input = { 0 };
+
+  ret = _cpus_ls(&cpus_input, "online", 98, -1);
+  INTERR(ret, "_cpus_ls returned %d\n", ret);
 
   int reserved = 0;
   /* Activate and check */

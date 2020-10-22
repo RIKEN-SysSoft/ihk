@@ -149,7 +149,6 @@ static struct procfs_list_entry *find_procfs_entry(
 
   for (ivec = 0; ivec < total_branch; ++ivec) {
     START(b_infos[ivec].name);
-
     struct list_head *list;
 
     if (parent == NULL)
@@ -176,6 +175,7 @@ static struct procfs_list_entry *find_procfs_entry(
       OKNG(ret == NULL, "not found a valid entry\n");
     }
   }
+  return ret;
  err:
   return NULL;
 }
