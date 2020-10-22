@@ -15,7 +15,7 @@
 int main(int argc, char **argv)
 {
   int ret;
-
+  int os_index = 0;
   params_getopt(argc, argv);
 
   char mode[6] = "\0";
@@ -31,16 +31,14 @@ int main(int argc, char **argv)
   int index_input[1] = { INDEX_DUMMY };
 
   ret = ihk_create_os(0);
-  INTERR(ret == 0, "ihk_create_os returned %d\n", ret);
+  INTERR(ret < 0, "ihk_create_os returned %d\n", ret);
+  os_index = ret;
 
   ret = ihk_get_os_instances(0, index_input, 1);
   INTERR(ret != 0, "return value: %d, expected: %d\n", ret, 0);
-  INTERR(index_input[0] != 0, "get os index as expected\n");
 
-  ret = ihk_destroy_os(0, 0);
-  
  out:
-
+  ihk_destroy_os(0, os_index);
   linux_rmmod(0);
   return ret;
 }

@@ -26,18 +26,18 @@ int main(int argc, char **argv)
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
 
-  int old_num_instance = ihk_get_num_os_instances(0);
-//	INTERR(ret == 1, "# of os instances: %d, expected: %d\n", ret, 1);
-
   ret = ihk_create_os(0);
   INTERR(ret, "ihk_create_os returned %d\n", ret);
 
-  int new_num_instance = ihk_get_num_os_instances(0);
-	INTERR(new_num_instance != old_num_instance + 1,
-    "# of os instances: %d, expected: %d\n", new_num_instance, old_num_instance);
+  int os_index = ret;
+
+  ret = ihk_get_num_os_instances(0);
+	INTERR(!ret, "ihk_get_num_os_instances error \n", ret);
+
+  unsetenv(IHKLIB_TEST_MODE_ENV_NAME);
 
  out:
-
+  ihk_destroy_os(0, os_index);
   linux_rmmod(0);
   return ret;
 }
