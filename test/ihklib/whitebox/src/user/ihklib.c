@@ -7609,6 +7609,93 @@ int ihk_os_thaw(unsigned long *os_set, int n)
 #include <limits.h>
 #include <pwd.h>
 
+int test_read_kmsg(int index)
+{
+  if (get_test_mode() != TEST_IHK_READ_KMSG)
+    return -EINVAL;
+
+  unsigned long test = 0;
+  unsigned long num_tests = 3;
+
+  branch_info_t b_infos[] = {
+    { 0, "PATH_TAIL_OVER_HEAD" },
+    { 0, "shift equal 1" },
+    { 0, "PATH_HEAD_OVER_TAIL" },
+  };
+
+  char kmsg_input[IHK_KMSG_SIZE] = {0};
+  struct ihk_device_get_kmsg_buf_desc desc_get = {
+    .os_index = 0 };
+  struct ihk_device_read_kmsg_buf_desc desc_read = {0};
+
+  int fd = ihklib_device_open(index);
+  if (fd < 0) return fd;
+  int ret = ioctl(fd, IHK_DEVICE_GET_KMSG_BUF, &desc_get);
+  if (ret) {
+    printf("IHK_DEVICE_GET_KMSG_BUF error \n");
+    goto err;
+  }
+  usleep(500000);
+
+  int test_mode = TEST_READ_KMSG;
+  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
+  if (ret) {
+    printf("set testmode error \n");
+    goto err;
+  }
+
+  for (test = 0; test < num_tests; ++test) {
+    START(b_infos[test].name);
+
+    if (test == 0) {
+      memset(kmsg_input, '0', sizeof(kmsg_input));
+      ret = ihk_os_kmsg(index, kmsg_input, (ssize_t)IHK_KMSG_SIZE);
+      if (ret < 0) {
+        printf("ihk_os_kmsg error: %d \n", ret);
+        goto err;
+      }
+    }
+
+    if (test == 1) {
+      memset(kmsg_input, '0', sizeof(kmsg_input));
+      desc_read.buf = kmsg_input;
+      desc_read.shift = 1;
+      desc_read.handle = desc_get.handle;
+
+      ret = ioctl(fd, IHK_DEVICE_READ_KMSG_BUF, &desc_read);
+      if (ret < 0) {
+        printf("IHK_DEVICE_READ_KMSG_BUF error: %d \n", ret);
+        goto err;
+      }
+    }
+
+    if (test == 2) {
+      test_mode = 2233;
+      ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
+      sleep(5);
+      test_mode = TEST_READ_KMSG;
+      ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
+
+      memset(kmsg_input, '0', sizeof(kmsg_input));
+      ret = ihk_os_kmsg(index, kmsg_input, (ssize_t)IHK_KMSG_SIZE);
+      if (ret < 0) {
+        printf("ihk_os_kmsg error: %d \n", ret);
+        goto err;
+      }
+    }
+
+    ret = 0;
+   out:
+    BRANCH_RET_CHK(ret, b_infos[test].expected);
+  }
+
+err:
+  ioctl(fd, IHK_DEVICE_RELEASE_KMSG_BUF, desc_get.handle);
+  close(fd); fd = -1;
+  return ret;
+}
+
+
 int test_smp_ihk_os_dump(int index)
 {
   dumpargs_t args;
@@ -7621,9 +7708,9 @@ int test_smp_ihk_os_dump(int index)
     return -EINVAL;
 
   if ((osfd = ihklib_os_open(index)) < 0) {
-		printf("%s: error: ihklib_os_open returned %d\n", __func__, osfd);
-		return osfd;
-	}
+    printf("%s: error: ihklib_os_open returned %d\n", __func__, osfd);
+    return osfd;
+  }
 
   ret = ihk_os_get_status(index);
   if (ret < 0) {

@@ -1338,6 +1338,7 @@ static int read_kmsg(struct ihk_kmsg_buf *kmsg_buf, char *buf, int shift)
 
     len_bottom = len_top = 0;
     int ret = 0;
+    int should_quit = 0;
     unsigned long flags;
 
     if (ivec == 0 || (!kmsg_buf || !buf)) {
@@ -1376,10 +1377,9 @@ static int read_kmsg(struct ihk_kmsg_buf *kmsg_buf, char *buf, int shift)
     if (shift) {
       kmsg_buf->head = kmsg_buf->tail;
     }
-    kmsg_buf->lock = 0;
-    local_irq_restore(flags);
 
    out:
+    should_quit = 1;
     BRANCH_RET_CHK(ret, b_infos[ivec].expected);
 
     if (ivec == total_branch - 1) {
@@ -1394,15 +1394,21 @@ static int read_kmsg(struct ihk_kmsg_buf *kmsg_buf, char *buf, int shift)
              "check size of the end of the buffer\n");
         OKNG(len_top == 0, "nothing to read at the front of the buffer\n");
       }
+
       if (shift)
         OKNG(kmsg_buf->head == kmsg_buf->tail, "head and tail are equal\n");
     } else {
       OKNG(len_bottom + len_top == 0, "nothing to read\n");
     }
+    should_quit = 0;
+
+   err:
+    kmsg_buf->lock = 0;
+    local_irq_restore(flags);
+    if (should_quit) return -EINVAL;
   }
+
   return len_bottom + len_top;
- err:
-  return -EINVAL;
 }
 
 static int __ihk_os_read_kmsg_orig(struct ihk_host_linux_os_data *data,
