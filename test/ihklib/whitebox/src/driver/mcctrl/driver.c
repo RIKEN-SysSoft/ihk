@@ -273,7 +273,6 @@ int mcctrl_os_boot_notifier(int os_index)
            "kernel call handlers should be set\n");
       OKNG(!list_empty(ioctl_handlers),
            "user call handlers should be set\n");
-      OKNG(ihk_host_os_get_usrdata(os_), "usrdata is set\n");
       OKNG(fs_os_procfs_entry_exist(os_index),
            "os procfs entries should be created\n");
     } else {
@@ -365,7 +364,6 @@ int mcctrl_os_shutdown_notifier(int os_index)
 }
 
 int g_ihk_test_mode;
-
 void mcctrl_os_set_test_mode(int mode)
 {
   struct ikc_scd_packet isp;
@@ -374,7 +372,7 @@ void mcctrl_os_set_test_mode(int mode)
   isp.arg = (unsigned long)mode;
 
   g_ihk_test_mode = mode;
-  if (os && os[0]) {
+  if (os && os[0] && mode == 2233) {
     mcctrl_ikc_send(os[0], 0, &isp);
   }
 

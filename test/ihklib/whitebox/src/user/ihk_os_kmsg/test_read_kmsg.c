@@ -16,17 +16,15 @@ int main(int argc, char **argv)
   int os_index;
   params_getopt(argc, argv);
 
+  char mode[6] = "\0";
+  sprintf(mode, "%d", TEST_IHK_READ_KMSG);
+  ret = setenv(IHKLIB_TEST_MODE_ENV_NAME, mode, 1);
+  INTERR(ret, "setenv returned %d. errno=%d\n", ret, -errno);
+
   /* Activate and check */
   /* Precondition */
   ret = linux_insmod(0);
   INTERR(ret, "linux_insmod returned %d\n", ret);
-
-  int fd = ihklib_device_open(0);
-  INTERR(fd < 0, "ihklib_device_open returned %d\n", fd);
-  int test_mode = TEST_READ_KMSG;
-  ret = ioctl(fd, IHK_DEVICE_SET_TEST_MODE, &test_mode);
-  INTERR(ret, "ioctl IHK_DEVICE_SET_TEST_MODE returned %d. errno=%d\n", ret, -errno);
-  close(fd); fd = -1;
 
   ret = _cpus_reserve(98, -1);
   INTERR(ret, "cpus_reserve returned %d\n", ret);
@@ -69,9 +67,8 @@ int main(int argc, char **argv)
   ret = ihk_os_boot(0);
   INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-  char kmsg_input[IHK_KMSG_SIZE] = {0};
-  ret = ihk_os_kmsg(0, kmsg_input, (ssize_t)IHK_KMSG_SIZE);
-  INTERR(ret <= 0, "ihk_os_kmsg returned %d\n", ret);
+  ret = test_read_kmsg(os_index);
+  INTERR(ret, "test_read_kmsg returned %d\n", ret);
 
   out:
   ihk_os_shutdown(0);

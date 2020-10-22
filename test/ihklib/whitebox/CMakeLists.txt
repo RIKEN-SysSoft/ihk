@@ -26,6 +26,9 @@ execute_process(COMMAND ${patch_cmd} ${patch_arg})
 set (patch_arg ${mckernel_root}/executer/kernel/mcctrl/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihklib/whitebox/patch/mck_exec_kernel_mcctrl.patch)
 execute_process(COMMAND ${patch_cmd} ${patch_arg})
 
+set (patch_arg ${mckernel_root}/kernel/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihklib/whitebox/patch/mck_kernel.patch)
+execute_process(COMMAND ${patch_cmd} ${patch_arg})
+
 set (cmake_cmd cmake)
 set (cmake_arg -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${MCK_INSTALL_PREFIX} -DUNAME_R=4.14.0-115.13.1.1chaos.el7a.aarch64 ${mckernel_root})
 execute_process(COMMAND ${cmake_cmd} ${cmake_arg})
@@ -49,6 +52,9 @@ set (patch_arg ${mckernel_root}/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihkl
 execute_process(COMMAND ${patch_cmd} ${patch_arg})
 
 set (patch_arg ${mckernel_root}/executer/kernel/mcctrl/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihklib/whitebox/patch/mck_exec_kernel_mcctrl.patch)
+execute_process(COMMAND ${patch_cmd} ${patch_arg})
+
+set (patch_arg ${mckernel_root}/kernel/CMakeLists.txt -i ${mckernel_root}/ihk/test/ihklib/whitebox/patch/mck_kernel.patch)
 execute_process(COMMAND ${patch_cmd} ${patch_arg})
 
 
