@@ -49,6 +49,30 @@
     },
     {
       "key": {
+        "uuid": "e0ffc4ac_7781b38f",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2388,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-11-11T03:52:11Z",
+      "side": 1,
+      "message": "your fix (https://review.gerrithub.io/c/RIKEN-SysSoft/ihk/+/504153/2) looks good to me.",
+      "parentUuid": "a8fab1d7_c8d7bc2d",
+      "range": {
+        "startLine": 2388,
+        "startChar": 0,
+        "endLine": 2388,
+        "endChar": 32
+      },
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "9243462d_b9b77ad8",
         "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
         "patchSetId": 1
@@ -63,6 +87,24 @@
       "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "ac10bdef_b9ce8423",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2772,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-11-11T03:52:11Z",
+      "side": 1,
+      "message": "resolved as it is",
+      "parentUuid": "9243462d_b9b77ad8",
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     },
     {
       "key": {
@@ -86,6 +128,30 @@
       "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "212e6d51_df2a23e6",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2871,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-11-11T03:52:11Z",
+      "side": 1,
+      "message": "your fix looks good to me.",
+      "parentUuid": "80b2b9fe_3d449dab",
+      "range": {
+        "startLine": 2871,
+        "startChar": 0,
+        "endLine": 2871,
+        "endChar": 41
+      },
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
     },
     {
       "key": {
@@ -124,6 +190,24 @@
     },
     {
       "key": {
+        "uuid": "cf91b8bb_0b99f537",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 584,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-11-11T03:52:11Z",
+      "side": 1,
+      "message": "your fix looks good to me",
+      "parentUuid": "c14cdef1_507a6526",
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "79c7039b_83cbab2a",
         "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
         "patchSetId": 1
@@ -153,6 +237,24 @@
       "side": 1,
       "message": "same reason with above",
       "parentUuid": "79c7039b_83cbab2a",
+      "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "73831d4e_38e0c0a5",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 587,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-11-11T03:52:11Z",
+      "side": 1,
+      "message": "your fix looks good to me.",
+      "parentUuid": "e278e237_a6f2ce1d",
       "revId": "a479f16bb4676a2d203bf60e37237d663105fe8c",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": false
