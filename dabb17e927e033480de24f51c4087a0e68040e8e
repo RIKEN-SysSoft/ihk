@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "496b74fa_699bde87",
+        "filename": "test/ihklib/whitebox/src/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 4584,
+      "author": {
+        "id": 1014590
+      },
+      "writtenOn": "2020-11-17T08:12:45Z",
+      "side": 1,
+      "message": "here you should check if all of the execution paths are traversed if there\u0027s no such code in the test-driver.",
+      "revId": "dabb17e927e033480de24f51c4087a0e68040e8e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
