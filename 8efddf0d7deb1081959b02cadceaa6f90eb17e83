@@ -1,0 +1,820 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7642d609_74f4a55f",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2378,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (request \u003e\u003d 0x122b00) {$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f2b55440_51e40a7f",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2378,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n+    if (request \u003e\u003d 0x122b00) {\n+      ret \u003d -EPERM;",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "879be230_94262e6f",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2379,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      ret \u003d -EPERM;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "462ff175_037a6dd3",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2380,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      break;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9f506ca4_f2398106",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2381,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    }$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a7ffe7c9_ddd79f93",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2401,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  unsigned long total_branch \u003d 4;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "02951f30_c98dbd93",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2404,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    { 0,      \"debugging request\" },$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7f3c0826_f2a4ad92",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2405,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    { 0,      \"IHK_OS_AUX_CALL_START\" },$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c09b912b_63171081",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2406,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    { -EPERM, \"invalid ioctl number (0x122b00)\" },$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e533189c_264b923f",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2407,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    { 0,      \"main case\" },$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "de6768e2_f2411fd0",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2418,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+    if (ivec \u003d\u003d 1) request \u003d IHK_OS_AUX_CALL_START;",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ad9de8d9_96bc2b09",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2418,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (ivec \u003d\u003d 1) request \u003d IHK_OS_AUX_CALL_START;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "49e16e12_2d243bc6",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2419,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+    if (ivec \u003d\u003d 2) request \u003d 0x122b00;",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b8982671_dfb17a1a",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2419,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (ivec \u003d\u003d 2) request \u003d 0x122b00;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "85621c1d_8028757a",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2902,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  unsigned long total_branch \u003d 5;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d589bcd3_c1fd2144",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2908,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    { -EPERM,  \"invalid ioctl num (0x122b00)\" },$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8ffd9bbd_18cb8c5a",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2939,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+    if (ivec \u003d\u003d 3) request \u003d 0x122b00;",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "840c966e_51ad8dae",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2939,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (ivec \u003d\u003d 3) request \u003d 0x122b00;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d3c7830b_a78d5266",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 562,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        ihk_ikc_spinlock_unlock(\u0026c-\u003epacket_pool_lock, flags);$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "373701bc_f4b13483",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 562,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        ihk_ikc_spinlock_unlock(\u0026c-\u003epacket_pool_lock, flags);$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fccc6d4f_9083c4b0",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 574,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n+    list_for_each_entry(p_iter, \u0026p-\u003eheader.channel-\u003epacket_pool, list) {\n       count_pkt_pool_after++;",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4be9e826_5012813e",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 574,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    list_for_each_entry(p_iter, \u0026p-\u003eheader.channel-\u003epacket_pool, list) {$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3bc0de96_e195f477",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 578,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n     if (ivec \u003d\u003d total_branch - 1) {\n+      OKNG(count_pkt_pool_after \u003d\u003d count_pkt_pool_prev + 1,",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8b844733_f82ecb3f",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 579,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      OKNG(count_pkt_pool_after \u003d\u003d count_pkt_pool_prev + 1,$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "62044981_67ebf1fe",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 581,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n     } else {\n+      OKNG(count_pkt_pool_after \u003d\u003d count_pkt_pool_prev,",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b4f56ca5_6c761673",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 582,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      OKNG(count_pkt_pool_after \u003d\u003d count_pkt_pool_prev,$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "59141a11_93abcf60",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/queue.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 587,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  ihk_ikc_spinlock_unlock(\u0026p-\u003eheader.channel-\u003epacket_pool_lock, flags);$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a33925b_a9c07eb6",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3297,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  struct ihk_os_rusage *rusage \u003d NULL;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "eadb1780_ee43534b",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3308,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    memset(\u0026desc, 0, sizeof(struct mcctrl_ioctl_getrusage_desc));$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "634dfa17_2afaeccb",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3398,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+    if (should_quit) goto err;",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "82c6055d_576cad7a",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3398,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (should_quit) goto err;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9726c39c_eea4cde0",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3402,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (ivec \u003d\u003d total_branch - 1) {$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "11ac4ddb_36fae5c9",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3402,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n+    if (ivec \u003d\u003d total_branch - 1) {\n+      OKNG(rusage \u0026\u0026 desc.rusage \u0026\u0026 ret \u003d\u003d 0, \"rusage is copied to user\\n\");",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2dc7c2eb_1803fb2b",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3403,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      OKNG(rusage \u0026\u0026 desc.rusage \u0026\u0026 ret \u003d\u003d 0, \"rusage is copied to user\\n\");$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d2c126e5_f9286a64",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3406,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        OKNG(!desc.rusage, \"rusage is not set\\n\");$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dba051bc_c0e584e2",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3406,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        OKNG(!desc.rusage, \"rusage is not set\\n\");$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fb39d7ef_298c31fa",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3408,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      OKNG(ret, \"rusage is not copied to user\\n\");$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6301c88d_729960eb",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3409,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    }$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "88adf454_c48fdeb6",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3411,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n+    if (rusage) {\n+      kfree(rusage); rusage \u003d NULL;",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1da26bd6_b5927627",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3411,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (rusage) {$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4c11574a_30daa4e6",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3412,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      kfree(rusage); rusage \u003d NULL;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "76669c3b_c46f898a",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3412,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: kfree(NULL) is safe and this check is probably not required\n+    if (rusage) {\n+      kfree(rusage); rusage \u003d NULL;",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "186b525a_c328c80c",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3418,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  if (rusage) {$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "973b0ad6_9bba8818",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3418,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (2, 4)\n+  if (rusage) {\n+    kfree(rusage);",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f940487f_d342c3f4",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3419,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    kfree(rusage);$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "37c3cb34_025c96fa",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3419,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: kfree(NULL) is safe and this check is probably not required\n+  if (rusage) {\n+    kfree(rusage);",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a659e6ad_9fbf3475",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3420,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  }$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ea242f8b_db00f390",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/control.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 3421,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:36:08Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  return (ret) ? ret : -EINVAL;$",
+      "revId": "8efddf0d7deb1081959b02cadceaa6f90eb17e83",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
