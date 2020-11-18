@@ -1,0 +1,2231 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "55d2e465_3d694236",
+        "filename": "test/ihklib/whitebox/include/user/ihklib_private.h",
+        "patchSetId": 4
+      },
+      "lineNbr": 121,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  TEST_IHK_READ_KMSG                               \u003d 40$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "68068946_3139ea5b",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1341,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    int should_quit \u003d 0;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6e8e0ae9_71419d79",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1382,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    should_quit \u003d 1;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ef6d6ab3_0db2d562",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1403,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    should_quit \u003d 0;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2fbcd7c4_6c72d96e",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1405,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: labels should not be indented\n+   err:",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8043a220_b0b778e8",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1406,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    kmsg_buf-\u003elock \u003d 0;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c5a22c06_3435f6db",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1407,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    local_irq_restore(flags);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aac3d55b_c8144a87",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1408,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+    if (should_quit) return -EINVAL;",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a142a7ef_779c555d",
+        "filename": "test/ihklib/whitebox/src/driver/ihk/host_driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1408,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (should_quit) return -EINVAL;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ffaab5e8_1c2a9c7c",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 375,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (2, 4)\n+  if (os \u0026\u0026 os[0] \u0026\u0026 mode \u003d\u003d 2233) {\n     mcctrl_ikc_send(os[0], 0, \u0026isp);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c9fc4994_5ea9a319",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 375,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  if (os \u0026\u0026 os[0] \u0026\u0026 mode \u003d\u003d 2233) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e3926064_b51d3806",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/procfs.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 835,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n     if (ivec \u003d\u003d 0 || !e) {\n+      e \u003d NULL;",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "080b05ff_0fd5baa2",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/procfs.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 836,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      e \u003d NULL;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "263aeaaa_50f8eec0",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/procfs.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 848,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n     } else {\n+      OKNG(!e, \"base entry doesn\u0027t exist\\n\");",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1b03fb7b_06536348",
+        "filename": "test/ihklib/whitebox/src/driver/mcctrl/procfs.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 849,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      OKNG(!e, \"base entry doesn\u0027t exist\\n\");$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "854963ae_64214823",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 783,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      if (mode \u003d\u003d 2233) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8fed8703_bceba3cc",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 784,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        int exp_log_count \u003d 0;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e9c5be11_8bb603c2",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 784,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        int exp_log_count \u003d 0;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4339ddac_908f595d",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 785,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (8, 10)\n+        while (exp_log_count \u003c 1000) {\n+          kprintf(\"Log for testing read_kmsg function, iter \u003d %d\\n\", exp_log_count);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "86032852_eb80d68b",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 785,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        while (exp_log_count \u003c 1000) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5178201f_67a2b169",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 785,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: Missing a blank line after declarations\n+        int exp_log_count \u003d 0;\n+        while (exp_log_count \u003c 1000) {",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dd36b16b_1b585688",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 785,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        while (exp_log_count \u003c 1000) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0763f0e2_bbc666ac",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 786,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+          kprintf(\"Log for testing read_kmsg function, iter \u003d %d\\n\", exp_log_count);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6d8a9fb5_d96e31d4",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 786,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+          kprintf(\"Log for testing read_kmsg function, iter \u003d %d\\n\", exp_log_count);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "47d99971_2f977ef7",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 786,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+          kprintf(\"Log for testing read_kmsg function, iter \u003d %d\\n\", exp_log_count);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5bf88433_bb874cc1",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 787,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+          exp_log_count++;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cab91d31_696c508f",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 787,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+          exp_log_count++;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "954c092c_29766d97",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 788,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        };$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "18faaa8e_b690cb3d",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 788,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        };$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "67c2c2ac_01c4b108",
+        "filename": "test/ihklib/whitebox/src/driver/mckernel/host.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 789,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e1ada425_e3cad511",
+        "filename": "test/ihklib/whitebox/src/user/ihk_os_kmsg/test_read_kmsg.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  char mode[6] \u003d \"\\0\";$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4e896dde_963c6df6",
+        "filename": "test/ihklib/whitebox/src/user/ihk_os_kmsg/test_read_kmsg.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  sprintf(mode, \"%d\", TEST_IHK_READ_KMSG);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fd2479e2_236c6a38",
+        "filename": "test/ihklib/whitebox/src/user/ihk_os_kmsg/test_read_kmsg.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: Missing a blank line after declarations\n+  char mode[6] \u003d \"\\0\";\n+  sprintf(mode, \"%d\", TEST_IHK_READ_KMSG);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "486bcac9_7aec8884",
+        "filename": "test/ihklib/whitebox/src/user/ihk_os_kmsg/test_read_kmsg.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  ret \u003d setenv(IHKLIB_TEST_MODE_ENV_NAME, mode, 1);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0d8967b1_da9119ec",
+        "filename": "test/ihklib/whitebox/src/user/ihk_os_kmsg/test_read_kmsg.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 22,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  INTERR(ret, \"setenv returned %d. errno\u003d%d\\n\", ret, -errno);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5b449508_d1887841",
+        "filename": "test/ihklib/whitebox/src/user/ihk_os_kmsg/test_read_kmsg.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 70,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  ret \u003d test_read_kmsg(os_index);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d6266b6a_d4260801",
+        "filename": "test/ihklib/whitebox/src/user/ihk_os_kmsg/test_read_kmsg.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 71,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  INTERR(ret, \"test_read_kmsg returned %d\\n\", ret);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3590a15b_8d46cb5d",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7614,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  if (get_test_mode() !\u003d TEST_IHK_READ_KMSG)$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f769ed19_81022637",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7614,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (2, 4)\n+  if (get_test_mode() !\u003d TEST_IHK_READ_KMSG)\n+    return -EINVAL;",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "949cc778_e2a1353b",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7615,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    return -EINVAL;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "10099f14_a3c5802c",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7617,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  unsigned long test \u003d 0;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fefdfeb7_b187de4b",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7618,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  unsigned long num_tests \u003d 3;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e870fba9_60120d72",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7620,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  branch_info_t b_infos[] \u003d {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "559c0bb3_70345da4",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7621,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    { 0, \"PATH_TAIL_OVER_HEAD\" },$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "74800278_03ceb2c1",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7622,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    { 0, \"shift equal 1\" },$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "914dc1f7_cbb9483a",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7623,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    { 0, \"PATH_HEAD_OVER_TAIL\" },$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e7a3a40e_4b56be6c",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7624,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  };$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "53b4b74e_c4681241",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7626,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  char kmsg_input[IHK_KMSG_SIZE] \u003d {0};$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "20338a9a_dcf67562",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7627,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  struct ihk_device_get_kmsg_buf_desc desc_get \u003d {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "029fbbd6_543d9b81",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7628,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    .os_index \u003d 0 };$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "38ed4580_150e21d7",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7629,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  struct ihk_device_read_kmsg_buf_desc desc_read \u003d {0};$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "11947fb1_d1457512",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7631,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  int fd \u003d ihklib_device_open(index);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e41fe7ea_23b4fef1",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7632,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+  if (fd \u003c 0) return fd;",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ccac4ed9_01b28589",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7632,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: Missing a blank line after declarations\n+  int fd \u003d ihklib_device_open(index);\n+  if (fd \u003c 0) return fd;",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c28cb37a_7cab3778",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7632,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  if (fd \u003c 0) return fd;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b80974ff_f4c0a5c2",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7633,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  int ret \u003d ioctl(fd, IHK_DEVICE_GET_KMSG_BUF, \u0026desc_get);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5903c21d_a2cab7be",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7634,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (2, 4)\n+  if (ret) {\n+    printf(\"IHK_DEVICE_GET_KMSG_BUF error \\n\");",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "eefa5627_894d8658",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7634,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  if (ret) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "21c3c3a3_dd569093",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7634,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: Missing a blank line after declarations\n+  int ret \u003d ioctl(fd, IHK_DEVICE_GET_KMSG_BUF, \u0026desc_get);\n+  if (ret) {",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1d683710_1d1623b1",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7635,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    printf(\"IHK_DEVICE_GET_KMSG_BUF error \\n\");$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "aa00d60a_1e3164ff",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7635,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: unnecessary whitespace before a quoted newline\n+    printf(\"IHK_DEVICE_GET_KMSG_BUF error \\n\");",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b70ee360_0c8e6607",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7636,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    goto err;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "542b6639_4ea3644b",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7637,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ada45df5_c98f6f2b",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7638,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  usleep(500000);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a42587c7_dbba95dc",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7640,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  int test_mode \u003d TEST_READ_KMSG;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "68677c3b_033912de",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7641,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: Missing a blank line after declarations\n+  int test_mode \u003d TEST_READ_KMSG;\n+  ret \u003d ioctl(fd, IHK_DEVICE_SET_TEST_MODE, \u0026test_mode);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9112bebf_2a33b460",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7641,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  ret \u003d ioctl(fd, IHK_DEVICE_SET_TEST_MODE, \u0026test_mode);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "59dac3d2_084df129",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7642,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (2, 4)\n+  if (ret) {\n+    printf(\"set testmode error \\n\");",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9073faa2_8138e87f",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7642,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  if (ret) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "db6af532_01573ccc",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7643,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    printf(\"set testmode error \\n\");$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "29331cca_57f3b010",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7643,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: unnecessary whitespace before a quoted newline\n+    printf(\"set testmode error \\n\");",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c62252b7_f18a9d93",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7644,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    goto err;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2f363e5a_65342069",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7645,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3f438416_adc71d63",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7647,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (2, 4)\n+  for (test \u003d 0; test \u003c num_tests; ++test) {\n+    START(b_infos[test].name);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9f8afb06_15c39ef6",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7647,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  for (test \u003d 0; test \u003c num_tests; ++test) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "496050ba_7c7fcfd5",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7648,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    START(b_infos[test].name);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b26e1d70_a5bea0cd",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7650,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n+    if (test \u003d\u003d 0) {\n+      memset(kmsg_input, \u00270\u0027, sizeof(kmsg_input));",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8b709a86_b2a1531a",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7650,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (test \u003d\u003d 0) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "276e87d9_4202d7b0",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7651,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      memset(kmsg_input, \u00270\u0027, sizeof(kmsg_input));$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "46c5818d_510fa7e7",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7652,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      ret \u003d ihk_os_kmsg(index, kmsg_input, (ssize_t)IHK_KMSG_SIZE);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cf295668_0afebc1d",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7653,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      if (ret \u003c 0) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e945be3f_da8dcac7",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7654,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: unnecessary whitespace before a quoted newline\n+        printf(\"ihk_os_kmsg error: %d \\n\", ret);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5eede771_1442bbe1",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7654,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        printf(\"ihk_os_kmsg error: %d \\n\", ret);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4d6bbf35_1a9bb6e8",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7654,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        printf(\"ihk_os_kmsg error: %d \\n\", ret);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2a0a0dbb_451d3635",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7655,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        goto err;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a4e32004_8512d9bc",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7655,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        goto err;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8fe2c0cf_e0191ff9",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7656,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d69baaa6_9ceb53ba",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7657,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6499de33_0f9fec34",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7659,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n+    if (test \u003d\u003d 1) {\n+      memset(kmsg_input, \u00270\u0027, sizeof(kmsg_input));",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "feed62c9_0eddf8ad",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7659,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (test \u003d\u003d 1) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c01acb12_83f8a335",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7660,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      memset(kmsg_input, \u00270\u0027, sizeof(kmsg_input));$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "96804cdd_98ecda79",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7661,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      desc_read.buf \u003d kmsg_input;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1ce523ae_00f10742",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7662,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      desc_read.shift \u003d 1;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6d3ab52a_1b0de7f2",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7663,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      desc_read.handle \u003d desc_get.handle;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "69f97e68_7ba656d4",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7665,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      ret \u003d ioctl(fd, IHK_DEVICE_READ_KMSG_BUF, \u0026desc_read);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e3934e17_c30a141c",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7666,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      if (ret \u003c 0) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a115d197_9d60b0b5",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7667,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: unnecessary whitespace before a quoted newline\n+        printf(\"IHK_DEVICE_READ_KMSG_BUF error: %d \\n\", ret);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ccee5b8d_44edd606",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7667,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        printf(\"IHK_DEVICE_READ_KMSG_BUF error: %d \\n\", ret);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0ace6d9a_f0824ab1",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7667,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        printf(\"IHK_DEVICE_READ_KMSG_BUF error: %d \\n\", ret);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "09657fa3_8444bc02",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7668,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        goto err;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a489c12a_b3d85d02",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7668,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        goto err;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0ab810ae_6b6a88b5",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7669,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bf9330e7_4d4e6547",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7670,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "47090817_58fdea65",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7672,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    if (test \u003d\u003d 2) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2eacb470_13aad550",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7672,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (4, 6)\n+    if (test \u003d\u003d 2) {\n+      test_mode \u003d 2233;",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "793acdf3_4958833d",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7673,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      test_mode \u003d 2233;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2ae6ed53_28b54996",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7674,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      ret \u003d ioctl(fd, IHK_DEVICE_SET_TEST_MODE, \u0026test_mode);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bd1d490e_dd6f336f",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7675,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      sleep(5);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d7b6f455_c77a9dce",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7676,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      test_mode \u003d TEST_READ_KMSG;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7bead9d2_fee08d9b",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7677,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      ret \u003d ioctl(fd, IHK_DEVICE_SET_TEST_MODE, \u0026test_mode);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da54f3e7_2ec0b115",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7679,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      memset(kmsg_input, \u00270\u0027, sizeof(kmsg_input));$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e542abf0_d050759c",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7680,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      ret \u003d ihk_os_kmsg(index, kmsg_input, (ssize_t)IHK_KMSG_SIZE);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3bfdf118_35aca3cf",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7681,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      if (ret \u003c 0) {$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8b534a8b_6511f86a",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7682,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        printf(\"ihk_os_kmsg error: %d \\n\", ret);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "182af232_0001b996",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7682,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        printf(\"ihk_os_kmsg error: %d \\n\", ret);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ed6e3554_dbc3bef0",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7682,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: unnecessary whitespace before a quoted newline\n+        printf(\"ihk_os_kmsg error: %d \\n\", ret);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "512b3ed4_8aee37a9",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7683,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "ERROR: code indent should use tabs where possible\n+        goto err;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "95300fda_ec240569",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7683,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+        goto err;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3f53209b_e145c8c5",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7684,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+      }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "13ae2b50_b79db44c",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7685,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "db7db9f2_98edbdf8",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7687,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    ret \u003d 0;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1d9cba9c_a9c6e662",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7688,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: labels should not be indented\n+   out:",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "12705084_5fc0cd3c",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7689,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    BRANCH_RET_CHK(ret, b_infos[test].expected);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b7fe6de1_e0b2e339",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7690,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "eb1dafa2_d24a1894",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7693,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  ioctl(fd, IHK_DEVICE_RELEASE_KMSG_BUF, desc_get.handle);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "179d8099_eb407e7d",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7694,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  close(fd); fd \u003d -1;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6f2be878_db6fe2b8",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7695,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  return ret;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b180fe3e_66129a17",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7710,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (2, 4)\n   if ((osfd \u003d ihklib_os_open(index)) \u003c 0) {\n+    printf(\"%s: error: ihklib_os_open returned %d\\n\", __func__, osfd);",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "37c74db2_a88f51d9",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7711,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    printf(\"%s: error: ihklib_os_open returned %d\\n\", __func__, osfd);$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "79521d03_e10b1b3f",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7712,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+    return osfd;$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c27c617b_3fe2c8d4",
+        "filename": "test/ihklib/whitebox/src/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 7713,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-18T01:37:01Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+  }$",
+      "revId": "cb2c10f37a9ab0af2d98935c9b98abbf5812d810",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
