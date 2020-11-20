@@ -28,5 +28,6 @@
 		goto out;					\
 	} \
 } while (0)
+#define ARRAY_SIZE_CHECK(array, size) INTERR(sizeof(array)/sizeof(array[0]) != size, "size of array \"%s\" isn't %d\n", #array, size)
 
 #endif
