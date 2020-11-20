@@ -96,4 +96,7 @@ int ikc_str2count(char *ikc_list);
 int ikc_str2req(char *_ikc_list, int num_cpus, struct ihk_ikc_req *req);
 char *ikc_req2str(struct ihk_ikc_req *req);
 
+int ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg);
+int ihk_reserve_mem_str(int dev_index, char *list, char *err_msg);
+
 #endif /* !defined(IHKLIB_PRIVATE_H_INCLUDED) */

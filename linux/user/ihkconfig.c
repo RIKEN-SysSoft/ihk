@@ -227,11 +227,9 @@ static int do_sbox(int fd)
 	return r;
 }
 
-static int do_reserve(int fd)
+static int do_reserve(int index)
 {
-	int ret, cnt;
-	struct ihk_cpu_req req_cpu = { 0 };
-	struct ihk_mem_req req_mem = { 0 };
+	int ret;
 
 	if (__argc < 5) {
 		usage(__argv);
@@ -239,50 +237,19 @@ static int do_reserve(int fd)
 	}
 
 	if (!strcmp(__argv[3], "cpu")) {
-		/* Parse CPU list */
-		cnt = cpu_str2count(__argv[4]);
-		IHKCONFIG_CHKANDJUMP(cnt <= 0,
-				"get num of requested cpus", -1);
-
-		req_cpu.cpus = calloc(sizeof(int), cnt);
-		IHKCONFIG_CHKANDJUMP(!req_cpu.cpus,
-				"allocate request space", -1);
-
-		ret = cpu_str2req(__argv[4], cnt, &req_cpu);
-		IHKCONFIG_CHKANDJUMP(ret < 0,
-				"parse provided cpulist string", -1);
-
-		ret = ioctl(fd, IHK_DEVICE_RESERVE_CPU, &req_cpu);
-		if (ret != 0) {
-			fprintf(stderr, "error: reserving CPUs: %s\n", __argv[4]);
+		ret = ihk_reserve_cpu_str(index, __argv[4], NULL);
+		if (ret) {
+			eprintf("%s: error: reserving CPUs: %s\n",
+				__func__, __argv[4]);
+			goto out;
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		/* Parse memory list */
-		cnt = mem_str2count(__argv[4]);
-		IHKCONFIG_CHKANDJUMP(cnt <= 0,
-				"get num of requested mems", -1);
-
-		req_mem.sizes = calloc(sizeof(ssize_t), cnt);
-		IHKCONFIG_CHKANDJUMP(!req_mem.sizes,
-				"allocate request space", -1);
-
-		req_mem.numa_ids = calloc(sizeof(int), cnt);
-		IHKCONFIG_CHKANDJUMP(!req_mem.numa_ids,
-				"allocate request space", -1);
-
-		ret = mem_str2req(__argv[4], &req_mem);
-		IHKCONFIG_CHKANDJUMP(ret < 0,
-				"parse provided memlist string", -1);
-
-		req_mem.min_chunk_size = reserve_mem_conf.min_chunk_size;
-		req_mem.max_size_ratio_all =
-			reserve_mem_conf.max_size_ratio_all;
-		req_mem.timeout = reserve_mem_conf.timeout;
-
-		ret = ioctl(fd, IHK_DEVICE_RESERVE_MEM, &req_mem);
-		if (ret != 0) {
-			fprintf(stderr, "error: reserving memory: %s\n", __argv[4]);
+		ret = ihk_reserve_mem_str(index, __argv[4], NULL);
+		if (ret) {
+			eprintf("%s: error: reserving memory: %s\n",
+				__func__, __argv[4]);
+			goto out;
 		}
 	}
 	else {
@@ -290,14 +257,8 @@ static int do_reserve(int fd)
 		ret = -EINVAL;
 	}
 
- fn_exit:
-	free(req_cpu.cpus);
-	free(req_mem.sizes);
-	free(req_mem.numa_ids);
-	dprintf("ret = %d\n", ret);
+ out:
 	return ret;
- fn_fail:
-	goto fn_exit;
 }
 
 static int do_release(int fd)
@@ -586,6 +547,7 @@ int main(int argc, char **argv)
 	}
 
 	HANDLER_WITH_INDEX(get)
+	else HANDLER_WITH_INDEX(reserve)
 
 	sprintf(fn, "/dev/mcd%d", atoi(argv[1]));
 
@@ -604,7 +566,6 @@ int main(int argc, char **argv)
 	else HANDLER(ioctl)
 	else HANDLER(clear_kmsg)
 	else HANDLER(clear_kmsg_write)
-	else HANDLER(reserve)
 	else HANDLER(release)
 	else HANDLER(query)
 	else {
