@@ -4315,6 +4315,36 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 		start = cur;
 	}
 
+	/* ihk_reserve_mem_conf must be called before ihk_reserve_mem */
+	for (i = 0; i < num_env; i++) {
+		int rval;
+		char *endp;
+
+#define RESERVE_MEM_CONF_PARSE(key) \
+		if (!strcmp(name[i], #key)) { \
+			rval = strtol(value[i], &endp, 10); \
+			if (*endp != '\0') { \
+				ret = -EINVAL; \
+				goto out; \
+			} \
+			ret = ihk_reserve_mem_conf(dev_index, \
+						   key, \
+						   err_msg); \
+			if (ret) { \
+				dprintf("%s: error: ihk_reserve_mem_conf failed with %d\n", \
+					__func__, ret); \
+				goto out; \
+			} \
+		}
+
+		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_ENABLE)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MIN_CHUNK_SIZE)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_TIMEOUT)
+	}
+
 	/* those are mandaroty settings. os_assign_{cpu,me}_all will complain
 	 * if any of them is missing.
 	 */
