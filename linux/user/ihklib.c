@@ -97,8 +97,9 @@ struct namespace_file namespace_files[] = {
 };
 
 struct ihklib_reserve_mem_conf reserve_mem_conf = {
-	.total = 0,
-	.variance_limit = 0,
+	.balanced_enable = 0,
+	.balanced_best_effort = 0,
+	.balanced_variance_limit = 0,
 	.min_chunk_size = PAGE_SIZE,
 	.max_size_ratio_all = 100,
 	.timeout = 30,
@@ -990,9 +991,14 @@ int ihk_reserve_mem_conf(int index, int key, void *value)
 	}
 
 	switch (key) {
-	case IHK_RESERVE_MEM_TOTAL:
-		reserve_mem_conf.total = 1;
-		reserve_mem_conf.variance_limit = *((int *)value);
+	case IHK_RESERVE_MEM_BALANCED_ENABLE:
+		reserve_mem_conf.balanced_enable = 1;
+		break;
+	case IHK_RESERVE_MEM_BALANCED_BEST_EFFORT:
+		reserve_mem_conf.balanced_best_effort = *((int *)value);
+		break;
+	case IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT:
+		reserve_mem_conf.balanced_variance_limit = *((int *)value);
 		break;
 	case IHK_RESERVE_MEM_MIN_CHUNK_SIZE:
 		reserve_mem_conf.min_chunk_size = *((int *)value);
@@ -1021,7 +1027,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	struct ihk_mem_req req = { 0 };
 	int fd = -1;
 
-	size_t total_requested = 0;
+	size_t total_requested = 0, total_avail = 0;
 	int num_mem_chunks_reserved;
 	struct ihk_mem_chunk *mem_chunks_reserved = NULL;
 	size_t *reserved = NULL;
@@ -1080,7 +1086,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	}
 
 	for (i = 0; i < num_mem_chunks; i++) {
-		if (reserve_mem_conf.total) {
+		if (reserve_mem_conf.balanced_enable) {
 			req.sizes[i] = (size_t)IHK_SMP_MEM_ALL;
 			total_requested += (size_t)mem_chunks[i].size;
 		} else {
@@ -1111,7 +1117,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 	close(fd);
 
-	if (reserve_mem_conf.total) {
+	if (reserve_mem_conf.balanced_enable) {
 		dprintk("%s: total requested: %ld\n",
 			__func__, total_requested);
 
@@ -1144,6 +1150,28 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 /* align reserve/release amount */
 #define IHKLIB_RESERVE_AMOUNT_ALIGN (1UL << 20)
+
+		for (i = 0; i < IHK_MAX_NUM_NUMA_NODES; i++) {
+			total_avail += reserved[i];
+		}
+
+		/* best-effort: reserve memory of up to requested amount */
+		if (total_avail < total_requested) {
+			dprintk("%s: info: best_effort: %d, "
+				"available (%ld, %ld MiB) < "
+				"requested (%ld, %ld MiB)\n",
+				__func__,
+				reserve_mem_conf.balanced_best_effort,
+				total_avail, total_avail >> 20,
+				total_requested, total_requested >> 20);
+			if (reserve_mem_conf.balanced_best_effort) {
+				total_requested = total_avail;
+			} else {
+				release = 1;
+				ret = -ENOMEM;
+				goto out;
+			}
+		}
 
 		/* round up not to release too much */
 		ave_requested = ((total_requested / num_numa_nodes +
