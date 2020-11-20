@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 		INTERR(ret, "mems_shift returned %d\n", ret);
 	}
 
-	struct mems mems_input[2] = {{ 0 }};
+	struct mems mems_input[2] = { { 0 } };
 	double mem_taken_ratio[] = { 0, 0.3 };
 
 	int ret_expected[2] = { 0, -ENOMEM };
@@ -72,9 +72,16 @@ int main(int argc, char **argv)
 		}
 	}
 
+	int rval = 1;
+
+	ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_BALANCED_ENABLE,
+				   &rval);
+	INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
+	       ret);
+
 	int allowed_var = 10;
 
-	ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_TOTAL,
+	ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT,
 				   &allowed_var);
 	INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
 	       ret);

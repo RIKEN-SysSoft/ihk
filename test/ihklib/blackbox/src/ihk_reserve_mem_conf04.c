@@ -11,7 +11,9 @@ const char param[] = "<key, value>";
 const char *values[] = {
 	"<INT_MIN, 0>",
 	"<-1, 0>",
-	"<IHK_RESERVE_MEM_TOTAL, 10>",
+	"<IHK_RESERVE_MEM_BALANCED_ENABLE, 1>",
+	"<IHK_RESERVE_MEM_BALANCED_BEST_EFFORT, 1>",
+	"<IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT, 10>",
 	"<IHK_RESERVE_MEM_MIN_CHUNK_SIZE, 65536>",
 	"<IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL, 95>",
 	"<IHK_RESERVE_MEM_TIMEOUT, 300>",
@@ -28,7 +30,9 @@ int main(int argc, char **argv)
 	int mem_conf_keys[] = {
 		INT_MIN,
 		-1,
-		IHK_RESERVE_MEM_TOTAL,
+		IHK_RESERVE_MEM_BALANCED_ENABLE,
+		IHK_RESERVE_MEM_BALANCED_BEST_EFFORT,
+		IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT,
 		IHK_RESERVE_MEM_MIN_CHUNK_SIZE,
 		IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL,
 		IHK_RESERVE_MEM_TIMEOUT,
@@ -38,6 +42,8 @@ int main(int argc, char **argv)
 	int mem_conf_values[] = {
 		0,
 		0,
+		1,
+		1,
 		10,
 		65536,
 		95,
@@ -48,6 +54,8 @@ int main(int argc, char **argv)
 	int ret_expected[] = {
 		-EINVAL,
 		-EINVAL,
+		0,
+		0,
 		0,
 		0,
 		0,

@@ -44,12 +44,12 @@ int main(int argc, char **argv)
 
 	int mem_conf_input[2] = { 100, 80 };
 	int ret_expected[2] = { 0, -ENOMEM };
-	struct mems mems_after_reserve[2] = {{ 0 }};
+	struct mems mems_after_reserve[2] = { { 0 } };
 
 	ret = mems_copy(&mems_after_reserve[0], &mems_input[0]);
 	INTERR(ret, "mems_copy returned %d\n", ret);
 
-	struct mems mems_margin[2] = {{ 0 }};
+	struct mems mems_margin[2] = { { 0 } };
 
 	ret = mems_copy(&mems_margin[0], &mems_input[0]);
 	mems_fill(&mems_margin[0], 4UL << 20);
@@ -80,9 +80,16 @@ int main(int argc, char **argv)
 		}
 	}
 
+	int rval = 1;
+
+	ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_BALANCED_ENABLE,
+				   &rval);
+	INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
+	       ret);
+
 	int allowed_var = 10;
 
-	ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_TOTAL,
+	ret = ihk_reserve_mem_conf(0, IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT,
 				   &allowed_var);
 	INTERR(ret, "ihk_reserve_mem_conf returned %d\n",
 	       ret);
