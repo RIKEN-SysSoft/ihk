@@ -55,12 +55,18 @@ struct ihklib_reserve_mem_conf {
 	 *    variance of the reserved amounts of the NUMA-nodes
 	 *    exceeds the "variance_limit" below.
 	 */
-	int total;
+	int balanced_enable;
+
+	/* 1: Perform best-effort reservation of the size up to the
+	 *    requested size, i.e. it's allowed to lower the reservation
+	 *    size to the available if the latter is less than the former.
+	 */
+	int balanced_best_effort;
 
 	/* MAX(max - ave, ave - min) must be less than or equal to
 	 * ave * variance_limit / 100
 	 */
-	int variance_limit;
+	int balanced_variance_limit;
 
 	/* Limit of alloc_pages order when reserving.
 	 * Use PAGE_SIZE for a system with system memory isolated,
