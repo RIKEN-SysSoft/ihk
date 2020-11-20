@@ -993,21 +993,33 @@ int ihk_reserve_mem_conf(int index, int key, void *value)
 	switch (key) {
 	case IHK_RESERVE_MEM_BALANCED_ENABLE:
 		reserve_mem_conf.balanced_enable = 1;
+		dprintk("%s: IHK_RESERVE_MEM_BALANCED_ENABLE=%d\n",
+			__func__, reserve_mem_conf.balanced_enable);
 		break;
 	case IHK_RESERVE_MEM_BALANCED_BEST_EFFORT:
 		reserve_mem_conf.balanced_best_effort = *((int *)value);
+		dprintk("%s: IHK_RESERVE_MEM_BALANCED_BEST_EFFORT=%d\n",
+			__func__, reserve_mem_conf.balanced_best_effort);
 		break;
 	case IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT:
 		reserve_mem_conf.balanced_variance_limit = *((int *)value);
+		dprintk("%s: IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT=%d\n",
+			__func__, reserve_mem_conf.balanced_variance_limit);
 		break;
 	case IHK_RESERVE_MEM_MIN_CHUNK_SIZE:
 		reserve_mem_conf.min_chunk_size = *((int *)value);
+		dprintk("%s: IHK_RESERVE_MEM_MIN_CHUNK_SIZE=%d\n",
+			__func__, reserve_mem_conf.min_chunk_size);
 		break;
 	case IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL:
 		reserve_mem_conf.max_size_ratio_all = *((int *)value);
+		dprintk("%s: IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL=%d\n",
+			__func__, reserve_mem_conf.max_size_ratio_all);
 		break;
 	case IHK_RESERVE_MEM_TIMEOUT:
 		reserve_mem_conf.timeout = *((int *)value);
+		dprintk("%s: IHK_RESERVE_MEM_TIMEOUT=%d\n",
+			__func__, reserve_mem_conf.timeout);
 		break;
 	default:
 		ret = -EINVAL;
@@ -4313,6 +4325,37 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 		}
 
 		start = cur;
+	}
+
+	/* ihk_reserve_mem_conf must be called before ihk_reserve_mem */
+	for (i = 0; i < num_env; i++) {
+		int rval;
+		char *endp;
+
+#define RESERVE_MEM_CONF_PARSE(key) \
+		if (!strcmp(name[i], #key)) { \
+			rval = strtol(value[i], &endp, 10); \
+			if (*endp != '\0') { \
+				dprintf("%s: error: parsing %s\n", \
+					__func__, value[i]); \
+				ret = -EINVAL; \
+				goto out; \
+			} \
+			ret = ihk_reserve_mem_conf(dev_index, \
+						   key, &rval); \
+			if (ret) { \
+				dprintf("%s: error: ihk_reserve_mem_conf failed with %d\n", \
+					__func__, ret); \
+				goto out; \
+			} \
+		}
+
+		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_ENABLE)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MIN_CHUNK_SIZE)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL)
+		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_TIMEOUT)
 	}
 
 	/* those are mandaroty settings. os_assign_{cpu,me}_all will complain

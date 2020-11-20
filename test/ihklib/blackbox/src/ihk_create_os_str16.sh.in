@@ -1,0 +1,41 @@
+#!/usr/bin/bash
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+patch_and_build "" ihklib_debug_ihk || exit 1
+
+sudo dmesg --clear
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str16 || exit $?
+
+for i in \
+    "IHK_RESERVE_MEM_BALANCED_ENABLE=1" \
+    "IHK_RESERVE_MEM_BALANCED_BEST_EFFORT=1" \
+    "IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT=10" \
+    "IHK_RESERVE_MEM_MIN_CHUNK_SIZE=65536" \
+    "IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL=98" \
+    "IHK_RESERVE_MEM_TIMEOUT=30"; do
+
+    dmesg | grep -qw $i
+    ret=$?
+
+    if (( ret == 0 )); then
+	printf "[  OK  ] "
+    else
+	printf "[  NG  ] "
+    fi
+    echo "$i found in Linux kmsg"
+
+    (( ret != 0 )) && exit $ret
+done
+
+exit 0
