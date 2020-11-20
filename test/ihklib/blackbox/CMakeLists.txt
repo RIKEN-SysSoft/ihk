@@ -408,6 +408,7 @@ foreach(target IN ITEMS
     ihk_create_os_str15
     ihk_create_os_str06
     ihk_destroy_os11
+    ihk_reserve_mem14
     )
 
   # Add target
