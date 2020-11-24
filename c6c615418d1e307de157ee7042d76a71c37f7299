@@ -1,0 +1,276 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "af21fe6e_80f9ecc9",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4335,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: Macros starting with if should be enclosed by a do - while loop to avoid possible if/else logic defects\n+#define RESERVE_MEM_CONF_PARSE(key) \\\n+\t\tif (!strcmp(name[i], #key)) { \\\n+\t\t\trval \u003d strtol(value[i], \u0026endp, 10); \\\n+\t\t\tif (*endp !\u003d \u0027\\0\u0027) { \\\n+\t\t\t\tdprintf(\"%s: error: parsing %s\\n\", \\\n+\t\t\t\t\t__func__, value[i]); \\\n+\t\t\t\tret \u003d -EINVAL; \\\n+\t\t\t\tgoto out; \\\n+\t\t\t} \\\n+\t\t\tret \u003d ihk_reserve_mem_conf(dev_index, \\\n+\t\t\t\t\t\t   key, \u0026rval); \\\n+\t\t\tif (ret) { \\\n+\t\t\t\tdprintf(\"%s: error: ihk_reserve_mem_conf failed with %d\\n\", \\\n+\t\t\t\t\t__func__, ret); \\\n+\t\t\t\tgoto out; \\\n+\t\t\t} \\\n+\t\t}",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "eb983c68_1d25de3f",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4335,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define RESERVE_MEM_CONF_PARSE(key) \\\n+\t\tif (!strcmp(name[i], #key)) { \\\n+\t\t\trval \u003d strtol(value[i], \u0026endp, 10); \\\n+\t\t\tif (*endp !\u003d \u0027\\0\u0027) { \\\n+\t\t\t\tdprintf(\"%s: error: parsing %s\\n\", \\\n+\t\t\t\t\t__func__, value[i]); \\\n+\t\t\t\tret \u003d -EINVAL; \\\n+\t\t\t\tgoto out; \\\n+\t\t\t} \\\n+\t\t\tret \u003d ihk_reserve_mem_conf(dev_index, \\\n+\t\t\t\t\t\t   key, \u0026rval); \\\n+\t\t\tif (ret) { \\\n+\t\t\t\tdprintf(\"%s: error: ihk_reserve_mem_conf failed with %d\\n\", \\\n+\t\t\t\t\t__func__, ret); \\\n+\t\t\t\tgoto out; \\\n+\t\t\t} \\\n+\t\t}",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "12467d67_cec147ca",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4347,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: ihk_reserve_mem_conf failed with %d\\n\", \\",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "10329e58_f585645a",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4354,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\telse RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT)",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1870d945_8875917e",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4354,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\t\telse RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT)",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3729b950_e366932d",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4355,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\telse RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT)",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a2fefc69_befedb0f",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4355,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\t\telse RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT)",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "51e5b679_fb74345d",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4356,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\t\telse RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MIN_CHUNK_SIZE)",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fdd860e7_be2a4cb5",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4357,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\t\telse RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL)",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4bd8ea18_38320eea",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4358,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\t\telse RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_TIMEOUT)",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e6da56b8_6f6853dc",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str17.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 42,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\"IHK_RESERVE_MEM_BALANCED_BEST_EFFORT\u003d1X\\0\", /* this element is invalid */",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "6a9968e1_69de7f14",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str17.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 51,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\"IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT\u003d10X\\0\", /* this element is invalid */",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ddb3a3fe_c35a833f",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str17.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\"IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL\u003d98X\\0\", /* this element is invalid */",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "415a37bd_da34e6a8",
+        "filename": "test/ihklib/blackbox/src/ihklib_debug_ihk.patch",
+        "patchSetId": 2
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "436e053b_cbf51ba7",
+        "filename": "test/ihklib/blackbox/src/ihklib_debug_ihk.patch",
+        "patchSetId": 2
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "e4119cdc_70dc91cc",
+        "filename": "test/ihklib/blackbox/src/ihklib_debug_ihk.patch",
+        "patchSetId": 2
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:25:52Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+ $",
+      "revId": "c6c615418d1e307de157ee7042d76a71c37f7299",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
