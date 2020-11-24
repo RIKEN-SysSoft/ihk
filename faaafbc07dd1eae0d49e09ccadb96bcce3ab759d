@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "0cbc3b47_33447ac1",
+        "filename": "linux/user/ihkconfig.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 550,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-24T00:28:25Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\telse HANDLER_WITH_INDEX(reserve)",
+      "revId": "faaafbc07dd1eae0d49e09ccadb96bcce3ab759d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
