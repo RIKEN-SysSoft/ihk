@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5f93ef4c_3e154d9a",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 2306,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-25T03:27:22Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_err([subsystem]dev, ... then dev_err(dev, ... then pr_err(...  to printk(KERN_ERR ...\n+\t\tprintk(KERN_ERR \"IHK-SMP: error: chunk not found in specified NUMA-node\\n\");",
+      "revId": "e0741a3d709116120eaaeeeac6d3e1bc890d7298",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
