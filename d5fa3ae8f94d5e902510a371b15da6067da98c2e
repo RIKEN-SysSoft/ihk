@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "eb59a55e_db26fc44",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3291,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-25T08:11:15Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE | __GFP_NOFAIL,",
+      "revId": "d5fa3ae8f94d5e902510a371b15da6067da98c2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8188129c_95deb86a",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3293,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-25T08:11:15Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 13, 0)",
+      "revId": "d5fa3ae8f94d5e902510a371b15da6067da98c2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "201ab71a_47a02620",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3297,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-11-25T08:11:15Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE),",
+      "revId": "d5fa3ae8f94d5e902510a371b15da6067da98c2e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
