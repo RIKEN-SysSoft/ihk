@@ -910,6 +910,12 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 		goto out;
 	}
 
+	/* num_cpus of zero is a valid input */
+	if (num_cpus == 0) {
+		ret = 0;
+		goto out;
+	}
+
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
 
@@ -1473,6 +1479,12 @@ int ihk_query_mem(int index, struct ihk_mem_chunk* mem_chunks, int _num_mem_chun
 		goto out;
 	}
 
+	/* _num_mem_chunks of zero is a valid input */
+	if (num_mem_chunks == 0) {
+		ret = 0;
+		goto out;
+	}
+
 	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
 	if (!req.sizes) {
 		dprintf("%s: error: allocating request sizes\n",
@@ -1961,6 +1973,13 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 		ret = -EINVAL;
 		goto out;
 	}
+
+	/* num_cpus of zero is a valid input */
+	if (num_cpus == 0) {
+		ret = 0;
+		goto out;
+	}
+
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
 
@@ -2316,7 +2335,7 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		goto out;
 	}
 
-	if (_num_mem_chunks <= 0 || _num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
+	if (_num_mem_chunks < 0 || _num_mem_chunks > IHK_MAX_NUM_MEM_CHUNKS) {
 		dprintf("%s: error: invalid # of chunks (%d)\n",
 			__func__, _num_mem_chunks);
 		ret = -EINVAL;
@@ -2342,6 +2361,12 @@ int ihk_os_query_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			" requested (%d)\n",
 			__func__, num_mem_chunks, _num_mem_chunks);
 		ret = -EINVAL;
+		goto out;
+	}
+
+	/* _num_mem_chunks of zero is a valid input */
+	if (num_mem_chunks == 0) {
+		ret = 0;
 		goto out;
 	}
 
