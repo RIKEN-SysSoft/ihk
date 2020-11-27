@@ -31,21 +31,16 @@
 #include <ihk/ihklib.h>
 #include <ihk/ihklib_private.h>
 
+//#define DEBUG
+
 int __argc;
 char **__argv;
 
 int loglevel = IHKLIB_LOGLEVEL_ERR;
 
-//#define DEBUG
-
-#ifdef DEBUG
-#define dprintf(fmt, args...) do {	\
-	printf(fmt, ##args);		\
-} while (0)
-
-#define dprintk(fmt, args...) do {					\
+#define printk(fmt, args...) do {					\
 	char contents[4096 - 256];					\
-	int fd;								\
+	int _fd;							\
 	ssize_t len;							\
 	ssize_t offset = 0;						\
 	if (geteuid()) {						\
@@ -60,6 +55,13 @@ int loglevel = IHKLIB_LOGLEVEL_ERR;
 	close(fd);							\
 } while (0)
 
+#ifdef DEBUG
+#define dprintf(fmt, args...) do {	\
+	printk(fmt, ##args);		\
+} while (0)
+#define dprintk(fmt, args...) do {	\
+	printk(fmt, ##args);		\
+} while (0)
 #else
 #define dprintf(fmt, args...) do {  } while (0)
 #define dprintk(fmt, args...) do {  } while (0)
@@ -67,7 +69,7 @@ int loglevel = IHKLIB_LOGLEVEL_ERR;
 
 #define eprintf(fmt, args...) do {		\
 	if (loglevel >= IHKLIB_LOGLEVEL_ERR) {	\
-		fprintf(stderr, fmt, ##args);	\
+		printk(fmt, ##args);		\
 	}					\
 } while (0)
 
