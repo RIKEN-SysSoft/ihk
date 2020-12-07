@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9d4b44a8_1691590c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 2332,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:56:25Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tif (mem_size_left \u003c __fake_chunk_per_node[numa_id]) {",
+      "revId": "ed771c403f16b095738bcd9e2550b130f55c1da6",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9b047ece_9c83409d",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 2333,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:56:25Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\t\tprintk(\"%s: WARNING: requested %lu, smaller than\"",
+      "revId": "ed771c403f16b095738bcd9e2550b130f55c1da6",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a0ca87f9_4109d7e0",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 2336,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:56:25Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t__fake_chunk_per_node[numa_id], numa_id);",
+      "revId": "ed771c403f16b095738bcd9e2550b130f55c1da6",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "dd2f8d89_a6edfcaf",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 2347,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:56:25Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"%s: error: requested %lu, larger than\"",
+      "revId": "ed771c403f16b095738bcd9e2550b130f55c1da6",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ca794dae_cb97bcd9",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 2350,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:56:25Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t__fake_chunk_per_node[numa_id], numa_id);",
+      "revId": "ed771c403f16b095738bcd9e2550b130f55c1da6",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
