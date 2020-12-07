@@ -1,0 +1,140 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a309ae5_c5326d50",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 617,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "288015c43d507f3e89ec7536cea3fecd0badec9a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "527b147d_08354724",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1279,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:00Z",
+      "side": 1,
+      "message": "WARNING: Missing a blank line after declarations\n+\t\t\tint tni, cq;\n+\t\t\tfor (tni \u003d 0; tni \u003c 6; ++tni) {",
+      "revId": "288015c43d507f3e89ec7536cea3fecd0badec9a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fb27d933_5fad6c57",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1282,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tif (!os_mem_chunk-\u003etofu_dma_addr[tni][cq])",
+      "revId": "288015c43d507f3e89ec7536cea3fecd0badec9a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c63e9963_96f8be86",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1286,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\tos_mem_chunk-\u003etofu_dma_addr[tni][cq],",
+      "revId": "288015c43d507f3e89ec7536cea3fecd0badec9a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4c420d3e_6dcf1186",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1288,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "288015c43d507f3e89ec7536cea3fecd0badec9a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cf4ca3d2_36ef9f3e",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1294,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t(unsigned long)os_mem_chunk-\u003etofu_dma_addr[tni][cq]);",
+      "revId": "288015c43d507f3e89ec7536cea3fecd0badec9a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "442a1b03_eb22cad8",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2591,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "288015c43d507f3e89ec7536cea3fecd0badec9a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "a8c148fa_65bc6d7f",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 2597,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t(unsigned long)os_mem_chunk-\u003etofu_dma_addr[tni][cq]);",
+      "revId": "288015c43d507f3e89ec7536cea3fecd0badec9a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
