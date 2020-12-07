@@ -1015,6 +1015,7 @@ void smp_ihk_setup_trampoline(void *priv)
 	int nr_irqs;
 	int i = 0;
 
+#ifdef ENABLE_TOFU
 	/* Tofu globals */
 	{
 		struct tofu_globals *tg = &os->param->tofu_globals;
@@ -1127,6 +1128,7 @@ void smp_ihk_setup_trampoline(void *priv)
 		tg->linux_vmalloc_start = VMALLOC_START;
 		tg->linux_vmalloc_end = VMALLOC_END;
 	}
+#endif
 
 	for (i = 0; i < nr_cpu_ids; i++) {
 		os->param->ihk_ikc_cpu_hwids[i] = ihk_smp_get_hw_id(i);
