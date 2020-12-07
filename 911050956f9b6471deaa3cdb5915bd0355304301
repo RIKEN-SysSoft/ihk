@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1c0f83e2_f0d77238",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1119,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:21Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t(unsigned long)kallsyms_lookup_name(\"tof_utofu_handler_bg_signal\");",
+      "revId": "911050956f9b6471deaa3cdb5915bd0355304301",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "4dac411d_5c42c365",
+        "filename": "linux/driver/smp/arch/arm64/smp-arch-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1121,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T03:55:21Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tkprintf(\"%s: WARNING: couldn\u0027t resolve tof_utofu_handler_bg_signal\\n\",",
+      "revId": "911050956f9b6471deaa3cdb5915bd0355304301",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
