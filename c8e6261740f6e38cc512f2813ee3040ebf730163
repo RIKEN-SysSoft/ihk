@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2ff4c9e2_552186d7",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 3389,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:52:42Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 4, 0) /* __GFP_ATOMIC */",
+      "revId": "c8e6261740f6e38cc512f2813ee3040ebf730163",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0668e598_31c830f2",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 3392,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:52:42Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE | __GFP_NOFAIL,",
+      "revId": "c8e6261740f6e38cc512f2813ee3040ebf730163",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c270f027_b40d6131",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 3394,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:52:42Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+#if LINUX_VERSION_CODE \u003e\u003d KERNEL_VERSION(4, 13, 0)",
+      "revId": "c8e6261740f6e38cc512f2813ee3040ebf730163",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "918ead38_3202ec3d",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 6
+      },
+      "lineNbr": 3398,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:52:42Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE),",
+      "revId": "c8e6261740f6e38cc512f2813ee3040ebf730163",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
