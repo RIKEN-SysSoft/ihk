@@ -1,0 +1,242 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "a4e95b3f_5172ee7f",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 2333,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"%s: used faked chunk %lu @ NUMA %d\\n\",",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "080fb909_7cd47e15",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 2334,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t__func__, __fake_chunk_per_node[numa_id], numa_id);",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0d3f0ae4_b4cebea8",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 3509,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t__func__, atomic_pages_freed_per_order, order);",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9fcd9293_dba4c041",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 3515,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tprintk(\"%s: order decreased to %d\\n\", __FUNCTION__, order);",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "50888b68_2ca32dd3",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 3515,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\t\tprintk(\"%s: order decreased to %d\\n\", __FUNCTION__, order);",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ae67adf5_47823630",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 3515,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\tprintk(\"%s: order decreased to %d\\n\", __FUNCTION__, order);",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "f0859500_65367b7a",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 3534,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: Block comments use a trailing */ on a separate line\n+\t\t\t * missing chunk will be faked below at fake_alloc: */",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "713f02b6_d7add336",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 3691,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_dbg([subsystem]dev, ... then dev_dbg(dev, ... then pr_debug(...  to printk(KERN_DEBUG ...\n+\t\t\tprintk(KERN_DEBUG \"%s: WARNING: page is compound but not head, skipping..\\n\",",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "9a17a76e_de249515",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 3692,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\t\t\t__FUNCTION__);",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d2666ca1_6ca3ab46",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 3742,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: released faked chunk on NUMA %d\\n\",",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5a720f7f_bcdddc42",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 4537,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\tsizeof(__fake_chunk_per_node[0]); ++i) {",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "54d068f9_5707c884",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 4585,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\tsizeof(__fake_chunk_per_node[0]); ++i) {",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "79525e12_1084c82c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 9
+      },
+      "lineNbr": 4589,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\t\tprintk(\"%s: reporting faked chunk %lu @ NUMA %d\\n\",",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "cf23782d_211764db",
+        "filename": "linux/driver/smp/smp-driver.h",
+        "patchSetId": 9
+      },
+      "lineNbr": 28,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-07T04:55:50Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_err([subsystem]dev, ... then dev_err(dev, ... then pr_err(...  to printk(KERN_ERR ...\n+#define dprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)",
+      "revId": "d2d652491bf6368722f5a81597922ab39baf1fe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
