@@ -444,6 +444,13 @@ struct ihk_device_ops {
 	int (*reserve_mem)(ihk_device_t, unsigned long arg);
 
 	/**
+	 * \brief Reserve memory max ratio
+	 *
+	 * Reserves max_ratio % of all memory internally.
+	 */
+	int (*reserve_mem_max_ratio)(ihk_device_t, unsigned long arg);
+
+	/**
 	 * \brief Release memory
 	 *
 	 * Releases memory if applicable.

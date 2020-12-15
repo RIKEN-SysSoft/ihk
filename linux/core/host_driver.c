@@ -1785,6 +1785,17 @@ static int __ihk_device_release_cpu(struct ihk_host_linux_device_data *data,
 	return data->ops->release_cpu(data, arg);
 }
 
+/** \brief Reserve memory max ratio */
+static int __ihk_device_reserve_mem_max_ratio(
+		struct ihk_host_linux_device_data *data,
+		unsigned long arg)
+{
+	if (!data->ops || !data->ops->reserve_mem_max_ratio)
+		return -1;
+
+	return data->ops->reserve_mem_max_ratio(data, arg);
+}
+
 /** \brief Reserve memory */
 static int __ihk_device_reserve_mem(struct ihk_host_linux_device_data *data,
 		unsigned long arg)
@@ -1881,6 +1892,10 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 
 	case IHK_DEVICE_RESERVE_MEM:
 		ret = __ihk_device_reserve_mem(data, arg);
+		break;
+
+	case IHK_DEVICE_RESERVE_MEM_MAX_RATIO:
+		ret = __ihk_device_reserve_mem_max_ratio(data, arg);
 		break;
 
 	case IHK_DEVICE_RELEASE_MEM:

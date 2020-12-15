@@ -569,6 +569,25 @@ static int do_get(int index)
 	}
 }
 
+static int do_reserve_mem_max_ratio(int fd)
+{
+	unsigned long arg;
+	long r;
+
+	if (__argc <= 3) {
+		fprintf(stderr, "error: specify reserve_mem_max_ratio.\n");
+		return 1;
+	}
+	arg = strtol(__argv[3], NULL, 10);
+
+	r = ioctl(fd, IHK_DEVICE_RESERVE_MEM_MAX_RATIO, arg);
+	if (r != 0) {
+		fprintf(stderr, "error: ioctl\n");
+	}
+	dprintf("ret = %lx\n", r);
+	return r;
+}
+
 
 #define HANDLER_WITH_INDEX(name) if (!strcmp(argv[2], #name)) { int r = do_##name(atoi(argv[1])); return r; }
 #define HANDLER(name) if (!strcmp(argv[2], #name)) { int r = do_##name(fd); close(fd); return r; }
@@ -605,6 +624,7 @@ int main(int argc, char **argv)
 	else HANDLER(clear_kmsg)
 	else HANDLER(clear_kmsg_write)
 	else HANDLER(reserve)
+	else HANDLER(reserve_mem_max_ratio)
 	else HANDLER(release)
 	else HANDLER(query)
 	else {
