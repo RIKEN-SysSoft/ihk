@@ -622,6 +622,9 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 							tofu_smmu_get_ipa(tni, cq,
 									phys_to_virt(os_mem_chunk->addr),
 									os_mem_chunk->size);
+#ifdef ENABLE_FUGAKU_HACKS
+						if (0)
+#endif
 						dprintf("%s: chunk 0x%lx:%lu TNI %d, CQ %d,"
 								" DMA addr: 0x%lx (offset: %lu)\n",
 								__func__,
@@ -1294,6 +1297,9 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 					tofu_smmu_release_ipa(tni, cq,
 						os_mem_chunk->tofu_dma_addr[tni][cq],
 						os_mem_chunk->size);
+#ifdef ENABLE_FUGAKU_HACKS
+					if (0)
+#endif
 					dprintf("%s: chunk 0x%lx:%lu TNI %d, CQ %d,"
 							" DMA addr: 0x%lx released\n",
 							__func__,
@@ -2627,6 +2633,9 @@ static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
 					tofu_smmu_release_ipa(tni, cq,
 						os_mem_chunk->tofu_dma_addr[tni][cq],
 						os_mem_chunk->size);
+#ifdef ENABLE_FUGAKU_HACKS
+					if (0)
+#endif
 					dprintf("%s: chunk 0x%lx:%lu TNI %d, CQ %d,"
 							" DMA addr: 0x%lx released\n",
 							__func__,
@@ -3266,6 +3275,10 @@ static void sort_pagelists(struct zone *zone)
 #define USE_TRY_TO_FREE_PAGES
 #define USE_TRY_TO_FREE_PAGES_TIME_LIMIT 2
 
+#ifdef ENABLE_FUGAKU_HACKS
+static unsigned long reserve_mem_max_ratio = 90;
+#endif
+
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 				 int min_chunk_size,
 				 int max_size_ratio_all,
@@ -3414,7 +3427,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 
 #ifdef ENABLE_FUGAKU_HACKS
 	/* XXX: Fugaku hack to skip step with IHK_SMP_MEM_ALL request */
-	max_size_ratio_all = 90;
 	if (want == IHK_SMP_MEM_ALL) {
 		want = node_present_pages(numa_id) * PAGE_SIZE;
 		goto fake_alloc;
@@ -3438,10 +3450,19 @@ retry:
 #else
 		    (/*want == IHK_SMP_MEM_ALL &&*/
 #endif
+#ifndef ENABLE_FUGAKU_HACKS
 		     allocated > (available * max_size_ratio_all / 100))) {
 			pr_info("%s: almost all of NUMA %d taken, breaking"
+				" allocation loop (current order: %d)..\n",
+				__func__, numa_id, order);
+#else
+		     allocated > (available * reserve_mem_max_ratio / 100))) {
+			pr_info("%s: %ld%% of NUMA %d taken, breaking"
 			       " allocation loop (current order: %d)..\n",
-			       __func__, numa_id, order);
+			       __func__,
+				   numa_id == 0 ? 95UL : reserve_mem_max_ratio,
+				   numa_id, order);
+#endif
 			goto pre_out;
 		}
 
@@ -4365,6 +4386,17 @@ out:
 	return 0;
 }
 
+#ifdef ENABLE_FUGAKU_HACKS
+static int smp_ihk_reserve_mem_max_ratio(ihk_device_t ihk_dev,
+		unsigned long arg)
+{
+	reserve_mem_max_ratio = arg;
+
+	pr_err("%s: reserve_mem_max_ratio: %lu\n", __func__, reserve_mem_max_ratio);
+	return 0;
+}
+#endif
+
 static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 {
 	size_t mem_size;
@@ -5087,6 +5119,9 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.reserve_cpu = smp_ihk_reserve_cpu,
 	.release_cpu = smp_ihk_release_cpu,
 	.reserve_mem = smp_ihk_reserve_mem,
+#ifdef ENABLE_FUGAKU_HACKS
+	.reserve_mem_max_ratio = smp_ihk_reserve_mem_max_ratio,
+#endif
 	.release_mem = smp_ihk_release_mem,
 	.release_mem_partially = smp_ihk_release_mem_partially,
 	.get_num_cpus = smp_ihk_get_num_cpus,

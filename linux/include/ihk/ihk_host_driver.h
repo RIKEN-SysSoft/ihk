@@ -443,6 +443,15 @@ struct ihk_device_ops {
 	 */
 	int (*reserve_mem)(ihk_device_t, unsigned long arg);
 
+#ifdef ENABLE_FUGAKU_HACKS
+	/**
+	 * \brief Reserve memory max ratio
+	 *
+	 * Reserves max_ratio % of all memory internally.
+	 */
+	int (*reserve_mem_max_ratio)(ihk_device_t, unsigned long arg);
+#endif
+
 	/**
 	 * \brief Release memory
 	 *
