@@ -384,6 +384,7 @@ static int ikc_array2str(char *str, ssize_t len, int num_cpus,
 #define rdtsc __native_read_tsc
 #endif
 
+#ifdef ENABLE_TOFU
 typedef uintptr_t (*tof_smmu_get_ipa_cq_t)(
 		int tni, int cqid, void *addr, size_t len);
 typedef void (*tof_smmu_release_ipa_cq_t)(
@@ -391,6 +392,7 @@ typedef void (*tof_smmu_release_ipa_cq_t)(
 
 static tof_smmu_get_ipa_cq_t tofu_smmu_get_ipa = NULL;
 static tof_smmu_release_ipa_cq_t tofu_smmu_release_ipa = NULL;
+#endif
 
 /** \brief Boot a kernel. */
 static int smp_ihk_os_boot(ihk_os_t ihk_os, void *priv, int flag)
@@ -568,6 +570,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 	bp_mem_chunk = (struct ihk_smp_boot_param_memory_chunk *)bp_numa_node;
 
+#ifdef ENABLE_TOFU
 	/* Resolve Tofu SMMU functions */
 	if (!tofu_smmu_get_ipa) {
 		tofu_smmu_get_ipa = (tof_smmu_get_ipa_cq_t)
@@ -583,6 +586,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 		kprintf("%s: error: resolving Tofu SMMU functions\n", __func__);
 		return -EINVAL;
 	}
+#endif
 
 	/* Fill in memory chunks information in the order of NUMA nodes */
 	for (linux_numa_id = find_first_bit(&os->numa_mask,
@@ -1274,6 +1278,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 				mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 				mem_chunk->size);
 
+#ifdef ENABLE_TOFU
 		{
 			int tni, cq;
 			for (tni = 0; tni < 6; ++tni) {
@@ -1295,6 +1300,7 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 				}
 			}
 		}
+#endif
 
 		add_free_mem_chunk(mem_chunk);
 
@@ -2296,8 +2302,10 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 
 		os_mem_chunk->addr = 0;
 		os_mem_chunk->numa_id = numa_id;
+#ifdef ENABLE_TOFU
 		memset(os_mem_chunk->tofu_dma_addr,
 				0, sizeof(os_mem_chunk->tofu_dma_addr));
+#endif
 		INIT_LIST_HEAD(&os_mem_chunk->list);
 
 		/* Find the biggest chunk or an exact match on this NUMA node */
@@ -2577,6 +2585,7 @@ static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
 		       mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
 		       mem_chunk->size, mem_chunk->numa_id);
 
+#ifdef ENABLE_TOFU
 		{
 			int tni, cq;
 			for (tni = 0; tni < 6; ++tni) {
@@ -2598,6 +2607,7 @@ static int _smp_ihk_os_release_mem(ihk_os_t ihk_os, size_t size, int numa_id)
 				}
 			}
 		}
+#endif
 
 		add_free_mem_chunk(mem_chunk);
 

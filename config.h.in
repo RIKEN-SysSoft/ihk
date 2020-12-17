@@ -9,9 +9,6 @@
 /* whether perf is enabled */
 #cmakedefine ENABLE_PERF 1
 
-/* whether built-in tofu driver is enabled */
-#cmakedefine ENABLE_TOFU 1
-
 /* whether rusage is enabled */
 #cmakedefine ENABLE_RUSAGE 1
 

@@ -518,6 +518,7 @@ int ihk_mc_get_memory_chunk(int id,
 	return 0;
 }
 
+#ifdef ENABLE_TOFU
 int ihk_mc_get_memory_chunk_dma_addr(int id,
 		int tni, int cqid,
 		uintptr_t *dma_addr)
@@ -537,6 +538,7 @@ int ihk_mc_get_memory_chunk_dma_addr(int id,
 
 	return 0;
 }
+#endif
 
 int ihk_mc_get_nr_cores(void)
 {
@@ -583,6 +585,7 @@ extern unsigned long ihk_param_lpj;
 /* @ref.impl linux-linaro/include/asm-generic/param.h::HZ, get from partitioning module */
 extern unsigned long ihk_param_hz;
 
+#ifdef ENABLE_TOFU
 struct page_table linux_page_table = {NULL, NULL, 0};
 void *ihk_mc_get_linux_kernel_pgt(void)
 {
@@ -602,6 +605,7 @@ struct tofu_globals *ihk_mc_get_tofu_globals(void)
 {
 	return &boot_param->tofu_globals;
 }
+#endif
 
 /* @ref.impl linux-linaro/arch/arm64/lib/delay.c::__udelay, __const_udelay, __delay */
 void arch_delay(int us)
