@@ -133,8 +133,10 @@ struct ihk_os_mem_chunk {
 	struct list_head list;
 	uintptr_t addr;
 	size_t size;
+#ifdef ENABLE_TOFU
 	/* Tofu SMMU DMA addresses per TNI/CQ */
 	uintptr_t tofu_dma_addr[6][12];
+#endif
 	ihk_os_t os;
 	int numa_id;
 };
