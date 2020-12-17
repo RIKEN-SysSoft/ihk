@@ -39,16 +39,38 @@ set_property(CACHE BUILD_TARGET PROPERTY STRINGS smp-x86 smp-arm64)
 
 if (BUILD_TARGET STREQUAL "smp-x86")
 	option(ENABLE_PERF "Enable perf support" ON)
-	option(ENABLE_TOFU "Built-in tofu driver support" OFF)
 	set(ARCH "x86_64")
 elseif (BUILD_TARGET STREQUAL "smp-arm64")
 	option(ENABLE_PERF "Enable perf support" OFF)
-	option(ENABLE_TOFU "Built-in tofu driver support" ON)
 	foreach(i RANGE 1 120)
 		add_definitions(-DPOSTK_DEBUG_ARCH_DEP_${i} -DPOSTK_DEBUG_TEMP_FIX_${i})
 		set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DPOSTK_DEBUG_ARCH_DEP_${i} -DPOSTK_DEBUG_TEMP_FIX_${i}")
 	endforeach()
 	set(ARCH "arm64")
+endif()
+
+execute_process(COMMAND bash -c "gawk '/CPU implementer/ { print \$4; exit; }' /proc/cpuinfo"
+  OUTPUT_VARIABLE CPU_IMPLEMENTER OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND bash -c "gawk '/CPU architecture/ { print \$3; exit; }' /proc/cpuinfo"
+  OUTPUT_VARIABLE CPU_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND bash -c "gawk '/CPU variant/ { print \$4; exit; }' /proc/cpuinfo"
+  OUTPUT_VARIABLE CPU_VARIANT OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND bash -c "gawk '/CPU part/ { print \$4; exit; }' /proc/cpuinfo"
+  OUTPUT_VARIABLE CPU_PART OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(CPU_IMPLEMENTER STREQUAL "0x46" AND CPU_ARCH STREQUAL "8" AND
+    CPU_VARIANT STREQUAL "0x1" AND CPU_PART STREQUAL "0x001")
+  message("A64FX detected")
+  set(CPU_MODEL "a64fx")
+endif()
+
+execute_process(COMMAND bash -c "ls -ld ls /proc/tofu/ 2>/dev/null | wc -l"
+  OUTPUT_VARIABLE PROC_TOFU OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(CPU_MODEL STREQUAL "a64fx" AND PROC_TOFU STREQUAL "1")
+	option(ENABLE_TOFU "Built-in tofu driver support" ON)
+else()
+	option(ENABLE_TOFU "Built-in tofu driver support" OFF)
 endif()
 
 set(ENABLE_MEMDUMP AUTO CACHE STRING "Enable memory dump support")
@@ -100,6 +122,8 @@ configure_file(config.h.in config.h)
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
 	message("Build type: ${CMAKE_BUILD_TYPE}")
 	message("Build target: ${BUILD_TARGET}")
+	message("CPU_MODEL: ${CPU_MODEL}")
+	message("PROC_TOFU: ${PROC_TOFU}")
 	message("ENABLE_MEMDUMP: ${ENABLE_MEMDUMP}")
 	message("ENABLE_PERF: ${ENABLE_PERF}")
 	message("ENABLE_TOFU: ${ENABLE_TOFU}")
