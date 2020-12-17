@@ -294,7 +294,9 @@ static struct arm_pmu **ihk_cpu_pmu;
 #else
 static struct arm_pmu **ihk_cpu_pmu;
 #endif
+#ifdef ENABLE_TOFU
 struct mm_struct *ihk__init_mm;
+#endif
 
 int (*ihk___irq_set_affinity)(unsigned int irq, const struct cpumask *mask,
 			      bool force);
@@ -429,9 +431,11 @@ int ihk_smp_arch_symbols_init(void)
 	if (WARN_ON(!ihk___memstart_addr))
 		return -EFAULT;
 
+#ifdef ENABLE_TOFU
 	ihk__init_mm = (void *) kallsyms_lookup_name("init_mm");
 	if (WARN_ON(!ihk__init_mm))
 		return -EFAULT;
+#endif
 
 	return 0;
 }
@@ -1149,9 +1153,11 @@ void smp_ihk_setup_trampoline(void *priv)
 	}
 #endif // IHK_IKC_USE_LINUX_WORK_IRQ
 
+#ifdef ENABLE_TOFU
 	os->param->linux_kernel_pgt_phys = virt_to_phys(ihk__init_mm->pgd);
 	printk("%s: Linux kernel init PT: 0x%llx, phys: 0x%llx\n", __func__,
 		(uint64_t)ihk__init_mm->pgd, (uint64_t)virt_to_phys(ihk__init_mm->pgd));
+#endif
 
 	/* Prepare trampoline code */
 	memcpy(trampoline_va, ihk_smp_trampoline_data,

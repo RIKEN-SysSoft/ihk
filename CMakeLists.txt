@@ -30,6 +30,20 @@ if (ENABLE_WERROR)
 	add_compile_options("-Werror")
 endif(ENABLE_WERROR)
 
+execute_process(COMMAND bash -c "ls -ld ls /proc/tofu/ 2>/dev/null | wc -l"
+  OUTPUT_VARIABLE PROC_TOFU OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(PROC_TOFU STREQUAL "1")
+	option(ENABLE_TOFU "Built-in tofu driver support" ON)
+else()
+	option(ENABLE_TOFU "Built-in tofu driver support" OFF)
+endif()
+
+if(ENABLE_TOFU)
+	add_definitions(-DENABLE_TOFU)
+	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DENABLE_TOFU")
+endif()
+
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 	set(BUILD_TARGET "smp-x86" CACHE STRING "Build target: smp-x86 | smp-arm64")
 elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
@@ -39,11 +53,9 @@ set_property(CACHE BUILD_TARGET PROPERTY STRINGS smp-x86 smp-arm64)
 
 if (BUILD_TARGET STREQUAL "smp-x86")
 	option(ENABLE_PERF "Enable perf support" ON)
-	option(ENABLE_TOFU "Built-in tofu driver support" OFF)
 	set(ARCH "x86_64")
 elseif (BUILD_TARGET STREQUAL "smp-arm64")
 	option(ENABLE_PERF "Enable perf support" OFF)
-	option(ENABLE_TOFU "Built-in tofu driver support" ON)
 	foreach(i RANGE 1 120)
 		add_definitions(-DPOSTK_DEBUG_ARCH_DEP_${i} -DPOSTK_DEBUG_TEMP_FIX_${i})
 		set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DPOSTK_DEBUG_ARCH_DEP_${i} -DPOSTK_DEBUG_TEMP_FIX_${i}")
