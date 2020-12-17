@@ -39,16 +39,23 @@ set_property(CACHE BUILD_TARGET PROPERTY STRINGS smp-x86 smp-arm64)
 
 if (BUILD_TARGET STREQUAL "smp-x86")
 	option(ENABLE_PERF "Enable perf support" ON)
-	option(ENABLE_TOFU "Built-in tofu driver support" OFF)
 	set(ARCH "x86_64")
 elseif (BUILD_TARGET STREQUAL "smp-arm64")
 	option(ENABLE_PERF "Enable perf support" OFF)
-	option(ENABLE_TOFU "Built-in tofu driver support" ON)
 	foreach(i RANGE 1 120)
 		add_definitions(-DPOSTK_DEBUG_ARCH_DEP_${i} -DPOSTK_DEBUG_TEMP_FIX_${i})
 		set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DPOSTK_DEBUG_ARCH_DEP_${i} -DPOSTK_DEBUG_TEMP_FIX_${i}")
 	endforeach()
 	set(ARCH "arm64")
+endif()
+
+execute_process(COMMAND bash -c "ls -ld ls /proc/tofu/ 2>/dev/null | wc -l"
+  OUTPUT_VARIABLE PROC_TOFU OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(PROC_TOFU STREQUAL "1")
+	option(ENABLE_TOFU "Built-in tofu driver support" ON)
+else()
+	option(ENABLE_TOFU "Built-in tofu driver support" OFF)
 endif()
 
 set(ENABLE_MEMDUMP AUTO CACHE STRING "Enable memory dump support")
