@@ -868,6 +868,9 @@ int ikc_cpu_map_check_channels(int nchannels, char *logdir)
 	FILE *fp = NULL;
 	int ncpus;
 	char cmd[4096];
+	char *line = NULL;
+	size_t n;
+	ssize_t nread;
 
 	sprintf(cmd, "%s/bin/mcexec %s/bin/ikc_map.sh %d |"
 		" sort -n | tee %s/ikc_map.log | uniq | wc -l",
@@ -882,12 +885,20 @@ int ikc_cpu_map_check_channels(int nchannels, char *logdir)
 		goto out;
 	}
 
-	ret = fscanf(fp, "%d\n", &ncpus);
+	nread = getline(&line, &n, fp);
+	INTERR(nread <= 0, "getline read zero byte (%lld bytes) "
+	       "or failed with %d\n", nread, errno);
+
+	ret = sscanf(line, "%d\n", &ncpus);
+	INTERR(ret != 1, "# of CPUs not found\n");
+
 	INFO("# of tokens: %d, ncpus: %d, nchannels: %d\n",
 	     ret, ncpus, nchannels);
 	ret = (ret == 1 && ncpus == nchannels) ? 0 : 1;
 
  out:
+	free(line);
+
 	if (fp) {
 		pclose(fp);
 	}
