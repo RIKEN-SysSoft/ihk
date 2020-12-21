@@ -237,7 +237,7 @@ static int do_reserve(int index)
 	}
 
 	if (!strcmp(__argv[3], "cpu")) {
-		ret = ihk_reserve_cpu_str(index, __argv[4], NULL);
+		ret = _ihk_reserve_cpu_str(index, __argv[4], NULL);
 		if (ret) {
 			eprintf("%s: error: reserving CPUs: %s\n",
 				__func__, __argv[4]);
@@ -245,7 +245,7 @@ static int do_reserve(int index)
 		}
 	}
 	else if (!strcmp(__argv[3], "mem")) {
-		ret = ihk_reserve_mem_str(index, __argv[4], NULL);
+		ret = _ihk_reserve_mem_str(index, __argv[4], NULL);
 		if (ret) {
 			eprintf("%s: error: reserving memory: %s\n",
 				__func__, __argv[4]);
