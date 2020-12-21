@@ -1,0 +1,157 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5bfe4c7b_6e014f5e",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4247,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define RESERVE_MEM_CONF_PARSE(key)\t\t\t\\\n+\tif (!strcmp(name[i], #key)) {\t\t\t\\\n+\t\trval \u003d strtol(value[i], \u0026endp, 10);\t\\\n+\t\tif (*endp !\u003d \u0027\\0\u0027) {\t\t\t\\\n+\t\t\tdprintf(\"%s: error: parsing %s\\n\", \\\n+\t\t\t\t__func__, value[i]);\t\\\n+\t\t\tret \u003d -EINVAL;\t\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t\t}\t\t\t\t\t\\\n+\t\tret \u003d ihk_reserve_mem_conf(dev_index,\t\\\n+\t\t\t\t\t   key, \u0026rval); \\\n+\t\tif (ret) {\t\t\t\t\\\n+\t\t\tdprintf(\"%s: error: ihk_reserve_mem_conf failed with %d\\n\", \\\n+\t\t\t\t__func__, ret);\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t\t}\t\t\t\t\t\\\n+\t}",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "408638e4_b31f90ca",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4247,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "ERROR: Macros starting with if should be enclosed by a do - while loop to avoid possible if/else logic defects\n+#define RESERVE_MEM_CONF_PARSE(key)\t\t\t\\\n+\tif (!strcmp(name[i], #key)) {\t\t\t\\\n+\t\trval \u003d strtol(value[i], \u0026endp, 10);\t\\\n+\t\tif (*endp !\u003d \u0027\\0\u0027) {\t\t\t\\\n+\t\t\tdprintf(\"%s: error: parsing %s\\n\", \\\n+\t\t\t\t__func__, value[i]);\t\\\n+\t\t\tret \u003d -EINVAL;\t\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t\t}\t\t\t\t\t\\\n+\t\tret \u003d ihk_reserve_mem_conf(dev_index,\t\\\n+\t\t\t\t\t   key, \u0026rval); \\\n+\t\tif (ret) {\t\t\t\t\\\n+\t\t\tdprintf(\"%s: error: ihk_reserve_mem_conf failed with %d\\n\", \\\n+\t\t\t\t__func__, ret);\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t\t}\t\t\t\t\t\\\n+\t}",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "08c80c03_94ee3104",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4259,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintf(\"%s: error: ihk_reserve_mem_conf failed with %d\\n\", \\",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b1f90a88_f92314e3",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4304,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: release_cpu_all failed with %d\\n\",",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "68077392_28626b0f",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4429,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tRESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT);",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a69230a_f2544006",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4430,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tRESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT);",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "b026258d_fd8a3360",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4432,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tRESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL);",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "56add814_47d1eacd",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4444,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: _ihk_reserve_cpu_str failed with %d\\n\",",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "68a20d19_3b1baf32",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4455,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-21T08:36:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: _ihk_reserve_mem_str failed with %d\\n\",",
+      "revId": "1dfcb7ee125df7c5a158a66bf30004b02b87982e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
