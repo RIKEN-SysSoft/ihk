@@ -433,6 +433,12 @@ set(TESTCASES
     ihk_create_os_str17
     ihk_os_kargs07
     ihk_reserve_mem_conf07
+    ihk_reserve_cpu_str01
+    ihk_reserve_cpu_str03
+    ihk_reserve_cpu_str04
+    ihk_reserve_mem_str01
+    ihk_reserve_mem_str03
+    ihk_reserve_mem_str04
 )
 
 if (WITH_KRM)
