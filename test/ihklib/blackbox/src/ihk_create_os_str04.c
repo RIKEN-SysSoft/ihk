@@ -12,7 +12,7 @@
 #include "params.h"
 #include "linux.h"
 
-const char param[] = "dev_index";
+const char param[] = "# of definitions";
 const char *values[] = {
 	"INT_MIN",
 	"-1",

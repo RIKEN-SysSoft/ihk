@@ -433,7 +433,17 @@ set(TESTCASES
     ihk_create_os_str17
     ihk_os_kargs07
     ihk_reserve_mem_conf07
-)
+    ihk_reserve_cpu_str01
+    ihk_reserve_cpu_str03
+    ihk_reserve_cpu_str04
+    ihk_reserve_mem_conf_str16
+    ihk_reserve_mem_str01
+    ihk_reserve_mem_str03
+    ihk_reserve_mem_str04
+    ihk_os_assign_cpu_str16
+    ihk_os_set_ikc_map_str16
+    ihk_os_kargs_str16
+    )
 
 if (WITH_KRM)
 	list(APPEND TESTCASES

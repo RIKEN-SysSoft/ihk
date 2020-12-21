@@ -1,0 +1,37 @@
+#!/usr/bin/bash
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+memleak_pro
+
+for i in {0..1}; do
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem_conf_str15 -i $i || exit $?
+
+    sudo @WITH_MCK@/sbin/ihkosctl 0 kmsg | awk '/KCommand Line/ && /hidos/ && /allow_oversubscribe/ && /ihk_reserve_mem_conf_str15/ { printf("[ INFO ] kmsg: %s\n", $0); found = 1 } END { exit found ? 0 : 1 }'
+    ret=$?
+
+    if (( ret == 0 )); then
+	printf "[  OK  ] "
+    else
+	printf "[  NG  ] "
+    fi
+
+    echo "ihk_reserve_mem_conf_str15 included in kargs"
+
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem_conf_str15 -c || exit $?
+
+    (( ret != 0 )) && exit $ret
+done
+
+memleak_epi
+
+exit 0
