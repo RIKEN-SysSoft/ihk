@@ -4188,7 +4188,7 @@ int ihk_set_loglevel(enum IHKLIB_LOGLEVEL level)
 	return 0;
 }
 
-int ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg)
+int _ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg)
 {
 	int ret;
 	int num_cpus;
@@ -4226,7 +4226,7 @@ int ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg)
 	return ret;
 }
 
-int ihk_reserve_mem_str(int dev_index, char *list, char *err_msg)
+int _ihk_reserve_mem_str(int dev_index, char *list, char *err_msg)
 {
 	int ret;
 	int num_mems;
@@ -4273,7 +4273,7 @@ int ihk_reserve_mem_str(int dev_index, char *list, char *err_msg)
 	return ret;
 }
 
-int ihk_os_set_ikc_map_str(int os_index, char *list, char *err_msg)
+int _ihk_os_set_ikc_map_str(int os_index, char *list, char *err_msg)
 {
 	int ret, num_cpus;
 	int *src_cpus = NULL, *dst_cpus = NULL;
@@ -4525,6 +4525,283 @@ static int release_cpu_all(int dev_index, char *err_msg)
 	return ret;
 }
 
+int parse_env(const char *envp, int num_env, char ***_name, char ***_value)
+{
+	int ret;
+	int i;
+	const char *start, *cur;
+	char **name = NULL, **value = NULL;
+
+	if (!envp) {
+		ret = -EINVAL;
+		dprintf("%s: error: envp is NULL\n",
+			__func__);
+		goto out;
+	}
+
+	if (num_env <= 0 || num_env > IHKLIB_MAX_NUM_ENV) {
+		ret = -EINVAL;
+		dprintf("%s: error: num_env (%d) out of range\n",
+			__func__, num_env);
+		goto out;
+	}
+
+	name = calloc(sizeof(char *), num_env);
+	if (!name) {
+		ret = -ENOMEM;
+		dprintf("%s: error: allocating name array\n",
+			__func__);
+		goto out;
+	}
+
+	value = calloc(sizeof(char *), num_env);
+	if (!value) {
+		ret = -ENOMEM;
+		dprintf("%s: error: allocating value array\n",
+			__func__);
+		goto out;
+	}
+
+	/* range check and split */
+	cur = envp;
+	start = cur;
+	for (i = 0; i < num_env; i++) {
+		char *pair = NULL, *car, *cdr;
+
+		while (*cur != '\0') {
+			cur++;
+			if (cur - envp >= IHKLIB_MAX_SIZE_ENV) {
+				ret = -EINVAL;
+				dprintf("%s: error: env ovf\n", __func__);
+				goto out;
+			}
+		}
+
+		pair = strndup(start, cur - start);
+		if (!pair) {
+			ret = -errno;
+			dprintf("%s: error: strndup failed with %d\n",
+				__func__, -ret);
+			goto out;
+		}
+
+		cdr = pair;
+		car = strsep(&cdr, "=");
+
+		/* if delimiter found */
+		if (cdr) {
+			dprintf("%s: name: %s, value: %s\n",
+				__func__, car, cdr);
+			name[i] = strdup(car);
+			value[i] = strdup(cdr);
+		} else {
+			if (*car == 0) {
+				dprintf("%s: error: empty entry\n",
+					__func__);
+				ret = -EINVAL;
+				goto out;
+			}
+			dprintf("%s: warning: missing \'=\': %s\n",
+				__func__, car);
+			name[i] = strdup(car);
+			value[i] = strdup("");
+		}
+
+		free(pair);
+
+		cur++;
+		if (cur - envp >= IHKLIB_MAX_SIZE_ENV) {
+			dprintf("%s: error: env ovf\n", __func__);
+			ret = -EINVAL;
+			goto out;
+		}
+
+		start = cur;
+	}
+
+	*_name = name;
+	*_value = value;
+
+	ret = 0;
+ out:
+	return ret;
+}
+
+int ihk_reserve_cpu_str(int dev_index, const char *envp, int num_env)
+{
+	int ret;
+	int i;
+	char **name = NULL, **value = NULL;
+
+	ret = parse_env(envp, num_env, &name, &value);
+	if (ret) {
+		dprintk("%s: parse_env failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_env; i++) {
+		if (!strcmp(name[i], "IHK_CPUS")) {
+			ret = _ihk_reserve_cpu_str(dev_index, value[i],
+						  NULL);
+			if (ret) {
+				dprintf("%s: error: _ihk_reserve_cpu_str failed with %d\n",
+					__func__, ret);
+				goto out;
+			}
+			break; /* use first when multiple lines exist */
+		}
+	}
+
+	ret = 0;
+ out:
+	return ret;
+}
+
+#define RESERVE_MEM_CONF_PARSE(key)			\
+	if (!strcmp(name[i], #key)) {			\
+		rval = strtol(value[i], &endp, 10);	\
+		if (*endp != '\0') {			\
+			dprintk("%s: error: parsing %s\n", \
+				__func__, value[i]);	\
+			ret = -EINVAL;			\
+			goto out;			\
+		}					\
+		ret = ihk_reserve_mem_conf(dev_index,	\
+					   key, &rval); \
+		if (ret) {				\
+			dprintk("%s: ihk_reserve_mem_conf failed with %d\n",	\
+				__func__, ret);				\
+			goto out;			\
+		}					\
+	}
+
+int ihk_reserve_mem_conf_str(int dev_index, const char *envp, int num_env)
+{
+	int ret;
+	int i;
+	char **name = NULL, **value = NULL;
+
+	ret = parse_env(envp, num_env, &name, &value);
+	if (ret) {
+		dprintk("%s: parse_env failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_env; i++) {
+		int rval;
+		char *endp;
+
+		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_ENABLE);
+		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT);
+		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT);
+		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MIN_CHUNK_SIZE);
+		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL);
+		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_TIMEOUT);
+	}
+
+	ret = 0;
+ out:
+	return ret;
+}
+
+int ihk_reserve_mem_str(int dev_index, const char *envp, int num_env)
+{
+	int ret;
+	int i;
+	char **name = NULL, **value = NULL;
+
+	ret = parse_env(envp, num_env, &name, &value);
+	if (ret) {
+		dprintk("%s: parse_env failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_env; i++) {
+		if (!strcmp(name[i], "IHK_MEM")) {
+			ret = _ihk_reserve_mem_str(dev_index, value[i],
+						   NULL);
+			if (ret) {
+				dprintk("%s: error: _ihk_reserve_mem_str failed with %d\n",
+					__func__, ret);
+				goto out;
+			}
+			break; /* use first when multiple lines exist */
+		}
+	}
+
+	ret = 0;
+ out:
+	return ret;
+}
+
+int ihk_os_set_ikc_map_str(int os_index, const char *envp, int num_env)
+{
+	int ret;
+	int i;
+	char **name = NULL, **value = NULL;
+
+	ret = parse_env(envp, num_env, &name, &value);
+	if (ret) {
+		dprintk("%s: parse_env failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_env; i++) {
+		if (!strcmp(name[i], "IHK_IKC_MAP")) {
+			ret = _ihk_os_set_ikc_map_str(os_index, value[i],
+						      NULL);
+			if (ret) {
+				dprintk("%s: error: _ihk_os_set_ikc_map_str failed with %d\n",
+					__func__, ret);
+				goto out;
+			}
+			break; /* use first when multiple lines exist */
+		}
+	}
+
+	ret = 0;
+ out:
+	return ret;
+}
+
+int ihk_os_kargs_str(int os_index, const char *envp, int num_env,
+		     const char *default_kargs)
+{
+	int ret;
+	int i;
+	char *kargs = (char *)default_kargs;
+	char **name = NULL, **value = NULL;
+
+	ret = parse_env(envp, num_env, &name, &value);
+	if (ret) {
+		dprintk("%s: parse_env failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_env; i++) {
+		if (!strcmp(name[i], "IHK_KARGS")) {
+			kargs = value[i];
+			break; /* use first when multiple lines exist */
+		}
+	}
+
+	ret = ihk_os_kargs(os_index, kargs);
+	if (ret) {
+		dprintk("%s: ihk_os_kargs failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	ret = 0;
+ out:
+	return ret;
+}
+
 /* envp (input)
  *	List of CPU, memory, IKC-map and kernel argument settings.
  *	The format is as follows:
@@ -4682,24 +4959,6 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 		int rval;
 		char *endp;
 
-#define RESERVE_MEM_CONF_PARSE(key) \
-		if (!strcmp(name[i], #key)) { \
-			rval = strtol(value[i], &endp, 10); \
-			if (*endp != '\0') { \
-				dprintf("%s: error: parsing %s\n", \
-					__func__, value[i]); \
-				ret = -EINVAL; \
-				goto out; \
-			} \
-			ret = ihk_reserve_mem_conf(dev_index, \
-						   key, &rval); \
-			if (ret) { \
-				dprintf("%s: error: ihk_reserve_mem_conf failed with %d\n", \
-					__func__, ret); \
-				goto out; \
-			} \
-		}
-
 		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_ENABLE)
 		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT)
 		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT)
@@ -4713,20 +4972,20 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 	 */
 	for (i = 0; i < num_env; i++) {
 		if (!strcmp(name[i], "IHK_CPUS")) {
-			ret = ihk_reserve_cpu_str(dev_index, value[i],
-						  err_msg);
+			ret = _ihk_reserve_cpu_str(dev_index, value[i],
+						   err_msg);
 			if (ret) {
-				dprintf("%s: error: ihk_reserve_cpu_str failed with %d\n",
+				dprintf("%s: error: _ihk_reserve_cpu_str failed with %d\n",
 					__func__, ret);
 				goto out;
 			}
 		}
 
 		else if (!strcmp(name[i], "IHK_MEM")) {
-			ret = ihk_reserve_mem_str(dev_index, value[i],
+			ret = _ihk_reserve_mem_str(dev_index, value[i],
 						  err_msg);
 			if (ret) {
-				dprintf("%s: error: ihk_reserve_mem_str failed with %d\n",
+				dprintf("%s: error: _ihk_reserve_mem_str failed with %d\n",
 					__func__, ret);
 				goto out;
 			}
@@ -4759,10 +5018,10 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 
 	for (i = 0; i < num_env; i++) {
 		if (!strcmp(name[i], "IHK_IKC_MAP")) {
-			ret = ihk_os_set_ikc_map_str(os_index, value[i],
+			ret = _ihk_os_set_ikc_map_str(os_index, value[i],
 						  err_msg);
 			if (ret) {
-				dprintf("%s: error: ihk_os_set_ikc_map_str failed with %d\n",
+				dprintf("%s: error: _ihk_os_set_ikc_map_str failed with %d\n",
 					__func__, ret);
 				goto out;
 			}
