@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 	INTERR(ret, "mems_init returned %d\n", ret);
 
 	mems.mem_chunks[0].size = 1UL << 30;
-	mems.mem_chunks[j].numa_node_number = 0;
+	mems.mem_chunks[0].numa_node_number = 0;
 #else
 	ret = mems_init(&mems, 2);
 	INTERR(ret, "mems_init returned %d\n", ret);

@@ -208,7 +208,7 @@ int main(int argc, char **argv)
 		ret = ihk_os_boot(0);
 		INTERR(ret, "ihk_os_boot returned %d\n", ret);
 
-		INFO("IHK_KMSG_SIZE: %d\n", IHK_KMSG_SIZE);
+		INFO("IHK_KMSG_SIZE: %ld\n", (ssize_t)IHK_KMSG_SIZE);
 		ret = ihk_os_kmsg(0, kmsg, IHK_KMSG_SIZE);
 		INTERR(ret < 0, "ihk_os_kmsg returned %d\n", ret);
 
