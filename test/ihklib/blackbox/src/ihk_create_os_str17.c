@@ -20,7 +20,6 @@ const char *values[] = {
 	"IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL=98X\0",
 	"IHK_RESERVE_MEM_TIMEOUT=30X\0",
 };
-#define NCASES 6
 
 const char *env_str[] = {
 	"IHK_CPUS=12-35\0"
@@ -99,6 +98,16 @@ const char *err_msg_expected[] = {
 	"",
 	"",
 };
+const int ret_expected[] = {
+	-EINVAL,
+	-EINVAL,
+	-EINVAL,
+	-EINVAL,
+	-EINVAL,
+	-EINVAL,
+};
+
+#define NR_CASES = sizeof(values) / sizeof(values[0]);
 
 int main(int argc, char **argv)
 {
@@ -106,15 +115,6 @@ int main(int argc, char **argv)
 	int ret;
 
 	params_getopt(argc, argv);
-
-	int ret_expected[] = {
-		-EINVAL,
-		-EINVAL,
-		-EINVAL,
-		-EINVAL,
-		-EINVAL,
-		-EINVAL,
-	};
 
 	char kernel_image[4096];
 	int os_index = -1;
@@ -130,12 +130,11 @@ int main(int argc, char **argv)
 	ret = linux_insmod(0);
 	INTERR(ret, "linux_insmod returned %d\n", ret);
 
-	ARRAY_SIZE_CHECK(values, NCASES);
-	ARRAY_SIZE_CHECK(env_str, NCASES);
-	ARRAY_SIZE_CHECK(err_msg_expected, NCASES);
-	ARRAY_SIZE_CHECK(ret_expected, NCASES);
+	ARRAY_SIZE_CHECK(env_str, NR_CASES);
+	ARRAY_SIZE_CHECK(err_msg_expected, NR_CASES);
+	ARRAY_SIZE_CHECK(ret_expected, NR_CASES);
 
-	for (i = 0; i < NCASES; i++) {
+	for (i = 0; i < NR_CASES; i++) {
 		START("test-case: %s: %s\n", param, values[i]);
 
 		memset(err_msg, 0, IHKLIB_MAX_SIZE_ERR_MSG);
