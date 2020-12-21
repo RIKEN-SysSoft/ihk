@@ -3907,7 +3907,7 @@ int ihk_set_loglevel(enum IHKLIB_LOGLEVEL level)
 	return 0;
 }
 
-int ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg)
+int _ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg)
 {
 	int ret;
 	int num_cpus;
@@ -3945,7 +3945,7 @@ int ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg)
 	return ret;
 }
 
-int ihk_reserve_mem_str(int dev_index, char *list, char *err_msg)
+int _ihk_reserve_mem_str(int dev_index, char *list, char *err_msg)
 {
 	int ret;
 	int num_mems;
@@ -4244,6 +4244,24 @@ static int release_cpu_all(int dev_index, char *err_msg)
 	return ret;
 }
 
+#define RESERVE_MEM_CONF_PARSE(key)			\
+	if (!strcmp(name[i], #key)) {			\
+		rval = strtol(value[i], &endp, 10);	\
+		if (*endp != '\0') {			\
+			dprintf("%s: error: parsing %s\n", \
+				__func__, value[i]);	\
+			ret = -EINVAL;			\
+			goto out;			\
+		}					\
+		ret = ihk_reserve_mem_conf(dev_index,	\
+					   key, &rval); \
+		if (ret) {				\
+			dprintf("%s: error: ihk_reserve_mem_conf failed with %d\n", \
+				__func__, ret);		\
+			goto out;			\
+		}					\
+	}
+
 /* envp (input)
  *	List of CPU, memory, IKC-map and kernel argument settings.
  *	The format is as follows:
@@ -4253,11 +4271,12 @@ static int release_cpu_all(int dev_index, char *err_msg)
  * err_msg (output)
  *	Name of the failed ihklib function.
  */
-int ihk_create_os_str(int dev_index, int *_os_index,
-		      const char *envp, int num_env,
-		      const char *kernel_image,
-		      const char *default_kargs,
-		      char *err_msg)
+static int _ihk_create_os_str(int dev_index, int *_os_index,
+			      const char *envp, int num_env,
+			      const char *kernel_image,
+			      const char *default_kargs,
+			      unsigned long flags,
+			      char *err_msg)
 {
 	int ret;
 	const char *start, *cur;
@@ -4270,39 +4289,43 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 	};
 
 	/* krm reserves cpus before calling this function */
-	ret = ihk_get_num_reserved_cpus(dev_index);
-	if (ret < 0) {
-		sprintf(err_msg,
-			"%s:%d: ihk_get_num_reserved_cpus failed with %d\n",
-			__FILE__, __LINE__, ret);
-		goto out;
-	}
-
-	if (ret > 0) {
-		ret = release_cpu_all(dev_index, err_msg);
-		if (ret) {
-			dprintf("%s: error: release_cpu_all failed with %d\n",
-				__func__, ret);
+	if (flags & IHKLIB_DO_RESERVE_CPU) {
+		ret = ihk_get_num_reserved_cpus(dev_index);
+		if (ret < 0) {
+			sprintf(err_msg,
+				"%s:%d: ihk_get_num_reserved_cpus failed with %d\n",
+				__FILE__, __LINE__, ret);
 			goto out;
+		}
+
+		if (ret > 0) {
+			ret = release_cpu_all(dev_index, err_msg);
+			if (ret) {
+				dprintf("%s: error: release_cpu_all failed with %d\n",
+					__func__, ret);
+				goto out;
+			}
 		}
 	}
 
 	/* krm reserves memory before calling this function */
-	ret = ihk_get_num_reserved_mem_chunks(dev_index);
-	if (ret < 0) {
-		sprintf(err_msg,
-			"%s:%d: ihk_get_num_reserved_mem_chunks failed with %d\n",
-			__FILE__, __LINE__, ret);
-		goto out;
-	}
-
-	if (ret > 0) {
-		ret = ihk_release_mem(dev_index, mem_chunks, 1);
-		if (ret) {
+	if (flags & IHKLIB_DO_RESERVE_MEM) {
+		ret = ihk_get_num_reserved_mem_chunks(dev_index);
+		if (ret < 0) {
 			sprintf(err_msg,
-				"%s:%d: ihk_release_mem failed with %d\n",
+				"%s:%d: ihk_get_num_reserved_mem_chunks failed with %d\n",
 				__FILE__, __LINE__, ret);
 			goto out;
+		}
+
+		if (ret > 0) {
+			ret = ihk_release_mem(dev_index, mem_chunks, 1);
+			if (ret) {
+				sprintf(err_msg,
+					"%s:%d: ihk_release_mem failed with %d\n",
+					__FILE__, __LINE__, ret);
+				goto out;
+			}
 		}
 	}
 
@@ -4397,87 +4420,76 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 	}
 
 	/* ihk_reserve_mem_conf must be called before ihk_reserve_mem */
-	for (i = 0; i < num_env; i++) {
-		int rval;
-		char *endp;
+	if (flags & IHKLIB_DO_RESERVE_MEM) {
+		for (i = 0; i < num_env; i++) {
+			int rval;
+			char *endp;
 
-#define RESERVE_MEM_CONF_PARSE(key) \
-		if (!strcmp(name[i], #key)) { \
-			rval = strtol(value[i], &endp, 10); \
-			if (*endp != '\0') { \
-				dprintf("%s: error: parsing %s\n", \
-					__func__, value[i]); \
-				ret = -EINVAL; \
-				goto out; \
-			} \
-			ret = ihk_reserve_mem_conf(dev_index, \
-						   key, &rval); \
-			if (ret) { \
-				dprintf("%s: error: ihk_reserve_mem_conf failed with %d\n", \
-					__func__, ret); \
-				goto out; \
-			} \
+			RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_ENABLE);
+			RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT);
+			RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT);
+			RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MIN_CHUNK_SIZE);
+			RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL);
+			RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_TIMEOUT);
 		}
-
-		RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_ENABLE)
-		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT)
-		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT)
-		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MIN_CHUNK_SIZE)
-		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL)
-		else RESERVE_MEM_CONF_PARSE(IHK_RESERVE_MEM_TIMEOUT)
 	}
 
-	/* those are mandaroty settings. os_assign_{cpu,me}_all will complain
-	 * if any of them is missing.
-	 */
+	/* os_assign_{cpu,mem}_all will complain if any of them is missing. */
 	for (i = 0; i < num_env; i++) {
-		if (!strcmp(name[i], "MCK_CPUS")) {
-			ret = ihk_reserve_cpu_str(dev_index, value[i],
+		if ((flags & IHKLIB_DO_RESERVE_CPU) &&
+		    !strcmp(name[i], "MCK_CPUS")) {
+			ret = _ihk_reserve_cpu_str(dev_index, value[i],
 						  err_msg);
 			if (ret) {
-				dprintf("%s: error: ihk_reserve_cpu_str failed with %d\n",
+				dprintf("%s: error: _ihk_reserve_cpu_str failed with %d\n",
 					__func__, ret);
 				goto out;
 			}
 		}
 
-		else if (!strcmp(name[i], "MCK_MEM")) {
-			ret = ihk_reserve_mem_str(dev_index, value[i],
+		else if ((flags & IHKLIB_DO_RESERVE_MEM) &&
+			 !strcmp(name[i], "MCK_MEM")) {
+			ret = _ihk_reserve_mem_str(dev_index, value[i],
 						  err_msg);
 			if (ret) {
-				dprintf("%s: error: ihk_reserve_mem_str failed with %d\n",
+				dprintf("%s: error: _ihk_reserve_mem_str failed with %d\n",
 					__func__, ret);
 				goto out;
 			}
 		}
 	}
 
-	ret = ihk_create_os(dev_index);
-	if (ret < 0) {
-		sprintf(err_msg,
-			"%s:%d: ihk_create_os failed with %d\n",
-			__FILE__, __LINE__, ret);
-		goto out;
-	}
-	os_index = ret;
-	*_os_index = os_index;
-
-	ret = os_assign_cpu_all(os_index, err_msg);
-	if (ret) {
-		dprintf("%s: error: os_assign_cpu_all failed with %d\n",
-			__func__, ret);
-		goto out;
+	if (flags & IHKLIB_DO_CREATE_OS) {
+		ret = ihk_create_os(dev_index);
+		if (ret < 0) {
+			sprintf(err_msg,
+				"%s:%d: ihk_create_os failed with %d\n",
+				__FILE__, __LINE__, ret);
+			goto out;
+		}
+		os_index = ret;
+		*_os_index = os_index;
 	}
 
-	ret = os_assign_mem_all(os_index, err_msg);
-	if (ret) {
-		dprintf("%s: error: os_assign_mem_all failed with %d\n",
-			__func__, ret);
-		goto out;
+	if (flags & IHKLIB_DO_ASSIGN_RESOURCE) {
+		ret = os_assign_cpu_all(os_index, err_msg);
+		if (ret) {
+			dprintf("%s: error: os_assign_cpu_all failed with %d\n",
+				__func__, ret);
+			goto out;
+		}
+
+		ret = os_assign_mem_all(os_index, err_msg);
+		if (ret) {
+			dprintf("%s: error: os_assign_mem_all failed with %d\n",
+				__func__, ret);
+			goto out;
+		}
 	}
 
 	for (i = 0; i < num_env; i++) {
-		if (!strcmp(name[i], "MCK_IKC_MAP")) {
+		if ((flags & IHKLIB_DO_SET_IKC_MAP) &&
+		    !strcmp(name[i], "MCK_IKC_MAP")) {
 			ret = ihk_os_set_ikc_map_str(os_index, value[i],
 						  err_msg);
 			if (ret) {
@@ -4485,29 +4497,34 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 					__func__, ret);
 				goto out;
 			}
-		} else if (!strcmp(name[i], "MCK_KARGS")) {
+		} else if ((flags & IHKLIB_DO_KARGS) &&
+			   !strcmp(name[i], "MCK_KARGS")) {
 			kargs = value[i];
 		}
 	}
 
-	ret = ihk_os_load(os_index, (char *)kernel_image);
-	if (ret) {
-		if (err_msg) {
-			sprintf(err_msg,
-				"%s:%d: ihk_os_load failed with %d\n",
-				__FILE__, __LINE__, ret);
+	if (flags & IHKLIB_DO_LOAD) {
+		ret = ihk_os_load(os_index, (char *)kernel_image);
+		if (ret) {
+			if (err_msg) {
+				sprintf(err_msg,
+					"%s:%d: ihk_os_load failed with %d\n",
+					__FILE__, __LINE__, ret);
+			}
+			goto out;
 		}
-		goto out;
 	}
 
-	ret = ihk_os_kargs(os_index, kargs);
-	if (ret) {
-		if (err_msg) {
-			sprintf(err_msg,
-				"%s:%d: ihk_os_kargs failed with %d\n",
-				__FILE__, __LINE__, ret);
+	if (flags & IHKLIB_DO_KARGS) {
+		ret = ihk_os_kargs(os_index, kargs);
+		if (ret) {
+			if (err_msg) {
+				sprintf(err_msg,
+					"%s:%d: ihk_os_kargs failed with %d\n",
+					__FILE__, __LINE__, ret);
+			}
+			goto out;
 		}
-		goto out;
 	}
 
  out:
@@ -4530,23 +4547,70 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 		int num_os;
 		int *os_list;
 
-		num_os = ihk_get_num_os_instances(dev_index);
-		if (num_os > 0) {
-			os_list = calloc(sizeof(int), num_os);
-			if (os_list) {
-				ihk_get_os_instances(dev_index, os_list,
-						     num_os);
-				for (i = 0; i < num_os; i++) {
-					os_release_cpu_all(os_list[i]);
-					ihk_os_release_mem(os_list[i],
-							   mem_chunks, 1);
-					ihk_destroy_os(dev_index, os_list[i]);
+		if (flags & IHKLIB_DO_CREATE_OS) {
+			num_os = ihk_get_num_os_instances(dev_index);
+			if (num_os > 0) {
+				os_list = calloc(sizeof(int), num_os);
+				if (os_list) {
+					ihk_get_os_instances(dev_index, os_list,
+							     num_os);
+					for (i = 0; i < num_os; i++) {
+						os_release_cpu_all(os_list[i]);
+						ihk_os_release_mem(os_list[i],
+								   mem_chunks,
+								   1);
+						ihk_destroy_os(dev_index,
+							       os_list[i]);
+					}
 				}
 			}
 		}
-		release_cpu_all(dev_index, NULL);
-		ihk_release_mem(dev_index, mem_chunks, 1);
+		if (flags & IHKLIB_DO_RESERVE_CPU) {
+			release_cpu_all(dev_index, NULL);
+		}
+		if (flags & IHKLIB_DO_RESERVE_MEM) {
+			ihk_release_mem(dev_index, mem_chunks, 1);
+		}
 	}
 
 	return ret;
+}
+
+int ihk_reserve_cpu_str(int dev_index,
+			const char *envp, int num_env,
+			char *err_msg)
+{
+	return _ihk_create_os_str(dev_index, NULL,
+				  envp, num_env,
+				  NULL, NULL,
+				  IHKLIB_DO_RESERVE_CPU,
+				  err_msg);
+}
+
+int ihk_reserve_mem_str(int dev_index,
+			const char *envp, int num_env,
+			char *err_msg)
+{
+	return _ihk_create_os_str(dev_index, NULL,
+				  envp, num_env,
+				  NULL, NULL,
+				  IHKLIB_DO_RESERVE_MEM,
+				  err_msg);
+}
+
+int ihk_create_os_str(int dev_index, int *os_index,
+		      const char *envp, int num_env,
+		      const char *kernel_image,
+		      const char *default_kargs,
+		      char *err_msg)
+{
+	return _ihk_create_os_str(dev_index, os_index,
+				  envp, num_env,
+				  kernel_image, default_kargs,
+				  IHKLIB_DO_CREATE_OS |
+				  IHKLIB_DO_ASSIGN_RESOURCE |
+				  IHKLIB_DO_SET_IKC_MAP |
+				  IHKLIB_DO_LOAD |
+				  IHKLIB_DO_KARGS,
+				  err_msg);
 }
