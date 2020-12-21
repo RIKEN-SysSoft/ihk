@@ -110,7 +110,16 @@ int ikc_str2count(char *ikc_list);
 int ikc_str2req(char *_ikc_list, int num_cpus, struct ihk_ikc_req *req);
 char *ikc_req2str(struct ihk_ikc_req *req);
 
-int ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg);
-int ihk_reserve_mem_str(int dev_index, char *list, char *err_msg);
+
+#define IHKLIB_DO_RESERVE_MEM		(1UL << 0)
+#define IHKLIB_DO_RESERVE_CPU		(1UL << 1)
+#define IHKLIB_DO_CREATE_OS		(1UL << 2)
+#define IHKLIB_DO_ASSIGN_RESOURCE	(1UL << 3)
+#define IHKLIB_DO_SET_IKC_MAP		(1UL << 4)
+#define IHKLIB_DO_LOAD			(1UL << 5)
+#define IHKLIB_DO_KARGS			(1UL << 6)
+
+int _ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg);
+int _ihk_reserve_mem_str(int dev_index, char *list, char *err_msg);
 
 #endif /* !defined(IHKLIB_PRIVATE_H_INCLUDED) */
