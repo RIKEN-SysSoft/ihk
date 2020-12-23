@@ -1202,6 +1202,19 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			}
 		}
 
+		/* prevent following round-up from making requested
+		 * exceed the cap
+		 */
+		if (reserve_mem_conf.balanced_best_effort) {
+			total_requested /=
+				num_numa_nodes * IHKLIB_RESERVE_AMOUNT_ALIGN;
+			total_requested *=
+				num_numa_nodes * IHKLIB_RESERVE_AMOUNT_ALIGN;
+			dprintk("%s: info: requsted trimmed to %ld, %ld MiB\n",
+				__func__,
+				total_requested, total_requested >> 20);
+		}
+
 		/* round up not to release too much */
 		ave_requested = ((total_requested / num_numa_nodes +
 				  IHKLIB_RESERVE_AMOUNT_ALIGN - 1) /
@@ -1236,8 +1249,12 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			goto out;
 		}
 
-		dprintk("%s: total missing: %ld\n",
-			__func__, total_missing);
+		dprintk("%s: total missing: %ld, %ld MiB, "
+			"total excess: %ld, %ld MiB\n",
+			__func__,
+			total_missing, total_missing >> 20,
+			total_excess, total_excess >> 20
+			);
 
 		req.sizes = calloc(IHK_MAX_NUM_NUMA_NODES, sizeof(size_t));
 		CHKANDJUMP(req.sizes == NULL, -ENOMEM,
