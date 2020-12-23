@@ -1236,8 +1236,12 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			goto out;
 		}
 
-		dprintk("%s: total missing: %ld\n",
-			__func__, total_missing);
+		dprintk("%s: total missing: %ld, %ld MiB, "
+			"total excess: %ld, %ld MiB\n",
+			__func__,
+			total_missing, total_missing >> 20,
+			total_excess, total_excess >> 20
+			);
 
 		req.sizes = calloc(IHK_MAX_NUM_NUMA_NODES, sizeof(size_t));
 		CHKANDJUMP(req.sizes == NULL, -ENOMEM,
