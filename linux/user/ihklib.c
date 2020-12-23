@@ -4431,7 +4431,7 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 	 * if any of them is missing.
 	 */
 	for (i = 0; i < num_env; i++) {
-		if (!strcmp(name[i], "MCK_CPUS")) {
+		if (!strcmp(name[i], "IHK_CPUS")) {
 			ret = ihk_reserve_cpu_str(dev_index, value[i],
 						  err_msg);
 			if (ret) {
@@ -4441,7 +4441,7 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 			}
 		}
 
-		else if (!strcmp(name[i], "MCK_MEM")) {
+		else if (!strcmp(name[i], "IHK_MEM")) {
 			ret = ihk_reserve_mem_str(dev_index, value[i],
 						  err_msg);
 			if (ret) {
@@ -4477,7 +4477,7 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 	}
 
 	for (i = 0; i < num_env; i++) {
-		if (!strcmp(name[i], "MCK_IKC_MAP")) {
+		if (!strcmp(name[i], "IHK_IKC_MAP")) {
 			ret = ihk_os_set_ikc_map_str(os_index, value[i],
 						  err_msg);
 			if (ret) {
@@ -4485,7 +4485,7 @@ int ihk_create_os_str(int dev_index, int *_os_index,
 					__func__, ret);
 				goto out;
 			}
-		} else if (!strcmp(name[i], "MCK_KARGS")) {
+		} else if (!strcmp(name[i], "IHK_KARGS")) {
 			kargs = value[i];
 		}
 	}
