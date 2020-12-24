@@ -1,0 +1,123 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d5120069_ba0b4303",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 623,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-24T06:15:18Z",
+      "side": 1,
+      "message": "WARNING: Too many leading tabs - consider code refactoring\n+\t\t\t\t\t\tif (0)",
+      "revId": "2febaf20fc1d628f3ebd7e56347b4eb65894aad7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "31fe5579_f8036233",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 623,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-24T06:15:18Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (48, 48)\n+\t\t\t\t\t\tif (0)\n \t\t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "2febaf20fc1d628f3ebd7e56347b4eb65894aad7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "dad80d60_10cac5e4",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1296,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-24T06:15:18Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (40, 40)\n+\t\t\t\t\tif (0)\n \t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "2febaf20fc1d628f3ebd7e56347b4eb65894aad7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f9210a45_74e17c66",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2626,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-24T06:15:18Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (40, 40)\n+\t\t\t\t\tif (0)\n \t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "2febaf20fc1d628f3ebd7e56347b4eb65894aad7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0b5f374c_d8b96b81",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 4350,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-24T06:15:18Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tpr_err(\"%s: reserve_mem_max_ratio: %lu\\n\", __func__, reserve_mem_max_ratio);",
+      "revId": "2febaf20fc1d628f3ebd7e56347b4eb65894aad7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "30623173_05f2f5fa",
+        "filename": "linux/include/ihk/ihk_host_driver.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 451,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-24T06:15:18Z",
+      "side": 1,
+      "message": "WARNING: function definition argument \u0027ihk_device_t\u0027 should also have an identifier name\n+\tint (*reserve_mem_max_ratio)(ihk_device_t, unsigned long arg);",
+      "revId": "2febaf20fc1d628f3ebd7e56347b4eb65894aad7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "dbc7a9a0_70cfca24",
+        "filename": "linux/user/ihkconfig.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 588,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-24T06:15:18Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\telse HANDLER(reserve_mem_max_ratio)",
+      "revId": "2febaf20fc1d628f3ebd7e56347b4eb65894aad7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
