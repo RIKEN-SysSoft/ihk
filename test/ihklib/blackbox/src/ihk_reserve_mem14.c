@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 		     ret, ret_expected[i]);
 
 		ret = mems_check_total(sum_expected);
-		OKNG(ret == 0, "total amount reserved %lu\n",
+		OKNG(ret == 0, "total amount reserved > %lu\n",
 		     sum_expected);
 
 		ret = mems_check_var(allowed_var / (double)100);

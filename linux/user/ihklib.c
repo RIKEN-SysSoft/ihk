@@ -1202,6 +1202,19 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 			}
 		}
 
+		/* prevent following round-up from making requested
+		 * exceed the cap
+		 */
+		if (reserve_mem_conf.balanced_best_effort) {
+			total_requested /=
+				num_numa_nodes * IHKLIB_RESERVE_AMOUNT_ALIGN;
+			total_requested *=
+				num_numa_nodes * IHKLIB_RESERVE_AMOUNT_ALIGN;
+			dprintk("%s: info: requsted trimmed to %ld, %ld MiB\n",
+				__func__,
+				total_requested, total_requested >> 20);
+		}
+
 		/* round up not to release too much */
 		ave_requested = ((total_requested / num_numa_nodes +
 				  IHKLIB_RESERVE_AMOUNT_ALIGN - 1) /
