@@ -19,6 +19,7 @@ int mems_push(struct mems *mems, unsigned long size, int numa_node_number);
 int mems_pop(struct mems *mems, int n);
 int mems_shift(struct mems *mems, int n);
 void mems_fill(struct mems *mems, unsigned long size);
+void mems_subtract(struct mems *mems, unsigned long size);
 void mems_multiply(struct mems *mems, double ratio);
 void mems_dump(struct mems *mems);
 void mems_dump_sum(struct mems *mems);
