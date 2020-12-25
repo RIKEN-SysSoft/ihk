@@ -46,7 +46,7 @@ int loglevel = IHKLIB_LOGLEVEL_ERR;
 	if (geteuid()) {						\
 		break;							\
 	}								\
-	sprintf(contents, fmt, ##args);					\
+	snprintf(contents, 4096 - 256, fmt, ##args);			\
 	_fd = open("/dev/kmsg", O_WRONLY);				\
 	len = strlen(contents) + 1;					\
 	while (offset < len) {						\
@@ -1324,7 +1324,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 					ave_compensate - ave_compensate2;
 				if (reserved[i] < ave_requested +
 					ave_compensate + ave_compensate2) {
-					dprintk("%s: negative release size\n",
+					dprintk("%s: negative release size %ld\n",
 						__func__, req.sizes[i]);
 					ret = -EINVAL;
 					goto out;
