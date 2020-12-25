@@ -3838,6 +3838,32 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 	return ret;
 }
 
+/* move header located at the head of the memory chunk */
+static struct chunk *move_chunk_header(struct chunk *old, struct chunk *new)
+{
+	struct chunk *q;
+
+	*new = *old;
+
+	list_del(&old->chain);
+
+	/* Insert the chunk in physical address ascending order */
+	list_for_each_entry(q, &ihk_mem_free_chunks, chain) {
+		if (new->addr < q->addr) {
+			break;
+		}
+	}
+
+	if ((void *)q == &ihk_mem_free_chunks) {
+		list_add_tail(&new->chain, &ihk_mem_free_chunks);
+	}
+	else {
+		list_add_tail(&new->chain, &q->chain);
+	}
+
+	return new;
+}
+
 /* We want to balance the amounts of memory reserved across NUMA-nodes
  * while the total amount exceeds the specified by the resource manager (RM).
  * The steps are as follows.
@@ -3917,13 +3943,18 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
 			size_t order_size;
 			struct page *page = virt_to_page(va);
 
-			if (!PageCompound(page) || !PageHead(page)) {
-				dprintk("IHK-SMP: WARNING: page is not compound or not head"
-					", freeing single page\n");
+			if (!PageCompound(page)) {
 				free_page(va);
 				size_taken += PAGE_SIZE;
 				size_left -= PAGE_SIZE;
 				va += PAGE_SIZE;
+				goto next_compound;
+			}
+
+			if (!PageHead(page)) {
+				pr_warn("IHK-SMP: WARNING: page is compound tail,"
+					"skipping %ld bytes\n", size_left);
+				size_left = 0;
 				goto next_compound;
 			}
 
@@ -3960,6 +3991,11 @@ static int __ihk_smp_release_mem_partially(size_t ihk_mem, int numa_id)
 
 next_compound:
 			if (size_left <= 0) {
+				/* move chunk header */
+				if (size_taken > 0) {
+					mem_chunk = move_chunk_header(mem_chunk,
+								      (void *)mem_chunk + size_taken);
+				}
 				mem_chunk->addr += size_taken;
 				mem_chunk->size -= size_taken;
 				pr_info("IHK-SMP: chunk is shrunk to 0x%lx - 0x%lx"

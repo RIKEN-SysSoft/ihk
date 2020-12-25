@@ -390,6 +390,15 @@ void mems_fill(struct mems *mems, unsigned long size)
 	}
 }
 
+void mems_subtract(struct mems *mems, unsigned long size)
+{
+	int i;
+
+	for (i = 0; i < mems->num_mem_chunks; i++) {
+		mems->mem_chunks[i].size -= size;
+	}
+}
+
 void mems_multiply(struct mems *mems, double ratio)
 {
 	int i;
