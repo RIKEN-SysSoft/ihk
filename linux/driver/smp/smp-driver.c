@@ -2463,6 +2463,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 		if (os_mem_chunk_next) {
 			list_add_tail(&os_mem_chunk->list, &os_mem_chunk_next->list);
 			dprintf("IHK-SMP: memory 0x%lx - 0x%lx (len: %lu) @ NUMA node %d assigned to %p [in front of 0x%lx]\n",
+					os_mem_chunk->addr, os_mem_chunk->addr + os_mem_chunk->size,
 					os_mem_chunk->size, numa_id, ihk_os, os_mem_chunk_next->addr);
 		}
 		/* Add to the end */
