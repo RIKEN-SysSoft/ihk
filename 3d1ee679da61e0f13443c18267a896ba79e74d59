@@ -1,0 +1,106 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "303389a0_442a8b01",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 626,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-28T05:33:14Z",
+      "side": 1,
+      "message": "WARNING: Too many leading tabs - consider code refactoring\n+\t\t\t\t\t\tif (0)",
+      "revId": "3d1ee679da61e0f13443c18267a896ba79e74d59",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ff855f50_0bc8cfb3",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 626,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-28T05:33:14Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (48, 48)\n+\t\t\t\t\t\tif (0)\n[...]\n \t\t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "3d1ee679da61e0f13443c18267a896ba79e74d59",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9c3b56f3_7b975b73",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 1301,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-28T05:33:14Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (40, 40)\n+\t\t\t\t\tif (0)\n[...]\n \t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "3d1ee679da61e0f13443c18267a896ba79e74d59",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0397d4d2_8ebb8ba6",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 2637,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-28T05:33:14Z",
+      "side": 1,
+      "message": "WARNING: suspect code indent for conditional statements (40, 40)\n+\t\t\t\t\tif (0)\n[...]\n \t\t\t\t\tdprintf(\"%s: chunk 0x%lx:%lu TNI %d, CQ %d,\"",
+      "revId": "3d1ee679da61e0f13443c18267a896ba79e74d59",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b1a7e6a9_8b7e9c10",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 4395,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-28T05:33:14Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tpr_err(\"%s: reserve_mem_max_ratio: %lu\\n\", __func__, reserve_mem_max_ratio);",
+      "revId": "3d1ee679da61e0f13443c18267a896ba79e74d59",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "beb7ea24_98115afb",
+        "filename": "linux/user/ihkconfig.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 590,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-28T05:33:14Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\telse HANDLER(reserve_mem_max_ratio)",
+      "revId": "3d1ee679da61e0f13443c18267a896ba79e74d59",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
