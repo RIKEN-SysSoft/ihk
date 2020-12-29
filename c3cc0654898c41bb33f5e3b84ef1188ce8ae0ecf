@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "aaaadaa0_d0268f39",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 3997,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2020-12-29T07:13:46Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t\t      (void *)mem_chunk + size_taken);",
+      "revId": "c3cc0654898c41bb33f5e3b84ef1188ce8ae0ecf",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
