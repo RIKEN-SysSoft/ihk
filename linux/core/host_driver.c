@@ -407,6 +407,16 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 		/* fall through */
 	case IHK_OS_STATUS_BOOTING:
 	case IHK_OS_STATUS_BOOTED:
+		/* wait 20 sec for ready */
+		pr_info("%s: waiting for ready...\n", __func__);
+		if (ihk_os_wait_for_status((ihk_os_t)data,
+					   IHK_OS_STATUS_READY,
+					   0, 200) != 0) {
+			pr_info("%s: warning: wait for ready timeouted, "
+			       "trying to wait for running instead...\n",
+			       __func__);
+		}
+		/* fall through */
 	case IHK_OS_STATUS_READY:
 		/* wait 20 sec for running */
 		pr_info("%s: waiting for running...\n", __func__);
