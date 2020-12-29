@@ -1769,9 +1769,14 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		goto out;
 	}
 
-	if (req.num_cpus <= 0 || req.num_cpus > SMP_MAX_CPUS) {
+	if (req.num_cpus < 0 || req.num_cpus > SMP_MAX_CPUS) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		ret = -EINVAL;
+		goto out;
+	}
+
+	if (req.num_cpus == 0) {
+		ret = 0;
 		goto out;
 	}
 
@@ -1858,9 +1863,14 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 		goto out;
 	}
 
-	if (req.num_cpus <= 0 || req.num_cpus > SMP_MAX_CPUS) {
+	if (req.num_cpus < 0 || req.num_cpus > SMP_MAX_CPUS) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		ret = -EINVAL;
+		goto out;
+	}
+
+	if (req.num_cpus == 0) {
+		ret = 0;
 		goto out;
 	}
 
@@ -2537,9 +2547,14 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		goto out;
 	}
 
-	if (req.num_chunks <= 0) {
+	if (req.num_chunks < 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		ret = -EINVAL;
+		goto out;
+	}
+
+	if (req.num_chunks == 0) {
+		ret = 0;
 		goto out;
 	}
 
@@ -2689,7 +2704,6 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 		ret = -EINVAL;
 		goto out;
 	}
-
 
 	if (req.num_chunks == 0) {
 		ret = 0;
@@ -4025,9 +4039,13 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_cpus == 0) {
+	if (req.num_cpus < 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
+	}
+
+	if (req.num_cpus == 0) {
+		return 0;
 	}
 
 	req_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
@@ -4200,9 +4218,13 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_cpus == 0) {
+	if (req.num_cpus < 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
+	}
+
+	if (req.num_cpus == 0) {
+		return 0;
 	}
 
 	req_cpus = kmalloc(sizeof(int) * req.num_cpus, GFP_KERNEL);
@@ -4412,9 +4434,13 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_chunks == 0) {
+	if (req.num_chunks < 0) {
 		printk("%s: invalid request length\n", __FUNCTION__);
 		return -EINVAL;
+	}
+
+	if (req.num_chunks == 0) {
+		return 0;
 	}
 
 	req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
@@ -4491,8 +4517,13 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	ret_internal = copy_from_user(&req, (void *)arg, sizeof(req));
 	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
 
-	ARCHDRV_CHKANDJUMP(req.num_chunks <= 0, "invalid request length",
+	ARCHDRV_CHKANDJUMP(req.num_chunks < 0, "invalid request length",
 			-EINVAL);
+
+	if (req.num_chunks == 0) {
+		ret = 0;
+		goto fn_fail;
+	}
 
 	req_sizes = kmalloc(sizeof(size_t) * req.num_chunks, GFP_KERNEL);
 	ARCHDRV_CHKANDJUMP(req_sizes == NULL, "kmalloc failed", -EINVAL);
