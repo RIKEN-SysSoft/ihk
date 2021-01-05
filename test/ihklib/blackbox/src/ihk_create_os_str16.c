@@ -19,14 +19,14 @@ const int num_env[] = {
 	10,
 };
 const char *env_str[] = {
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,1GM@5\0"
+	"IHK_MEM=1G@4,1GM@5\0"
 #else
-	"MCK_MEM=1G@0,1G@1\0"
+	"IHK_MEM=1G@0,1G@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0"
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_BALANCED_ENABLE=1\0"
 	"IHK_RESERVE_MEM_BALANCED_BEST_EFFORT=1\0"
 	"IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT=10\0"

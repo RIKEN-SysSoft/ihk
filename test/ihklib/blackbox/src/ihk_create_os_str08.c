@@ -14,41 +14,41 @@
 const char param[] = "parameter string";
 const char *values[] = {
 	"empty string",
-	"MCK_CPUS=\0",
-	"MCK_MEM=\0",
-	"MCK_IKC_MAP=\0",
+	"IHK_CPUS=\0",
+	"IHK_MEM=\0",
+	"IHK_IKC_MAP=\0",
 };
 
 const char *env_str[] = {
 	"\0" /* this element is invalid */
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0",
-	"MCK_CPUS=\0" /* this element is invalid */
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0",
+	"IHK_CPUS=\0" /* this element is invalid */
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0",
-	"MCK_CPUS=12-35\0"
-	"MCK_MEM=\0" /* this element is invalid */
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0",
-	"MCK_CPUS=12-35\0"
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0",
+	"IHK_CPUS=12-35\0"
+	"IHK_MEM=\0" /* this element is invalid */
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0",
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=\0" /* this element is invalid */
-	"MCK_KARGS=hidos allow_oversubscribe\0",
+	"IHK_IKC_MAP=\0" /* this element is invalid */
+	"IHK_KARGS=hidos allow_oversubscribe\0",
 };
 const char kernel_image[] = QUOTE(WITH_MCK) "/" QUOTE(BUILD_TARGET)
 	"/kernel/mckernel.img";

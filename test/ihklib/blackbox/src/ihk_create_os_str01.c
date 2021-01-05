@@ -18,14 +18,14 @@ const char *values[] = {
 };
 
 const char env_str[] =
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe ihk_create_os_str01\0";
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe ihk_create_os_str01\0";
 const char kernel_image[] = QUOTE(WITH_MCK) "/" QUOTE(BUILD_TARGET)
 	"/kernel/mckernel.img";
 const char default_kargs[] = "hidos allow_oversubscribe time_sharing";

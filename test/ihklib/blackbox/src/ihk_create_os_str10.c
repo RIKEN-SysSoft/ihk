@@ -58,17 +58,17 @@ int main(int argc, char **argv)
 
 	/* fifth entry extends across the boundary */
 	sprintf(env_str[0], "%s",
-		"MCK_CPUS=12-35\0"
-		"MCK_MEM=1G@0,512M@1\0"
-		"MCK_IKC_MAP=12:0\0"
-		"MCK_KARGS=hidos allow_oversubscribe\0");
+		"IHK_CPUS=12-35\0"
+		"IHK_MEM=1G@0,512M@1\0"
+		"IHK_IKC_MAP=12:0\0"
+		"IHK_KARGS=hidos allow_oversubscribe\0");
 
 	/* fifth entry extends across the boundary */
 	sprintf(env_str[1], "%s",
-		"MCK_CPUS=12-35\0"
-		"MCK_MEM=1G@0,512M@1\0"
-		"MCK_IKC_MAP=12:0\0"
-		"MCK_KARGS=hidos allow_oversubscribe\0");
+		"IHK_CPUS=12-35\0"
+		"IHK_MEM=1G@0,512M@1\0"
+		"IHK_IKC_MAP=12:0\0"
+		"IHK_KARGS=hidos allow_oversubscribe\0");
 
 	/* Precondition */
 	ret = linux_insmod(0);

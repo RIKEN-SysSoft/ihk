@@ -23,59 +23,59 @@ const char *values[] = {
 #define NCASES 6
 
 const char *env_str[] = {
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0"
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_BALANCED_ENABLE=1X\0", /* this element is invalid */
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0"
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_BALANCED_BEST_EFFORT=1X\0", /* this element is invalid */
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0"
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT=10X\0", /* this element is invalid */
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0"
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_MIN_CHUNK_SIZE=65536X\0", /* this element is invalid */
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0"
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL=98X\0", /* this element is invalid */
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=1G@4,512M@5\0"
+	"IHK_MEM=1G@4,512M@5\0"
 #else
-	"MCK_MEM=1G@0,512M@1\0"
+	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe\0"
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_TIMEOUT=30X\0", /* this element is invalid */
 };
 const char default_kargs[] = "hidos allow_oversubscribe time_sharing";

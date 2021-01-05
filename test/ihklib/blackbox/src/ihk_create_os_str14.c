@@ -13,20 +13,20 @@
 
 const char param[] = "parameter string";
 const char *values[] = {
-	"MCK_MEM=ALL@0,ALL@1 with IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL of 95",
+	"IHK_MEM=ALL@0,ALL@1 with IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL of 95",
 };
 const int num_env[] = {
 	4,
 };
 const char *env_str[] = {
-	"MCK_CPUS=12-35\0"
+	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"MCK_MEM=ALL@4,ALL@5,ALL@6,ALL@7\0"
+	"IHK_MEM=ALL@4,ALL@5,ALL@6,ALL@7\0"
 #else
-	"MCK_MEM=ALL@0,ALL@1\0"
+	"IHK_MEM=ALL@0,ALL@1\0"
 #endif
-	"MCK_IKC_MAP=12-23:0+24-35:1\0"
-	"MCK_KARGS=hidos allow_oversubscribe ihk_create_os_str14\0",
+	"IHK_IKC_MAP=12-23:0+24-35:1\0"
+	"IHK_KARGS=hidos allow_oversubscribe ihk_create_os_str14\0",
 };
 const int mem_conf_keys[] = {
 	IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL
