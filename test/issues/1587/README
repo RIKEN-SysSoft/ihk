@@ -1,0 +1,14 @@
+==============
+How to compile
+==============
+Example:
+cd /home/users/ea01/ea0105/project/os/mckernel/ihk/test/issues/
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=/home/users/ea01/ea0105/project/os/mckernel/ihk/test/issues/install -DWITH_MCK=/home/users/ea01/ea0105/project/os/install ../1587
+
+==========
+How to run
+==========
+Example:
+/home/users/ea01/ea0105/project/os/mckernel/ihk/test/issues/install/scripts/1587-besteffort
