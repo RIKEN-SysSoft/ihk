@@ -14,6 +14,12 @@ if(CPU_IMPLEMENTER STREQUAL "0x46" AND CPU_ARCH STREQUAL "8" AND
   add_definitions(-D__a64fx__)
 endif()
 
+
+# number of NUMA nodes
+execute_process(COMMAND bash -c "lscpu | awk '/NUMA node[(]s[)]:/ { print }' | cut -d: -f2 | sed 's/ //g'" OUTPUT_VARIABLE NR_NUMA OUTPUT_STRIP_TRAILING_WHITESPACE)
+message("NR_NUMA: ${NR_NUMA}")
+add_definitions(-DNR_NUMA=${NR_NUMA})
+
 # find first NUMA available to user (0 or 4 now)
 execute_process(COMMAND bash -c "awk -v keyword=nr_free_pages -f ${CMAKE_CURRENT_SOURCE_DIR}/src/zoneinfo.awk /proc/zoneinfo | awk -v page_size=$(getconf PAGE_SIZE) -f ${CMAKE_CURRENT_SOURCE_DIR}/src/zoneinfo_filter.awk | head -n1" OUTPUT_VARIABLE FIRST_USER_NUMA OUTPUT_STRIP_TRAILING_WHITESPACE)
 message("FIRST_USER_NUMA: ${FIRST_USER_NUMA}")
@@ -468,6 +474,7 @@ foreach(target IN ITEMS
     str
     ihkmond_ihk
     ihklib_debug_ihk
+    kmsg_size_ihk
     )
   install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/src/${target}.patch DESTINATION bin)
 endforeach()

@@ -24,7 +24,9 @@ const char *values[] = {
 
 const char *env_str[] = {
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -33,7 +35,9 @@ const char *env_str[] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_BALANCED_ENABLE=1X\0", /* this element is invalid */
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -42,7 +46,9 @@ const char *env_str[] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_BALANCED_BEST_EFFORT=1X\0", /* this element is invalid */
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -51,7 +57,9 @@ const char *env_str[] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT=10X\0", /* this element is invalid */
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -60,7 +68,9 @@ const char *env_str[] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_MIN_CHUNK_SIZE=65536X\0", /* this element is invalid */
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -69,7 +79,9 @@ const char *env_str[] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0"
 	"IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL=98X\0", /* this element is invalid */
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"

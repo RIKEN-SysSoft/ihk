@@ -20,7 +20,9 @@ const int num_env[] = {
 };
 const char *env_str[] = {
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=ALL@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=ALL@4,ALL@5,ALL@6,ALL@7\0"
 #else
 	"IHK_MEM=ALL@0,ALL@1\0"
@@ -49,6 +51,10 @@ char err_msg[IHKLIB_MAX_SIZE_ERR_MSG];
 const char *err_msg_expected[] = {
 	"",
 };
+
+/* expecting the patch is applied */
+#undef IHK_KMSG_SIZE
+#define IHK_KMSG_SIZE (2UL << 20)
 
 int main(int argc, char **argv)
 {

@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
 # define WORKDIR
 SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
 AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
@@ -8,6 +10,8 @@ if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
 else
     WORKDIR=$(pwd)
 fi
+
+patch_and_build "" kmsg_size_ihk || exit 1
 
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str14 || exit $?
 
