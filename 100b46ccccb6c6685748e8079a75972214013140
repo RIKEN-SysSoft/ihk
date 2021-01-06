@@ -1,0 +1,157 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "95190c5b_4b65737d",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "ERROR: do not set execute permissions for source files",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9418145c_77fb4f93",
+        "filename": "test/issues/1587/besteffort.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "ERROR: do not initialise statics to 0\n+static const int devidx \u003d 0;",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ac0b4aae_ea0e4c38",
+        "filename": "test/issues/1587/besteffort.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tif ((ret \u003d ihk_reserve_mem_conf(devidx, IHK_RESERVE_MEM_BALANCED_ENABLE, \u0026val)) \u003c 0)",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "5bcd2cde_a05325ac",
+        "filename": "test/issues/1587/besteffort.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\terrx(1, \"ihk_reserve_mem_conf(IHK_RESERVE_MEM_BALANCED_ENABLE): %d.\", ret);",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fb50b167_7fb4f995",
+        "filename": "test/issues/1587/besteffort.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 33,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tif ((ret \u003d ihk_reserve_mem_conf(devidx, IHK_RESERVE_MEM_BALANCED_BEST_EFFORT, \u0026val)) \u003c 0)",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "21b99592_2ee716ca",
+        "filename": "test/issues/1587/besteffort.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 34,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\terrx(1, \"ihk_reserve_mem_conf(IHK_RESERVE_MEM_BALANCED_BEST_EFFORT): %d.\", ret);",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0cfe2070_d48ff96e",
+        "filename": "test/issues/1587/besteffort.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tif ((ret \u003d ihk_reserve_mem_conf(devidx, IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT, \u0026val)) \u003c 0)",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "44621893_02fbccd7",
+        "filename": "test/issues/1587/besteffort.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 37,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\terrx(1, \"ihk_reserve_mem_conf(IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT): %d.\", ret);",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d7dd4e51_cfcd5956",
+        "filename": "test/issues/1587/besteffort.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T09:44:13Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I$",
+      "revId": "100b46ccccb6c6685748e8079a75972214013140",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
