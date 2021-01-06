@@ -25,7 +25,11 @@
 #define dprintk(...) do { if (1) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
 #define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
 #else
+#ifndef ENABLE_FUGAKU_DEBUG
+#define dprintk(...) do { if (0) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)
+#else
 #define dprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
+#endif
 #define eprintk(...) do { if (1) { printk(KERN_ERR __VA_ARGS__); } } while (0)
 #endif
 
