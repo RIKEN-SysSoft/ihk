@@ -21,7 +21,7 @@ const int num_env[] = {
 const char *env_str[] = {
 	"IHK_CPUS=12-35\0"
 #if FIRST_USER_NUMA == 4
-	"IHK_MEM=1G@4,1GM@5\0"
+	"IHK_MEM=1G@4,1G@5\0"
 #else
 	"IHK_MEM=1G@0,1G@1\0"
 #endif
