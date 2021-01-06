@@ -35,7 +35,7 @@ function patch_and_build()
 	rm -rf $BUILDDIR
 	mkdir -p $BUILDDIR
 	pushd $BUILDDIR
-	cmake @WITH_MCK_SRC@ -DCMAKE_INSTALL_PREFIX=@WITH_MCK@
+	cmake @WITH_MCK_SRC@ -DCMAKE_INSTALL_PREFIX=@WITH_MCK@ -DENABLE_FUGAKU_HACKS=OFF -DENABLE_FUGAKU_DEBUG=OFF
     fi
     make -j install
     popd
