@@ -886,7 +886,7 @@ int ikc_cpu_map_check_channels(int nchannels, char *logdir)
 	}
 
 	nread = getline(&line, &n, fp);
-	INTERR(nread <= 0, "getline read zero byte (%lld bytes) "
+	INTERR(nread <= 0, "getline read zero byte (%ld bytes) "
 	       "or failed with %d\n", nread, errno);
 
 	ret = sscanf(line, "%d\n", &ncpus);
