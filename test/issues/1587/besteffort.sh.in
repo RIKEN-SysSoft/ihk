@@ -1,0 +1,22 @@
+#!/usr/bin/bash
+
+sudo insmod @WITH_MCK@/kmod/ihk.ko
+sudo insmod @WITH_MCK@/kmod/ihk-@BUILD_TARGET@.ko ihk_ikc_irq_core=0
+sudo insmod @WITH_MCK@/kmod/mcctrl.ko
+
+for sz in $((8 * 1024 * 1024 * 1024 - 8 * 1024 * 1024)) $((8 * 1024 * 1024 * 1024 + 0 * 1024 * 1024)) $((8 * 1024 * 1024 * 1024 + 8 * 1024 * 1024)); do
+    for i in {1..4}; do
+	sleep 1
+	sudo @CMAKE_INSTALL_PREFIX@/bin/besteffort $sz
+
+	echo "query mem: $(sudo @WITH_MCK@/sbin/ihkconfig 0 query mem)"
+	#sudo @WITH_MCK@/sbin/ihkconfig 0 release mem $(sudo ihkconfig 0 query mem)
+	sudo @WITH_MCK@/sbin/ihkconfig 0 release mem all
+	sudo bash -c 'echo 3 > /proc/sys/vm/drop_caches'
+	cat /sys/devices/system/node/node[4-7]/meminfo | grep MemUsed
+    done
+done
+
+sudo rmmod @WITH_MCK@/kmod/mcctrl.ko
+sudo rmmod @WITH_MCK@/kmod/ihk-@BUILD_TARGET@.ko
+sudo rmmod @WITH_MCK@/kmod/ihk.ko
