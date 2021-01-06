@@ -24,7 +24,9 @@ const char *values[] = {
 
 const char *env_str[] = {
 	"IHK_CPUS=12X\0" /* this element is invalid */
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -32,7 +34,9 @@ const char *env_str[] = {
 	"IHK_IKC_MAP=12:0\0"
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 	"IHK_CPUS=12X-35\0" /* this element is invalid */
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -40,7 +44,9 @@ const char *env_str[] = {
 	"IHK_IKC_MAP=12-23:0+24-35:1\0"
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 	"IHK_CPUS=12-35X\0" /* this element is invalid */
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -56,7 +62,9 @@ const char *env_str[] = {
 	"IHK_IKC_MAP=12-23:0+24-35:1\0"
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -64,7 +72,9 @@ const char *env_str[] = {
 	"IHK_IKC_MAP=12X-23:0+24-35:1\0" /* this element is invalid */
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"

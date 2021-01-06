@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
 # define WORKDIR
 SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
 AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
@@ -9,7 +11,11 @@ else
     WORKDIR=$(pwd)
 fi
 
-sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str14 || exit $?
+patch_and_build "" kmsg_size_ihk || exit 1
+
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str14
+ret=$?
+(( ret != 0 )) && ng=$((ng + 1))
 
 sudo @WITH_MCK@/sbin/ihkosctl 0 kmsg | awk '/KCommand Line/ && /hidos/ && /allow_oversubscribe/ && /ihk_create_os_str14/ { print; found = 1 } END { exit found ? 0 : 1 }'
 ret=$?
@@ -18,10 +24,16 @@ if (( ret == 0)); then
     printf "[  OK  ] "
 else
     printf "[  NG  ] "
+    ng=$((ng + 1))
 fi
 
 echo "ihk_create_os_str14 included in kargs"
 
 sudo @WITH_MCK@/sbin/mcstop+release.sh
+rebuild
 
-exit $ret
+if (( ng > 0 )); then
+    exit 1
+else
+    exit 0
+fi
