@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6b293087_128cb64f",
+        "filename": "linux/driver/smp/smp-driver.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-06T04:08:27Z",
+      "side": 1,
+      "message": "WARNING: Prefer [subsystem eg: netdev]_dbg([subsystem]dev, ... then dev_dbg(dev, ... then pr_debug(...  to printk(KERN_DEBUG ...\n+#define dprintk(...) do { if (0) { printk(KERN_DEBUG __VA_ARGS__); } } while (0)",
+      "revId": "2e659bf760b74293d69b218fb26bc3ab7e73fbdd",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
