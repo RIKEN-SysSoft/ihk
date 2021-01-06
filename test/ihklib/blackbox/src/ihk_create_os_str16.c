@@ -20,7 +20,9 @@ const int num_env[] = {
 };
 const char *env_str[] = {
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,1G@5\0"
 #else
 	"IHK_MEM=1G@0,1G@1\0"
@@ -77,6 +79,13 @@ int main(int argc, char **argv)
 	struct mems mems;
 	struct mems mems_margin;
 
+#if NR_NUMA == 1
+	ret = mems_init(&mems, 1);
+	INTERR(ret, "mems_init returned %d\n", ret);
+
+	mems.mem_chunks[0].size = 1UL << 30;
+	mems.mem_chunks[j].numa_node_number = 0;
+#else
 	ret = mems_init(&mems, 2);
 	INTERR(ret, "mems_init returned %d\n", ret);
 
@@ -90,6 +99,7 @@ int main(int argc, char **argv)
 		mems.mem_chunks[j].numa_node_number = j;
 #endif
 	}
+#endif
 
 	ret = mems_copy(&mems_margin, &mems);
 	INTERR(ret, "mems_copy returned %d\n", ret);

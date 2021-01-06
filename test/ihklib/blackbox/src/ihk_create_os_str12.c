@@ -34,7 +34,9 @@ const char *values[17] = {
 
 const char *env_str[17] = {
 	"IHK_CPUS=,12-23\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -43,7 +45,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-23,\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -82,7 +86,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -91,7 +97,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -100,7 +108,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -109,7 +119,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-23\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -118,7 +130,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-23\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -127,7 +141,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -136,7 +152,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -145,7 +163,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-23\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
@@ -154,7 +174,9 @@ const char *env_str[17] = {
 	"IHK_KARGS=hidos allow_oversubscribe\0",
 
 	"IHK_CPUS=12-35\0"
-#if FIRST_USER_NUMA == 4
+#if NR_NUMA == 1
+	"IHK_MEM=1G@0\0"
+#elif FIRST_USER_NUMA == 4
 	"IHK_MEM=1G@4,512M@5\0"
 #else
 	"IHK_MEM=1G@0,512M@1\0"
