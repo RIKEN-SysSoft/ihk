@@ -57,6 +57,14 @@ if(ENABLE_FUGAKU_HACKS)
 	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DENABLE_FUGAKU_HACKS")
 endif()
 
+# SIGSTOP instead of SIGSEGV, additional IHK Linux kmsg
+option(ENABLE_FUGAKU_DEBUG "Fugaku debug instrumentation" OFF)
+
+if(ENABLE_FUGAKU_DEBUG)
+	add_definitions(-DENABLE_FUGAKU_DEBUG)
+	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DENABLE_FUGAKU_DEBUG")
+endif()
+
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 	set(BUILD_TARGET "smp-x86" CACHE STRING "Build target: smp-x86 | smp-arm64")
 elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
