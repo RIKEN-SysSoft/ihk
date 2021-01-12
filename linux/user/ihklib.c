@@ -992,6 +992,7 @@ int ihk_release_cpu(int index, int* cpus, int num_cpus)
 int ihk_reserve_mem_conf(int index, int key, void *value)
 {
 	int ret;
+	int ival;
 
 	if (value == NULL) {
 		ret = -EFAULT;
@@ -1025,7 +1026,13 @@ int ihk_reserve_mem_conf(int index, int key, void *value)
 			__func__, reserve_mem_conf.min_chunk_size);
 		break;
 	case IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL:
-		reserve_mem_conf.max_size_ratio_all = *((int *)value);
+		ival = *((int *)value);
+		if (ival <= 0 ||
+		    ival > IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT) {
+			ret = -EINVAL;
+			goto out;
+		}
+		reserve_mem_conf.max_size_ratio_all = ival;
 		dprintk("%s: IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL=%d\n",
 			__func__, reserve_mem_conf.max_size_ratio_all);
 		break;
