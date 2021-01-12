@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "951d3e9f_6646d88e",
+        "filename": "test/ihklib/blackbox/src/ihk_os_kargs07.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 35,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-12T06:11:43Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+\tint nr_cases \u003d sizeof(values) / sizeof(values[0]);",
+      "revId": "f64da3bdcce7caeac1b4c73f23c313df170032e4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
