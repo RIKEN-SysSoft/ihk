@@ -61,7 +61,7 @@
 
 #define REQ_STR_MAXLEN 1024
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 unsigned long __fake_chunk_per_node[16];
 #endif
 
@@ -2353,7 +2353,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 				break;
 			}
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 			/* Special condition for faked chunk */
 			if (mem_size_left <= __fake_chunk_per_node[numa_id]) {
 				if (mem_size_left < __fake_chunk_per_node[numa_id]) {
@@ -2371,7 +2371,7 @@ static int __smp_ihk_os_assign_mem(ihk_os_t ihk_os, struct smp_os_data *os,
 
 			printk(KERN_ERR "IHK-SMP: error: not enough memory on ihk_mem_free_chunks\n");
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 			if (__fake_chunk_per_node[numa_id] > 0) {
 				printk("%s: error: requested %lu, larger than"
 						" faked chunk %lu @ NUMA %d\n",
@@ -3440,7 +3440,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 	pr_err("%s: NUMA %d (online nodes: %d), free mem: %lu bytes\n",
 		__FUNCTION__, numa_id, num_online_nodes(), available);
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	/* XXX: Fugaku hack to skip step with IHK_SMP_MEM_ALL request */
 	if (want == IHK_SMP_MEM_ALL) {
 		want = node_present_pages(numa_id) * PAGE_SIZE;
@@ -3616,7 +3616,7 @@ pre_out:
 			 */
 			if (allocated >= want || want == IHK_SMP_MEM_ALL) break;
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 			/* XXX: Fugaku: don't fail for unsatisfied allocation,
 			 * missing chunk will be faked below at fake_alloc: */
 			if (allocated < want) {
@@ -3736,7 +3736,7 @@ pre_out:
 			__func__, want, allocated,
 			(get_seconds() - res_start), numa_id);
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 fake_alloc:
 	if (allocated < want) {
 		__fake_chunk_per_node[numa_id] = want - allocated;
@@ -3824,7 +3824,7 @@ static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
 		goto out;
 	}
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	if (__fake_chunk_per_node[numa_id] == ihk_mem) {
 		__fake_chunk_per_node[numa_id] = 0;
 		ret = 0;
@@ -4673,7 +4673,7 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	struct chunk *mem_chunk;
 	size_t *query_res_size = NULL;
 	int *query_res_numa_id = NULL;
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	int i;
 #endif
 
@@ -4687,7 +4687,7 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 		num_chunks++;
 	}
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	/* Check faked chunks */
 	for (i = 0; i < sizeof(__fake_chunk_per_node) /
 						sizeof(__fake_chunk_per_node[0]); ++i) {
@@ -4737,7 +4737,7 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 		idx++;
 	}
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	/* Add faked chunks */
 	for (i = 0; i < sizeof(__fake_chunk_per_node) /
 						sizeof(__fake_chunk_per_node[0]); ++i) {
@@ -5135,7 +5135,7 @@ static int smp_ihk_init(ihk_device_t ihk_dev, void *priv)
 
 	ret = smp_ihk_arch_init();
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	memset(__fake_chunk_per_node, 0, sizeof(__fake_chunk_per_node));
 #endif
 
