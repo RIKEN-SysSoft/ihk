@@ -12,6 +12,11 @@
 #define IHKLIB_MAX_NUM_ENV (1UL << 10)
 #define IHKLIB_MAX_SIZE_ERR_MSG (1UL << 12)
 
+/* taking more than this percentage of memory would
+ * make Linux panic due to out of memory
+ */
+#define IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT 98
+
 struct ihk_ioctl_desc {
 	char *string;
 	int string_len;
