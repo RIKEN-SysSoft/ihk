@@ -2616,8 +2616,11 @@ int ihk_os_kargs(int index, char* kargs)
 {
 	int ret;
 	int fd = -1;
+	char *_kargs = NULL;
+	char *token;
+	int found;
 
-	dprintk("%s: enter\n", __func__);
+	dprintk("%s: kargs: %s\n", __func__, kargs);
 	if (kargs == NULL) {
 		dprintf("%s: warning: kargs is NULL\n",
 			__func__);
@@ -2632,6 +2635,35 @@ int ihk_os_kargs(int index, char* kargs)
 		goto out;
 	}
 
+	/* check mandatory parameters */
+	_kargs = strdup(kargs);
+	if (_kargs == NULL) {
+		ret = -errno;
+		dprintf("%s: error: strdup failed with %d\n",
+			__func__, -ret);
+		goto out;
+	}
+
+	found = 0;
+	while ((token = strsep(&_kargs, " "))) {
+		if (*token == 0) {
+			continue;
+		}
+
+		dprintf("%s: token: %s\n", __func__, token);
+
+		if (!strcmp(token, "hidos")) {
+			found = 1;
+		}
+	}
+
+	if (!found) {
+		ret = -EINVAL;
+		dprintf("%s: error: mandatory parameter not found, kargs: %s\n",
+			__func__, kargs);
+		goto out;
+	}
+
 	ret = ioctl(fd, IHK_OS_SET_KARGS, kargs);
 	if (ret) {
 		ret = -errno;
@@ -2641,6 +2673,8 @@ int ihk_os_kargs(int index, char* kargs)
 	}
 
  out:
+	free(_kargs);
+
 	if (fd != -1) {
 		close(fd);
 	}
