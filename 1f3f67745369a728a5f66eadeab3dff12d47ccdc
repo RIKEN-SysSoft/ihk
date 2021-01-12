@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ffd28aeb_f13256f6",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_conf07.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-12T06:10:03Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+\tint nr_cases \u003d sizeof(values) / sizeof(values[0]);",
+      "revId": "1f3f67745369a728a5f66eadeab3dff12d47ccdc",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
