@@ -49,7 +49,19 @@ int main(int argc, char **argv)
 		}
 	}
 
-	enum ihk_os_pgsize page_size_index[2] = {
+	enum ihk_os_pgsize rusage_pgsizes[2] = {
+/* 64KB page is recorded to index of IHK_OS_PGSIZE_4KB with Fugaku workaround.
+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)
+ */
+#if 1
+		IHK_OS_PGSIZE_4KB,
+#else
+		IHK_OS_PGSIZE_64KB,
+#endif
+		IHK_OS_PGSIZE_2MB,
+	};
+
+	enum ihk_os_pgsize pgsizes[2] = {
 		IHK_OS_PGSIZE_64KB,
 		IHK_OS_PGSIZE_2MB,
 	};
@@ -62,7 +74,14 @@ int main(int argc, char **argv)
 	int ret_expected[2] = { 0 };
 
 	struct ihk_os_rusage ru_expected[2] = {
+/* 64KB page is recorded to index of IHK_OS_PGSIZE_4KB with Fugaku workaround.
+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)
+ */
+#if 1
+		{ .memory_stat_rss[IHK_OS_PGSIZE_4KB] = 256 * 1024 * 1024 },
+#else
 		{ .memory_stat_rss[IHK_OS_PGSIZE_64KB] = 256 * 1024 * 1024 },
+#endif
 		{ .memory_stat_rss[IHK_OS_PGSIZE_2MB] =  512 * 1024 * 1024 },
 	};
 
@@ -115,7 +134,7 @@ int main(int argc, char **argv)
 		INTERR(fd_out == -1, "open returned %d\n", errno);
 
 		sprintf(cmd, "mmap %s %s -p %d -u %zu",
-				fn_in, fn_out, page_size_index[i], mem_size[i]);
+				fn_in, fn_out, pgsizes[i], mem_size[i]);
 		ret = user_fork_exec(cmd, &pid);
 		INTERR(ret < 0, "user_fork_exec returned %d\n", ret);
 
@@ -130,7 +149,7 @@ int main(int argc, char **argv)
 		     ret, ret_expected[i]);
 
 		INFO("rss: %lu\n",
-		     ru_input_before[i].memory_stat_rss[page_size_index[i]]);
+		     ru_input_before[i].memory_stat_rss[rusage_pgsizes[i]]);
 
 		ret = write(fd_in, &message, sizeof(int));
 		INTERR(ret != sizeof(int),
@@ -146,7 +165,7 @@ int main(int argc, char **argv)
 		     ret, ret_expected[i]);
 
 		INFO("rss: %lu\n",
-			ru_input_after[i].memory_stat_rss[page_size_index[i]]);
+			ru_input_after[i].memory_stat_rss[rusage_pgsizes[i]]);
 
 		ret = write(fd_in, &message, sizeof(int));
 		INTERR(ret != sizeof(int),
@@ -161,11 +180,11 @@ int main(int argc, char **argv)
 
 		if (ret_expected[i] == 0) {
 			unsigned long rss =
-				ru_input_after[i].memory_stat_rss[page_size_index[i]] -
-				ru_input_before[i].memory_stat_rss[page_size_index[i]];
+				ru_input_after[i].memory_stat_rss[rusage_pgsizes[i]] -
+				ru_input_before[i].memory_stat_rss[rusage_pgsizes[i]];
 
 			unsigned long rss_expected =
-				ru_expected[i].memory_stat_rss[page_size_index[i]];
+				ru_expected[i].memory_stat_rss[rusage_pgsizes[i]];
 
 			OKNG(rss >= rss_expected && rss <= rss_expected * 1.1,
 				"rss: %lu, expected: %lu\n", rss, rss_expected);
