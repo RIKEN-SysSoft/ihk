@@ -1,0 +1,259 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f5c0d062_85c44f10",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage01.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 60,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "66901d08_e70705ac",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage02.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 74,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f48c2424_fff53e82",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage03.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 59,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b21db1fa_99e5331b",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage04.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 68,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ffcfbb1d_c7233a36",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage05.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 72,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "5e59b0a3_d69c0f24",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage06.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 54,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b370e880_98ac23c8",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage06.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 78,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d15ca27d_9d4f8c9a",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage06.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 183,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_input_after[i].memory_stat_rss[rusage_pgsizes[i]] -",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2b1b887f_a9fb31af",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage06.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 184,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_input_before[i].memory_stat_rss[rusage_pgsizes[i]];",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0ec3d1fe_d67ad6c4",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage06.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 187,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_expected[i].memory_stat_rss[rusage_pgsizes[i]];",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e8f6883b_539a22c6",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage07.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 55,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9d9cb997_59b05141",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage07.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 70,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d8c504c0_8cd17090",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage07.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 178,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tru_expected[i].memory_stat_mapped_file[pgsizes[i]];",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f2f9619e_82e94411",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage12.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 32,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: please, no spaces at the start of a line\n+       {$",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d0408865_6be52583",
+        "filename": "test/ihklib/blackbox/src/ihk_os_getrusage12.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 112,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-14T08:37:38Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tINFO(\"executing %s/bin/mcexec taskset --cpu-list 36 %s/bin/%s...\\n\",",
+      "revId": "a230511d9b92b45bf651438e65d21da9c7c76af1",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
