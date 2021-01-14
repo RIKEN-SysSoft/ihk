@@ -55,7 +55,14 @@ int main(int argc, char **argv)
 		0
 	};
 
+/* 64KB page is recorded to index of IHK_OS_PGSIZE_4KB with Fugaku workaround.
+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)
+ */
+#if 1
+	ru_expected[1].memory_stat_rss[IHK_OS_PGSIZE_4KB] = PAGE_SIZE * 1024;
+#else
 	ru_expected[1].memory_stat_rss[IHK_OS_PGSIZE_64KB] = PAGE_SIZE * 1024;
+#endif
 
 	/* Precondition */
 	ret = linux_insmod(0);

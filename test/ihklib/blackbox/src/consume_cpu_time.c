@@ -243,12 +243,8 @@ int main(int argc, char **argv)
 	/* Wait until parent takes reference stat */
 	ret = read(fd_in, &message, sizeof(int));
 	if (ret != sizeof(int)) {
-		int errno_save = errno;
-
-		printf("%s: read returned %d, errno: %d\n",
+		printf("%s: warning: read returned %d, errno: %d\n",
 		       __FILE__, ret, errno);
-		ret = ret >= 0 ? ret : -errno_save;
-		goto sync_out;
 	}
 
 	if (user_mode) {
@@ -314,12 +310,8 @@ sync_out:
 	/* Wait until parent takes usage stat */
 	ret = read(fd_in, &message, sizeof(int));
 	if (ret != sizeof(int)) {
-		int errno_save = errno;
-
-		printf("%s: read returned %d, errno: %d\n",
+		printf("%s: warning: read returned %d, errno: %d\n",
 		       __FILE__, ret, errno);
-		ret = ret >= 0 ? ret : -errno_save;
-		goto out;
 	}
 
 	ret = 0;

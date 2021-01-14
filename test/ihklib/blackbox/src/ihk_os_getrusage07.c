@@ -51,8 +51,14 @@ int main(int argc, char **argv)
 		}
 	}
 
-	int pg[1] = { IHK_OS_PGSIZE_64KB };
-
+/* 64KB page is recorded to index of IHK_OS_PGSIZE_4KB with Fugaku workaround.
+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)
+ */
+#if 1
+	int pgsizes[1] = { IHK_OS_PGSIZE_4KB };
+#else
+	int pgsizes[1] = { IHK_OS_PGSIZE_64KB };
+#endif
 	size_t mem_size[1] = {
 		256 * 1024 * 1024,
 	};
@@ -60,7 +66,14 @@ int main(int argc, char **argv)
 	int ret_expected[1] = { 0 };
 
 	struct ihk_os_rusage ru_expected[1] = {
+/* 64KB page is recorded to index of IHK_OS_PGSIZE_4KB with Fugaku workaround.
+ * see 91146ac Make struct ihk_os_rusage compatible with mckernel_rusage (workaround for Fugaku)
+ */
+#if 1
+	{ .memory_stat_mapped_file[IHK_OS_PGSIZE_4KB] = 256 * 1024 * 1024 },
+#else
 	{ .memory_stat_mapped_file[IHK_OS_PGSIZE_64KB] = 256 * 1024 * 1024 },
+#endif
 	};
 
 	/* Precondition */
@@ -127,7 +140,7 @@ int main(int argc, char **argv)
 		     ret, ret_expected[i]);
 
 		INFO("mapped_file: %lu\n",
-		     ru_input_before[i].memory_stat_mapped_file[pg[i]]);
+		     ru_input_before[i].memory_stat_mapped_file[pgsizes[i]]);
 
 		ret = write(fd_in, &message, sizeof(int));
 		INTERR(ret != sizeof(int),
@@ -143,7 +156,7 @@ int main(int argc, char **argv)
 		     ret, ret_expected[i]);
 
 		INFO("mapped_file: %lu\n",
-		     ru_input_after[i].memory_stat_mapped_file[pg[i]]);
+		     ru_input_after[i].memory_stat_mapped_file[pgsizes[i]]);
 
 		ret = write(fd_in, &message, sizeof(int));
 		INTERR(ret != sizeof(int),
@@ -158,11 +171,11 @@ int main(int argc, char **argv)
 
 		if (ret_expected[i] == 0) {
 			unsigned long mapped_file =
-			ru_input_after[i].memory_stat_mapped_file[pg[i]] -
-			ru_input_before[i].memory_stat_mapped_file[pg[i]];
+			ru_input_after[i].memory_stat_mapped_file[pgsizes[i]] -
+			ru_input_before[i].memory_stat_mapped_file[pgsizes[i]];
 
 			unsigned long mapped_file_expected =
-				ru_expected[i].memory_stat_mapped_file[pg[i]];
+				ru_expected[i].memory_stat_mapped_file[pgsizes[i]];
 
 			OKNG(mapped_file >= mapped_file_expected &&
 			     mapped_file <= mapped_file_expected * 1.1,

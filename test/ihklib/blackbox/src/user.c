@@ -48,22 +48,23 @@ int __user_fork_exec(char *cmd, pid_t *pid)
 	return ret;
 }
 
-int _user_fork_exec(char *filename, pid_t *pid, char *opt)
+int _user_fork_exec(char *mcmd, pid_t *pid, char *mcexecopt, char *wrapper)
 {
 	char cmd[4096];
 
-	sprintf(cmd, "%s/bin/mcexec %s %s/bin/%s",
+	sprintf(cmd, "%s/bin/mcexec %s %s %s/bin/%s",
 		QUOTE(WITH_MCK),
-		opt,
+		mcexecopt,
+		wrapper,
 		QUOTE(CMAKE_INSTALL_PREFIX),
-		filename);
+		mcmd);
 
 	return __user_fork_exec(cmd, pid);
 }
 
-int user_fork_exec(char *filename, pid_t *pid)
+int user_fork_exec(char *mcmd, pid_t *pid)
 {
-	return _user_fork_exec(filename, pid, "");
+	return _user_fork_exec(mcmd, pid, "", "");
 }
 
 int user_wait(pid_t *pid)

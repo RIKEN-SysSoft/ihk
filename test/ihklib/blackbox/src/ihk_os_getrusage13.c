@@ -18,10 +18,14 @@
 
 const char param[] = "num_threads";
 const char *values[] = {
-	"spawn 1 thread --> spawn additional 14 threads --> join"
+	"spawn 1 thread --> spawn additional #cpus-2 threads --> join"
 };
 
 struct ihk_os_rusage ru_input[1];
+
+int ret_expected[1];
+
+struct ihk_os_rusage ru_expected[4];
 
 int main(int argc, char **argv)
 {
@@ -47,33 +51,25 @@ int main(int argc, char **argv)
 		}
 	}
 
-	int num_threads = 16;
-	int ret_expected[1] = { 0 };
-
-	struct ihk_os_rusage ru_expected[4] = {
-		{
-			.num_threads = 1,
-		},
-		{
-			.num_threads = 2,
-		},
-		{
-			.num_threads = 16,
-		},
-		{
-			.num_threads = 1,
-		},
-	};
-
 	/* Precondition */
 	ret = linux_insmod(0);
 	INTERR(ret, "linux_insmod returned %d\n", ret);
 
-	ret = cpus_reserve();
-	INTERR(ret, "cpus_reserve returned %d\n", ret);
+	struct cpus cpus;
+
+	ret = _cpus_ls(&cpus, "online", 2, -1);
+	INTERR(ret, "_cpus_ls returned %d\n", ret);
+
+	ret = ihk_reserve_cpu(0, cpus.cpus, cpus.ncpus);
+	INTERR(ret, "ihk_reserve_cpu returned %d\n", ret);
 
 	ret = mems_reserve();
 	INTERR(ret, "mems_reserve returned %d\n", ret);
+
+	ru_expected[0].num_threads = 1;
+	ru_expected[1].num_threads = 2;
+	ru_expected[2].num_threads = cpus.ncpus;
+	ru_expected[3].num_threads = 1;
 
 	pid_t pid = -1;
 	int wstatus;
@@ -114,7 +110,7 @@ int main(int argc, char **argv)
 		INTERR(fd_out == -1, "open returned %d\n", errno);
 
 		sprintf(cmd, "spawn_threads %s %s -n %d",
-				fn_in, fn_out, num_threads - 1);
+				fn_in, fn_out, cpus.ncpus - 1);
 		ret = user_fork_exec(cmd, &pid);
 		INTERR(ret < 0, "user_fork_exec returned %d\n", ret);
 

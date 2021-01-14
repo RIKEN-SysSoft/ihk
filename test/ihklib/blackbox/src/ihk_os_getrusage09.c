@@ -18,12 +18,11 @@
 
 const char param[] = "memory_numa_stat";
 const char *values[] = {
-	"256MB at the 1st node",
-	"512MB at the 2nd node"
+	"512MB at the last node"
 };
 
-struct ihk_os_rusage ru_input_before[2];
-struct ihk_os_rusage ru_input_after[2];
+struct ihk_os_rusage ru_input_before[1];
+struct ihk_os_rusage ru_input_after[1];
 
 int main(int argc, char **argv)
 {
@@ -80,19 +79,16 @@ int main(int argc, char **argv)
 		INTERR(ret, "mems_shift returned %d\n", ret);
 	}
 
-	INTERR(mems.num_mem_chunks < 2,
-	       "# of NUMA nodes (%d) < 2\n", mems.num_mem_chunks);
-
 	ret = ihk_reserve_mem(0, mems.mem_chunks,
 			      mems.num_mem_chunks);
 	INTERR(ret, "ihk_reserve_mem returned %d\n", ret);
 
-	unsigned long size_input[] = { 256 << 20, 512 << 20 };
-	int node_input[2] = { 0, 1 }; /* McKernel numbering */
-	int ret_expected[2] = { 0 };
+	unsigned long size_input[] = { 512 << 20 };
+	int node_input[1] = { mems.num_mem_chunks - 1 }; /* McKernel numbering */
+	int ret_expected[1] = { 0 };
 
 	/* Activate and check */
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 1; i++) {
 
 		START("test-case: %s: %s\n", param, values[i]);
 
@@ -130,7 +126,15 @@ int main(int argc, char **argv)
 		sprintf(cmd, "mmap %s %s -u %lu",
 			fn_in, fn_out, size_input[i]);
 		sprintf(mcexecopt, "-m %d", node_input[i]);
-		ret = _user_fork_exec(cmd, &pid, mcexecopt);
+
+		INFO("executing %s/bin/mcexec %s %s %s/bin/%s\n",
+		     QUOTE(WITH_MCK),
+		     mcexecopt,
+		     "",
+		     QUOTE(CMAKE_INSTALL_PREFIX),
+		     cmd);
+
+		ret = _user_fork_exec(cmd, &pid, mcexecopt, "");
 		INTERR(ret < 0, "user_fork_exec returned %d\n", ret);
 
 		/* Wait until child is ready */
@@ -143,10 +147,9 @@ int main(int argc, char **argv)
 		OKNG(ret == ret_expected[i], "return value: %d, expected: %d\n",
 		     ret, ret_expected[i]);
 
-		INFO("node#0: %lu\n",
-			ru_input_before[i].memory_numa_stat[0]);
-		INFO("node#1: %lu\n",
-			ru_input_before[i].memory_numa_stat[1]);
+		INFO("node#%d: %lu\n",
+		     mems.num_mem_chunks - 1,
+		     ru_input_before[i].memory_numa_stat[mems.num_mem_chunks - 1]);
 
 		ret = write(fd_in, &message, sizeof(int));
 		INTERR(ret != sizeof(int),
@@ -161,8 +164,9 @@ int main(int argc, char **argv)
 		OKNG(ret == ret_expected[i], "return value: %d, expected: %d\n",
 		     ret, ret_expected[i]);
 
-		INFO("node#0: %lu\n", ru_input_after[i].memory_numa_stat[0]);
-		INFO("node#1: %lu\n", ru_input_after[i].memory_numa_stat[1]);
+		INFO("node#%d: %lu\n",
+		     mems.num_mem_chunks - 1,
+		     ru_input_after[i].memory_numa_stat[mems.num_mem_chunks - 1]);
 
 		ret = write(fd_in, &message, sizeof(int));
 		INTERR(ret != sizeof(int), "write returned %d\n", errno);
