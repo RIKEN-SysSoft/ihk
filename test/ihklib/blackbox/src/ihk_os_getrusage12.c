@@ -20,11 +20,19 @@
 
 const char param[] = "cpuacct_usage_percpu";
 const char *values[] = {
-	"CPU#0 2s and CPU#45 4s"
+	"CPU#36 4s"
 };
 
 struct ihk_os_rusage ru_input_before[1];
 struct ihk_os_rusage ru_input_after[1];
+
+int ret_expected[1] = { 0 };
+
+struct ihk_os_rusage ru_expected[1] = {
+       {
+		.cpuacct_usage_percpu[36] = 4 * NS_PER_SEC,
+	},
+};
 
 int main(int argc, char **argv)
 {
@@ -33,8 +41,6 @@ int main(int argc, char **argv)
 	int fd_in = -1, fd_out = -1;
 	char *fn_in = NULL, *fn_out = NULL;
 	int opt;
-
-	params_getopt(argc, argv);
 
 	while ((opt = getopt(argc, argv, "i:o:")) != -1) {
 		switch (opt) {
@@ -50,23 +56,15 @@ int main(int argc, char **argv)
 		}
 	}
 
-	int ret_expected[1] = { 0 };
-
-	struct ihk_os_rusage ru_expected[1] = {
-		{
-			.cpuacct_usage_percpu[0] = 2 * NS_PER_SEC,
-			.cpuacct_usage_percpu[45] = 4 * NS_PER_SEC,
-		},
-	};
-
-	char *cpu_time_input = "0:2,45:4";
-
 	/* Precondition */
 	ret = linux_insmod(0);
 	INTERR(ret, "linux_insmod returned %d\n", ret);
 
-	ret = cpus_reserve();
+	ret = _cpus_reserve(2, 37);
 	INTERR(ret, "cpus_reserve returned %d\n", ret);
+
+	ret = ihk_get_num_reserved_cpus(0);
+	INTERR(ret < 37, "reserve more cpus\n");
 
 	ret = mems_reserve();
 	INTERR(ret, "mems_reserve returned %d\n", ret);
@@ -109,9 +107,11 @@ int main(int argc, char **argv)
 		fd_out = open(fn_out, O_RDWR);
 		INTERR(fd_out == -1, "open returned %d\n", errno);
 
-		sprintf(cmd, "consume_cpu_time %s %s -c %s",
-				fn_in, fn_out, cpu_time_input);
-		ret = user_fork_exec(cmd, &pid);
+		sprintf(cmd, "consume_cpu_time %s %s -u 4",
+				fn_in, fn_out);
+		INFO("executing %s/bin/mcexec taskset --cpu-list 36 %s/bin/%s...\n",
+		     QUOTE(WITH_MCK), QUOTE(CMAKE_INSTALL_PREFIX), cmd);
+		ret = _user_fork_exec(cmd, &pid, "", "taskset --cpu-list 36");
 		INTERR(ret < 0, "user_fork_exec returned %d\n", ret);
 
 		/* Wait until child is ready */
@@ -124,10 +124,8 @@ int main(int argc, char **argv)
 		OKNG(ret == ret_expected[i], "return value: %d, expected: %d\n",
 		     ret, ret_expected[i]);
 
-		INFO("CPU#0: %ld ns\n",
-			ru_input_before[i].cpuacct_usage_percpu[0]);
-		INFO("CPU#45: %ld ns\n",
-			ru_input_before[i].cpuacct_usage_percpu[45]);
+		INFO("CPU#36: %ld ns\n",
+			ru_input_before[i].cpuacct_usage_percpu[36]);
 
 		ret = write(fd_in, &message, sizeof(int));
 		INTERR(ret != sizeof(int),
@@ -142,10 +140,8 @@ int main(int argc, char **argv)
 		OKNG(ret == ret_expected[i], "return value: %d, expected: %d\n",
 		     ret, ret_expected[i]);
 
-		INFO("CPU#0: %ld ns\n",
-			ru_input_after[i].cpuacct_usage_percpu[0]);
-		INFO("CPU#45: %ld ns\n",
-			ru_input_after[i].cpuacct_usage_percpu[45]);
+		INFO("CPU#36: %ld ns\n",
+			ru_input_after[i].cpuacct_usage_percpu[36]);
 
 		ret = write(fd_in, &message, sizeof(int));
 		INTERR(ret != sizeof(int), "write returned %d\n", errno);
@@ -158,27 +154,17 @@ int main(int argc, char **argv)
 		close(fd_out);
 
 		if (ret_expected[i] == 0) {
-			unsigned long cpu0 =
-			ru_input_after[i].cpuacct_usage_percpu[0] -
-			ru_input_before[i].cpuacct_usage_percpu[0];
+			unsigned long cpu36 =
+			ru_input_after[i].cpuacct_usage_percpu[36] -
+			ru_input_before[i].cpuacct_usage_percpu[36];
 
-			unsigned long cpu45 =
-			ru_input_after[i].cpuacct_usage_percpu[45] -
-			ru_input_before[i].cpuacct_usage_percpu[45];
+			unsigned long cpu36_expected =
+				ru_expected[i].cpuacct_usage_percpu[36];
 
-			unsigned long cpu0_expected =
-				ru_expected[i].cpuacct_usage_percpu[0];
-			unsigned long cpu45_expected =
-				ru_expected[i].cpuacct_usage_percpu[45];
-
-			OKNG(cpu0 >= cpu0_expected &&
-				cpu0 <= cpu0_expected * 1.1,
-				"cpu0: %lu, expected: %lu\n",
-				cpu0, cpu0_expected);
-			OKNG(cpu45 >= cpu45_expected &&
-				cpu45 <= cpu45_expected * 1.1,
-				"cpu45: %lu, expected: %lu\n",
-				cpu45, cpu45_expected);
+			OKNG(cpu36 >= cpu36_expected &&
+				cpu36 <= cpu36_expected * 1.1,
+				"cpu36: %lu, expected: %lu\n",
+				cpu36, cpu36_expected);
 		}
 
 		ret = ihk_os_shutdown(0);
