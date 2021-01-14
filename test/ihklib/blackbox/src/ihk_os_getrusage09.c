@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 		sprintf(cmd, "mmap %s %s -u %lu",
 			fn_in, fn_out, size_input[i]);
 		sprintf(mcexecopt, "-m %d", node_input[i]);
-		ret = _user_fork_exec(cmd, &pid, mcexecopt);
+		ret = _user_fork_exec(cmd, &pid, mcexecopt, "");
 		INTERR(ret < 0, "user_fork_exec returned %d\n", ret);
 
 		/* Wait until child is ready */
