@@ -3203,7 +3203,7 @@ static void sort_pagelists(struct zone *zone)
 #define USE_TRY_TO_FREE_PAGES
 #define USE_TRY_TO_FREE_PAGES_TIME_LIMIT 2
 
-static unsigned long reserve_mem_max_ratio = 99;
+static unsigned long reserve_mem_max_ratio = 95;
 
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 				 int min_chunk_size,
@@ -3295,8 +3295,9 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 	}
 
+
 	/* Shrink slab/slub caches */
-	{
+	if (0) {
 		struct mutex *slab_mutexp =
 			(struct mutex *)kallsyms_lookup_name("slab_mutex");
 		struct list_head *slab_cachesp =
