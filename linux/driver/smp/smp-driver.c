@@ -3386,6 +3386,15 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 	}
 
+	/* Don't call kmem_cache_shrink() until the
+	 * following bug introduced by RHEL-8.3 is fixed:
+	 * kmem_cache_shrink()->...->deactivate_slab():
+	 *	c->page = NULL
+	 * kmem_cache_alloc_node_trace()->...->node_match():
+	 *	if (... page_to_nid(page) != node)
+	 * see https://lkml.org/lkml/2020/10/27/873
+	 */
+#ifndef ENABLE_FUGAKU_HACKS
 	/* Shrink slab/slub caches */
 	{
 		struct mutex *slab_mutexp =
@@ -3403,6 +3412,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 			mutex_unlock(slab_mutexp);
 		}
 	}
+#endif
 
 	/* Sort page list (from Intel XPPSL patch) */
 	{
