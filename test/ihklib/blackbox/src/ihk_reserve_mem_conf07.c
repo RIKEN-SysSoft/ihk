@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 
 		ret = ihk_reserve_mem_conf(0,
 					   IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL,
-					   &mem_conf_values[i]);
+					   (void *)&mem_conf_values[i]);
 		OKNG(ret == ret_expected[i],
 		     "return value: %d, expected: %d\n",
 		     ret, ret_expected[i]);
