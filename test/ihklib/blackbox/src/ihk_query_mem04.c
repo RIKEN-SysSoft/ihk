@@ -122,6 +122,12 @@ int main(int argc, char **argv)
 			break;
 		}
 
+		/* it's okay when the actual # of chunks is one */
+		ret = ihk_get_num_reserved_mem_chunks(0);
+		if (ret == mems_input[i].num_mem_chunks) {
+			ret_expected[i] = 0;
+		}
+
 		ret = ihk_query_mem(0, mems_input[i].mem_chunks,
 				    mems_input[i].num_mem_chunks);
 		OKNG(ret == ret_expected[i],
