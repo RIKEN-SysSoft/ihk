@@ -876,6 +876,8 @@ int ikc_cpu_map_check_channels(int nchannels, char *logdir)
 		" sort -n | tee %s/ikc_map.log | uniq | wc -l",
 		QUOTE(WITH_MCK), QUOTE(CMAKE_INSTALL_PREFIX),
 		nchannels, logdir);
+	INFO("executing %s...\n", cmd);
+
 	fp = popen(cmd, "r");
 
 	if (fp == NULL) {
@@ -888,6 +890,9 @@ int ikc_cpu_map_check_channels(int nchannels, char *logdir)
 	nread = getline(&line, &n, fp);
 	INTERR(nread <= 0, "getline read zero byte (%ld bytes) "
 	       "or failed with %d\n", nread, errno);
+
+	INFO("ikc_map.log: read %ld bytes, contents: %s",
+	     nread, line);
 
 	ret = sscanf(line, "%d\n", &ncpus);
 	INTERR(ret != 1, "# of CPUs not found\n");
