@@ -6,11 +6,11 @@
 #include "params.h"
 #include "linux.h"
 
-const char param[] = "MemTotal";
+const char param[] = "MemFree";
 const char *values[] = {
-	"MemTotal * 0.9",
-	"MemTotal * 1.0",
-	"MemTotal * 1.1",
+	"MemFree * 0.9",
+	"MemFree * 1.0",
+	"MemFree * 1.1",
 };
 
 int main(int argc, char **argv)
@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < 3; i++) {
 		int excess;
 
-		ret = _mems_ls(&mems_input[i], "MemTotal", ratios[i], -1);
+		ret = _mems_ls(&mems_input[i], "MemFree", ratios[i], -1);
 		INTERR(ret, "_mems_ls returned %d\n", ret);
 
 		excess = mems_input[i].num_mem_chunks - 4;
@@ -42,17 +42,8 @@ int main(int argc, char **argv)
 	struct mems mems_after_reserve[3] = {{ 0 }};
 
 	for (i = 0; i < 3; i++) {
-		int excess;
-
-		ret = _mems_ls(&mems_after_reserve[i], "MemTotal",
-			       ratios[i], -1);
-		INTERR(ret, "_mems_ls returned %d\n", ret);
-
-		excess = mems_after_reserve[i].num_mem_chunks - 4;
-		if (excess > 0) {
-			ret = mems_shift(&mems_after_reserve[i], excess);
-			INTERR(ret, "mems_shift returned %d\n", ret);
-		}
+		ret = mems_copy(&mems_after_reserve[i], &mems_input[i]);
+		INTERR(ret, "mems_copy returned %d\n", ret);
 	}
 
 	/* Empty */
@@ -65,17 +56,8 @@ int main(int argc, char **argv)
 	struct mems mems_margin[3] = {{ 0 }};
 
 	for (i = 0; i < 3; i++) {
-		int excess;
-
-		ret = _mems_ls(&mems_margin[i], "MemTotal", 1.0, -1);
-		INTERR(ret, "_mems_ls returned %d\n", ret);
-
-		excess = mems_margin[i].num_mem_chunks - 4;
-		if (excess > 0) {
-			ret = mems_shift(&mems_margin[i], excess);
-			INTERR(ret, "mems_shift returned %d\n", ret);
-		}
-
+		ret = mems_copy(&mems_margin[i], &mems_after_reserve[i]);
+		INTERR(ret, "mems_copy returned %d\n", ret);
 		mems_fill(&mems_margin[i], 4UL << 20);
 	}
 
