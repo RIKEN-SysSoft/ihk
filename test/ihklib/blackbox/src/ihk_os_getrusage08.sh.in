@@ -23,4 +23,6 @@ ret=$?
 sudo rm -f ${WORKDIR}/fifo_in
 sudo rm -f ${WORKDIR}/fifo_out
 
+rebuild
+
 exit $ret

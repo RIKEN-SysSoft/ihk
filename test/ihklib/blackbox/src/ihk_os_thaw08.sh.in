@@ -20,4 +20,6 @@ ret=$?
 
 sudo rm -f ${WORKDIR}/fifo_count
 
+rebuild
+
 exit $ret

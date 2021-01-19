@@ -15,7 +15,7 @@ patch_and_build "" ihklib_debug_ihk || exit 1
 
 sudo dmesg --clear
 
-sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str16 || exit $?
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str16 || ng=$((ng + 1))
 
 for i in \
     "IHK_RESERVE_MEM_BALANCED_ENABLE=1" \
@@ -32,10 +32,15 @@ for i in \
 	printf "[  OK  ] "
     else
 	printf "[  NG  ] "
+	ng=$((ng + 1))
     fi
     echo "$i found in Linux kmsg"
-
-    (( ret != 0 )) && exit $ret
 done
 
-exit 0
+rebuild
+
+if (( ng > 0 )); then
+    exit 1
+else
+    exit 0
+fi
