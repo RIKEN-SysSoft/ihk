@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 
 	params_getopt(argc, argv);
 
-	int ret_expected[2] = { -ENOENT, 1 };
+	int ret_expected[2] = { 0, 1 };
 
 	for (i = 0; i < 2; i++) {
 		START("test-case: %s: %s\n", param, values[i]);
