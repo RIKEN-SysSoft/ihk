@@ -1838,11 +1838,6 @@ int ihk_get_num_os_instances(int index)
 
 	dprintk("%s: enter\n", __func__);
 
-	ret = ihklib_device_readable(index);
-	if (ret) {
-		goto out;
-	}
-
 	dir = opendir(PATH_DEV);
 	if (dir == NULL) {
 		ret = -errno;
