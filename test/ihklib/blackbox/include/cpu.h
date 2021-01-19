@@ -18,6 +18,7 @@ int cpus_copy(struct cpus *dst, struct cpus *src);
 int _cpus_ls(struct cpus *cpus, char *online, int nlinux, int nmck);
 int cpus_ls(struct cpus *cpus);
 int cpus_ls_online(struct cpus *cpus, int nlinux, int nmck);
+int cpus_min_id(struct cpus *cpus);
 int cpus_max_id(struct cpus *cpus);
 int cpus_push(struct cpus *cpus, int id);
 int cpus_pop(struct cpus *cpus, int n);
