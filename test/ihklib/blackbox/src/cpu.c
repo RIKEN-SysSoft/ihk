@@ -127,6 +127,20 @@ int cpus_ls(struct cpus *cpus)
 	return _cpus_ls(cpus, "online", 0, 8);
 }
 
+int cpus_min_id(struct cpus *cpus)
+{
+	int i;
+	int min = INT_MAX;
+
+	for (i = 0; i < cpus->ncpus; i++) {
+		if (cpus->cpus[i] < min) {
+			min = cpus->cpus[i];
+		}
+	}
+
+	return min;
+}
+
 int cpus_max_id(struct cpus *cpus)
 {
 	int i;
@@ -283,7 +297,8 @@ int cpus_compare(struct cpus *result, struct cpus *expected)
 {
 	int i;
 
-	if (result == NULL && expected == NULL) {
+	if ((result == NULL && expected == NULL) ||
+	    (result->ncpus == 0 && expected == NULL)) {
 		return 0;
 	}
 
