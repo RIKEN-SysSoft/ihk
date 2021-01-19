@@ -3291,7 +3291,7 @@ static void sort_pagelists(struct zone *zone)
 #define USE_TRY_TO_FREE_PAGES_TIME_LIMIT 2
 
 #ifdef ENABLE_FUGAKU_HACKS
-static unsigned long reserve_mem_max_ratio = 90;
+static unsigned long reserve_mem_max_ratio = 95;
 #endif
 
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,

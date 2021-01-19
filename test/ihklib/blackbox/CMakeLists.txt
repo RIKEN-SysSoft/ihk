@@ -14,7 +14,6 @@ if(CPU_IMPLEMENTER STREQUAL "0x46" AND CPU_ARCH STREQUAL "8" AND
   add_definitions(-D__a64fx__)
 endif()
 
-
 # number of NUMA nodes
 execute_process(COMMAND bash -c "lscpu | awk '/NUMA node[(]s[)]:/ { print }' | cut -d: -f2 | sed 's/ //g'" OUTPUT_VARIABLE NR_NUMA OUTPUT_STRIP_TRAILING_WHITESPACE)
 message("NR_NUMA: ${NR_NUMA}")
@@ -28,6 +27,25 @@ add_definitions(-DFIRST_USER_NUMA=${FIRST_USER_NUMA})
 if (FIRST_USER_NUMA STREQUAL "4")
   execute_process(COMMAND sudo bash -c "echo 0-7 > /sys/fs/cgroup/cpuset/system.slice/cpuset.mems")
 endif()
+
+execute_process(COMMAND bash -c "rpm -qi FJSVpxkrm-plugin-mckernel | awk '$1 == \"Version\" && $2 == \":\" { print $3 }'"
+  OUTPUT_VARIABLE KRM_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+message("KRM_VERSION: ${KRM_VERSION}")
+
+if(NOT "${KRM_VERSION}" STREQUAL "")
+	option(WITH_KRM "krm is used" ON)
+else()
+	option(WITH_KRM "krm is used" OFF)
+endif()
+message("WITH_KRM: ${WITH_KRM}")
+if(WITH_KRM)
+	add_definitions(-DWITH_KRM)
+endif()
+
+execute_process(COMMAND bash -c "cat /sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems 2>/dev/null"
+  OUTPUT_VARIABLE JOBS_SLICE_CPUSET_MEMS OUTPUT_STRIP_TRAILING_WHITESPACE)
+message("JOBS_SLICE_CPUSET_MEMS: ${JOBS_SLICE_CPUSET_MEMS}")
+add_definitions(-DJOBS_SLICE_CPUSET_MEMS=${JOBS_SLICE_CPUSET_MEMS})
 
 cmake_policy(SET CMP0005 NEW)
 
@@ -130,7 +148,7 @@ foreach(target IN ITEMS
     )
 endforeach()
 
-foreach(target IN ITEMS
+set(TESTCASES
     ihk_reserve_cpu01
     ihk_reserve_cpu02
     ihk_reserve_cpu03
@@ -420,7 +438,15 @@ foreach(target IN ITEMS
     ihk_create_os_str17
     ihk_os_kargs07
     ihk_reserve_mem_conf07
-    )
+)
+
+if (WITH_KRM)
+	list(APPEND TESTCASES
+	  ihk_reserve_cpu08
+	)
+endif()
+
+foreach(target IN LISTS TESTCASES)
 
   # Add target
   add_executable(${target} src/${target}.c)

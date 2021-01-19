@@ -17,6 +17,9 @@
  */
 #define IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT 98
 
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
 struct ihk_ioctl_desc {
 	char *string;
 	int string_len;
