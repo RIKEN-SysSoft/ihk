@@ -16,4 +16,6 @@ patch_and_build delay_with_interrupt_disabled_mckernel || exit 1
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_destroy_os10 -u $(id -u) -g $(id -g)
 ret=$?
 
+rebuild
+
 exit $ret
