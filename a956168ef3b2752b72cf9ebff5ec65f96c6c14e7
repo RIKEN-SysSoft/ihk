@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "36604bfe_c0a240b2",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 897,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-19T01:36:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintf(\"%s: error: numa to which cpu %d is attached not found\\n\",",
+      "revId": "a956168ef3b2752b72cf9ebff5ec65f96c6c14e7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "cfbcbe8f_542501c6",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 911,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-19T01:36:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintf(\"%s: error: numa %d associated with cpu %d is outside %s\\n\",",
+      "revId": "a956168ef3b2752b72cf9ebff5ec65f96c6c14e7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
