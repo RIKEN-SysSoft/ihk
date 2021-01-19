@@ -745,6 +745,41 @@ out:
 	return str;
 }
 
+static int parse_cpuset_mems(int **nodeids, int *_nr_nodeids)
+{
+	int ret;
+	int nr_nodeids;
+
+	dprintf("%s: MEMS: %s",
+		__func__, QUOTE(JOBS_SLICE_CPUSET_MEMS));
+
+	nr_nodeids = cpu_str2count(QUOTE(JOBS_SLICE_CPUSET_MEMS));
+	if (nr_nodeids <= 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	dprintf("%s: nr_nodeids: %d\n", __func__, nr_nodeids);
+
+	*nodeids = calloc(sizeof(int), nr_nodeids);
+	if (!*nodeids) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = cpu_str2array(QUOTE(JOBS_SLICE_CPUSET_MEMS),
+			    nr_nodeids, *nodeids);
+	if (ret < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	*_nr_nodeids = nr_nodeids;
+	ret = 0;
+ out:
+	return ret;
+}
+
 static int ihklib_device_readable(int index)
 {
 	int ret;
@@ -793,6 +828,11 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	int ret;
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
+#ifdef WITH_KRM
+	int *nodeids = NULL;
+	int nr_nodeids;
+	int i;
+#endif
 
 	dprintk("%s: enter\n", __func__);
 
@@ -818,6 +858,64 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 		goto out;
 	}
 
+#ifdef WITH_KRM
+	/* included in cgroup? */
+	ret = parse_cpuset_mems(&nodeids, &nr_nodeids);
+	if (ret) {
+		dprintf("%s: error: paser_cpuset_mems failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_cpus; i++) {
+		int found = 0;
+		int j;
+
+		char path[4096];
+		DIR *dir = NULL;
+		struct dirent *direp;
+		int nodeid;
+
+		sprintf(path, "/sys/devices/system/cpu/cpu%d/", cpus[i]);
+		dir = opendir(path);
+		if (dir == NULL) {
+			ret = -errno;
+			dprintf("%s: error: opendir returned %d\n",
+				__func__, -ret);
+			goto out;
+		}
+
+		while ((direp = readdir(dir))) {
+			ret = sscanf(direp->d_name, "node%d", &nodeid);
+			if (ret == 1) {
+				break;
+			}
+		}
+		closedir(dir);
+
+		if (ret != 1) {
+			dprintf("%s: error: numa to which cpu %d is attached not found\n",
+				__func__, cpus[i]);
+			ret = -EINVAL;
+			goto out;
+		}
+
+		for (j = 0; j < nr_nodeids; j++) {
+			if (nodeid == nodeids[j]) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found) {
+			dprintf("%s: error: numa %d associated with cpu %d is outside %s\n",
+				__func__, nodeid, cpus[i],
+				QUOTE(JOBS_SLICE_CPUSET_MEMS));
+			ret = -EINVAL;
+			goto out;
+		}
+	}
+#endif
 	req.cpus = cpus;
 	req.num_cpus = num_cpus;
 
@@ -837,6 +935,9 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	}
 
  out:
+#ifdef WITH_KRM
+	free(nodeids);
+#endif
 	if (fd != -1) {
 		close(fd);
 	}
@@ -1075,6 +1176,10 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	unsigned long max = 0;
 	unsigned long variance_limit;
 	int release = 0;
+#ifdef WITH_KRM
+	int *nodeids = NULL;
+	int nr_nodeids;
+#endif
 
 	dprintk("%s: reserve_mem_conf.balanced_enable=%d\n",
 		__func__, reserve_mem_conf.balanced_enable);
@@ -1100,6 +1205,37 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		ret = 0;
 		goto out;
 	}
+
+#ifdef WITH_KRM
+	/* included in cgroup? */
+	ret = parse_cpuset_mems(&nodeids, &nr_nodeids);
+	if (ret) {
+		dprintf("%s: error: paser_cpuset_mems failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_mem_chunks; i++) {
+		int found = 0;
+		int j;
+
+		for (j = 0; j < nr_nodeids; j++) {
+			if (mem_chunks[i].numa_node_number == nodeids[j]) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found) {
+			dprintf("%s: error: numa %d is outside %s\n",
+				__func__,
+				mem_chunks[i].numa_node_number,
+				QUOTE(JOBS_SLICE_CPUSET_MEMS));
+			ret = -EINVAL;
+			goto out;
+		}
+	}
+#endif
 
 	req.sizes = calloc(num_mem_chunks, sizeof(size_t));
 	if (!req.sizes) {
@@ -1407,6 +1543,9 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 	ret = 0;
 out:
+#ifdef WITH_KRM
+	free(nodeids);
+#endif
 	if (release) {
 		struct ihk_mem_chunk mem_chunks[1] = {
 			{ .size = -1UL, .numa_node_number = 0 }
