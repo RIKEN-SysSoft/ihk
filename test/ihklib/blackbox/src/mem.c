@@ -157,6 +157,20 @@ int mems_ls(struct mems *mems)
 	return _mems_ls(mems, "MemFree", 0.9, 1UL << 30);
 }
 
+int mems_min_id(struct mems *mems)
+{
+	int i;
+	int min = INT_MAX;
+
+	for (i = 0; i < mems->num_mem_chunks; i++) {
+		if (mems->mem_chunks[i].numa_node_number < min) {
+			min = mems->mem_chunks[i].numa_node_number;
+		}
+	}
+
+	return min;
+}
+
 int mems_free(struct mems *mems)
 {
 	int ret;
