@@ -15,7 +15,7 @@ patch_and_build "" ihklib_debug_ihk || exit 1
 
 sudo dmesg --clear
 
-sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str17 || exit $?
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str17 || ng=$((ng + 1))
 
 dmesg | grep -qE "IHK_RESERVE_MEM_[A-Z_]*="
 ret=$?
@@ -24,9 +24,14 @@ if (( ret != 0 )); then
     printf "[  OK  ] "
 else
     printf "[  NG  ] "
+    ng=$((ng + 1))
 fi
 echo "ihk_reserve_mem_conf() isn't called because IHK_RESERVE_MEM_[A-Z_]*=<value> isn't shown in Linux kmsg"
 
-(( ret == 0 )) && exit 1
+rebuild
 
-exit 0
+if (( ng > 0 )); then
+    exit 1
+else
+    exit 0
+fi
