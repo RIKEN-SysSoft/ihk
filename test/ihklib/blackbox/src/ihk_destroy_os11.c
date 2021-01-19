@@ -35,9 +35,9 @@ int main(int argc, char **argv)
 
 	START("test-case: %s: %s\n", param, values[0]);
 
-	/* chance to conflict is 1% (10 usec / 1 msec),
+	/* chance to conflict is 50% (500 usec / 1 msec),
 	 * so probability of missing all chances is roughly
-	 * 2^ -(number_of_iterations / 72)
+	 * 2^ -(number_of_iterations)
 	 */
 	for (i = 0; i < 72 * 20; i++) {
 		ret = ihk_create_os(0);
