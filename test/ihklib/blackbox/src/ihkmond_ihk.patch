@@ -6,7 +6,7 @@ index a5ba85a..a2d2649 100644
  
  	osfd = ihklib_os_open(arg->os_index);
  
-+	usleep(10);
++	usleep(500);
 +
  	if (osfd < 0) {
  		if (osfd == -ENOENT) {
