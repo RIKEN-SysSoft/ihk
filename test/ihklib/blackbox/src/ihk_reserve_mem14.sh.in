@@ -11,6 +11,8 @@ fi
 
 . @CMAKE_INSTALL_PREFIX@/bin/util.sh
 
+memleak_pro
+
 init_oom_killer
 
 sudo timeout 300 @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem14 -u $(id -u) -g $(id -g)
@@ -23,5 +25,7 @@ elif [ "$ret" == "0" ]; then
 fi
 
 fini_oom_killer
+
+memleak_epi
 
 exit $ret

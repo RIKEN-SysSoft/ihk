@@ -11,6 +11,8 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 # patch to change interval unit to ms
 # and wait 10 usec
 patch_and_build "" ihkmond_ihk || exit 1
@@ -29,5 +31,7 @@ ret=$?
 pgrep -x ihkmond | xargs -r sudo kill -9
 
 rebuild
+
+memleak_epi
 
 exit $ret

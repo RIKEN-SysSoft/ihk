@@ -11,6 +11,8 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 patch_and_build "" kmsg_size_ihk || exit 1
 
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str14
@@ -30,7 +32,10 @@ fi
 echo "ihk_create_os_str14 included in kargs"
 
 sudo @WITH_MCK@/sbin/mcstop+release.sh
-rebuild
+
+revert
+
+memleak_epi
 
 if (( ng > 0 )); then
     exit 1

@@ -11,6 +11,8 @@ fi
 
 . @CMAKE_INSTALL_PREFIX@/bin/util.sh
 
+memleak_pro
+
 init_oom_killer
 detect_cpu_model
 if [[ "$cpu_model" == "a64fx" ]]; then
@@ -29,5 +31,7 @@ elif [ "$ret" == "0" ]; then
 fi
 
 fini_oom_killer
+
+memleak_epi
 
 exit $ret

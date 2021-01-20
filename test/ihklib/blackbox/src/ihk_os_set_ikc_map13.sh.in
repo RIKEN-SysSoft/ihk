@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
 # define WORKDIR
 SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
 AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
@@ -9,7 +11,11 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_set_ikc_map13 -u $(id -u) -g $(id -g)
 ret=$?
+
+memleak_epi
 
 exit $ret

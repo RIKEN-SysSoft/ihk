@@ -139,3 +139,25 @@ send \"quit\n\"
     awk -f @CMAKE_INSTALL_PREFIX@/bin/check_dump.awk ${WORKDIR}/log
     ret=$?
 }
+
+function memleak_pro() {
+    #awk -f @CMAKE_INSTALL_PREFIX@/bin/nr_free_pages.awk /proc/zoneinfo
+    free_before=($(awk -f @CMAKE_INSTALL_PREFIX@/bin/nr_free_pages.awk /proc/zoneinfo))
+}
+
+function memleak_epi() {
+    #awk -f @CMAKE_INSTALL_PREFIX@/bin/nr_free_pages.awk /proc/zoneinfo
+    free_after=($(awk -f @CMAKE_INSTALL_PREFIX@/bin/nr_free_pages.awk /proc/zoneinfo))
+
+    for i in "${!free_after[@]}"; do
+	perl -e '$a='"${free_after[$i]}"'; $b='"${free_before[$i]}"'; exit ($a < $b * 0.9)? 1 : 0'
+	ret=$?
+	if (( ret != 0 )); then
+	    printf "[  NG  ] "
+	    exit 1
+	else
+	    printf "[  OK  ] "
+	fi
+	echo "node: $i, nr_free_pages $((${free_before[$i]} / 1024 / 1024)) MiB --> $((${free_after[$i]} / 1024 / 1024)) MiB"
+    done
+}

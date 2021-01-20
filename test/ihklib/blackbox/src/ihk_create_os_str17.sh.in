@@ -11,6 +11,8 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 patch_and_build "" ihklib_debug_ihk || exit 1
 
 sudo dmesg --clear
@@ -29,6 +31,8 @@ fi
 echo "ihk_reserve_mem_conf() isn't called because IHK_RESERVE_MEM_[A-Z_]*=<value> isn't shown in Linux kmsg"
 
 rebuild
+
+memleak_epi
 
 if (( ng > 0 )); then
     exit 1

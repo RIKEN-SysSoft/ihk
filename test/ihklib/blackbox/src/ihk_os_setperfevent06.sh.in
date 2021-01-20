@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
 # define WORKDIR
 SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
 AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
@@ -8,6 +10,8 @@ if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
 else
     WORKDIR=$(pwd)
 fi
+
+memleak_pro
 
 # insmod as root
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_setperfevent06 -u $(id -u) -g $(id -g) -i || exit $?
@@ -18,5 +22,7 @@ sudo chmod 666 /dev/mcos0
 
 # rmmod as root
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_setperfevent06 -u $(id -u) -g $(id -g) -r || exit $?
+
+memleak_epi
 
 exit 0

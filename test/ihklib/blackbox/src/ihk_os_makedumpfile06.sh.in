@@ -11,6 +11,8 @@ fi
 
 . @CMAKE_INSTALL_PREFIX@/bin/util.sh
 
+memleak_pro
+
 for i in {0..1}; do
     sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile06 -u $(id -u) -g $(id -g) -i $i -f ${WORKDIR}/dump || exit $?
 
@@ -21,5 +23,7 @@ for i in {0..1}; do
     # clean up
     sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_makedumpfile06 -u $(id -u) -g $(id -g) -i $i -f ${WORKDIR}/dump -c || exit $?
 done;
+
+memleak_epi
 
 exit 0

@@ -11,11 +11,15 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 patch_and_build status_mckernel status_ihk || exit $?
 
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_get_eventfd08 -u $(id -u) -g $(id -g)
 ret=$?
 
 rebuild
+
+memleak_epi
 
 exit $ret

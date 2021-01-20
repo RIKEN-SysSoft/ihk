@@ -11,6 +11,8 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 sudo mkfifo -m 0666 ${WORKDIR}/fifo_in
 sudo mkfifo -m 0666 ${WORKDIR}/fifo_out
 
@@ -23,5 +25,7 @@ sudo rm -f ${WORKDIR}/fifo_in
 sudo rm -f ${WORKDIR}/fifo_out
 
 rebuild
+
+memleak_epi
 
 exit $ret
