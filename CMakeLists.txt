@@ -73,7 +73,7 @@ if(ENABLE_KRM_WORKAROUND)
 	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DENABLE_KRM_WORKAROUND")
 endif()
 
-if(NOT "${KRM_VERSION}")
+if(NOT "${KRM_VERSION}" STREQUAL "")
 	option(WITH_KRM "krm is used" ON)
 else()
 	option(WITH_KRM "krm is used" OFF)
