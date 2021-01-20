@@ -11,6 +11,8 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 patch_and_build "" ihklib_debug_ihk || exit 1
 
 sudo dmesg --clear
@@ -38,6 +40,8 @@ for i in \
 done
 
 rebuild
+
+memleak_epi
 
 if (( ng > 0 )); then
     exit 1

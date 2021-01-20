@@ -11,6 +11,8 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 patch_and_build status_mckernel status_ihk || exit $?
 
 sudo mkfifo -m 0666 ${WORKDIR}/fifo_count
@@ -21,5 +23,7 @@ ret=$?
 sudo rm -f ${WORKDIR}/fifo_count
 
 rebuild
+
+memleak_epi
 
 exit $ret

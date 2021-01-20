@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
 # define WORKDIR
 SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
 AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
@@ -8,6 +10,8 @@ if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
 else
     WORKDIR=$(pwd)
 fi
+
+memleak_pro
 
 sudo rm -f ${WORKDIR}/dump
 sudo chattr -i ${WORKDIR}/inaccessible
@@ -43,5 +47,7 @@ done
 
 sudo chattr -i ${WORKDIR}/inaccessible
 sudo rm -rf ${WORKDIR}/inaccessible
+
+memleak_epi
 
 exit $ret

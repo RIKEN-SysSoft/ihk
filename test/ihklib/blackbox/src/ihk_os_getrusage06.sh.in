@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
 # define WORKDIR
 SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
 AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
@@ -9,6 +11,8 @@ else
     WORKDIR=$(pwd)
 fi
 
+memleak_pro
+
 sudo mkfifo -m 0666 ${WORKDIR}/fifo_in
 sudo mkfifo -m 0666 ${WORKDIR}/fifo_out
 
@@ -17,5 +21,7 @@ ret=$?
 
 sudo rm -f ${WORKDIR}/fifo_in
 sudo rm -f ${WORKDIR}/fifo_out
+
+memleak_epi
 
 exit $ret

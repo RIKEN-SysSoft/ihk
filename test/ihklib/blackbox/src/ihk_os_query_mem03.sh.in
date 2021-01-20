@@ -11,11 +11,15 @@ fi
 
 . @CMAKE_INSTALL_PREFIX@/bin/util.sh
 
+memleak_pro
+
 init_oom_killer
 
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_query_mem03 -u $(id -u) -g $(id -g)
 ret=$?
 
 fini_oom_killer
+
+memleak_epi
 
 exit $ret

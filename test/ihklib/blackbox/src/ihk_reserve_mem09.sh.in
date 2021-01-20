@@ -11,6 +11,8 @@ fi
 
 . @CMAKE_INSTALL_PREFIX@/bin/util.sh
 
+memleak_pro
+
 detect_cpu_model
 if [[ "$cpu_model" == "a64fx" ]]; then
     opt=
@@ -26,5 +28,7 @@ if [ "$ret" == "124" ]; then
 elif [ "$ret" == "0" ]; then
     echo "[  OK  ] reservation time"
 fi
+
+memleak_epi
 
 exit $ret

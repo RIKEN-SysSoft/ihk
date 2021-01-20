@@ -485,6 +485,7 @@ endforeach()
 foreach(target IN ITEMS
     zoneinfo.awk
     check_dump.awk
+    nr_free_pages.awk
     )
   install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/src/${target} DESTINATION bin)
 endforeach()
