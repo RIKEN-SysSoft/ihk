@@ -9,13 +9,7 @@ else
     WORKDIR=$(pwd)
 fi
 
-sudo timeout 300 @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem16
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem16
 ret=$?
-
-if [ "$ret" == "124" ]; then
-    echo "[  NG  ] reservation time"
-elif [ "$ret" == "0" ]; then
-    echo "[  OK  ] reservation time"
-fi
 
 exit $ret

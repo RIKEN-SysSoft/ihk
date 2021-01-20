@@ -84,12 +84,6 @@ if(WITH_KRM)
 	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DWITH_KRM")
 endif()
 
-execute_process(COMMAND bash -c "cat /sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems 2>/dev/null"
-  OUTPUT_VARIABLE JOBS_SLICE_CPUSET_MEMS OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-add_definitions(-DJOBS_SLICE_CPUSET_MEMS=${JOBS_SLICE_CPUSET_MEMS})
-set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DJOBS_SLICE_CPUSET_MEMS=${JOBS_SLICE_CPUSET_MEMS}")
-
 # SIGSTOP instead of SIGSEGV, additional IHK Linux kmsg
 option(ENABLE_FUGAKU_DEBUG "Fugaku debug instrumentation" OFF)
 
@@ -175,4 +169,3 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
 endif()
 
 message("WITH_KRM: ${WITH_KRM}")
-message("JOBS_SLICE_CPUSET_MEMS: ${JOBS_SLICE_CPUSET_MEMS}")
