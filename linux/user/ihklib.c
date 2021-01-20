@@ -745,15 +745,68 @@ out:
 	return str;
 }
 
+static int get_slice_cpuset_mems(char **_slice_cpuset_mems)
+{
+	int ret;
+	char *slice_cpuset_mems = NULL;
+	FILE *fp = NULL;
+	char cmd[4096];
+	size_t n;
+	ssize_t nread;
+
+	sprintf(cmd,
+		"cat /sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems "
+		"2>/dev/null | tr -d '\n'");
+
+	fp = popen(cmd, "r");
+
+	if (fp == NULL) {
+		ret = -errno;
+		dprintf("%s: popen failed with %d\n",
+		       __func__, -ret);
+		goto out;
+	}
+
+	nread = getline(&slice_cpuset_mems, &n, fp);
+	if (nread <= 0) {
+		ret = -EINVAL;
+		dprintf("%s: getline read zero byte (%ld bytes) "
+			"or failed with %d\n",
+			__func__, nread, errno);
+		goto out;
+	}
+
+	dprintf("%s: read %ld bytes\n",
+		__func__, nread);
+
+	dprintf("%s: slice_cpuset_mems: %s\n",
+		__func__, slice_cpuset_mems);
+
+	*_slice_cpuset_mems = slice_cpuset_mems;
+	ret = 0;
+ out:
+
+	if (fp) {
+		pclose(fp);
+	}
+
+	return ret;
+}
+
 static int parse_cpuset_mems(int **nodeids, int *_nr_nodeids)
 {
 	int ret;
 	int nr_nodeids;
+	char *slice_cpuset_mems = NULL;
 
-	dprintf("%s: MEMS: %s",
-		__func__, QUOTE(JOBS_SLICE_CPUSET_MEMS));
+	ret = get_slice_cpuset_mems(&slice_cpuset_mems);
+	if (ret) {
+		dprintf("%s: get_slice_cpuset_mems failed with %d\n",
+		       __func__, ret);
+		goto out;
+	}
 
-	nr_nodeids = cpu_str2count(QUOTE(JOBS_SLICE_CPUSET_MEMS));
+	nr_nodeids = cpu_str2count(slice_cpuset_mems);
 	if (nr_nodeids <= 0) {
 		ret = -EINVAL;
 		goto out;
@@ -767,9 +820,11 @@ static int parse_cpuset_mems(int **nodeids, int *_nr_nodeids)
 		goto out;
 	}
 
-	ret = cpu_str2array(QUOTE(JOBS_SLICE_CPUSET_MEMS),
+	ret = cpu_str2array(slice_cpuset_mems,
 			    nr_nodeids, *nodeids);
 	if (ret < 0) {
+		dprintf("%s: get_slice_cpuset_mems failed with %d\n",
+		       __func__, ret);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -777,6 +832,7 @@ static int parse_cpuset_mems(int **nodeids, int *_nr_nodeids)
 	*_nr_nodeids = nr_nodeids;
 	ret = 0;
  out:
+	free(slice_cpuset_mems);
 	return ret;
 }
 
@@ -862,7 +918,7 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	/* included in cgroup? */
 	ret = parse_cpuset_mems(&nodeids, &nr_nodeids);
 	if (ret) {
-		dprintf("%s: error: paser_cpuset_mems failed with %d\n",
+		dprintf("%s: error: parse_cpuset_mems failed with %d\n",
 			__func__, ret);
 		goto out;
 	}
@@ -908,9 +964,13 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 		}
 
 		if (!found) {
+			char *slice_cpuset_mems = NULL;
+
+			(void)get_slice_cpuset_mems(&slice_cpuset_mems);
 			dprintf("%s: error: numa %d associated with cpu %d is outside %s\n",
 				__func__, nodeid, cpus[i],
-				QUOTE(JOBS_SLICE_CPUSET_MEMS));
+				slice_cpuset_mems);
+			free(slice_cpuset_mems);
 			ret = -EINVAL;
 			goto out;
 		}
@@ -1210,7 +1270,7 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	/* included in cgroup? */
 	ret = parse_cpuset_mems(&nodeids, &nr_nodeids);
 	if (ret) {
-		dprintf("%s: error: paser_cpuset_mems failed with %d\n",
+		dprintf("%s: error: parse_cpuset_mems failed with %d\n",
 			__func__, ret);
 		goto out;
 	}
@@ -1227,10 +1287,14 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		}
 
 		if (!found) {
+			char *slice_cpuset_mems = NULL;
+
+			(void)get_slice_cpuset_mems(&slice_cpuset_mems);
 			dprintf("%s: error: numa %d is outside %s\n",
 				__func__,
 				mem_chunks[i].numa_node_number,
-				QUOTE(JOBS_SLICE_CPUSET_MEMS));
+				slice_cpuset_mems);
+			free(slice_cpuset_mems);
 			ret = -EINVAL;
 			goto out;
 		}

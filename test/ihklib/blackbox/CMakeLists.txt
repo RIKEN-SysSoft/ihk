@@ -44,11 +44,6 @@ if(WITH_KRM)
 	add_definitions(-DWITH_KRM)
 endif()
 
-execute_process(COMMAND bash -c "cat /sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems 2>/dev/null"
-  OUTPUT_VARIABLE JOBS_SLICE_CPUSET_MEMS OUTPUT_STRIP_TRAILING_WHITESPACE)
-message("JOBS_SLICE_CPUSET_MEMS: ${JOBS_SLICE_CPUSET_MEMS}")
-add_definitions(-DJOBS_SLICE_CPUSET_MEMS=${JOBS_SLICE_CPUSET_MEMS})
-
 # Options: -DWITH_MCK=<McKernel install directory>
 add_definitions(-DWITH_MCK=${WITH_MCK})
 
