@@ -30,7 +30,7 @@ ret=$?
 
 pgrep -x ihkmond | xargs -r sudo kill -9
 
-rebuild
+revert
 
 memleak_epi
 
