@@ -18,7 +18,7 @@ patch_and_build status_mckernel status_ihk || exit $?
 sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_os_shutdown08 -u $(id -u) -g $(id -g)
 ret=$?
 
-rebuild
+revert
 
 memleak_epi
 

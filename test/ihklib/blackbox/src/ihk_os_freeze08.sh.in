@@ -22,7 +22,7 @@ ret=$?
 
 sudo rm -f ${WORKDIR}/fifo_count
 
-rebuild
+revert
 
 memleak_epi
 

@@ -30,7 +30,7 @@ else
 fi
 echo "ihk_reserve_mem_conf() isn't called because IHK_RESERVE_MEM_[A-Z_]*=<value> isn't shown in Linux kmsg"
 
-rebuild
+revert
 
 memleak_epi
 

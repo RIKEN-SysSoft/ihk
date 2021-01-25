@@ -27,6 +27,8 @@ function patch_and_build()
 	popd
     fi
 
+    mv @WITH_MCK@{,.save}
+
     BUILDDIR=$WORKDIR/build/$(uname -r)
 
     if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
@@ -53,6 +55,11 @@ function patch_and_build()
     fi
 
     return 0
+}
+
+function revert()
+{
+        mv @WITH_MCK@{.save,}
 }
 
 function rebuild()
@@ -150,14 +157,15 @@ function memleak_epi() {
     free_after=($(awk -f @CMAKE_INSTALL_PREFIX@/bin/nr_free_pages.awk /proc/zoneinfo))
 
     for i in "${!free_after[@]}"; do
-	perl -e '$a='"${free_after[$i]}"'; $b='"${free_before[$i]}"'; exit ($a < $b * 0.9)? 1 : 0'
-	ret=$?
-	if (( ret != 0 )); then
+	p=$(perl -e '$a='"${free_after[$i]}"'; $b='"${free_before[$i]}"'; $d = $a - $b; $p = ($d / $b) * 100; printf("%d", $p);')
+
+	if (( p < -7 )) || (( p > 10 )); then
 	    printf "[  NG  ] "
-	    exit 1
+	    ng=$((ng + 1))
 	else
 	    printf "[  OK  ] "
 	fi
-	echo "node: $i, nr_free_pages $((${free_before[$i]} / 1024 / 1024)) MiB --> $((${free_after[$i]} / 1024 / 1024)) MiB"
+	echo "node: $i, nr_free_pages: $((${free_before[$i]} / 1024 / 1024)) MiB --> $((${free_after[$i]} / 1024 / 1024)) MiB, increase: ${p} %"
+	(( ng > 0 )) && exit 1
     done
 }
