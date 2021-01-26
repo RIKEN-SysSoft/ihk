@@ -3118,68 +3118,23 @@ static int __smp_ihk_free_mem_from_list(struct list_head *list)
 	return 0;
 }
 
+static void __ihk_smp_release_chunk(struct chunk *mem_chunk);
 static int __smp_ihk_free_mem_from_rbtree(struct rb_root *root)
 {
 	struct rb_node *node;
 	struct chunk *mem_chunk;
-	unsigned long size_left;
-	unsigned long va;
-	unsigned long pa;
-#ifdef IHK_DEBUG
-	unsigned long size;
-#endif
 
 	/* Drop all memory */
 	node = rb_first(root);
 	while (node) {
 		mem_chunk = container_of(node, struct chunk, node);
-		pa = mem_chunk->addr;
-#ifdef IHK_DEBUG
-		size = mem_chunk->size;
-#endif
+
+		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n",
+			mem_chunk->addr, mem_chunk->addr + mem_chunk->size);
 
 		rb_erase(node, root);
+		__ihk_smp_release_chunk(mem_chunk);
 
-		va = (unsigned long)phys_to_virt(pa);
-		size_left = mem_chunk->size;
-		while (size_left > 0) {
-			int order;
-			size_t order_size;
-			struct page *page = virt_to_page(va);
-
-			if (!PageCompound(page)) {
-				free_page(va);
-				size_left -= PAGE_SIZE;
-				va += PAGE_SIZE;
-				continue;
-			}
-
-			if (!PageHead(page)) {
-				printk(KERN_DEBUG "%s: WARNING: page is compound but not head, skipping..\n",
-					__FUNCTION__);
-				size_left -= PAGE_SIZE;
-				va += PAGE_SIZE;
-				continue;
-			}
-
-			order = compound_order(page);
-			order_size = (PAGE_SIZE << order);
-
-			free_pages(va, order);
-			pr_debug("0x%lx, page order: %d freed\n", va, order);
-			/* A compound page may stretch over the size of this chunk */
-			if (order_size <= size_left) {
-				size_left -= order_size;
-				va += order_size;
-			}
-			else {
-				dprintk("%s: order_size - size_left: %lu\n",
-					__FUNCTION__, order_size - size_left);
-				size_left = 0;
-			}
-		}
-
-		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
 		node = rb_first(root);
 	}
 
@@ -3508,9 +3463,9 @@ retry:
 			pg = __alloc_pages_nodemask(
 					__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE |
 #ifndef ENABLE_FUGAKU_HACKS
-						__GFP_NOFAIL | __GFP_NOWARN,
+					__GFP_COMP | __GFP_NOFAIL | __GFP_NOWARN,
 #else
-						__GFP_NORETRY | __GFP_NOWARN,
+					__GFP_COMP | __GFP_NORETRY | __GFP_NOWARN,
 #endif
 					order,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
