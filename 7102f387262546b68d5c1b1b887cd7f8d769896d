@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "98739844_0d6dbbf0",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3466,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-26T00:56:56Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t__GFP_COMP | __GFP_NOFAIL | __GFP_NOWARN,",
+      "revId": "7102f387262546b68d5c1b1b887cd7f8d769896d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c593b74c_3a42234e",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 3468,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-26T00:56:56Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t__GFP_COMP | __GFP_NORETRY | __GFP_NOWARN,",
+      "revId": "7102f387262546b68d5c1b1b887cd7f8d769896d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
