@@ -13,7 +13,7 @@
 
 const char param[] = "parameter string";
 const char *values[] = {
-	"IHK_MEM=ALL@0,ALL@1 with IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL of 95",
+	"IHK_MEM=ALL@0,ALL@1 with IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL of 90",
 };
 const int num_env[] = {
 	4,
