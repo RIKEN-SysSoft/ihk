@@ -3508,9 +3508,9 @@ retry:
 			pg = __alloc_pages_nodemask(
 					__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE |
 #ifndef ENABLE_FUGAKU_HACKS
-						__GFP_NOFAIL | __GFP_NOWARN,
+					__GFP_COMP | __GFP_NOFAIL | __GFP_NOWARN,
 #else
-						__GFP_NORETRY | __GFP_NOWARN,
+					__GFP_COMP | __GFP_NORETRY | __GFP_NOWARN,
 #endif
 					order,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
