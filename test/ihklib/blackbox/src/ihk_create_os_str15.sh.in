@@ -16,7 +16,7 @@ memleak_pro
 for i in {0..1}; do
     sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str15 -i $i || exit $?
 
-    sudo @WITH_MCK@/sbin/ihkosctl 0 kmsg | awk '/KCommand Line/ && /hidos/ && /allow_oversubscribe/ && /ihk_create_os_str15/ { print; found = 1 } END { exit found ? 0 : 1 }'
+    sudo @WITH_MCK@/sbin/ihkosctl 0 kmsg | awk '/KCommand Line/ && /hidos/ && /allow_oversubscribe/ && /ihk_create_os_str15/ { printf("[ INFO ] kmsg: ", $0); found = 1 } END { exit found ? 0 : 1 }'
     ret=$?
 
     if (( ret == 0 )); then
@@ -27,7 +27,8 @@ for i in {0..1}; do
 
     echo "ihk_create_os_str15 included in kargs"
 
-    sudo @WITH_MCK@/sbin/mcstop+release.sh
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_create_os_str15 -c || exit $?
+
     (( ret != 0 )) && exit $ret
 done
 

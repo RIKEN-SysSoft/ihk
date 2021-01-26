@@ -18,7 +18,7 @@ const char *values[] = {
 };
 
 const char *env_str[] = {
-	"IHK_CPUS=12-35\0"
+	"IHK_CPUS=12-13\0"
 #if NR_NUMA == 1
 	"IHK_MEM=1G@0\0"
 #elif FIRST_USER_NUMA == 4
@@ -26,9 +26,8 @@ const char *env_str[] = {
 #else
 	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"IHK_IKC_MAP=12-23:0+24-35:1\0"
 	"IHK_KARGS=hidos allow_oversubscribe ihk_create_os_str15\0",
-	"IHK_CPUS=12-35\0"
+	"IHK_CPUS=12-13\0"
 #if NR_NUMA == 1
 	"IHK_MEM=1G@0\0"
 #elif FIRST_USER_NUMA == 4
@@ -36,9 +35,9 @@ const char *env_str[] = {
 #else
 	"IHK_MEM=1G@0,512M@1\0"
 #endif
-	"IHK_IKC_MAP=12-23:0+24-35:1\0"
 	"IHK_KARGS=hidos allow_oversubscribe ihk_create_os_str15\0",
 };
+
 const char kernel_image[] = QUOTE(WITH_MCK) "/" QUOTE(BUILD_TARGET)
 	"/kernel/mckernel.img";
 const char default_kargs[] = "hidos allow_oversubscribe time_sharing";
@@ -62,10 +61,14 @@ int main(int argc, char **argv)
 	int opt;
 
 	opterr = 0;
-	while ((opt = getopt(argc, argv, "i:")) != -1) {
+	while ((opt = getopt(argc, argv, "i:c")) != -1) {
 		switch (opt) {
 		case 'i':
 			subindex = atoi(optarg);
+			break;
+		case 'c': /* clean up */
+			ret = 0;
+			goto out;
 			break;
 		default:
 			INTERR(1, "unknown option %c\n", opt);
@@ -79,14 +82,14 @@ int main(int argc, char **argv)
 	/* cpus took before calling ihk_create_os_str */
 	struct cpus cpus_taken;
 
-	ret = cpus_init(&cpus_taken, 12);
+	ret = cpus_init(&cpus_taken, 2);
 	INTERR(ret, "cpus_init returned %d\n", ret);
 
-	for (j = 0; j < 12; j++) {
+	for (j = 0; j < 2; j++) {
 		cpus_taken.cpus[j] = j + 12;
 	}
 
-	/* memory took before calling ihk_create_os_str */
+	/* memory taken before calling ihk_create_os_str */
 	struct mems mems_taken;
 
 	ret = _mems_ls(&mems_taken, "MemFree", 0.9, -1);
@@ -98,40 +101,27 @@ int main(int argc, char **argv)
 		INTERR(ret, "mems_ls returned %d\n", ret);
 	}
 
-	/* expected reservation */
+	mems_dump(&mems_taken);
 
+	/* expected assignment */
 	struct cpus cpus;
 
-	ret = cpus_init(&cpus, 24);
+	ret = cpus_init(&cpus, 2);
 	INTERR(ret, "cpus_init returned %d\n", ret);
 
-	for (j = 0; j < 24; j++) {
+	for (j = 0; j < 2; j++) {
 		cpus.cpus[j] = j + 12;
 	}
 
-	struct ikc_cpu_map map_expected;
-
-	ret = ikc_cpu_map_init(&map_expected, 24);
-	INTERR(ret, "ikc_cpu_map_init returned %d\n", ret);
-
-	for (j = 0; j < 12; j++) {
-		map_expected.map[j].src_cpu = j + 12;
-		map_expected.map[j].dst_cpu = 0;
-	}
-	for (; j < 24; j++) {
-		map_expected.map[j].src_cpu = j + 12;
-		map_expected.map[j].dst_cpu = 1;
-	}
-
 	struct mems mems;
-	struct mems mems_margin;
+	struct mems mems_margin = { 0 };
 
 #if NR_NUMA == 1
 	ret = mems_init(&mems, 1);
 	INTERR(ret, "mems_init returned %d\n", ret);
 
 	mems.mem_chunks[0].size = 1UL << 30;
-	mems.mem_chunks[j].numa_node_number = 0;
+	mems.mem_chunks[0].numa_node_number = 0;
 #else
 	ret = mems_init(&mems, 2);
 	INTERR(ret, "mems_init returned %d\n", ret);
@@ -170,11 +160,12 @@ int main(int argc, char **argv)
 				      mems_taken.num_mem_chunks);
 		INTERR(ret, "ihk_reserve_mem failed with %d\n",
 		       ret);
+
 	}
 
 	memset(err_msg, 0, IHKLIB_MAX_SIZE_ERR_MSG);
 	ret = ihk_create_os_str(0, &os_index,
-				env_str[subindex], 4,
+				env_str[subindex], 3,
 				kernel_image,
 				default_kargs,
 				err_msg);
@@ -203,15 +194,16 @@ int main(int argc, char **argv)
 		char kmsg[IHK_KMSG_SIZE] = { 0 };
 		char *token;
 
-		ret = cpus_check_assigned(&cpus);
-		OKNG(ret == 0, "cpu: assigned as expected\n");
+		if (subindex == 0) {
+			ret = cpus_check_assigned(&cpus);
+			OKNG(ret == 0, "cpu: assigned as expected\n");
+		}
 
-		ret = mems_check_assigned(&mems,
-					  &mems_margin);
-		OKNG(ret == 0, "mem: assigned as expected\n");
-
-		ret = ikc_cpu_map_check(&map_expected);
-		OKNG(ret == 0, "ikc_map: map set as expected\n");
+		if (subindex == 1) {
+			ret = mems_check_assigned(&mems,
+						  &mems_margin);
+			OKNG(ret == 0, "mem: assigned as expected\n");
+		}
 
 		ret = ihk_os_boot(0);
 		INTERR(ret, "ihk_os_boot returned %d\n", ret);
@@ -239,6 +231,5 @@ int main(int argc, char **argv)
 	cpus_release();
 	mems_release();
 	linux_rmmod(1);
-
 	return ret;
 }
