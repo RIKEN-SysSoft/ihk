@@ -3286,9 +3286,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id,
 #ifdef CONFIG_MOVABLE_NODE
 	bool *__movable_node_enabled = NULL;
 #endif
-#ifdef ENABLE_FUGAKU_HACKS
 	int atomic_pages_freed_per_order = 0;
-#endif
 
 	if (order_limit < 0 || order_limit > MAX_ORDER) {
 		pr_err("IHK-SMP: error: invalid order_limit (%d)\n",
@@ -3472,11 +3470,7 @@ retry:
 #endif
 					&nodemask);
 			if (pg) {
-#ifndef ENABLE_FUGAKU_HACKS
-				pr_err("%s: got __GFP_ATOMIC page with order %d\n", __func__, order);
-#else
 				atomic_pages_freed_per_order += 1;
-#endif
 			}
 		}
 #endif
@@ -3547,13 +3541,11 @@ retry:
 			 * pages, decrease order and try to grab smaller pieces.
 			 */
 			if (order > order_limit) {
-#ifdef ENABLE_FUGAKU_HACKS
 				if (atomic_pages_freed_per_order) {
 					pr_err("%s: got %d __GFP_ATOMIC page(s) with order %d\n",
 							__func__, atomic_pages_freed_per_order, order);
 					atomic_pages_freed_per_order = 0;
 				}
-#endif
 				--order;
 				failed_free_attempts = 0;
 #ifndef ENABLE_FUGAKU_HACKS
