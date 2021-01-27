@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "051e43e5_aeaf8d55",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str15.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 72,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-27T02:43:27Z",
+      "side": 1,
+      "message": "WARNING: break is not useful after a goto or return\n+\t\t\tgoto out;\n+\t\t\tbreak;",
+      "revId": "394800202243777a8bdd7bd268a616905155466f",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
