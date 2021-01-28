@@ -2843,19 +2843,29 @@ int ihk_os_kargs(int index, char* kargs)
 	char *token;
 	int found;
 
-	dprintk("%s: kargs: %s\n", __func__, kargs);
-	if (kargs == NULL) {
-		dprintf("%s: warning: kargs is NULL\n",
-			__func__);
-		ret = -EFAULT;
-		goto out;
-	}
-
 	if ((fd = ihklib_os_open(index)) < 0) {
 		dprintf("%s: error: ihklib_os_open\n",
 			__func__);
 		ret = fd;
 		goto out;
+	}
+
+	if (kargs == NULL) {
+		dprintf("%s: error: kargs is NULL\n",
+			__func__);
+		ret = -EFAULT;
+		goto out;
+	}
+
+	token = kargs;
+	while (*token != '\0') {
+		token++;
+		if (token - kargs >= IHKLIB_MAX_SIZE_KARGS) {
+			dprintf("%s: error: missing NULL character\n",
+				__func__);
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 
 	dnprintk(kargs, "%s: kargs: %s\n", __func__, _kargs);
