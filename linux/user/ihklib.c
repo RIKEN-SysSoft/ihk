@@ -39,23 +39,35 @@ char **__argv;
 int loglevel = IHKLIB_LOGLEVEL_ERR;
 
 #define printk(fmt, args...) do {					\
-	char contents[4096 - 256];					\
+	char contents[IHKLIB_LINUX_KMSG_SIZE];				\
 	int _fd;							\
 	ssize_t len;							\
 	ssize_t offset = 0;						\
+	ssize_t written;						\
+									\
 	if (geteuid()) {						\
 		break;							\
 	}								\
-	snprintf(contents, 4096 - 256, fmt, ##args);			\
+	snprintf(contents, IHKLIB_LINUX_KMSG_SIZE, fmt, ##args);	\
 	_fd = open("/dev/kmsg", O_WRONLY);				\
-	len = strlen(contents) + 1;					\
+	len = strnlen(contents, IHKLIB_LINUX_KMSG_SIZE - 1) + 1;	\
 	while (offset < len) {						\
-		offset += write(_fd, contents + offset, len - offset);	\
+		written = write(_fd, contents + offset, len - offset);	\
+		if (written <= 0) {					\
+			break;						\
+		}							\
+		offset += written;					\
 	}								\
 	close(_fd);							\
 } while (0)
 
 #ifdef DEBUG
+#define dnprintk(str, fmt, args...) do {		 \
+	char *_##str = strndup(str, 256);		 \
+							 \
+	printk(fmt, ##args);				 \
+	free(_##str);					 \
+} while (0)
 #define dprintf(fmt, args...) do {	\
 	printk(fmt, ##args);		\
 } while (0)
@@ -63,6 +75,7 @@ int loglevel = IHKLIB_LOGLEVEL_ERR;
 	printk(fmt, ##args);		\
 } while (0)
 #else
+#define dnprintk(fmt, args...) do {  } while (0)
 #define dprintf(fmt, args...) do {  } while (0)
 #define dprintk(fmt, args...) do {  } while (0)
 #endif
@@ -845,8 +858,8 @@ static int ihklib_device_readable(int index)
 	ret = access(fn, R_OK);
 	if (ret) {
 		ret = -errno;
-		dprintf("%s: error: access: path: %s, errno: %d\n",
-			__func__, fn, -ret);
+		dnprintk(fn, "%s: error: access: path: %s, errno: %d\n",
+			 __func__, _fn, -ret);
 		goto out;
 	}
 
@@ -870,8 +883,8 @@ int ihklib_device_open(int index)
 	sprintf(fn, "/dev/mcd%d", index);
 	if ((ret = open(fn, O_RDONLY)) == -1) {
 		ret = -errno;
-		dprintf("%s: error: open %s: %s\n",
-			__func__, fn, strerror(-ret));
+		dnprintk(fn, "%s: error: open %s: %s\n",
+			 __func__, _fn, strerror(-ret));
 		goto out;
 	}
 
@@ -2029,8 +2042,8 @@ static int ihklib_os_readable(int index)
 	ret = access(fn, R_OK);
 	if (ret) {
 		ret = -errno;
-		dprintf("%s: error: access: path: %s, errno: %d\n",
-			__func__, fn, -ret);
+		dnprintk(fn, "%s: error: access: path: %s, errno: %d\n",
+			 __func__, _fn, -ret);
 		goto out;
 	}
 
@@ -2054,8 +2067,8 @@ int ihklib_os_open(int index)
 
 	if ((ret = open(fn, O_RDONLY)) == -1) {
 		ret = -errno;
-		dprintf("%s: error: open %s: %s\n",
-			__func__, fn, strerror(-ret));
+		dnprintk(fn, "%s: error: open %s: %s\n",
+			 __func__, _fn, strerror(-ret));
 		goto out;
 	}
 
@@ -2845,6 +2858,8 @@ int ihk_os_kargs(int index, char* kargs)
 		goto out;
 	}
 
+	dnprintk(kargs, "%s: kargs: %s\n", __func__, _kargs);
+
 	/* check mandatory parameters */
 	_kargs = strdup(kargs);
 	if (_kargs == NULL) {
@@ -3204,7 +3219,12 @@ int ihklib_os_query_mem_sysfs(int index, char *result, ssize_t sz_result,
 		size_t line_len;
 
 		fp = fopen(path, "r");
-		CHKANDJUMP(!fp, -1, "error: opening %s\n", path);
+		if (fp == NULL) {
+			ret = -EINVAL;
+			dnprintk(path, "%s: error: opening %s\n",
+				 __func__, _path);
+			goto out;
+		}
 
 		while (getline(&line, &line_len, fp) != -1) {
 			int scan_node;
