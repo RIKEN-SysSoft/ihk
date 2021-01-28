@@ -1651,8 +1651,8 @@ int ihk_get_num_reserved_mem_chunks(int index)
 
 	dprintk("%s: enter\n", __func__);
 	if ((fd = ihklib_device_open(index)) < 0) {
-		eprintf("%s: error: ihklib_device_open\n",
-			__func__);
+		eprintf("%s: ihklib_device_open failed with %d\n",
+			__func__, fd);
 		ret = fd;
 		goto out;
 	}
