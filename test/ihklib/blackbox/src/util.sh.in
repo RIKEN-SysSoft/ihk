@@ -165,7 +165,7 @@ function memleak_epi() {
 	else
 	    printf "[  OK  ] "
 	fi
-	echo "node: $i, nr_free_pages: $((${free_before[$i]} / 1024 / 1024)) MiB --> $((${free_after[$i]} / 1024 / 1024)) MiB, increase: ${p} MiB"
+	echo "$i-th job node, nr_free_pages: $((${free_before[$i]} / 1024 / 1024)) MiB --> $((${free_after[$i]} / 1024 / 1024)) MiB, increase: ${p} MiB"
 	(( ng > 0 )) && exit 1
     done
 }
