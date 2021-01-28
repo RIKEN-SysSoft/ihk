@@ -19,7 +19,12 @@ BEGIN {
 }
 
 END {
-    for (i = 0; i <= max_id; i++) {
+    if (max_id > 4) {
+	min_id = max_id - 3;
+    } else {
+	min_id = 0;
+    }
+    for (i = min_id; i <= max_id; i++) {
 	printf("%d ", sizes[i]);
     }
 }
