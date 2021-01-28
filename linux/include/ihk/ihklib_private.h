@@ -11,6 +11,7 @@
 #define IHKLIB_MAX_SIZE_ENV (1UL << 20)
 #define IHKLIB_MAX_NUM_ENV (1UL << 10)
 #define IHKLIB_MAX_SIZE_ERR_MSG (1UL << 12)
+#define IHKLIB_MAX_SIZE_KARGS (1UL << 20)
 #define IHKLIB_LINUX_KMSG_SIZE (4096 - 256)
 
 /* taking more than this percentage of memory would
