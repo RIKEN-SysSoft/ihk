@@ -564,10 +564,16 @@ int main(int argc, char** argv) {
 	dprintf("enable_kmsg=%d,mon_interval=%d\n", enable_kmsg, mon_interval);
 
 #ifdef DEBUG
-	daemon(1, 1);
+	ret = daemon(1, 1);
 #else
-	daemon(1, 0);
+	ret = daemon(1, 0);
 #endif
+	if (ret) {
+		ret = -errno;
+		dprintf("%s:%d: daemon failed with %d\n",
+			__FILE__, __LINE__, -ret);
+		goto out_early;
+	}
 
 	ret_lib = pthread_attr_init(&attr);
 	CHKANDJUMP(ret_lib != 0, 255, "pthread_attr_init returned %s\n", strerror(ret_lib));
@@ -723,6 +729,7 @@ int main(int argc, char** argv) {
 			}
 		}
 	}
+ out_early:
 	if (evfd_mcos != -1) {
 		close(evfd_mcos);
 	}
