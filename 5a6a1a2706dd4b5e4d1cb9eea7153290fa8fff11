@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4c50fbcf_5cffb252",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-01-29T01:54:56Z",
+      "side": 1,
+      "message": "WARNING: \u0027deamon\u0027 may be misspelled - perhaps \u0027daemon\u0027?\nSubject: [PATCH] ihkmond: check return value of deamon()",
+      "revId": "5a6a1a2706dd4b5e4d1cb9eea7153290fa8fff11",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
