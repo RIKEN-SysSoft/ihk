@@ -3099,7 +3099,7 @@ int ihk_os_kmsg(int index, char* kmsg, ssize_t sz_kmsg)
 
 	if (sz_kmsg != IHK_KMSG_SIZE) {
 		dprintf("%s: error: invalid buffer size (%ld, expecting %ld)\n",
-			__func__, sz_kmsg, IHK_KMSG_SIZE);
+			__func__, sz_kmsg, (ssize_t)IHK_KMSG_SIZE);
 		ret = -EINVAL;
 		goto out;
 	}
