@@ -2885,8 +2885,12 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	unsigned long i,j,k;
 	struct page *pg;
 
+	pr_info("%s: sending nmi\n",
+		__func__);
 	smp_ihk_os_send_nmi(ihk_os, priv, 0);
 
+	pr_info("%s: waiting for mckernel marking pages excluded from dump\n",
+		__func__);
 	while (os->param->dump_page_set.completion_flag !=
 	       IHK_DUMP_PAGE_SET_COMPLETED) {
 
@@ -2894,6 +2898,8 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 
 	}
 
+	pr_info("%s: marking pages excluded from dump\n",
+		__func__);
 	if (os->param->dump_level == DUMP_LEVEL_USER_UNUSED_EXCLUDE) {
 
 		dump_page = phys_to_virt((unsigned long)os->param->dump_page_set.phy_page);
@@ -2915,6 +2921,7 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 			}
 		}
 	}
+	pr_info("%s: exit\n", __func__);
 
 	return;
 }
