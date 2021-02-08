@@ -42,22 +42,22 @@ const int ret_expected[] = {
 	-EINVAL,
 };
 
+#define NR_CASES (sizeof(values) / sizeof(values[0]))
+
 int main(int argc, char **argv)
 {
 	int ret;
 	int i;
-	int nr_cases = sizeof(values) / sizeof(values[0]);
 
-	ARRAY_SIZE_CHECK(values, nr_cases);
-	ARRAY_SIZE_CHECK(mem_conf_values, nr_cases);
-	ARRAY_SIZE_CHECK(ret_expected, nr_cases);
+	ARRAY_SIZE_CHECK(mem_conf_values, NR_CASES);
+	ARRAY_SIZE_CHECK(ret_expected, NR_CASES);
 
 	/* Precondition */
 	ret = linux_insmod(0);
 	INTERR(ret, "linux_insmod returned %d\n", ret);
 
 	/* Activate and check */
-	for (i = 0; i < nr_cases; i++) {
+	for (i = 0; i < NR_CASES; i++) {
 		START("test-case: %s: %s\n", param, values[i]);
 
 		ret = ihk_reserve_mem_conf(0,
