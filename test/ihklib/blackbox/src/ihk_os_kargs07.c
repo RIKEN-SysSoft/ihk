@@ -28,15 +28,16 @@ const int ret_expected[] = {
 	0,
 };
 
+#define NR_CASES (sizeof(values) / sizeof(values[0]))
+
 int main(int argc, char **argv)
 {
 	int ret;
 	int i;
-	int nr_cases = sizeof(values) / sizeof(values[0]);
 
 	/* Array size check. Don't forget to type commas! */
-	ARRAY_SIZE_CHECK(kargs, nr_cases);
-	ARRAY_SIZE_CHECK(ret_expected, nr_cases);
+	ARRAY_SIZE_CHECK(kargs, NR_CASES);
+	ARRAY_SIZE_CHECK(ret_expected, NR_CASES);
 
 	/* Precondition */
 	ret = linux_insmod(0);
@@ -49,7 +50,7 @@ int main(int argc, char **argv)
 	INTERR(ret, "mems_reserve returned %d\n", ret);
 
 	/* Activate and check */
-	for (i = 0; i < nr_cases; i++) {
+	for (i = 0; i < NR_CASES; i++) {
 		START("test-case: %s: %s\n", param, values[i]);
 
 		ret = ihk_create_os(0);
