@@ -690,19 +690,30 @@ static int do_kargs(int fd)
 	return r;
 }
 
-static int do_kmsg(int fd)
+static int do_kmsg(int os_index)
 {
-	char buf[IHK_KMSG_SIZE];
-	int r = ioctl(fd, IHK_OS_READ_KMSG, (unsigned long)buf);
-	if (r >= 0) {
-		buf[r] = 0;
+	int ret;
+	char *buf = NULL;
+
+	buf = calloc(IHK_KMSG_SIZE, sizeof(char));
+	if (!buf) {
+		return -ENOMEM;
+	}
+
+	ret = ihk_os_kmsg(os_index, buf, (ssize_t)IHK_KMSG_SIZE);
+	if (ret >= 0) {
+		buf[ret] = 0;
 		printf("%s\n", buf);
-		return 0;
-	}
-	else {
+	} else {
 		fprintf(stderr, "error querying kmsg\n");
-		return 1;
+		ret = -EINVAL;
+		goto out;
 	}
+
+	ret = 0;
+ out:
+	free(buf);
+	return ret;
 }
 
 static int do_clear_kmsg(int fd)
@@ -828,6 +839,7 @@ int main(int argc, char **argv)
 
 	HANDLER_WITH_INDEX(get)
 	else HANDLER_WITH_INDEX(dump)
+	else HANDLER_WITH_INDEX(kmsg)
 
 	sprintf(fn, "/dev/mcos%d", atoi(argv[1]));
 
@@ -849,7 +861,6 @@ int main(int argc, char **argv)
 	else HANDLER(query)
 	else HANDLER(query_free_mem)
 	else HANDLER(kargs)
-	else HANDLER(kmsg)
 	else HANDLER(clear_kmsg)
 	else HANDLER(intr)
 	else HANDLER(ioctl)
