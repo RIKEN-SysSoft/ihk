@@ -3392,7 +3392,7 @@ retry:
 
 		if (!pg) {
 			pg = __alloc_pages_nodemask(
-					__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE |
+					__GFP_ATOMIC | __GFP_COMP | __GFP_HIGH | __GFP_THISNODE |
 						__GFP_NORETRY | __GFP_NOWARN,
 					order,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
