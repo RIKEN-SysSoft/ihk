@@ -2131,37 +2131,6 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 	return ret;
 }
 
-int ihk_os_assign_cpu_str(int os_index, const char *envp, int num_env)
-{
-	int ret;
-	int i;
-	char **name = NULL, **value = NULL;
-
-	ret = parse_env(envp, num_env, &name, &value);
-	if (ret) {
-		dprintk("%s: parse_env failed with %d\n",
-			__func__, ret);
-		goto out;
-	}
-
-	for (i = 0; i < num_env; i++) {
-		if (!strcmp(name[i], "IHK_CPUS")) {
-			ret = _ihk_os_assign_cpu_str(os_index, value[i],
-						     NULL);
-			if (ret) {
-				dprintf("%s: error: _ihk_reserve_cpu_str failed with %d\n",
-					__func__, ret);
-				goto out;
-			}
-			break; /* use first when multiple lines exist */
-		}
-	}
-
-	ret = 0;
- out:
-	return ret;
-}
-
 int ihk_os_get_num_assigned_cpus(int index)
 {
 	int ret;
@@ -4794,6 +4763,37 @@ int ihk_reserve_mem_str(int dev_index, const char *envp, int num_env)
 						   NULL);
 			if (ret) {
 				dprintk("%s: error: _ihk_reserve_mem_str failed with %d\n",
+					__func__, ret);
+				goto out;
+			}
+			break; /* use first when multiple lines exist */
+		}
+	}
+
+	ret = 0;
+ out:
+	return ret;
+}
+
+int ihk_os_assign_cpu_str(int os_index, const char *envp, int num_env)
+{
+	int ret;
+	int i;
+	char **name = NULL, **value = NULL;
+
+	ret = parse_env(envp, num_env, &name, &value);
+	if (ret) {
+		dprintk("%s: parse_env failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_env; i++) {
+		if (!strcmp(name[i], "IHK_CPUS")) {
+			ret = _ihk_os_assign_cpu_str(os_index, value[i],
+						     NULL);
+			if (ret) {
+				dprintf("%s: error: _ihk_reserve_cpu_str failed with %d\n",
 					__func__, ret);
 				goto out;
 			}
