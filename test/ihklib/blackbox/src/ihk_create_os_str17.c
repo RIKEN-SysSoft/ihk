@@ -107,7 +107,7 @@ const int ret_expected[] = {
 	-EINVAL,
 };
 
-#define NR_CASES = sizeof(values) / sizeof(values[0]);
+#define NR_CASES (sizeof(values) / sizeof(values[0]))
 
 int main(int argc, char **argv)
 {

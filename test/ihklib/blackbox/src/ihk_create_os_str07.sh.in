@@ -22,10 +22,10 @@ for i in {0..2}; do
 	karg=time_sharing
     fi
 
-    sudo @WITH_MCK@/sbin/ihkosctl 0 kmsg | awk '/KCommand Line/ && /hidos/ && /allow_oversubscribe/ && /'"$karg"'/ { print; found = 1 } END { exit found ? 0 : 1 }'
+    sudo @WITH_MCK@/sbin/ihkosctl 0 kmsg | awk '/KCommand Line/ && /hidos/ && /allow_oversubscribe/ && /'"$karg"'/ { print "[ INFO ] kmsg: " $0; found = 1; } END { exit found ? 0 : 1 }'
     ret=$?
 
-    if (( ret == 0)); then
+    if (( ret == 0 )); then
 	printf "[  OK  ] "
     else
 	printf "[  NG  ] "
