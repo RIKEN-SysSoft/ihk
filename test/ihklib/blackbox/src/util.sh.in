@@ -27,7 +27,7 @@ function patch_and_build()
 	popd
     fi
 
-    mv @WITH_MCK@{,.save}
+    rsync -a @WITH_MCK@{,.save}/
 
     BUILDDIR=$WORKDIR/build/$(uname -r)
 
@@ -59,7 +59,7 @@ function patch_and_build()
 
 function revert()
 {
-        mv @WITH_MCK@{.save,}
+        rsync -a @WITH_MCK@{.save,}/
 }
 
 function rebuild()
