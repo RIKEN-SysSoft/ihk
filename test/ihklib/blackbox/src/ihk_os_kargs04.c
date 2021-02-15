@@ -33,25 +33,10 @@ int main(int argc, char **argv)
 	char *kargs_input[4] = { NULL };
 
 	for (i = 1; i < 4; i++) {
-		switch (i) {
-		case 1:
-			kargs_input[i] = calloc(1023, sizeof(char));
-			break;
-		case 2:
-			kargs_input[i] = calloc(1024, sizeof(char));
-			break;
-		case 3:
-			kargs_input[i] = calloc(1025, sizeof(char));
-			break;
-		default:
-			kargs_input[i] = NULL;
-			break;
-		}
+		kargs_input[i] = calloc(kargs_size[i], sizeof(char));
+		memset(kargs_input[i], 'a', kargs_size[i] - 1);
+		memcpy(kargs_input[i], kargs, strlen(kargs));
 
-		if (kargs_input[i]) {
-			memset(kargs_input[i], 'a', kargs_size[i] - 1);
-			memcpy(kargs_input[i], kargs, strlen(kargs));
-		}
 	}
 
 	params_getopt(argc, argv);
@@ -76,6 +61,15 @@ int main(int argc, char **argv)
 	/* Activate and check */
 	for (i = 0; i < 4; i++) {
 		START("test-case: %s: %s\n", param, values[i]);
+
+		ret = linux_insmod(0);
+		INTERR(ret, "linux_insmod returned %d\n", ret);
+
+		ret = cpus_reserve();
+		INTERR(ret, "cpus_reserve returned %d\n", ret);
+
+		ret = mems_reserve();
+		INTERR(ret, "mems_reserve returned %d\n", ret);
 
 		ret = ihk_create_os(0);
 		INTERR(ret, "ihk_create_os returned %d\n", ret);
@@ -103,6 +97,10 @@ int main(int argc, char **argv)
 
 		ret = ihk_destroy_os(0, 0);
 		INTERR(ret, "ihk_destroy_os returned %d\n", ret);
+
+		cpus_release();
+		mems_release();
+		linux_rmmod(1);
 	}
 
 	ret = 0;
