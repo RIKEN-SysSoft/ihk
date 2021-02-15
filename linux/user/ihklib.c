@@ -2131,6 +2131,37 @@ int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 	return ret;
 }
 
+int ihk_os_assign_cpu_str(int os_index, const char *envp, int num_env)
+{
+	int ret;
+	int i;
+	char **name = NULL, **value = NULL;
+
+	ret = parse_env(envp, num_env, &name, &value);
+	if (ret) {
+		dprintk("%s: parse_env failed with %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	for (i = 0; i < num_env; i++) {
+		if (!strcmp(name[i], "IHK_CPUS")) {
+			ret = _ihk_os_assign_cpu_str(os_index, value[i],
+						     NULL);
+			if (ret) {
+				dprintf("%s: error: _ihk_reserve_cpu_str failed with %d\n",
+					__func__, ret);
+				goto out;
+			}
+			break; /* use first when multiple lines exist */
+		}
+	}
+
+	ret = 0;
+ out:
+	return ret;
+}
+
 int ihk_os_get_num_assigned_cpus(int index)
 {
 	int ret;
@@ -4270,6 +4301,44 @@ int _ihk_reserve_mem_str(int dev_index, char *list, char *err_msg)
 
  out:
 	free(mems);
+	return ret;
+}
+
+int _ihk_os_assign_cpu_str(int os_index, char *list, char *err_msg)
+{
+	int ret;
+	int num_cpus;
+	int *cpus = NULL;
+
+	num_cpus = cpu_str2count(list);
+	if (num_cpus <= 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	cpus = calloc(sizeof(int), num_cpus);
+	if (!cpus) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = cpu_str2array(list, num_cpus, cpus);
+	if (ret < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = ihk_os_assign_cpu(os_index, cpus, num_cpus);
+	if (ret) {
+		if (err_msg) {
+			sprintf(err_msg,
+				"%s:%d: ihk_os_assign_cpu failed with %d\n",
+				__FILE__, __LINE__, ret);
+		}
+		goto out;
+	}
+ out:
+	free(cpus);
 	return ret;
 }
 

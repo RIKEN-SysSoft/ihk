@@ -92,6 +92,7 @@ int ihk_get_num_os_instances(int index);
 int ihk_get_os_instances(int index, int *indices, int _num_os_instances);
 int ihk_destroy_os(int dev_index, int os_index);
 int ihk_os_assign_cpu(int index, int* cpus, int num_cpus);
+int ihk_os_assign_cpu_str(int os_index, const char *envp, int num_env);
 int ihk_os_get_num_assigned_cpus(int index);
 int ihk_os_query_cpu(int index, int* cpus, int _num_cpus);
 int ihk_os_release_cpu(int index, int* cpus, int num_cpus);
