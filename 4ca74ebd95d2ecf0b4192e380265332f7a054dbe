@@ -1,0 +1,548 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4ba39208_bdbc3500",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 4686,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: _ihk_reserve_cpu_str failed with %d\\n\",",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6f8e5211_5adb59db",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 4699,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "ERROR: Macros starting with if should be enclosed by a do - while loop to avoid possible if/else logic defects\n+#define RESERVE_MEM_CONF_PARSE(key)\t\t\t\\\n+\tif (!strcmp(name[i], #key)) {\t\t\t\\\n+\t\trval \u003d strtol(value[i], \u0026endp, 10);\t\\\n+\t\tif (*endp !\u003d \u0027\\0\u0027) {\t\t\t\\\n+\t\t\tdprintk(\"%s: error: parsing %s\\n\", \\\n+\t\t\t\t__func__, value[i]);\t\\\n+\t\t\tret \u003d -EINVAL;\t\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t\t}\t\t\t\t\t\\\n+\t\tret \u003d ihk_reserve_mem_conf(dev_index,\t\\\n+\t\t\t\t\t   key, \u0026rval); \\\n+\t\tif (ret) {\t\t\t\t\\\n+\t\t\tdprintk(\"%s: ihk_reserve_mem_conf failed with %d\\n\",\t\\\n+\t\t\t\t__func__, ret);\t\t\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t\t}\t\t\t\t\t\\\n+\t}",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "74a38de8_e088f3f2",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 4699,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define RESERVE_MEM_CONF_PARSE(key)\t\t\t\\\n+\tif (!strcmp(name[i], #key)) {\t\t\t\\\n+\t\trval \u003d strtol(value[i], \u0026endp, 10);\t\\\n+\t\tif (*endp !\u003d \u0027\\0\u0027) {\t\t\t\\\n+\t\t\tdprintk(\"%s: error: parsing %s\\n\", \\\n+\t\t\t\t__func__, value[i]);\t\\\n+\t\t\tret \u003d -EINVAL;\t\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t\t}\t\t\t\t\t\\\n+\t\tret \u003d ihk_reserve_mem_conf(dev_index,\t\\\n+\t\t\t\t\t   key, \u0026rval); \\\n+\t\tif (ret) {\t\t\t\t\\\n+\t\t\tdprintk(\"%s: ihk_reserve_mem_conf failed with %d\\n\",\t\\\n+\t\t\t\t__func__, ret);\t\t\t\t\\\n+\t\t\tgoto out;\t\t\t\\\n+\t\t}\t\t\t\t\t\\\n+\t}",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b1267ad0_edf191f1",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 4711,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintk(\"%s: ihk_reserve_mem_conf failed with %d\\n\",\t\\",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a2aa4fbf_8be61515",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 4765,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintk(\"%s: error: _ihk_reserve_mem_str failed with %d\\n\",",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "103040aa_e681a5ca",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 4796,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: _ihk_reserve_cpu_str failed with %d\\n\",",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7a79551b_51b7c619",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 4827,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintk(\"%s: error: _ihk_os_set_ikc_map_str failed with %d\\n\",",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "89dec32b_00cbc15b",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 5047,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: _ihk_reserve_cpu_str failed with %d\\n\",",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6dce4238_9f1ce726",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 5057,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: _ihk_reserve_mem_str failed with %d\\n\",",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "39bcb10a_61a5ab5f",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 5093,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\tdprintf(\"%s: error: _ihk_os_set_ikc_map_str failed with %d\\n\",",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "74092a06_90d48014",
+        "filename": "test/ihklib/blackbox/include/okng.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+#define ARRAY_SIZE_CHECK(array, size) INTERR(sizeof(array)/sizeof(array[0]) !\u003d size, \"size of array \\\"%s\\\" isn\u0027t %d\\n\", #array, (int)size)",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "af702353_9bcbee5a",
+        "filename": "test/ihklib/blackbox/include/okng.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(array)\n+#define ARRAY_SIZE_CHECK(array, size) INTERR(sizeof(array)/sizeof(array[0]) !\u003d size, \"size of array \\\"%s\\\" isn\u0027t %d\\n\", #array, (int)size)",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4118b185_728e4bea",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str17.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: macros should not use a trailing semicolon\n+#define NR_CASES \u003d sizeof(values) / sizeof(values[0]);",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b05c5677_fccf81c7",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str17.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES \u003d sizeof(values) / sizeof(values[0]);",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "008c398b_c9696f73",
+        "filename": "test/ihklib/blackbox/src/ihk_create_os_str17.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "ERROR: Macros with multiple statements should be enclosed in a do - while loop\n+#define NR_CASES \u003d sizeof(values) / sizeof(values[0]);",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "bf44e9b7_304fdd9e",
+        "filename": "test/ihklib/blackbox/src/ihk_os_assign_cpu_str16.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1821781c_9a25b81c",
+        "filename": "test/ihklib/blackbox/src/ihk_os_kargs_str01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "df7ec327_235c8e60",
+        "filename": "test/ihklib/blackbox/src/ihk_os_kargs_str03.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "cd24a421_5ec2e368",
+        "filename": "test/ihklib/blackbox/src/ihk_os_kargs_str16.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fbe81c97_09b57b80",
+        "filename": "test/ihklib/blackbox/src/ihk_os_kargs_str16.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 79,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tINTERR(kmsg \u003d\u003d NULL, \"allocation of kmsg failed with %d\\n\", errno);",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7e0e6c6b_aa0412bb",
+        "filename": "test/ihklib/blackbox/src/ihk_os_set_ikc_map_str01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "05b6e1c7_8b89eb1f",
+        "filename": "test/ihklib/blackbox/src/ihk_os_set_ikc_map_str03.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a7e089c2_4de27108",
+        "filename": "test/ihklib/blackbox/src/ihk_os_set_ikc_map_str16.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7e8af9c3_46c5fa80",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_cpu_str01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 31,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "476458a5_d1c9e074",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_cpu_str03.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "5fa3e389_b3b60159",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_cpu_str04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ca962aae_24d66a47",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_conf_str01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d818cdca_60c2251f",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_conf_str03.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "27a9dfbe_94358bba",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_conf_str16.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "acf50826_c4bb9f1d",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_str01.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "983e5a2a_c23f2cfa",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_str03.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9bb3b590_91cb6237",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_str04.c",
+        "patchSetId": 7
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-15T03:46:12Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "4ca74ebd95d2ecf0b4192e380265332f7a054dbe",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
