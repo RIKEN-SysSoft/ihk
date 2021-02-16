@@ -32,7 +32,7 @@ index e677e3f0..ecf595c3 100644
 +{
 +	kprintf("%s: enter\n",
 +		__func__);
-+	ihk_mc_delay_us(2000000);
++	ihk_mc_delay_us(4000000);
 +	return 0;
 +}
 +

@@ -26,6 +26,8 @@ const char *values[] = {
 	"IHK_STATUS_FROZEN"
 };
 
+#define NR_CASES (sizeof(values) / sizeof(values[0]))
+
 int main(int argc, char **argv)
 {
 	int ret;
@@ -49,7 +51,7 @@ int main(int argc, char **argv)
 		0,
 		0,
 		0,
-		-EBUSY,
+		0, /* see smp_ihk_os_shutdown() */
 		0,
 		0,
 		0,
@@ -60,12 +62,16 @@ int main(int argc, char **argv)
 		0,
 		0,
 		0,
-		1,
+		0,
 		0,
 		0,
 		0,
 		0,
 	};
+
+	ARRAY_SIZE_CHECK(target_status, NR_CASES);
+	ARRAY_SIZE_CHECK(ret_expected, NR_CASES);
+	ARRAY_SIZE_CHECK(num_os_instances_after_destroy, NR_CASES);
 
 	/* Precondition */
 	ret = linux_insmod(0);
@@ -81,7 +87,7 @@ int main(int argc, char **argv)
 	unsigned long os_set[1] = { 1 };
 
 	/* Activate and check */
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < NR_CASES; i++) {
 		/* There's no way to destroy os in BOOTING state
 		 * because ihk_os_boot() returns after os status
 		 * changes to RUNNING
@@ -155,7 +161,7 @@ int main(int argc, char **argv)
 			INTERR(ret < 0, "user_fork_exec returned %d\n", ret);
 
 			/* wait until McKernel start ihk_mc_delay_us() */
-			usleep(0.25 * 1000000);
+			usleep(1.0 * 1000000);
 
 			fd = ihklib_os_open(0);
 			INTERR(fd < 0, "ihklib_os_open returned %d\n", fd);
@@ -199,17 +205,6 @@ int main(int argc, char **argv)
 		ret = ihk_get_num_os_instances(0);
 		OKNG(ret == num_os_instances_after_destroy[i],
 		     "os is destroyed as expected\n");
-
-		/* wait until parallel shutdown finishes */
-		if (target_status[i] == IHK_STATUS_SHUTDOWN) {
-			ret = os_wait_for_status(IHK_STATUS_INACTIVE);
-			INTERR(ret, "os status didn't change to %d\n",
-			       IHK_STATUS_INACTIVE);
-
-			ret = ihk_destroy_os(0, 0);
-			INTERR(ret, "ihk_destroy_os returned %d\n",
-			       ret);
-		}
 
 		/* Clean up */
 		if (ihk_get_num_os_instances(0)) {
