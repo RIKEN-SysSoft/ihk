@@ -33,12 +33,16 @@ int main(int argc, char **argv)
 		1,
 		INT_MAX
 	};
+
+	/* ihk_get_num_os_instances won't check if /dev/mcosN exists
+	 * or not to prevent collision with ihkmond
+	 */
 	int ret_expected[5] = {
-		-ENOENT,
-		-ENOENT,
 		1,
-		-ENOENT,
-		-ENOENT,
+		1,
+		1,
+		1,
+		1,
 	};
 
 	for (i = 0; i < 5; i++) {
