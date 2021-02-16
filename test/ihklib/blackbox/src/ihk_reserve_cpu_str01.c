@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 
 	INTERR(subindex == -1, "-i <subindex> is not specified\n");
 
-	struct cpus cpus[NR_CASES] = { 0 };
+	struct cpus cpus[NR_CASES] = { { 0 } };
 
 	ret = cpus_init(&cpus[1], 24);
 	INTERR(ret, "cpus_init returned %d\n", ret);
