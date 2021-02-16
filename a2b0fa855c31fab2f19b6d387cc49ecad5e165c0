@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0cc6cb9b_73c89e5a",
+        "filename": "test/ihklib/blackbox/src/ihk_destroy_os09.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-16T06:07:38Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "a2b0fa855c31fab2f19b6d387cc49ecad5e165c0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
