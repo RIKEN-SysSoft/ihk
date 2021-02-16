@@ -1915,6 +1915,14 @@ int ihk_get_num_os_instances(int index)
 
 	dprintk("%s: enter\n", __func__);
 
+	/* don't call access() for /dev/mcosN for permission check
+	 * for the call not to collide with ihkmond.
+	 */
+	if (geteuid() != 0) {
+		ret = -EACCES;
+		goto out;
+	}
+
 	dir = opendir(PATH_DEV);
 	if (dir == NULL) {
 		ret = -errno;
