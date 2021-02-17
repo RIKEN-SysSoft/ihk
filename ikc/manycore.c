@@ -70,6 +70,8 @@ no_m_channel:
 	       r_channel->recv.queue->read_cpu == ihk_mc_get_processor_id()) {
 		ihk_ikc_recv_handler(r_channel, r_channel->handler, NULL, 0);
 	}
+
+	smp_func_call_handler();
 }
 
 int ihk_ikc_send(struct ihk_ikc_channel_desc *channel, void *p, int opt)
