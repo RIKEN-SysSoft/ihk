@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e41952d3_b9f604e2",
+        "filename": "linux/user/ihkosctl.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 842,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-02-18T03:49:59Z",
+      "side": 1,
+      "message": "ERROR: trailing statements should be on next line\n+\telse HANDLER_WITH_INDEX(kmsg)",
+      "revId": "ab6312d74bf1ac5c995a9116b7406b8e40298742",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
