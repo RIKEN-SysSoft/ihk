@@ -27,17 +27,6 @@ struct ihk_ioctl_desc {
 	int string_len;
 };
 
-struct ihk_ioctl_cpu_desc {
-	int *cpus;
-	int num_cpus;
-};
-
-struct ihk_ioctl_ikc_desc {
-	int *src_cpus;	/* LWC CPUs as IKC source */
-	int *dst_cpus;	/* Linux CPUs as IKC destination */
-	int num_cpus;
-};
-
 struct mcctrl_ioctl_getrusage_desc {
 	struct ihk_os_rusage *rusage;
 	size_t size_rusage;

@@ -895,7 +895,7 @@ int ihklib_device_open(int index)
 int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 {
 	int ret;
-	struct ihk_ioctl_cpu_desc req = { 0 };
+	struct ihk_cpu_req req = { 0 };
 	int fd = -1;
 #ifdef WITH_KRM
 	int *nodeids = NULL;
@@ -1048,7 +1048,7 @@ int ihk_get_num_reserved_cpus(int index)
 int ihk_query_cpu(int index, int *cpus, int num_cpus)
 {
 	int ret;
-	struct ihk_ioctl_cpu_desc req = { 0 };
+	struct ihk_cpu_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -1112,7 +1112,7 @@ int ihk_query_cpu(int index, int *cpus, int num_cpus)
 int ihk_release_cpu(int index, int* cpus, int num_cpus)
 {
 	int ret;
-	struct ihk_ioctl_cpu_desc req = { 0 };
+	struct ihk_cpu_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2087,7 +2087,7 @@ int ihklib_os_open(int index)
 int ihk_os_assign_cpu(int index, int* cpus, int num_cpus)
 {
 	int ret;
-	struct ihk_ioctl_cpu_desc req = { 0 };
+	struct ihk_cpu_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2169,7 +2169,7 @@ int ihk_os_get_num_assigned_cpus(int index)
 int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 {
 	int ret;
-	struct ihk_ioctl_cpu_desc req = { 0 };
+	struct ihk_cpu_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2238,7 +2238,7 @@ int ihk_os_query_cpu(int index, int *cpus, int num_cpus)
 int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 {
 	int ret;
-	struct ihk_ioctl_cpu_desc req = { 0 };
+	struct ihk_cpu_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2292,7 +2292,7 @@ int ihk_os_release_cpu(int index, int *cpus, int num_cpus)
 int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
 	int ret, i;
-	struct ihk_ioctl_ikc_desc req = { 0 };
+	struct ihk_ikc_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
@@ -2372,7 +2372,7 @@ int ihk_os_set_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 int ihk_os_get_ikc_map(int index, struct ihk_ikc_cpu_map *map, int num_cpus)
 {
 	int ret, i;
-	struct ihk_ioctl_ikc_desc req = { 0 };
+	struct ihk_ikc_req req = { 0 };
 	int fd = -1;
 
 	dprintk("%s: enter\n", __func__);
