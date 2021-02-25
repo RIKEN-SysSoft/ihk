@@ -1625,7 +1625,16 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	while (((size_t)PAGE_SIZE << kmsg_buf_order) < kmsg_buf_size)
 		++kmsg_buf_order;
 
-	kmsg_buf_pages = alloc_pages(GFP_KERNEL | __GFP_ZERO, kmsg_buf_order);
+	kmsg_buf_pages = alloc_pages_node(NUMA_NO_NODE,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+					  __GFP_ATOMIC |
+#else
+					  GFP_KERNEL |
+#endif
+					  __GFP_HIGH |
+					  __GFP_COMP | __GFP_NORETRY |
+					  __GFP_NOWARN | __GFP_ZERO,
+					  kmsg_buf_order);
 	if (!kmsg_buf_pages) {
 		pr_info("IHK: Cannot allocate kmsg buffer\n");
 		ret = -ENOMEM;
