@@ -530,7 +530,7 @@ static int do_get(int index)
 	}
 }
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 static int do_reserve_mem_max_ratio(int fd)
 {
 	unsigned long arg;
@@ -586,7 +586,7 @@ int main(int argc, char **argv)
 	else HANDLER(ioctl)
 	else HANDLER(clear_kmsg)
 	else HANDLER(clear_kmsg_write)
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	else HANDLER(reserve_mem_max_ratio)
 #endif
 	else HANDLER(release)

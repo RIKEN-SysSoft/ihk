@@ -443,7 +443,7 @@ struct ihk_device_ops {
 	 */
 	int (*reserve_mem)(ihk_device_t, unsigned long arg);
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	/**
 	 * \brief Reserve memory max ratio
 	 *

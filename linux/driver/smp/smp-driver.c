@@ -3252,7 +3252,7 @@ static void sort_pagelists(struct zone *zone)
 #define USE_TRY_TO_FREE_PAGES
 #define USE_TRY_TO_FREE_PAGES_TIME_LIMIT 2
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 static unsigned long reserve_mem_max_ratio = 95;
 #endif
 
@@ -3435,18 +3435,20 @@ retry:
 #else
 		    (/*want == IHK_SMP_MEM_ALL &&*/
 #endif
-#ifndef ENABLE_FUGAKU_HACKS
+#ifndef ENABLE_KRM_WORKAROUND
 		     allocated > (available * max_size_ratio_all / 100))) {
-			pr_info("%s: almost all of NUMA %d taken, breaking"
+			pr_info("%s: %ld%% of NUMA %d taken, breaking"
 				" allocation loop (current order: %d)..\n",
-				__func__, numa_id, order);
+				__func__,
+				numa_id == 0 ? 95UL : max_size_ratio_all,
+				numa_id, order);
 #else
 		     allocated > (available * reserve_mem_max_ratio / 100))) {
 			pr_info("%s: %ld%% of NUMA %d taken, breaking"
 			       " allocation loop (current order: %d)..\n",
 			       __func__,
-				   numa_id == 0 ? 95UL : reserve_mem_max_ratio,
-				   numa_id, order);
+				numa_id == 0 ? 95UL : reserve_mem_max_ratio,
+				numa_id, order);
 #endif
 			goto pre_out;
 		}
@@ -4405,7 +4407,7 @@ out:
 	return 0;
 }
 
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 static int smp_ihk_reserve_mem_max_ratio(ihk_device_t ihk_dev,
 		unsigned long arg)
 {
@@ -5147,7 +5149,7 @@ static struct ihk_device_ops smp_ihk_device_ops = {
 	.reserve_cpu = smp_ihk_reserve_cpu,
 	.release_cpu = smp_ihk_release_cpu,
 	.reserve_mem = smp_ihk_reserve_mem,
-#ifdef ENABLE_FUGAKU_HACKS
+#ifdef ENABLE_KRM_WORKAROUND
 	.reserve_mem_max_ratio = smp_ihk_reserve_mem_max_ratio,
 #endif
 	.release_mem = smp_ihk_release_mem,
