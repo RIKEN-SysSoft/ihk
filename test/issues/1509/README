@@ -1,0 +1,69 @@
+【Issue#1509 動作確認】
+□ テスト内容
+1. /dev/mcd0 へのioctlによって、CPUおよびメモリの操作を実施し、
+  追加したエラー処理によって安全にエラーを返すことを確認する
+  操作はそれぞれ、下記を行う
+    CT001: reserve_cpu by negative num_cpus
+    CT002: reserve_cpu by NULL array
+    CT003: release_cpu by negative num_cpus
+    CT004: release_cpu by NULL array
+    CT005: query_cpu by negative num_cpus
+    CT006: query_cpu by NULL array
+    CT007: os_assign_cpu by negative num_cpus
+    CT008: os_assign_cpu by NULL array
+    CT009: os_release_cpu by negative num_cpus
+    CT010: os_release_cpu by NULL array
+    CT011: os_query_cpu by negative num_cpus
+    CT012: os_query_cpu by NULL array
+    CT013: os_set_ikc_map by negative num_cpus
+    CT014: os_set_ikc_map by NULL array
+    CT015: os_get_ikc_map by negative num_cpus
+    CT016: os_get_ikc_map by NULL array
+    CT017: reserve_mem by negative num_mems
+    CT018: reserve_mem by NULL array
+    CT019: reserve_mem by negative min_chunk_size
+    CT020: reserve_mem by negative ratio
+    CT021: reserve_mem by over ratio
+    CT022: release_mem by negative num_mems
+    CT023: release_mem by NULL array
+    CT024: release_mem by negative min_chunk_size
+    CT025: release_mem by negative ratio
+    CT026: release_mem by over ratio
+    CT027: release_mem_partially by negative num_mems
+    CT028: release_mem_partially by NULL array
+    CT029: release_mem_partially by negative min_chunk_size
+    CT030: release_mem_partially by negative ratio
+    CT031: release_mem_partially by over ratio
+    CT032: query_mem by negative num_mems
+    CT033: query_mem by NULL array
+    CT034: query_mem by negative min_chunk_size
+    CT035: query_mem by negative ratio
+    CT036: query_mem by over ratio
+    CT037: os_assign_mem by negative num_mems
+    CT038: os_assign_mem by NULL array
+    CT039: os_assign_mem by negative min_chunk_size
+    CT040: os_assign_mem by negative ratio
+    CT041: os_assign_mem by over ratio
+    CT042: os_release_mem by negative num_mems
+    CT043: os_release_mem by NULL array
+    CT044: os_release_mem by negative min_chunk_size
+    CT045: os_release_mem by negative ratio
+    CT046: os_release_mem by over ratio
+    CT047: os_query_mem by negative num_mems
+    CT048: os_query_mem by NULL array
+    CT049: os_query_mem by negative min_chunk_size
+    CT050: os_query_mem by negative ratio
+    CT051: os_query_mem by over ratio
+    CT052: os_assign_mem by negative num_mems
+
+□ 実行手順
+$ make test
+
+McKernelのインストール先や、OSTEST, LTPの配置場所は、
+$HOME/.mck_test_config を参照している
+.mck_test_config は、McKernelをビルドした際に生成されるmck_test_config.sample ファイルを
+$HOMEにコピーし、適宜編集する
+
+□ 実行結果
+x86_64_result.log aarch64_result.log 参照。
+すべての項目をPASSしていることを確認。
