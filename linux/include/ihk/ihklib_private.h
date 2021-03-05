@@ -1,5 +1,8 @@
 #ifndef IHKLIB_PRIVATE_H_INCLUDED
 #define IHKLIB_PRIVATE_H_INCLUDED
+
+#ifndef __KERNEL__
+
 #include <ihk/ihklib.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_rusage.h>
@@ -26,25 +29,6 @@
 	}								\
 	close(_fd);							\
 } while (0)
-
-#define IHK_MAX_NUM_MEM_CHUNKS 2048
-
-#define IHK_OS_EVENTFD_MONITOR_INTERVAL (1000*1000*2) /* usec */
-
-#define IHKLIB_MAX_SIZE_ENV (1UL << 20)
-#define IHKLIB_MAX_NUM_ENV (1UL << 10)
-#define IHKLIB_MAX_SIZE_ERR_MSG (1UL << 12)
-#define IHKLIB_MAX_SIZE_KARGS (1UL << 20)
-#define IHKLIB_LINUX_KMSG_SIZE (4096 - 256)
-
-/* taking more than this percentage of memory would
- * make Linux panic due to out of memory
- */
-#ifndef ENABLE_FUGAKU_HACKS
-#define IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT 98
-#else
-#define IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT 95
-#endif
 
 #define Q(x) #x
 #define QUOTE(x) Q(x)
@@ -130,5 +114,26 @@ char *ikc_req2str(struct ihk_ikc_req *req);
 
 int _ihk_reserve_cpu_str(int dev_index, char *list, char *err_msg);
 int _ihk_reserve_mem_str(int dev_index, char *list, char *err_msg);
+
+#endif /* !defined(__KERNEL__) */
+
+#define IHK_MAX_NUM_MEM_CHUNKS 2048
+
+#define IHK_OS_EVENTFD_MONITOR_INTERVAL (1000*1000*2) /* usec */
+
+#define IHKLIB_MAX_SIZE_ENV (1UL << 20)
+#define IHKLIB_MAX_NUM_ENV (1UL << 10)
+#define IHKLIB_MAX_SIZE_ERR_MSG (1UL << 12)
+#define IHKLIB_MAX_SIZE_KARGS (1UL << 20)
+#define IHKLIB_LINUX_KMSG_SIZE (4096 - 256)
+
+/* taking more than this percentage of memory would
+ * make Linux panic due to out of memory
+ */
+#ifndef ENABLE_FUGAKU_HACKS
+#define IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT 98
+#else
+#define IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT 95
+#endif
 
 #endif /* !defined(IHKLIB_PRIVATE_H_INCLUDED) */
