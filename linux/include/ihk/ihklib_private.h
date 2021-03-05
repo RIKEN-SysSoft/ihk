@@ -1,5 +1,7 @@
 #ifndef IHKLIB_PRIVATE_H_INCLUDED
 #define IHKLIB_PRIVATE_H_INCLUDED
+
+#ifndef __KERNEL__
 #include <ihk/ihklib.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_rusage.h>
@@ -26,6 +28,7 @@
 	}								\
 	close(_fd);							\
 } while (0)
+#endif
 
 #define IHK_MAX_NUM_MEM_CHUNKS 2048
 

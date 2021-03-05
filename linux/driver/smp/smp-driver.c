@@ -38,6 +38,7 @@
 #include <ihk/ihk_host_driver.h>
 #include <ihk/ihk_host_misc.h>
 #include <ihk/ihk_host_user.h>
+#include <ihk/ihklib_private.h>
 //#define IHK_DEBUG
 #include <ihk/misc/debug.h>
 #include <ikc/msg.h>
@@ -379,6 +380,86 @@ static int ikc_array2str(char *str, ssize_t len, int num_cpus,
 	}
  out:
 	kfree(num_ikc_src);
+	return ret;
+}
+
+static int validate_cpu_req(struct ihk_cpu_req *req)
+{
+	int ret = 0;
+
+	if (req->num_cpus < 0 || req->num_cpus > SMP_MAX_CPUS) {
+		pr_err("%s: invalid cpu length\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (req->num_cpus > 0) {
+		if (req->cpus == NULL) {
+			pr_err("%s: cpus pointer is NULL\n", __func__);
+			ret = -EINVAL;
+			goto out;
+		}
+	}
+
+out:
+	return ret;
+}
+
+static int validate_ikc_req(struct ihk_ikc_req *req)
+{
+	int ret = 0;
+
+	if (req->num_cpus < 0 || req->num_cpus > SMP_MAX_CPUS) {
+		pr_err("%s: invalid cpu length\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (req->num_cpus > 0) {
+		if (req->src_cpus == NULL || req->dst_cpus == NULL) {
+			pr_err("%s: cpus pointer is NULL\n", __func__);
+			ret = -EINVAL;
+			goto out;
+		}
+	}
+
+out:
+	return ret;
+}
+
+static int validate_mem_req(struct ihk_mem_req *req)
+{
+	int ret = 0;
+
+	if (req->num_chunks < 0) {
+		pr_err("%s: invalid chunk length\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (req->num_chunks > 0) {
+		if (req->sizes == NULL || req->numa_ids == NULL) {
+			pr_err("%s: mem info pointer is NULL\n", __func__);
+			ret = -EINVAL;
+			goto out;
+		}
+	}
+
+	if (req->min_chunk_size < 0) {
+		pr_err("%s: invalid min_chunk size\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (req->max_size_ratio_all < 0 ||
+	    IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT < req->max_size_ratio_all) {
+		pr_err("%s: invalid max_size_ratio (%d)\n",
+		       __func__, req->max_size_ratio_all);
+		ret = -EINVAL;
+		goto out;
+	}
+
+out:
 	return ret;
 }
 
@@ -1783,8 +1864,8 @@ static int smp_ihk_os_assign_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		goto out;
 	}
 
-	if (req.num_cpus < 0 || req.num_cpus > SMP_MAX_CPUS) {
-		printk("%s: invalid request length\n", __FUNCTION__);
+	if (validate_cpu_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1877,8 +1958,8 @@ static int smp_ihk_os_release_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg
 		goto out;
 	}
 
-	if (req.num_cpus < 0 || req.num_cpus > SMP_MAX_CPUS) {
-		printk("%s: invalid request length\n", __FUNCTION__);
+	if (validate_cpu_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1992,6 +2073,12 @@ static int smp_ihk_os_query_cpu(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		return -EFAULT;
 	}
 
+	if (validate_cpu_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	if (req.num_cpus != os->nr_cpus) {
 		pr_err("%s: error: #cpu requested (%d) != actual (%d)\n",
 		       __func__, req.num_cpus, os->nr_cpus);
@@ -2062,8 +2149,8 @@ static int smp_ihk_os_set_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		goto out;
 	}
 
-	if (req.num_cpus <= 0 || req.num_cpus > SMP_MAX_CPUS) {
-		printk("%s: invalid request length\n", __FUNCTION__);
+	if (validate_ikc_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -2210,8 +2297,8 @@ static int smp_ihk_os_get_ikc_map(ihk_os_t ihk_os, void *priv, unsigned long arg
 		goto out;
 	}
 
-	if (req.num_cpus <= 0 || req.num_cpus > SMP_MAX_CPUS) {
-		pr_err("%s: invalid request length\n", __func__);
+	if (validate_ikc_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -2561,8 +2648,8 @@ static int smp_ihk_os_assign_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		goto out;
 	}
 
-	if (req.num_chunks < 0) {
-		printk("%s: invalid request length\n", __FUNCTION__);
+	if (validate_mem_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -2714,7 +2801,8 @@ static int smp_ihk_os_release_mem(ihk_os_t ihk_os, void *priv, unsigned long arg
 		goto out;
 	}
 
-	if (req.num_chunks < 0) {
+	if (validate_mem_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -2797,7 +2885,8 @@ static int smp_ihk_os_query_mem(ihk_os_t ihk_os, void *priv, unsigned long arg)
 		num_chunks++;
 	}
 
-	if (req.num_chunks < 0) {
+	if (validate_mem_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -4102,9 +4191,10 @@ static int smp_ihk_reserve_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_cpus < 0) {
-		printk("%s: invalid request length\n", __FUNCTION__);
-		return -EINVAL;
+	if (validate_cpu_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (req.num_cpus == 0) {
@@ -4281,9 +4371,10 @@ static int smp_ihk_release_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_cpus < 0) {
-		printk("%s: invalid request length\n", __FUNCTION__);
-		return -EINVAL;
+	if (validate_cpu_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (req.num_cpus == 0) {
@@ -4422,6 +4513,12 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 		goto out;
 	}
 
+	if (validate_cpu_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	for (cpu = 0, idx = 0; cpu < SMP_MAX_CPUS; ++cpu) {
 		if (ihk_smp_cpus[cpu].status != IHK_SMP_CPU_AVAILABLE)
 			continue;
@@ -4469,7 +4566,7 @@ static int smp_ihk_query_cpu(ihk_device_t ihk_dev, unsigned long arg)
 	ret = 0;
 out:
 	kfree(res_cpus);
-	return 0;
+	return ret;
 }
 
 #ifdef ENABLE_KRM_WORKAROUND
@@ -4497,9 +4594,10 @@ static int smp_ihk_reserve_mem(ihk_device_t ihk_dev, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (req.num_chunks < 0) {
-		printk("%s: invalid request length\n", __FUNCTION__);
-		return -EINVAL;
+	if (validate_mem_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (req.num_chunks == 0) {
@@ -4580,8 +4678,11 @@ static int smp_ihk_release_mem(ihk_device_t ihk_dev, unsigned long arg)
 	ret_internal = copy_from_user(&req, (void *)arg, sizeof(req));
 	ARCHDRV_CHKANDJUMP(ret_internal != 0, "copy_from_user failed", -EFAULT);
 
-	ARCHDRV_CHKANDJUMP(req.num_chunks < 0, "invalid request length",
-			-EINVAL);
+	if (validate_mem_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
+		ret = -EINVAL;
+		goto fn_fail;
+	}
 
 	if (req.num_chunks == 0) {
 		ret = 0;
@@ -4634,9 +4735,8 @@ static int smp_ihk_release_mem_partially(ihk_device_t ihk_dev,
 		goto out;
 	}
 
-	if (req.num_chunks <= 0) {
-		pr_err("%s: invalid number of chunks (%d)\n",
-		       __func__, req.num_chunks);
+	if (validate_mem_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -4724,7 +4824,8 @@ static int smp_ihk_query_mem(ihk_device_t ihk_dev, unsigned long arg)
 	}
 #endif
 
-	if (req.num_chunks < 0) {
+	if (validate_mem_req(&req)) {
+		pr_err("%s: invalid request\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
