@@ -93,7 +93,11 @@ struct ihklib_reserve_mem_conf reserve_mem_conf = {
 	.balanced_best_effort = 0,
 	.balanced_variance_limit = 0,
 	.min_chunk_size = PAGE_SIZE,
+#ifdef ENABLE_FUGAKU_HACKS
+	.max_size_ratio_all = 95,
+#else
 	.max_size_ratio_all = 98,
+#endif
 	.timeout = 30,
 };
 
