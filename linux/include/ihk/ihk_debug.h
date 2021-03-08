@@ -11,8 +11,13 @@
 /* careful not to exceed the max order of 10 (= 4MiB) in RHEL-7 (x86_64) */
 #define IHK_KMSG_SIZE            ((4 << 20) - 4096)
 
+#ifdef ENABLE_KMSG_REDIRECT
+#define IHK_KMSG_HIGH_WATER_MARK 1
+#define IHK_KMSG_NOTIFY_DELAY    400
+#else
 #define IHK_KMSG_HIGH_WATER_MARK (IHK_KMSG_SIZE / 2)
 #define IHK_KMSG_NOTIFY_DELAY    400 /* Unit is us, 400 us would avoid overloading fwrite of ihkmond */
+#endif
 
 struct ihk_kmsg_buf {
 	int lock; /* Be careful, it's inter-kernel lock */

@@ -4,6 +4,29 @@
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_rusage.h>
 
+#define printk(fmt, args...) do {					\
+	char contents[IHKLIB_LINUX_KMSG_SIZE];				\
+	int _fd;							\
+	ssize_t len;							\
+	ssize_t offset = 0;						\
+	ssize_t written;						\
+									\
+	if (geteuid()) {						\
+		break;							\
+	}								\
+	snprintf(contents, IHKLIB_LINUX_KMSG_SIZE, fmt, ##args);	\
+	_fd = open("/dev/kmsg", O_WRONLY);				\
+	len = strnlen(contents, IHKLIB_LINUX_KMSG_SIZE - 1) + 1;	\
+	while (offset < len) {						\
+		written = write(_fd, contents + offset, len - offset);	\
+		if (written <= 0) {					\
+			break;						\
+		}							\
+		offset += written;					\
+	}								\
+	close(_fd);							\
+} while (0)
+
 #define IHK_MAX_NUM_MEM_CHUNKS 2048
 
 #define IHK_OS_EVENTFD_MONITOR_INTERVAL (1000*1000*2) /* usec */

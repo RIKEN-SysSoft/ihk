@@ -225,6 +225,45 @@ out:
 	return NULL;
 }
 
+#ifdef ENABLE_KMSG_REDIRECT
+static int printk_kmsg(int dev_index, void *handle)
+{
+	int ret;
+	int devfd = -1;
+	ssize_t nread;
+	char buf[IHK_KMSG_SIZE];
+	char *car, *cdr;
+	struct ihk_device_read_kmsg_buf_desc desc = {
+		.handle = handle, .shift = 1, .buf = buf };
+
+	devfd = ihklib_device_open(dev_index);
+	CHKANDJUMP(devfd < 0, -errno, "ihklib_device_open returned %d\n",
+		   -errno);
+
+	nread = ioctl(devfd, IHK_DEVICE_READ_KMSG_BUF, (unsigned long)&desc);
+	CHKANDJUMP(nread < 0 || nread > IHK_KMSG_SIZE, nread, "ioctl failed\n");
+	if (nread == 0) {
+		dprintf("nread is zero\n");
+		goto out;
+	}
+	close(devfd);
+	devfd = -1;
+
+	cdr = buf;
+	while ((car = strsep(&cdr, "\n"))) {
+		printk("<3>%s", car); /* KERN_ERR */
+		usleep(200); /* Prevent messages from getting dropped */
+	}
+
+	ret = 0;
+ out:
+	if (devfd >= 0) {
+		close(devfd);
+	}
+	return ret;
+}
+#endif
+
 static int fwrite_kmsg(int dev_index, void* handle, int os_index, FILE **fps, int *sizes, int *prod, int shift) {
 	int ret = 0, ret_lib;
 	int devfd = -1;
@@ -426,25 +465,39 @@ static void* redirect_kmsg(void* _arg) {
 			if (events[i].data.fd == evfd_kmsg) {
 				reap_event(events[i].data.fd);
 				dprintf("kmsg event detected\n");
+#ifdef ENABLE_KMSG_REDIRECT
+				ret_lib = printk_kmsg(arg->dev_index, desc_get.handle);
+#else
 				ret_lib = fwrite_kmsg(arg->dev_index, desc_get.handle, arg->os_index, fps, sizes, &prod, 1);
+#endif
 				CHKANDJUMP(ret_lib < 0, -EINVAL, "fwrite_kmsg returned %d\n", ret_lib);
 			} else if (events[i].data.fd == evfd_status) {
 				reap_event(events[i].data.fd);
 				dprintf("LWK status event detected\n");
+#ifdef ENABLE_KMSG_REDIRECT
+				ret_lib = printk_kmsg(arg->dev_index, desc_get.handle);
+				CHKANDJUMP(ret_lib < 0, -EINVAL, "printk_kmsg returned %d\n", ret_lib);
+#else
 				ret_lib = fwrite_kmsg(arg->dev_index, desc_get.handle, arg->os_index, fps, sizes, &prod, 1);
 				CHKANDJUMP(ret_lib < 0, -EINVAL, "fwrite_kmsg returned %d\n", ret_lib);
 
 				ret_lib = syslog_kmsg(fps, prod);
 				CHKANDJUMP(ret_lib < 0, ret_lib, "syslog_kmsg returned %d\n", ret_lib);
+#endif
 			} else if (events[i].data.fd == arg->evfd_mcos_removed) {
 				reap_event(events[i].data.fd);
 				dprintf("mcos remove event detected\n");
+#ifdef ENABLE_KMSG_REDIRECT
+				ret_lib = printk_kmsg(arg->dev_index, desc_get.handle);
+				CHKANDJUMP(ret_lib < 0, -EINVAL, "printk_kmsg returned %d\n", ret_lib);
+#else
 				ret_lib = fwrite_kmsg(arg->dev_index, desc_get.handle, arg->os_index, fps, sizes, &prod, 1);
 				CHKANDJUMP(ret_lib < 0, -EINVAL, "fwrite_kmsg returned %d\n", ret_lib);
 
 				ret_lib = syslog_kmsg(fps, prod);
 				CHKANDJUMP(ret_lib < 0, ret_lib, "syslog_kmsg returned %d\n", ret_lib);
 				dprintf("after syslog_kmsg for destroy\n");
+#endif
 
 				/* Release (i.e. unref) kmsg_buf */
 				devfd = ihklib_device_open(arg->dev_index);
