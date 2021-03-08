@@ -92,6 +92,14 @@ if(ENABLE_FUGAKU_DEBUG)
 	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DENABLE_FUGAKU_DEBUG")
 endif()
 
+# redirect kernel messages to Linux's /dev/kmsg
+option(ENABLE_KMSG_REDIRECT "Redirect kernel message to Linux's /dev/kmsg" OFF)
+
+if(ENABLE_KMSG_REDIRECT)
+	add_definitions(-DENABLE_KMSG_REDIRECT)
+	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DENABLE_KMSG_REDIRECT")
+endif()
+
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 	set(BUILD_TARGET "smp-x86" CACHE STRING "Build target: smp-x86 | smp-arm64")
 elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
@@ -169,3 +177,4 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
 endif()
 
 message("WITH_KRM: ${WITH_KRM}")
+message("ENABLE_KMSG_REDIRECT: ${ENABLE_KMSG_REDIRECT}")

@@ -38,29 +38,6 @@ char **__argv;
 
 int loglevel = IHKLIB_LOGLEVEL_ERR;
 
-#define printk(fmt, args...) do {					\
-	char contents[IHKLIB_LINUX_KMSG_SIZE];				\
-	int _fd;							\
-	ssize_t len;							\
-	ssize_t offset = 0;						\
-	ssize_t written;						\
-									\
-	if (geteuid()) {						\
-		break;							\
-	}								\
-	snprintf(contents, IHKLIB_LINUX_KMSG_SIZE, fmt, ##args);	\
-	_fd = open("/dev/kmsg", O_WRONLY);				\
-	len = strnlen(contents, IHKLIB_LINUX_KMSG_SIZE - 1) + 1;	\
-	while (offset < len) {						\
-		written = write(_fd, contents + offset, len - offset);	\
-		if (written <= 0) {					\
-			break;						\
-		}							\
-		offset += written;					\
-	}								\
-	close(_fd);							\
-} while (0)
-
 #ifdef DEBUG
 #define dnprintk(str, fmt, args...) do {		 \
 	char *_##str = strndup(str, 256);		 \
