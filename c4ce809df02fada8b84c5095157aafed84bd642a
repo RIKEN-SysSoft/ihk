@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a29d17bc_45547f67",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1015580
+      },
+      "writtenOn": "2021-03-10T04:35:44Z",
+      "side": 1,
+      "message": "テストプログラムの余分な#if 0 を削除しました。",
+      "revId": "c4ce809df02fada8b84c5095157aafed84bd642a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
