@@ -948,9 +948,17 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 		sprintf(path, "/sys/devices/system/cpu/cpu%d/", cpus[i]);
 		dir = opendir(path);
 		if (dir == NULL) {
+			if (errno == ENOENT) {
+				dprintf("%s: error: cpu %d doesn't exist\n",
+					__func__, i);
+				ret = -EINVAL;
+				closedir(dir);
+				goto out;
+			}
 			ret = -errno;
 			dprintf("%s: error: opendir returned %d\n",
 				__func__, -ret);
+			closedir(dir);
 			goto out;
 		}
 
