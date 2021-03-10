@@ -120,6 +120,15 @@ struct ihklib_reserve_mem_conf reserve_mem_conf = {
 	.timeout = 30,
 };
 
+static const struct ihklib_reserve_mem_conf reserve_mem_conf_default = {
+	.balanced_enable = 0,
+	.balanced_best_effort = 0,
+	.balanced_variance_limit = 0,
+	.min_chunk_size = PAGE_SIZE,
+	.max_size_ratio_all = 98,
+	.timeout = 30,
+};
+
 static int snprintf_realloc(char **str, size_t *size,
 		size_t offset, const char *format, ...)
 {
@@ -4745,6 +4754,9 @@ int ihk_reserve_mem_conf_str(int dev_index, const char *envp, int num_env)
 	int ret;
 	int i;
 	char **name = NULL, **value = NULL;
+
+	/* use default values if not specified */
+	reserve_mem_conf = reserve_mem_conf_default;
 
 	ret = parse_env(envp, num_env, &name, &value);
 	if (ret) {
