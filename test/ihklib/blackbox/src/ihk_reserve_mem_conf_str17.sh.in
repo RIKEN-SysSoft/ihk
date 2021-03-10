@@ -1,0 +1,52 @@
+#!/usr/bin/bash
+
+. @CMAKE_INSTALL_PREFIX@/bin/util.sh
+
+# define WORKDIR
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+if [ -f ${AUTOTEST_HOME}/bin/config.sh ]; then
+    . ${AUTOTEST_HOME}/bin/config.sh
+else
+    WORKDIR=$(pwd)
+fi
+
+memleak_pro
+
+patch_and_build "" dump_reserve_mem_conf_ihk || exit 1
+
+sudo dmesg --clear
+
+for i in 0 1; do
+    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem_conf_str17 -i $i || ng=$((ng + 1))
+done
+
+for i in \
+    "IHK_RESERVE_MEM_BALANCED_ENABLE=0" \
+    "IHK_RESERVE_MEM_BALANCED_BEST_EFFORT=0" \
+    "IHK_RESERVE_MEM_BALANCED_VARIANCE_LIMIT=0" \
+    "IHK_RESERVE_MEM_MIN_CHUNK_SIZE=65536" \
+    "IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL=98" \
+    "IHK_RESERVE_MEM_TIMEOUT=30"; do
+
+    dmesg | grep -qw $i
+    ret=$?
+
+    if (( ret == 0 )); then
+	printf "[  OK  ] "
+    else
+	printf "[  NG  ] "
+	ng=$((ng + 1))
+    fi
+    echo "$i found in Linux kmsg"
+done
+
+revert
+
+memleak_epi
+
+if (( ng > 0 )); then
+    exit 1
+else
+    exit 0
+fi

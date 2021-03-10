@@ -449,6 +449,7 @@ set(TESTCASES
     ihk_os_assign_cpu_str16
     ihk_os_set_ikc_map_str16
     ihk_os_kargs_str16
+    ihk_reserve_mem_conf_str17
     )
 
 if (WITH_KRM)
