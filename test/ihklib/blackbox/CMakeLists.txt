@@ -449,6 +449,7 @@ set(TESTCASES
     ihk_os_assign_cpu_str16
     ihk_os_set_ikc_map_str16
     ihk_os_kargs_str16
+    ihk_reserve_mem_conf_str17
     )
 
 if (WITH_KRM)
@@ -516,6 +517,7 @@ foreach(target IN ITEMS
     ihkmond_ihk
     ihklib_debug_ihk
     kmsg_size_ihk
+    dump_reserve_mem_conf_ihk
     )
   install(PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/src/${target}.patch DESTINATION bin)
 endforeach()
