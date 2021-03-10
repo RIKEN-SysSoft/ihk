@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "203169cf_8e149ca9",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_conf_str17.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-10T06:51:36Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "abd1a05e22d57253e157ea3b21fe5ed8a12e2595",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "55efe419_e38d7d49",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_mem_conf_str17.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 34,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-10T06:51:36Z",
+      "side": 1,
+      "message": "WARNING: externs should be avoided in .c files\n+extern void dump_reserve_mem_conf(void); /* defined in patch */",
+      "revId": "abd1a05e22d57253e157ea3b21fe5ed8a12e2595",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
