@@ -13,13 +13,9 @@ fi
 
 memleak_pro
 
-patch_and_build "" dump_reserve_mem_conf_ihk || exit 1
-
 sudo dmesg --clear
 
-for i in 0 1; do
-    sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem_conf_str17 -i $i || ng=$((ng + 1))
-done
+sudo @CMAKE_INSTALL_PREFIX@/bin/ihk_reserve_mem_conf_str17 -i $i || ng=$((ng + 1))
 
 for i in \
     "IHK_RESERVE_MEM_BALANCED_ENABLE=0" \

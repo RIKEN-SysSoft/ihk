@@ -1619,6 +1619,10 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 
 	ret = 0;
 out:
+
+	/* ihk_reserve_mem_conf is one-shot */
+	reserve_mem_conf = reserve_mem_conf_default;
+
 #ifdef WITH_KRM
 	free(cgroup_mems);
 #endif
@@ -4736,9 +4740,6 @@ int ihk_reserve_mem_conf_str(int dev_index, const char *envp, int num_env)
 	int ret;
 	int i;
 	char **name = NULL, **value = NULL;
-
-	/* use default values if not specified */
-	reserve_mem_conf = reserve_mem_conf_default;
 
 	ret = parse_env(envp, num_env, &name, &value);
 	if (ret) {
