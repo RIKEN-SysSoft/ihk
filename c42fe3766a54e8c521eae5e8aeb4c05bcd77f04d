@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "07b6f1e4_3133d642",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 939,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T00:51:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tret \u003d parse_cgroup_set(\"/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.cpus\",",
+      "revId": "c42fe3766a54e8c521eae5e8aeb4c05bcd77f04d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "dfd05074_85dcd949",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 961,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T00:51:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t(void)get_cgroup_set(\"/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.cpus\",",
+      "revId": "c42fe3766a54e8c521eae5e8aeb4c05bcd77f04d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b574e99c_93309b5e",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1281,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T00:51:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tret \u003d parse_cgroup_set(\"/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems\",",
+      "revId": "c42fe3766a54e8c521eae5e8aeb4c05bcd77f04d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e361e479_3f1f19f0",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1294,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T00:51:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tif (mem_chunks[i].numa_node_number \u003d\u003d cgroup_nodeids[j]) {",
+      "revId": "c42fe3766a54e8c521eae5e8aeb4c05bcd77f04d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3c2e07a8_99f4d1d7",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1303,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T00:51:05Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t(void)get_cgroup_set(\"/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems\",",
+      "revId": "c42fe3766a54e8c521eae5e8aeb4c05bcd77f04d",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
