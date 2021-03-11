@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "17044f58_085ad4d4",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 939,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T01:31:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tret \u003d parse_cgroup_set(\"/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.cpus\",",
+      "revId": "a7f87b7af9c38b5030faa473139db67fce67252c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "60c56820_37059ce1",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 961,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T01:31:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t(void)get_cgroup_set(\"/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.cpus\",",
+      "revId": "a7f87b7af9c38b5030faa473139db67fce67252c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "48c998be_33aeb70f",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1281,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T01:31:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tret \u003d parse_cgroup_set(\"/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems\",",
+      "revId": "a7f87b7af9c38b5030faa473139db67fce67252c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7b22544b_b2c25494",
+        "filename": "linux/user/ihklib.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1303,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T01:31:16Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t(void)get_cgroup_set(\"/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems\",",
+      "revId": "a7f87b7af9c38b5030faa473139db67fce67252c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
