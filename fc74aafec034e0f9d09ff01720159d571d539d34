@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d40396f1_ca466a73",
+        "filename": "test/ihklib/blackbox/src/ihk_reserve_cpu_str19.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-11T01:49:09Z",
+      "side": 1,
+      "message": "WARNING: Prefer ARRAY_SIZE(values)\n+#define NR_CASES (sizeof(values) / sizeof(values[0]))",
+      "revId": "fc74aafec034e0f9d09ff01720159d571d539d34",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
