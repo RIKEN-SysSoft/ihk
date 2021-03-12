@@ -2884,21 +2884,47 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	unsigned long map_start;
 	unsigned long i,j,k;
 	struct page *pg;
+	enum ihk_os_status status;
+	struct ihk_os_mem_chunk *os_mem_chunk;
+	unsigned long phys;
 
-	pr_info("%s: sending nmi\n",
+	/* excluding McKernel memory from Linux dump when info
+	 * accessed by ihk_mc_query_mem_areas(),
+	 * ihk_mc_query_mem_free_page(), ihk_mc_query_mem_user_page()
+	 * might not be ready
+	 */
+	status = smp_ihk_os_query_status(ihk_os, priv);
+
+	if (status == IHK_OS_STATUS_BOOTED ||
+	    status == IHK_OS_STATUS_BOOTING ||
+	    status == IHK_OS_STATUS_READY) {
+		pr_err("%s: excluding McKernel memory from Linux dump because of status (%d)\n",
+		       __func__, (int)status);
+		goto exclude_from_linux_dump;
+	}
+
+	pr_err("%s: sending nmi\n",
 		__func__);
 	smp_ihk_os_send_nmi(ihk_os, priv, 0);
 
-	pr_info("%s: waiting for mckernel marking pages excluded from dump\n",
+	pr_err("%s: waiting for mckernel marking pages excluded from dump\n",
 		__func__);
-	while (os->param->dump_page_set.completion_flag !=
-	       IHK_DUMP_PAGE_SET_COMPLETED) {
 
-		cpu_relax();
-
+	for (i = 0; i < 30; i++) {
+		if (os->param->dump_page_set.completion_flag ==
+		    IHK_DUMP_PAGE_SET_COMPLETED) {
+			break;
+		}
+		mdelay(100);
+	}
+	
+	if (i == 30) {
+		pr_err("%s: excluding McKernel memory from Linux dump because of timeout\n",
+		__func__);
+		goto exclude_from_linux_dump;
 	}
 
-	pr_info("%s: marking pages excluded from dump\n",
+	pr_err("%s: marking pages excluded from dump\n",
 		__func__);
 	if (os->param->dump_level == DUMP_LEVEL_USER_UNUSED_EXCLUDE) {
 
@@ -2915,15 +2941,34 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 						map_start = (unsigned long)(dump_page->start + (j << (PAGE_SHIFT+6)));
 						map_start = map_start + (k << PAGE_SHIFT);
 						pg = virt_to_page(phys_to_virt(map_start));
-						pg->mapping += PAGE_MAPPING_ANON;
+						pg->mapping = (struct address_space *)((unsigned long)pg->mapping |
+										       PAGE_MAPPING_ANON);
 					}
 				}
 			}
 		}
 	}
-	pr_info("%s: exit\n", __func__);
+	pr_err("%s: marking pages done\n", __func__);
 
 	return;
+
+ exclude_from_linux_dump:
+	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
+		if (os_mem_chunk->os != ihk_os)
+			continue;
+
+		for (phys = os_mem_chunk->addr;
+		     phys < os_mem_chunk->addr + os_mem_chunk->size;
+		     phys += PAGE_SIZE) {
+			pg = virt_to_page(phys_to_virt(phys));
+			pg->mapping = (struct address_space *)((unsigned long)pg->mapping |
+							       PAGE_MAPPING_ANON);
+		}
+	}
+	pr_err("%s: marking all pages as PAGE_MAPPING_ANON done\n",
+	       __func__);
+	return;
+
 }
 
 static struct ihk_os_ops smp_ihk_os_ops = {
