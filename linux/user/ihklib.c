@@ -744,16 +744,18 @@ out:
 	return str;
 }
 
-static int get_cgroup_set(char *path, char **_set)
+static int get_slice_cpuset_mems(char **_slice_cpuset_mems)
 {
 	int ret;
-	char *set = NULL;
+	char *slice_cpuset_mems = NULL;
 	FILE *fp = NULL;
 	char cmd[4096];
 	size_t n;
 	ssize_t nread;
 
-	sprintf(cmd, "cat %s 2>/dev/null | tr -d '\n'", path);
+	sprintf(cmd,
+		"cat /sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems "
+		"2>/dev/null | tr -d '\n'");
 
 	fp = popen(cmd, "r");
 
@@ -764,7 +766,7 @@ static int get_cgroup_set(char *path, char **_set)
 		goto out;
 	}
 
-	nread = getline(&set, &n, fp);
+	nread = getline(&slice_cpuset_mems, &n, fp);
 	if (nread <= 0) {
 		ret = -EINVAL;
 		dprintf("%s: getline read zero byte (%ld bytes) "
@@ -776,10 +778,10 @@ static int get_cgroup_set(char *path, char **_set)
 	dprintf("%s: read %ld bytes\n",
 		__func__, nread);
 
-	dprintf("%s: set: %s\n",
-		__func__, set);
+	dprintf("%s: slice_cpuset_mems: %s\n",
+		__func__, slice_cpuset_mems);
 
-	*_set = set;
+	*_slice_cpuset_mems = slice_cpuset_mems;
 	ret = 0;
  out:
 
@@ -790,46 +792,46 @@ static int get_cgroup_set(char *path, char **_set)
 	return ret;
 }
 
-static int parse_cgroup_set(char *path, int **ids, int *_nr_ids)
+static int parse_cpuset_mems(int **nodeids, int *_nr_nodeids)
 {
 	int ret;
-	int nr_ids;
-	char *cgroup_mems = NULL;
+	int nr_nodeids;
+	char *slice_cpuset_mems = NULL;
 
-	ret = get_cgroup_set(path, &cgroup_mems);
+	ret = get_slice_cpuset_mems(&slice_cpuset_mems);
 	if (ret) {
-		dprintf("%s: get_cgroup_set failed with %d\n",
+		dprintf("%s: get_slice_cpuset_mems failed with %d\n",
 		       __func__, ret);
 		goto out;
 	}
 
-	nr_ids = cpu_str2count(cgroup_mems);
-	if (nr_ids <= 0) {
+	nr_nodeids = cpu_str2count(slice_cpuset_mems);
+	if (nr_nodeids <= 0) {
 		ret = -EINVAL;
 		goto out;
 	}
 
-	dprintf("%s: nr_ids: %d\n", __func__, nr_ids);
+	dprintf("%s: nr_nodeids: %d\n", __func__, nr_nodeids);
 
-	*ids = calloc(sizeof(int), nr_ids);
-	if (!*ids) {
+	*nodeids = calloc(sizeof(int), nr_nodeids);
+	if (!*nodeids) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	ret = cpu_str2array(cgroup_mems,
-			    nr_ids, *ids);
+	ret = cpu_str2array(slice_cpuset_mems,
+			    nr_nodeids, *nodeids);
 	if (ret < 0) {
-		dprintf("%s: cpu_str2array failed with %d\n",
+		dprintf("%s: get_slice_cpuset_mems failed with %d\n",
 		       __func__, ret);
 		ret = -EINVAL;
 		goto out;
 	}
 
-	*_nr_ids = nr_ids;
+	*_nr_nodeids = nr_nodeids;
 	ret = 0;
  out:
-	free(cgroup_mems);
+	free(slice_cpuset_mems);
 	return ret;
 }
 
@@ -882,8 +884,8 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	struct ihk_ioctl_cpu_desc req = { 0 };
 	int fd = -1;
 #ifdef WITH_KRM
-	int *cgroup_cpus = NULL;
-	int nr_cgroup_cpus;
+	int *nodeids = NULL;
+	int nr_nodeids;
 	int i;
 #endif
 
@@ -912,11 +914,13 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 	}
 
 #ifdef WITH_KRM
-	/* included in cgroup? */
-	ret = parse_cgroup_set("/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.cpus",
-			      &cgroup_cpus, &nr_cgroup_cpus);
+	/* Included in cgroup cpuset.mems? We refer to cpuset.mems
+	 * because cpuset.cpus includes both system cpus and job cpus
+	 * but cpuset.mems only includes job NUMA-nodes.
+	 */
+	ret = parse_cpuset_mems(&nodeids, &nr_nodeids);
 	if (ret) {
-		dprintf("%s: error: parse_cgroup_set failed with %d\n",
+		dprintf("%s: error: parse_cpuset_mems failed with %d\n",
 			__func__, ret);
 		goto out;
 	}
@@ -925,23 +929,58 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 		int found = 0;
 		int j;
 
-		for (j = 0; j < nr_cgroup_cpus; j++) {
-			if (cpus[i] == cgroup_cpus[j]) {
+		char path[4096];
+		DIR *dir = NULL;
+		struct dirent *direp;
+		int nodeid;
+
+		sprintf(path, "/sys/devices/system/cpu/cpu%d/", cpus[i]);
+		dir = opendir(path);
+		if (dir == NULL) {
+			if (errno == ENOENT) {
+				dprintf("%s: error: cpu %d doesn't exist\n",
+					__func__, cpus[i]);
+				ret = -EINVAL;
+				closedir(dir);
+				goto out;
+			}
+			ret = -errno;
+			dprintf("%s: error: opendir returned %d\n",
+				__func__, -ret);
+			closedir(dir);
+			goto out;
+		}
+
+		while ((direp = readdir(dir))) {
+			ret = sscanf(direp->d_name, "node%d", &nodeid);
+			if (ret == 1) {
+				break;
+			}
+		}
+		closedir(dir);
+
+		if (ret != 1) {
+			dprintf("%s: error: numa to which cpu %d is attached not found\n",
+				__func__, cpus[i]);
+			ret = -EINVAL;
+			goto out;
+		}
+
+		for (j = 0; j < nr_nodeids; j++) {
+			if (nodeid == nodeids[j]) {
 				found = 1;
 				break;
 			}
 		}
 
 		if (!found) {
-			char *cgroup_cpus_str = NULL;
+			char *slice_cpuset_mems = NULL;
 
-			(void)get_cgroup_set("/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.cpus",
-					     &cgroup_cpus_str);
-			dprintf("%s: error: cpu %d is not included in %s\n",
-				__func__,
-				cpus[i],
-				cgroup_cpus_str);
-			free(cgroup_cpus_str);
+			(void)get_slice_cpuset_mems(&slice_cpuset_mems);
+			dprintf("%s: error: numa %d associated with cpu %d is outside %s\n",
+				__func__, nodeid, cpus[i],
+				slice_cpuset_mems);
+			free(slice_cpuset_mems);
 			ret = -EINVAL;
 			goto out;
 		}
@@ -967,7 +1006,7 @@ int ihk_reserve_cpu(int index, int* cpus, int num_cpus)
 
  out:
 #ifdef WITH_KRM
-	free(cgroup_cpus);
+	free(nodeids);
 #endif
 	if (fd != -1) {
 		close(fd);
@@ -1224,8 +1263,8 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	unsigned long variance_limit;
 	int release = 0;
 #ifdef WITH_KRM
-	int *cgroup_mems = NULL;
-	int nr_cgroup_mems;
+	int *nodeids = NULL;
+	int nr_nodeids;
 #endif
 
 	dprintk("%s: reserve_mem_conf.balanced_enable=%d\n",
@@ -1254,11 +1293,10 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 	}
 
 #ifdef WITH_KRM
-	/* included in cgroup? */
-	ret = parse_cgroup_set("/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems",
-			      &cgroup_mems, &nr_cgroup_mems);
+	/* Included in cgroup cpuset.mems? */
+	ret = parse_cpuset_mems(&nodeids, &nr_nodeids);
 	if (ret) {
-		dprintf("%s: error: parse_cgroup_set failed with %d\n",
+		dprintf("%s: error: parse_cpuset_mems failed with %d\n",
 			__func__, ret);
 		goto out;
 	}
@@ -1267,23 +1305,22 @@ int ihk_reserve_mem(int index, struct ihk_mem_chunk *mem_chunks,
 		int found = 0;
 		int j;
 
-		for (j = 0; j < nr_cgroup_mems; j++) {
-			if (mem_chunks[i].numa_node_number == cgroup_mems[j]) {
+		for (j = 0; j < nr_nodeids; j++) {
+			if (mem_chunks[i].numa_node_number == nodeids[j]) {
 				found = 1;
 				break;
 			}
 		}
 
 		if (!found) {
-			char *cgroup_mems_str = NULL;
+			char *slice_cpuset_mems = NULL;
 
-			(void)get_cgroup_set("/sys/fs/cgroup/cpuset/pxkrmjobs.slice/cpuset.mems",
-					     &cgroup_mems_str);
-			dprintf("%s: error: numa %d is not included in %s\n",
+			(void)get_slice_cpuset_mems(&slice_cpuset_mems);
+			dprintf("%s: error: numa %d is outside %s\n",
 				__func__,
 				mem_chunks[i].numa_node_number,
-				cgroup_mems_str);
-			free(cgroup_mems_str);
+				slice_cpuset_mems);
+			free(slice_cpuset_mems);
 			ret = -EINVAL;
 			goto out;
 		}
@@ -1601,7 +1638,7 @@ out:
 	reserve_mem_conf = reserve_mem_conf_default;
 
 #ifdef WITH_KRM
-	free(cgroup_mems);
+	free(nodeids);
 #endif
 	if (release) {
 		struct ihk_mem_chunk mem_chunks[1] = {
