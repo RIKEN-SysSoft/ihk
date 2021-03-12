@@ -2821,6 +2821,19 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	unsigned long i,j,k;
 	struct page *pg;
 
+	/* (rest_init --> ap_init --> ihk_mc_init_ap -->)
+	 * assign_processor_id gets ihk_mc_get_processor_id() ready. And
+	 * then arch_ready set boot_param->status to 2, i.e. READY.
+	 * only after that the ihk_mc_query_mem_areas's assumption, i.e.,
+	 * num_processors and ihk_mc_get_processor_id() are ready, holds
+	 * true.
+	 */
+	status = smp_ihk_os_query_status(ihk_os, priv);
+	if (status == IHK_OS_STATUS_BOOTED ||
+	    status == IHK_OS_STATUS_BOOTING) {
+		return;
+	}
+
 	smp_ihk_os_send_nmi(ihk_os, priv, 0);
 
 	while (os->param->dump_page_set.completion_flag !=
