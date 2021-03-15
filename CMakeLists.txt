@@ -100,6 +100,14 @@ if(ENABLE_KMSG_REDIRECT)
 	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DENABLE_KMSG_REDIRECT")
 endif()
 
+# exclude mckernel memory from Linux dump
+option(EXCLUDE_MEM_FROM_LINUX_DUMP "Exclude McKernel memory from Linux dump" ON)
+
+if(EXCLUDE_MEM_FROM_LINUX_DUMP)
+	add_definitions(-DEXCLUDE_MEM_FROM_LINUX_DUMP)
+	set(KBUILD_C_FLAGS "${KBUILD_C_FLAGS} -DEXCLUDE_MEM_FROM_LINUX_DUMP")
+endif()
+
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 	set(BUILD_TARGET "smp-x86" CACHE STRING "Build target: smp-x86 | smp-arm64")
 elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
@@ -178,3 +186,4 @@ endif()
 
 message("WITH_KRM: ${WITH_KRM}")
 message("ENABLE_KMSG_REDIRECT: ${ENABLE_KMSG_REDIRECT}")
+message("EXCLUDE_MEM_FROM_LINUX_DUMP: ${EXCLUDE_MEM_FROM_LINUX_DUMP}")

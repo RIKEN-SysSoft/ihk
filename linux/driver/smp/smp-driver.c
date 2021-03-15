@@ -2888,6 +2888,12 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	struct ihk_os_mem_chunk *os_mem_chunk;
 	unsigned long phys;
 
+#ifdef EXCLUDE_MEM_FROM_LINUX_DUMP
+	pr_err("%s: excluding McKernel memory from Linux dump because of cmake option\n",
+	       __func__);
+	goto exclude_mem_from_linux_dump;
+#endif
+
 	/* excluding McKernel memory from Linux dump when info
 	 * accessed by ihk_mc_query_mem_areas(),
 	 * ihk_mc_query_mem_free_page(), ihk_mc_query_mem_user_page()
@@ -2900,7 +2906,7 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	    status == IHK_OS_STATUS_READY) {
 		pr_err("%s: excluding McKernel memory from Linux dump because of status (%d)\n",
 		       __func__, (int)status);
-		goto exclude_from_linux_dump;
+		goto exclude_mem_from_linux_dump;
 	}
 
 	pr_err("%s: sending nmi\n",
@@ -2921,7 +2927,7 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	if (i == 30) {
 		pr_err("%s: excluding McKernel memory from Linux dump because of timeout\n",
 		__func__);
-		goto exclude_from_linux_dump;
+		goto exclude_mem_from_linux_dump;
 	}
 
 	pr_err("%s: marking pages excluded from dump\n",
@@ -2952,7 +2958,7 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 
 	return;
 
- exclude_from_linux_dump:
+ exclude_mem_from_linux_dump:
 	list_for_each_entry(os_mem_chunk, &ihk_mem_used_chunks, list) {
 		if (os_mem_chunk->os != ihk_os)
 			continue;
