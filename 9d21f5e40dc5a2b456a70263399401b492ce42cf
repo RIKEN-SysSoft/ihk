@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e4affa28_75391ad1",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1241,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T05:35:22Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: warning: already shut down\\n\", __func__);",
+      "revId": "9d21f5e40dc5a2b456a70263399401b492ce42cf",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2b80010a_a8ddc6b9",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1245,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T05:35:22Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tprintk(\"%s: warning: trying to shut down while booting\\n\", __func__);",
+      "revId": "9d21f5e40dc5a2b456a70263399401b492ce42cf",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "9f1bc31b_4b277150",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1245,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T05:35:22Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: warning: trying to shut down while booting\\n\", __func__);",
+      "revId": "9d21f5e40dc5a2b456a70263399401b492ce42cf",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "69cf2a3f_9d199c7f",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 3
+      },
+      "lineNbr": 1248,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T05:35:22Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\t\tprintk(\"%s: warning: being shutting down\\n\", __func__);",
+      "revId": "9d21f5e40dc5a2b456a70263399401b492ce42cf",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
