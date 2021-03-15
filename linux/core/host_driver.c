@@ -433,6 +433,13 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 		}
 		break;
 	case IHK_OS_STATUS_NOT_BOOTED:
+		/* assuming there is no overlapping os management calls
+		 * so IHK_OS_STATUS_NOT_BOOTED implies BUILTIN_OS_STATUS_INITIAL
+		 */
+		pr_info("%s: do nothing because data->priv->status is BUILTIN_OS_STATUS_INITIAL\n",
+			__func__);
+		ret = 0;
+		goto out;
 	case IHK_OS_STATUS_RUNNING:
 	case IHK_OS_STATUS_FAILED:
 	case IHK_OS_STATUS_HUNGUP:
