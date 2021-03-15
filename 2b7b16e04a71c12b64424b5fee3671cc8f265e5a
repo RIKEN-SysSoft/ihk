@@ -1,0 +1,89 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7932a7d5_2aedb877",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2920,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T02:44:27Z",
+      "side": 1,
+      "message": "ERROR: trailing whitespace\n+^I$",
+      "revId": "2b7b16e04a71c12b64424b5fee3671cc8f265e5a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "217d0d7b_7fc74c0c",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2944,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T02:44:27Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\tpg-\u003emapping \u003d (struct address_space *)((unsigned long)pg-\u003emapping |",
+      "revId": "2b7b16e04a71c12b64424b5fee3671cc8f265e5a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0995070d_0f1543a6",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2945,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T02:44:27Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t\t\t\t       PAGE_MAPPING_ANON);",
+      "revId": "2b7b16e04a71c12b64424b5fee3671cc8f265e5a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "81d0d3f1_77c182b6",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2964,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T02:44:27Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tpg-\u003emapping \u003d (struct address_space *)((unsigned long)pg-\u003emapping |",
+      "revId": "2b7b16e04a71c12b64424b5fee3671cc8f265e5a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2a1bbe8e_a78b21de",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 2965,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T02:44:27Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t       PAGE_MAPPING_ANON);",
+      "revId": "2b7b16e04a71c12b64424b5fee3671cc8f265e5a",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
