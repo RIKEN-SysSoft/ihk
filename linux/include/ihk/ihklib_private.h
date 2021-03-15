@@ -40,7 +40,11 @@
 /* taking more than this percentage of memory would
  * make Linux panic due to out of memory
  */
+#ifndef ENABLE_FUGAKU_HACKS
 #define IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT 98
+#else
+#define IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT 95
+#endif
 
 #define Q(x) #x
 #define QUOTE(x) Q(x)
