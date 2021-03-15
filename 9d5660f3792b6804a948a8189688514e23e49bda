@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "631dd1a1_a713c6ad",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2944,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T03:41:24Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\tpg-\u003emapping \u003d (struct address_space *)((unsigned long)pg-\u003emapping |",
+      "revId": "9d5660f3792b6804a948a8189688514e23e49bda",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "27438b95_5082c384",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2945,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T03:41:24Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t\t\t\t       PAGE_MAPPING_ANON);",
+      "revId": "9d5660f3792b6804a948a8189688514e23e49bda",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ce85ce7d_6700fbf1",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2964,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T03:41:24Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tpg-\u003emapping \u003d (struct address_space *)((unsigned long)pg-\u003emapping |",
+      "revId": "9d5660f3792b6804a948a8189688514e23e49bda",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "64118a4b_766f732e",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 2965,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-15T03:41:24Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\t\t\t\t\t       PAGE_MAPPING_ANON);",
+      "revId": "9d5660f3792b6804a948a8189688514e23e49bda",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
