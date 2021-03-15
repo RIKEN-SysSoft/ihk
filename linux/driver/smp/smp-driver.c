@@ -1236,9 +1236,21 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 	struct ihk_os_mem_chunk *next_chunk = NULL;
 	struct chunk *mem_chunk;
 
-	if(os->status == BUILTIN_OS_STATUS_SHUTDOWN) {
-		eprintk("%s,already down\n", __FUNCTION__);
+	switch (os->status) {
+	case BUILTIN_OS_STATUS_INITIAL:
+		printk("%s: warning: already shut down\n", __func__);
 		return 0;
+	case BUILTIN_OS_STATUS_LOADING:
+	case BUILTIN_OS_STATUS_LOADED:
+		printk("%s: warning: trying to shut down while booting\n", __func__);
+		break;
+	case BUILTIN_OS_STATUS_SHUTDOWN:
+		printk("%s: warning: being shutting down\n", __func__);
+		return 0;
+	case BUILTIN_OS_STATUS_BOOTING:
+	case BUILTIN_OS_STATUS_HUNGUP:
+	default:
+		break;
 	}
 	set_os_status(os, BUILTIN_OS_STATUS_SHUTDOWN);
 
