@@ -2888,6 +2888,12 @@ static void smp_ihk_os_panic_notifier(ihk_os_t ihk_os, void *priv)
 	struct ihk_os_mem_chunk *os_mem_chunk;
 	unsigned long phys;
 
+#ifdef EXCLUDE_FROM_LINUX_DUMP
+	pr_err("%s: excluding McKernel memory from Linux dump because of cmake option\n",
+	       __func__);
+	goto exclude_from_linux_dump;
+#endif
+
 	/* excluding McKernel memory from Linux dump when info
 	 * accessed by ihk_mc_query_mem_areas(),
 	 * ihk_mc_query_mem_free_page(), ihk_mc_query_mem_user_page()
