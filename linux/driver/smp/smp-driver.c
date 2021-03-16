@@ -774,7 +774,7 @@ bp_cpu->numa_id = linux_numa_2_lwk_numa(os,
 
 	/* Error cases */
  revert_os_status:
-	set_os_status(os, BUILTIN_OS_STATUS_LOADED);
+	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
  revert_dev_status:
 	set_dev_status(dev, BUILTIN_DEV_STATUS_READY);
  free_param_pages:
