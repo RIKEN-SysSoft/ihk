@@ -381,11 +381,12 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 	struct ihk_os_notifier *_ion;
 	int index = ihk_host_os_get_index(data);
 	enum ihk_os_status status = __ihk_os_status(data);
+	struct smp_os_data *os = data->priv;
 
 	switch (status) {
 	case IHK_OS_STATUS_SHUTDOWN:
-		pr_err("%s: error: invalid os status: %d\n",
-		       __func__, status);
+		pr_err("%s: error: os status is IHK_OS_STATUS_SHUTDOWN\n",
+		       __func__);
 		ret = -EBUSY;
 		goto out;
 	case IHK_OS_STATUS_FREEZING:
@@ -433,13 +434,18 @@ static int __ihk_os_shutdown(struct ihk_host_linux_os_data *data, int flag)
 		}
 		break;
 	case IHK_OS_STATUS_NOT_BOOTED:
-		/* assuming there is no overlapping os management calls
-		 * so IHK_OS_STATUS_NOT_BOOTED implies BUILTIN_OS_STATUS_INITIAL
-		 */
-		pr_info("%s: do nothing because data->priv->status is BUILTIN_OS_STATUS_INITIAL\n",
-			__func__);
-		ret = 0;
-		goto out;
+		switch (os->status) {
+		case BUILTIN_OS_STATUS_INITIAL:
+			pr_info("%s: info: do nothing, smp_os_data::status: BUILTIN_OS_STATUS_INITIAL\n",
+				__func__);
+			ret = 0;
+			goto out;
+		case BUILTIN_OS_STATUS_LOADING:
+		case BUILTIN_OS_STATUS_LOADED:
+			pr_err("%s: error: smp_os_data::status: %d\n",
+				__func__, os->status);
+			ret = -EBUSY;
+			goto out;
 	case IHK_OS_STATUS_RUNNING:
 	case IHK_OS_STATUS_FAILED:
 	case IHK_OS_STATUS_HUNGUP:
