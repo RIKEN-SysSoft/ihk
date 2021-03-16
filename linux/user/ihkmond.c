@@ -391,7 +391,9 @@ static void* redirect_kmsg(void* _arg) {
 	int i;
 	FILE* fps[IHKMOND_NUM_FILEBUF_SLOTS];
 	int sizes[IHKMOND_NUM_FILEBUF_SLOTS];
+#ifndef ENABLE_KMSG_REDIRECT
 	int prod = 0; /* Producer pointer */
+#endif
 	struct ihk_device_get_kmsg_buf_desc desc_get;
 
 	memset(fps, 0, IHKMOND_NUM_FILEBUF_SLOTS * sizeof(FILE *));
