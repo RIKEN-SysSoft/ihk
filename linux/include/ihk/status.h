@@ -10,7 +10,9 @@
 
 /** \brief Status of a manycore kernel instance */
 enum ihk_os_status {
-	IHK_OS_STATUS_NOT_BOOTED,
+	IHK_OS_STATUS_NOT_BOOTED,	/* BUILTIN_OS_STATUS_INITIAL */
+	IHK_OS_STATUS_LOADING,		/* BUILTIN_OS_STATUS_LOADING */
+	IHK_OS_STATUS_LOADED,		/* BUILTIN_OS_STATUS_LOADED */
 	IHK_OS_STATUS_BOOTING,
 	IHK_OS_STATUS_BOOTED,    /* OS booted and acked */
 	IHK_OS_STATUS_READY,     /* OS is ready to initialize IKC from Linux */
