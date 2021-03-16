@@ -1335,8 +1335,9 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 		os->numa_mapping = NULL;
 	}
 
-	if (os->param && os->param_pages_order) {
+	if (os->param) {
 		free_pages((unsigned long)os->param, os->param_pages_order);
+		os->param = NULL;
 	}
 
 	set_os_status(os, BUILTIN_OS_STATUS_INITIAL);
