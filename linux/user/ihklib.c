@@ -3050,22 +3050,25 @@ int ihk_os_get_status(int index)
 	}
 
 	switch (ret) {
-	case IHK_OS_STATUS_NOT_BOOTED: /* before smp_ihk_os_boot or
-					* after smp_ihk_destroy_os
-					*/
+	/* before smp_ihk_os_boot or after smp_ihk_destroy_os */
+	case IHK_OS_STATUS_NOT_BOOTED:
+	case IHK_OS_STATUS_LOADING:
 		ret = IHK_STATUS_INACTIVE;
 		break;
-	case IHK_OS_STATUS_BOOTING:	/* smp_ihk_os_boot -- arch_init */
-	case IHK_OS_STATUS_BOOTED:	/* arch_init -- arch_ready */
-	case IHK_OS_STATUS_READY:	/* arch_ready -- done_init */
+	/* smp_ihk_os_boot -- arch_init */
+	case IHK_OS_STATUS_BOOTING:
+	/* arch_init -- arch_ready */
+	case IHK_OS_STATUS_BOOTED:
+	/* arch_ready -- done_init */
+	case IHK_OS_STATUS_READY:
 		ret = IHK_STATUS_BOOTING;
 		break;
-	case IHK_OS_STATUS_RUNNING:	/* after done_init */
+	/* after done_init */
+	case IHK_OS_STATUS_RUNNING:
 		ret = IHK_STATUS_RUNNING;
 		break;
-	case IHK_OS_STATUS_SHUTDOWN:	/* smp_ihk_os_shutdown --
-					 * smp_ihk_destroy_os
-					 */
+	/* smp_ihk_os_shutdown -- smp_ihk_destroy_os */
+	case IHK_OS_STATUS_SHUTDOWN:
 		ret = IHK_STATUS_SHUTDOWN;
 		break;
 	case IHK_OS_STATUS_FAILED:
