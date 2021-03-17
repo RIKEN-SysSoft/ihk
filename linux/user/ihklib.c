@@ -2056,8 +2056,13 @@ int ihk_destroy_os(int dev_index, int os_index)
 				__func__, -ret);
 			goto out;
 		}
-		dprintf("%s: EBUSY case, retrying...\n", __func__);
-		usleep(10000);
+		printk("%s: retrying because someone is holding /dev/mcos0\n",
+		       __func__);
+		usleep(100000);
+	}
+	if (i == 100) {
+		printk("%s: error: someone is holding /dev/mcos0 for more than 10 seconds\n",
+		       __func__);
 	}
  out:
 	if (fd != -1) {
