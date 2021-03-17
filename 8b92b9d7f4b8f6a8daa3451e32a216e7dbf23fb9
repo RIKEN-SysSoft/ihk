@@ -1,0 +1,174 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "7c6dfba6_7efc9271",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 455,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: Comparisons should place the constant on the right side of the test\n+\t    IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT \u003c req-\u003emax_size_ratio_all) {",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fe98b2c2_039d6b56",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 455,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t    IHK_RESERVE_MEM_MAX_SIZE_RATIO_ALL_LIMIT \u003c req-\u003emax_size_ratio_all) {",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "2abe53f1_48250060",
+        "filename": "test/issues/1509/C1509.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: Macros with flow control statements should be avoided\n+#define OKNG(cond, fmt, args...) do {\t\t\\\n+\tif (cond) {\t\t\t\t\t\t\\\n+\t\tprintf(\"[OK] \" fmt, ##args);\t\\\n+\t} else {\t\t\t\t\t\t\\\n+\t\tprintf(\"[NG] \" fmt, ##args);\t\t\\\n+\t\tgoto out;\t\t\t\\\n+\t}\t\t\t\t\t\t\t\\\n+} while (0)",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "da001848_6f0a824a",
+        "filename": "test/issues/1509/C1509.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 193,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tOKNG(rc !\u003d 0, \"CT%03d: release_mem_partially by negative num_mems\\n\", tid);",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "17c40e58_a825f082",
+        "filename": "test/issues/1509/C1509.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 200,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\trc \u003d ioctl(mckfd, IHK_DEVICE_RELEASE_MEM_PARTIALLY, \u0026mem_req_nega_chunk_size);",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "26efd923_55df2727",
+        "filename": "test/issues/1509/C1509.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 201,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tOKNG(rc !\u003d 0, \"CT%03d: release_mem_partially by negative min_chunk_size\\n\", tid);",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f128cbff_74cc1ff1",
+        "filename": "test/issues/1509/C1509.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 204,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\trc \u003d ioctl(mckfd, IHK_DEVICE_RELEASE_MEM_PARTIALLY, \u0026mem_req_nega_ratio);",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d51adb2f_e0b34588",
+        "filename": "test/issues/1509/C1509.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 208,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\trc \u003d ioctl(mckfd, IHK_DEVICE_RELEASE_MEM_PARTIALLY, \u0026mem_req_over_ratio);",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d457179d_9a70f685",
+        "filename": "test/issues/1509/C1509.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 243,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tOKNG(rc !\u003d 0, \"CT%03d: os_assign_mem by negative min_chunk_size\\n\", tid);",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0c140649_dd133a71",
+        "filename": "test/issues/1509/C1509.c",
+        "patchSetId": 5
+      },
+      "lineNbr": 264,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T08:11:48Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\tOKNG(rc !\u003d 0, \"CT%03d: os_release_mem by negative min_chunk_size\\n\", tid);",
+      "revId": "8b92b9d7f4b8f6a8daa3451e32a216e7dbf23fb9",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
