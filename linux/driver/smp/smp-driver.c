@@ -1238,16 +1238,18 @@ static int smp_ihk_os_shutdown(ihk_os_t ihk_os, void *priv, int flag)
 
 	switch (os->status) {
 	case BUILTIN_OS_STATUS_INITIAL:
-		printk("%s: warning: already shut down\n", __func__);
+		pr_warn("%s: warning: already shut down\n", __func__);
 		return 0;
 	case BUILTIN_OS_STATUS_LOADING:
 	case BUILTIN_OS_STATUS_LOADED:
-		printk("%s: warning: trying to shut down while booting\n", __func__);
+		pr_warn("%s: warning: trying to shut down while loading\n", __func__);
 		break;
 	case BUILTIN_OS_STATUS_SHUTDOWN:
-		printk("%s: warning: being shutting down\n", __func__);
+		pr_warn("%s: warning: being shut down\n", __func__);
 		return 0;
 	case BUILTIN_OS_STATUS_BOOTING:
+		pr_warn("%s: warning: trying to shut down while booting\n", __func__);
+		break;
 	case BUILTIN_OS_STATUS_HUNGUP:
 	default:
 		break;
