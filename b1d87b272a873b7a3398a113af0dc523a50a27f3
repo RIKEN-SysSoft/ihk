@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "ed8cd9fa_afea5014",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1245,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T00:30:33Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tpr_warn(\"%s: warning: trying to shut down while loading\\n\", __func__);",
+      "revId": "b1d87b272a873b7a3398a113af0dc523a50a27f3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1cb959e4_95c29031",
+        "filename": "linux/driver/smp/smp-driver.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 1251,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-17T00:30:33Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tpr_warn(\"%s: warning: trying to shut down while booting\\n\", __func__);",
+      "revId": "b1d87b272a873b7a3398a113af0dc523a50a27f3",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
