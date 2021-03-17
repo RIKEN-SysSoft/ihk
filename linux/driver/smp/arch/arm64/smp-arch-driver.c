@@ -1276,6 +1276,12 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 	status = os->status;
 
 	switch (status) {
+	case BUILTIN_OS_STATUS_INITIAL:
+		ret = IHK_OS_STATUS_NOT_BOOTED;
+		break;
+	case BUILTIN_OS_STATUS_LOADING:
+		ret = IHK_OS_STATUS_LOADING;
+		break;
 	case BUILTIN_OS_STATUS_BOOTING:
 		if (os->param->status == 1) {
 			ret = IHK_OS_STATUS_BOOTED;
@@ -1294,6 +1300,8 @@ enum ihk_os_status smp_ihk_os_query_status(ihk_os_t ihk_os, void *priv)
 		ret = IHK_OS_STATUS_SHUTDOWN;
 		break;
 	default:
+		pr_err("%s: error: unknown status (%d)\n",
+		       __func__, status);
 		ret = IHK_OS_STATUS_NOT_BOOTED;
 		break;
 	}
