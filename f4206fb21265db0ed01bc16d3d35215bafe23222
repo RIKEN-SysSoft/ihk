@@ -1,0 +1,191 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e69cf72a_51fe45cf",
+        "filename": "linux/core/host_driver.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 769,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+static int __ihk_device_detect_hungup(struct ihk_host_linux_device_data *dev_data,",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6d2c5be5_75ece75a",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 39,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: Single statement macros should not use a do {} while (0) loop\n+#define dprintf(fmt, args...) do {\t\\\n+\tprintk(fmt, ##args);\t\t\\\n+} while (0)",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "853cd171_2aceb35a",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(fmt, ##args);\t\t\\",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "f06df65b_ef1789b2",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 46,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: Single statement macros should not use a do {} while (0) loop\n+#define eprintf(fmt, args...) do {\t\\\n+\tprintk(fmt, ##args);\t\t\\\n+} while (0)",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "0c26bf8a_d1deed08",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: printk() should include KERN_\u003cLEVEL\u003e facility level\n+\tprintk(fmt, ##args);\t\t\\",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "3a9f4edb_09d84784",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 168,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\tdprintf(\"%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned EAGAIN\\n\", __FUNCTION__);",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4209facb_a6f8f45f",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 168,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintf(\"%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned EAGAIN\\n\", __FUNCTION__);",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1a471a03_339dea12",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 170,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\t\tdprintf(\"%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned %s\\n\", __FUNCTION__, strerror(errno));",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "831c4ad9_c3293b7e",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 170,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\t\tdprintf(\"%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned %s\\n\", __FUNCTION__, strerror(errno));",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e9ca0749_698a33a7",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 173,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: line over 80 characters\n+\t\tdprintf(\"%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned %d\\n\", __FUNCTION__, ret_lib);",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "43f56615_05adcf3d",
+        "filename": "linux/user/ihkmond.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 173,
+      "author": {
+        "id": 1014954
+      },
+      "writtenOn": "2021-03-18T06:09:00Z",
+      "side": 1,
+      "message": "WARNING: __func__ should be used instead of gcc specific __FUNCTION__\n+\t\tdprintf(\"%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned %d\\n\", __FUNCTION__, ret_lib);",
+      "revId": "f4206fb21265db0ed01bc16d3d35215bafe23222",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
