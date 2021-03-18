@@ -36,26 +36,16 @@
 //#define DEBUG
 
 #ifdef DEBUG
-#define	dprintf(...)											\
-	do {														\
-		char msg[1024];											\
-		sprintf(msg, __VA_ARGS__);								\
-		fprintf(stderr, "%s,%s", __FUNCTION__, msg);			\
-	} while (0);
-#define	eprintf(...)											\
-	do {														\
-		char msg[1024];											\
-		sprintf(msg, __VA_ARGS__);								\
-		fprintf(stderr, "%s,%s", __FUNCTION__, msg);			\
-	} while (0);
+#define dprintf(fmt, args...) do {	\
+	printk(fmt, ##args);		\
+} while (0)
 #else
 #define dprintf(...) do {  } while (0)
-#define eprintf(...) do {										\
-		char msg[1024];											\
-		sprintf(msg, __VA_ARGS__);								\
-		fprintf(stderr, "%s,%s", __FUNCTION__, msg);			\
-  } while (0)
 #endif
+
+#define eprintf(fmt, args...) do {	\
+	printk(fmt, ##args);		\
+} while (0)
 
 #define CHKANDJUMP(cond, err, ...)								\
 	do {																\
@@ -119,7 +109,7 @@ static ssize_t reap_event(int evfd) {
 
 static void* detect_hungup(void* _arg) {
 	struct thr_args *arg = (struct thr_args *)_arg;
-	int osfd = -1, epfd = -1;
+	int devfd = -1, epfd = -1;
 	struct epoll_event event;
 	struct epoll_event events[1];
 	int ret = 0, ret_lib;
@@ -163,36 +153,28 @@ static void* detect_hungup(void* _arg) {
  next:
 	dprintf("next\n");
 
-	osfd = ihklib_os_open(arg->os_index);
-
-	if (osfd < 0) {
-		if (osfd == -ENOENT) {
-			dprintf("%s: detect removal before parent\n",
-				__func__);
-		} else {
-			dprintf("%s: warning: ihklib_os_open failed with %d\n",
-				__func__, errno);
-		}
-		/* don't go to wait_for_add since
-		 * removal-notification would be missed
-		 */
-		goto wait_for_removal;
+	devfd = ihklib_device_open(arg->os_index);
+	if (devfd < 0) {
+		dprintf("%s: error: ihklib_device_open failed with %d\n",
+			__func__, errno);
+		ret = devfd;
+		goto out;
 	}
 
-	ret_lib = ioctl(osfd, IHK_OS_DETECT_HUNGUP);
+	ret_lib = ioctl(devfd, IHK_DEVICE_DETECT_HUNGUP,
+			(unsigned long)arg->dev_index);
 	if(ret_lib == -1) {
 		if(errno == EAGAIN) { /* OS is booting */
-			dprintf("%s: ioctl IHK_OS_DETECT_HUNGUP returned EAGAIN\n", __FUNCTION__);
+			dprintf("%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned EAGAIN\n", __FUNCTION__);
 		} else {
-			dprintf("%s: ioctl IHK_OS_DETECT_HUNGUP returned %s\n", __FUNCTION__, strerror(errno));
+			dprintf("%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned %s\n", __FUNCTION__, strerror(errno));
 		}
 	} else {
-		dprintf("%s: ioctl IHK_OS_DETECT_HUNGUP returned %d\n", __FUNCTION__, ret_lib);
+		dprintf("%s: ioctl IHK_DEVICE_DETECT_HUNGUP returned %d\n", __FUNCTION__, ret_lib);
 	}
-	close(osfd);
-	osfd = -1;
+	close(devfd);
+	devfd = -1;
 
- wait_for_removal:
 	do {
 		int nfd = epoll_wait(epfd, events, 1, arg->interval * 1000);
 		if (nfd < 0 && errno == EINTR)
@@ -215,8 +197,8 @@ static void* detect_hungup(void* _arg) {
 	} while (1);
 
 out:
-	if (osfd >= 0) {
-		close(osfd);
+	if (devfd >= 0) {
+		close(devfd);
 	}
 	if (epfd >= 0) {
 		close(epfd);
