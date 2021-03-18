@@ -33,6 +33,7 @@
 #include <linux/eventfd.h>
 #include <linux/version.h>
 #include <linux/cred.h>
+#include <linux/mutex.h>
 #include <ihk/ihk_host_user.h>
 #include <ihk/ihk_host_driver.h>
 #include <asm/spinlock.h>
@@ -68,6 +69,7 @@ static struct ihk_host_linux_device_data *dev_data[DEV_MAX_MINOR];
 static int dev_max_minor = 0;
 
 static DEFINE_SPINLOCK(os_data_lock);
+static DEFINE_MUTEX(os_lock);
 static struct ihk_host_linux_os_data *os_data[OS_MAX_MINOR];
 static int os_max_minor = 0;
 
@@ -764,11 +766,27 @@ setup_rusage(struct ihk_host_linux_os_data *data)
 	data->rusage_len = size;
 }
 
-static int detect_hungup(struct ihk_host_linux_os_data *data)
+static int __ihk_device_detect_hungup(struct ihk_host_linux_device_data *dev_data,
+				      unsigned long arg)
 {
 	int ret;
 	int n;
 	int i;
+	struct ihk_host_linux_os_data *data;
+
+	if (mutex_lock_interruptible(&os_lock)) {
+		ret = -ERESTARTSYS;
+		goto out;
+	}
+
+	if (arg > OS_MAX_MINOR || !os_data[arg]) {
+		pr_err("%s: error: no OS exists with id %lu\n",
+		       __func__, arg);
+		ret = -EINVAL;
+		goto unlock_out;
+	}
+
+	data = os_data[arg];
 
 	ret = __ihk_os_query_status(data);
 	pr_debug("%s: status before checking monitor info: %d",
@@ -781,16 +799,16 @@ static int detect_hungup(struct ihk_host_linux_os_data *data)
 	   (3) LWK sets boot_param->status to 2 (__ihk_os_query_status returns IHK_OS_STATUS_READY) in arch_ready()
 	   (4) LWK sets boot_param->status to 3 (__ihk_os_query_status returns IHK_OS_STATUS_RUNNING) in done_init() */
 	if (ret == IHK_OS_STATUS_HUNGUP) {
-		goto out;
+		goto unlock_out;
 	} else if (ret != IHK_OS_STATUS_READY && ret != IHK_OS_STATUS_RUNNING) {
 		ret = -EAGAIN;
-		goto out;
+		goto unlock_out;
 	}
 
 	setup_monitor(data);
 	if (data->monitor == NULL) {
 		ret = -ENOSYS;
-		goto out;
+		goto unlock_out;
 	}
 
 	n = data->monitor->num_processors;
@@ -799,7 +817,7 @@ static int detect_hungup(struct ihk_host_linux_os_data *data)
 		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_PANIC){
 			dkprintf("%s: cpu[%d].status==%d\n", __FUNCTION__, i, data->monitor->cpu[i].status);
 			ret = IHK_OS_STATUS_FAILED;
-			goto out;
+			goto unlock_out;
 		}
 
 		if(data->monitor->cpu[i].status == IHK_OS_MONITOR_KERNEL){
@@ -821,6 +839,8 @@ static int detect_hungup(struct ihk_host_linux_os_data *data)
 		data->monitor->cpu[i].ocounter = data->monitor->cpu[i].counter;
 	}
 
+ unlock_out:
+	mutex_unlock(&os_lock);
  out:
 	pr_debug("%s: status after checking monitor info: %d\n",
 		__func__, ret);
@@ -1229,10 +1249,6 @@ static long ihk_host_os_ioctl(struct file *file, unsigned int request,
 
 	case IHK_OS_QUERY_STATUS:
 		ret = __ihk_os_query_status(data);
-		break;
-
-	case IHK_OS_DETECT_HUNGUP:
-		ret = detect_hungup(data);
 		break;
 
 	case IHK_OS_NOTIFY_HUNGUP:
@@ -1701,6 +1717,10 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	/* set os_data[minor] before creating device to avoid creating
 	 * the device before it's useable
 	 */
+	if (mutex_lock_interruptible(&os_lock)) {
+		return -ERESTARTSYS;
+	}
+
 	os_data[minor] = os;
 	os->minor = minor;
 
@@ -1709,8 +1729,11 @@ static int __ihk_device_create_os(struct ihk_host_linux_device_data *data,
 	if (IS_ERR(os->lindev)) {
 		printk("ihk: device_create failed.\n");
 		ret = -ENOMEM;
+		mutex_unlock(&os_lock);
 		goto error;
 	}
+
+	mutex_unlock(&os_lock);
 
 	return minor;
 
@@ -1729,23 +1752,30 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 	int ret = 0;
 
 	dkprintf("__ihk_device_destroy_os (%p, %p)\n", data, os);
+
+	if (mutex_lock_interruptible(&os_lock)) {
+		return -ERESTARTSYS;
+	}
+
 	if (!os || os == OS_DATA_INVALID || !data || data == DEV_DATA_INVALID
 	    || os->dev_data != data) {
 		dkprintf("%s: pointer invalid\n", __FUNCTION__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 	
 	if (atomic_read(&os->refcount) > 0) {
 		pr_err("%s: error: refcount != 0 (%d)\n",
 		       __func__, atomic_read(&os->refcount));
-		return -EBUSY;
+		ret = -EBUSY;
+		goto out;
 	}
 
 	ret = __ihk_os_shutdown(os, FLAG_IHK_OS_SHUTDOWN_FORCE);
 	if (ret) {
 		pr_err("%s: error: __ihk_os_shutdown failed with %d\n",
 		       __func__, ret);
-		return ret;
+		goto out;
 	}
 
 	if (data->ops->destroy_os) {
@@ -1753,7 +1783,8 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 		if (ret) {
 			pr_err("%s: error: destroy_os: ret: %d\n",
 			       __func__, ret);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto out;
 		}
 	}
 
@@ -1775,7 +1806,10 @@ static int __ihk_device_destroy_os(struct ihk_host_linux_device_data *data,
 		kfree(os->regular_channels);
 	kfree(os);
 
-	return 0;
+	ret = 0;
+ out:
+	mutex_unlock(&os_lock);
+	return ret;
 }
 
 /** \brief Destroy all the OS kernel stuffs of the specified device */
@@ -1981,6 +2015,10 @@ static long ihk_host_device_ioctl(struct file *file, unsigned int request,
 
 	case IHK_DEVICE_RELEASE_KMSG_BUF:
 		ret = __ihk_device_release_kmsg_buf(file, arg);
+		break;
+
+	case IHK_DEVICE_DETECT_HUNGUP:
+		ret = __ihk_device_detect_hungup(data, arg);
 		break;
 
 	default:

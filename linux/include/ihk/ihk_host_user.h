@@ -31,6 +31,7 @@
 #ifdef ENABLE_KRM_WORKAROUND
 #define IHK_DEVICE_RESERVE_MEM_MAX_RATIO        0x11290e
 #endif
+#define IHK_DEVICE_DETECT_HUNGUP      0x11290f
 
 #define IHK_DEVICE_DEBUG_START        0x122900
 #define IHK_DEVICE_DEBUG_END          0x1229ff
@@ -67,7 +68,6 @@
 #define IHK_OS_GET_CPU_USAGE          0x112a33
 #define IHK_OS_GET_NUM_NUMA_NODES     0x112a34
 #define IHK_OS_NOTIFY_HUNGUP          0x112a35
-#define IHK_OS_DETECT_HUNGUP          0x112a36
 #define IHK_OS_GET_BUILDID            0x112a37
 #define IHK_OS_GET_NUM_CPUS           0x112a38
 #define IHK_OS_READ_KADDR             0x112a39
