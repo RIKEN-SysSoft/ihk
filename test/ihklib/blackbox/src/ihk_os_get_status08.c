@@ -138,13 +138,13 @@ int main(int argc, char **argv)
 			/* wait until McKernel start ihk_mc_delay_us() */
 			usleep(0.25 * 1000000);
 
-			fd = ihklib_os_open(0);
-			INTERR(fd < 0, "ihklib_os_open returned %d\n",
+			fd = ihklib_device_open(0);
+			INTERR(fd < 0, "ihklib_device_open returned %d\n",
 			       fd);
 
-			ioctl(fd, IHK_OS_DETECT_HUNGUP);
+			ioctl(fd, IHK_DEVICE_DETECT_HUNGUP, 0);
 			usleep(0.25 * 1000000);
-			ioctl(fd, IHK_OS_DETECT_HUNGUP);
+			ioctl(fd, IHK_DEVICE_DETECT_HUNGUP, 0);
 
 			close(fd);
 			break;
