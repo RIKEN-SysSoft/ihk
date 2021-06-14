@@ -62,6 +62,6 @@
 
 #define IHK_SMP_CHUNK_BASE_SIZE	(4UL << 20)	/* 4MiB a chunk */
 
-#define rdtsc() arch_counter_get_cntvct()
+#define rdtsc() arch_timer_read_counter()
 
 #endif /* HEADER_SMP_SMP_DEFINES_DRIVER_H */
