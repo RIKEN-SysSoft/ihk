@@ -1217,6 +1217,8 @@ unsigned long smp_ihk_adjust_entry(unsigned long entry,
 	return entry;
 }
 
+#if (!defined(RHEL_RELEASE_CODE) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)) || \
+	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 4))
 int smp_ihk_arch_vmap_area_taken(void)
 {
 	int vmap_area_taken = 0;
@@ -1239,6 +1241,7 @@ int smp_ihk_arch_vmap_area_taken(void)
 	}
 	return vmap_area_taken;
 }
+#endif
 
 int smp_ihk_os_setup_startup(void *priv, unsigned long phys,
                             unsigned long entry)
