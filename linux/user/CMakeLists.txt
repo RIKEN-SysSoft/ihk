@@ -24,12 +24,18 @@ SET_TARGET_PROPERTIES(ihklib PROPERTIES OUTPUT_NAME ihk)
 target_link_libraries(ihklib ${LIBBFD})
 
 add_executable(ihkconfig ihkconfig.c)
+set_property(TARGET ihkconfig PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET ihkconfig PROPERTY LINK_FLAGS "-fPIE -pie")
 target_link_libraries(ihkconfig ihklib ${LIBBFD})
 
 add_executable(ihkosctl ihkosctl.c)
+set_property(TARGET ihkosctl PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET ihkosctl PROPERTY LINK_FLAGS "-fPIE -pie")
 target_link_libraries(ihkosctl ihklib ${LIBBFD} ${LIBIBERTY})
 
 add_executable(ihkmond ihkmond.c)
+set_property(TARGET ihkmond PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET ihkmond PROPERTY LINK_FLAGS "-fPIE -pie")
 target_link_libraries(ihkmond ihklib ${LIBUDEV} pthread)
 
 configure_file(ihkconfig.1in ihkconfig.1 @ONLY)
