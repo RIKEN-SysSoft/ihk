@@ -2698,61 +2698,23 @@ static int __smp_ihk_free_mem_from_list(struct list_head *list)
 	return 0;
 }
 
+static void __ihk_smp_release_chunk(struct chunk *mem_chunk);
 static int __smp_ihk_free_mem_from_rbtree(struct rb_root *root)
 {
 	struct rb_node *node;
 	struct chunk *mem_chunk;
-	unsigned long size_left;
-	unsigned long va;
-	unsigned long pa;
-#ifdef IHK_DEBUG
-	unsigned long size;
-#endif
 
 	/* Drop all memory */
 	node = rb_first(root);
 	while (node) {
 		mem_chunk = container_of(node, struct chunk, node);
-		pa = mem_chunk->addr;
-#ifdef IHK_DEBUG
-		size = mem_chunk->size;
-#endif
+
+		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n",
+			mem_chunk->addr, mem_chunk->addr + mem_chunk->size);
 
 		rb_erase(node, root);
+		__ihk_smp_release_chunk(mem_chunk);
 
-		va = (unsigned long)phys_to_virt(pa);
-		size_left = mem_chunk->size;
-		while (size_left > 0) {
-			int order;
-			size_t order_size;
-			struct page *page = virt_to_page(va);
-
-			if (!PageCompound(page) || !PageHead(page)) {
-				printk(KERN_ERR "%s: WARNING: page is not compound or not head, skipping..\n",
-					__FUNCTION__);
-				size_left -= PAGE_SIZE;
-				va += PAGE_SIZE;
-				continue;
-			}
-
-			order = compound_order(page);
-			order_size = (PAGE_SIZE << order);
-
-			free_pages(va, order);
-			pr_debug("0x%lx, page order: %d freed\n", va, order);
-			/* A compound page may stretch over the size of this chunk */
-			if (order_size <= size_left) {
-				size_left -= order_size;
-				va += order_size;
-			}
-			else {
-				dprintk("%s: order_size - size_left: %lu\n",
-					__FUNCTION__, order_size - size_left);
-				size_left = 0;
-			}
-		}
-
-		dprintf("IHK-SMP: 0x%lx - 0x%lx freed\n", pa, pa + size);
 		node = rb_first(root);
 	}
 
@@ -2860,8 +2822,9 @@ static void sort_pagelists(struct zone *zone)
 }
 
 #define RESERVE_MEM_FAILED_ATTEMPTS 1
-#define RESERVE_MEM_TIMEOUT 30
-//#define USE_TRY_TO_FREE_PAGES
+#define RESERVE_MEM_TIMEOUT 10
+#define USE_TRY_TO_FREE_PAGES
+#define USE_TRY_TO_FREE_PAGES_TIME_LIMIT 2
 
 static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 {
@@ -2879,6 +2842,7 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 #ifdef USE_TRY_TO_FREE_PAGES
 	unsigned long (*__try_to_free_pages)(struct zonelist *zonelist, int order,
 				gfp_t gfp_mask, nodemask_t *nodemask) = NULL;
+	int try_free_pages_secs = 0;
 #endif // USE_TRY_TO_FREE_PAGES
 #ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
@@ -2895,6 +2859,20 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	bool *__movable_node_enabled = NULL;
 #endif
 
+	if (order_limit < 0 || order_limit > MAX_ORDER) {
+		pr_err("IHK-SMP: error: invalid order_limit (%d)\n",
+		       order_limit);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	if (!node_online(numa_id)) {
+		pr_err("IHK-SMP: error: NUMA node %d isn't online\n",
+		       numa_id);
+		ret = -EINVAL;
+		goto out;
+	}
+
 	memset(&nodemask, 0, sizeof(nodemask));
 	__node_set(numa_id, &nodemask);
 
@@ -2905,7 +2883,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 			(struct zonelist *, int, gfp_t, nodemask_t *))
 			kallsyms_lookup_name("try_to_free_pages");
 #endif // USE_TRY_TO_FREE_PAGES
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	__drain_all_pages = (void (*)(struct zone *))
 			kallsyms_lookup_name("drain_all_pages");
@@ -2913,10 +2890,6 @@ static int __ihk_smp_reserve_mem(size_t ihk_mem, int numa_id)
 	__drain_all_pages = (void (*)(void))
 			kallsyms_lookup_name("drain_all_pages");
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-	__drain_all_pages = (void (*)(void))
-			kallsyms_lookup_name("drain_all_pages");
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 
 #ifdef CONFIG_MOVABLE_NODE
 	__movable_node_enabled =
@@ -2994,49 +2967,77 @@ retry:
 		 * when requested "all" or when allocating from NUMA 0
 		 * to avoid Linux crashing...
 		 */
-		if ((numa_id == 0 && allocated > (available * 95 / 100)) ||
+		if ((numa_id == 0 && allocated > (available * 90 / 100)) ||
 				(want == IHK_SMP_MEM_ALL &&
 				 allocated > (available * 98 / 100))) {
-			printk("%s: 95%% of NUMA %d taken, breaking allocation"
+			printk("%s: %d%% of NUMA %d taken, breaking allocation"
 					" loop (current order: %d)..\n",
-					__FUNCTION__, numa_id, order);
+					__FUNCTION__, numa_id,
+					(numa_id == 0) ? 90 : 98, order);
 			goto pre_out;
 		}
 
 		pg = __alloc_pages_nodemask(
 				GFP_KERNEL | __GFP_COMP | __GFP_NOWARN |
-				__GFP_NORETRY,
+				__GFP_NORETRY | __GFP_THISNODE,
 				//| __GFP_REPEAT,
 				order,
-				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP), &nodemask);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+				numa_id,
+#else
+				node_zonelist(numa_id, GFP_KERNEL | __GFP_COMP),
+#endif
+				&nodemask);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0) /* __GFP_ATOMIC */
+		if (!pg) {
+			pg = __alloc_pages_nodemask(
+					__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE |
+					__GFP_COMP | __GFP_NORETRY | __GFP_NOWARN,
+					order,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+					numa_id,
+#else
+					node_zonelist(numa_id,
+						__GFP_ATOMIC | __GFP_HIGH | __GFP_THISNODE),
+#endif
+					&nodemask);
+			if (pg) {
+				atomic_pages_freed_per_order += 1;
+			}
+		}
+#endif
 
 #ifdef CONFIG_MOVABLE_NODE
 		/* Try movable pages if supported */
 		if (!pg && __movable_node_enabled && *__movable_node_enabled) {
 			pg = __alloc_pages_nodemask(
-					__GFP_MOVABLE | __GFP_HIGHMEM | __GFP_COMP | __GFP_NOWARN |
-					__GFP_NORETRY,
+					__GFP_MOVABLE | __GFP_HIGHMEM |
+					__GFP_COMP | __GFP_NOWARN |
+					__GFP_NORETRY | __GFP_THISNODE,
 					//| __GFP_REPEAT,
 					order,
-					node_zonelist(numa_id, __GFP_COMP), &nodemask);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+					numa_id,
+#else
+					node_zonelist(numa_id, __GFP_COMP),
+#endif
+					&nodemask);
 		}
 #endif
 
 		if (!pg) {
 #ifdef USE_TRY_TO_FREE_PAGES
 			int freed_pages;
+			int try_free_pages_start_sec;
 #endif // USE_TRY_TO_FREE_PAGES
 
 			if (__drain_all_pages) {
-#ifdef POSTK_DEBUG_ARCH_DEP_79 /* drain_all_pages() version depend hide */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 				__drain_all_pages(NULL);
 #else /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
 				__drain_all_pages();
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0) */
-#else /* POSTK_DEBUG_ARCH_DEP_79 */
-				__drain_all_pages();
-#endif /* POSTK_DEBUG_ARCH_DEP_79 */
 			}
 
 #ifdef USE_TRY_TO_FREE_PAGES
@@ -3045,18 +3046,24 @@ retry:
 			 */
 			if ((num_online_nodes() > 1 && numa_id > 0) &&
 					(__try_to_free_pages &&
-					 failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS)) {
+					 failed_free_attempts < RESERVE_MEM_FAILED_ATTEMPTS) &&
+					 (try_free_pages_secs <
+						USE_TRY_TO_FREE_PAGES_TIME_LIMIT) && order > 0) {
 
+				try_free_pages_start_sec = get_seconds();
 				freed_pages = __try_to_free_pages(
 						node_zonelist(numa_id, GFP_KERNEL),
 						order,
 						GFP_KERNEL, NULL);
+				try_free_pages_secs +=
+					(get_seconds() - try_free_pages_start_sec);
 
 				if (freed_pages <= 1)
 					++failed_free_attempts;
 
-				dprintk("%s: freed %d pages with order %d..\n",
-						__FUNCTION__, freed_pages, order);
+				if (freed_pages)
+					printk("%s: freed %d pages with order %d @ NUMA %d\n",
+							__FUNCTION__, freed_pages, order, numa_id);
 				goto retry;
 			}
 #endif // USE_TRY_TO_FREE_PAGES
@@ -3144,15 +3151,16 @@ pre_out:
 			/* Not in front of compound page? */
 			leftover_page = virt_to_page(leftover);
 			if (PageCompound(leftover_page) && !PageHead(leftover_page)) {
+				struct page *head = compound_head(leftover_page);
 				leftover = (struct chunk *)
-					phys_to_virt(page_to_phys(leftover_page->first_page)) +
-					(PAGE_SIZE << compound_order(leftover_page->first_page));
+					(phys_to_virt(page_to_phys(head)) +
+					 (PAGE_SIZE << compound_order(head)));
 
 				printk("%s: adjusted leftover chunk to compound "
 						"page border: 0x%llx:%lu\n",
 						__FUNCTION__,
-						page_to_phys(leftover_page->first_page),
-						(PAGE_SIZE << compound_order(leftover_page->first_page)));
+						page_to_phys(head),
+						(PAGE_SIZE << compound_order(head)));
 			}
 
 			/* Only if there is really something left.. */
@@ -3204,68 +3212,77 @@ out:
 	return ret;
 }
 
-static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
+static void __ihk_smp_release_chunk(struct chunk *mem_chunk)
 {
-	int ret = -1;
-	struct chunk *mem_chunk;
-	struct chunk *mem_chunk_next;
 	unsigned long size_left;
 	unsigned long va;
+	unsigned long pa = mem_chunk->addr;
+
+	va = (unsigned long)phys_to_virt(pa);
+	size_left = mem_chunk->size;
+	while (size_left > 0) {
+		int order;
+		size_t order_size;
+		struct page *page = virt_to_page(va);
+
+		if (!PageCompound(page)) {
+			free_page(va);
+			size_left -= PAGE_SIZE;
+			va += PAGE_SIZE;
+			continue;
+		}
+
+		if (!PageHead(page)) {
+			printk(KERN_DEBUG "%s: WARNING: page is compound but not head, skipping..\n",
+					__FUNCTION__);
+			size_left -= PAGE_SIZE;
+			va += PAGE_SIZE;
+			continue;
+		}
+
+		order = compound_order(page);
+		order_size = (PAGE_SIZE << order);
+
+		free_pages(va, order);
+		pr_debug("0x%lx, page order: %d freed\n", va, order);
+		/* A compound page may stretch over the size of this chunk */
+		if (order_size <= size_left) {
+			size_left -= order_size;
+			va += order_size;
+		}
+		else {
+			dprintk("%s: order_size - size_left: %lu\n",
+				__func__, order_size - size_left);
+			size_left = 0;
+		}
+	}
+}
+
+static int __ihk_smp_release_mem(size_t ihk_mem, int numa_id)
+{
+	int ret;
+	struct chunk *mem_chunk;
+	struct chunk *mem_chunk_next;
 
 	list_for_each_entry_safe(mem_chunk,
 			mem_chunk_next, &ihk_mem_free_chunks, chain) {
-		unsigned long pa = mem_chunk->addr;
-
 		if(mem_chunk->size != ihk_mem || mem_chunk->numa_id != numa_id) {
 			continue;
 		}
 
+		pr_info("IHK-SMP: chunk 0x%lx - 0x%lx"
+			" (len: %lu) @ NUMA node: %d is released\n",
+			mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
+			mem_chunk->size, mem_chunk->numa_id);
+
 		list_del(&mem_chunk->chain);
-
-		va = (unsigned long)phys_to_virt(pa);
-		size_left = mem_chunk->size;
-		while (size_left > 0) {
-			int order;
-			size_t order_size;
-			struct page *page = virt_to_page(va);
-
-			if (!PageCompound(page) || !PageHead(page)) {
-				dprintk(KERN_ERR "%s: WARNING: page is not compound or not head"
-						", freeing single page\n",
-						__FUNCTION__);
-				free_page(va);
-				size_left -= PAGE_SIZE;
-				va += PAGE_SIZE;
-				continue;
-			}
-
-			order = compound_order(page);
-			order_size = (PAGE_SIZE << order);
-
-			free_pages(va, order);
-			pr_debug("0x%lx, page order: %d freed\n", va, order);
-			/* A compound page may stretch over the size of this chunk */
-			if (order_size <= size_left) {
-				size_left -= order_size;
-				va += order_size;
-			}
-			else {
-				dprintk("%s: order_size - size_left: %lu\n",
-					__FUNCTION__, order_size - size_left);
-				size_left = 0;
-			}
-		}
-
-		dprintk(KERN_INFO "IHK-SMP: chunk 0x%lx - 0x%lx"
-				" (len: %lu) @ NUMA node: %d is released\n",
-			   mem_chunk->addr, mem_chunk->addr + mem_chunk->size,
-			   mem_chunk->size, mem_chunk->numa_id);
-
+		__ihk_smp_release_chunk(mem_chunk);
 		ret = 0;
-		goto fn_exit;
+		goto out;
 	}
 
- fn_exit:
+	ret = -EINVAL;
+ out:
 	return ret;
 }
 
