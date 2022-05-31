@@ -113,6 +113,9 @@ struct vmap_area *(*ihk__alloc_vmap_area)(unsigned long size,
 void (*ihk__free_vmap_area)(struct vmap_area *va);
 #endif
 
+void (*ihk__unmap_kernel_range_noflush)(unsigned long addr,
+				unsigned long size);
+
 static int smp_ihk_os_get_special_addr(ihk_os_t ihk_os, void *priv,
                                        enum ihk_special_addr_type type,
                                        unsigned long *addr,
@@ -1314,14 +1317,17 @@ static size_t max_size_mem_chunk(struct rb_root *root)
 static int smp_ihk_os_unmap_lwk(void)
 {
 	if (lwk_va) {
+#if (!defined(RHEL_RELEASE_CODE) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)) || \
+	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 4))
+		unsigned long flags;
+#endif
+
 		/* Unmap LWK from Linux kernel virtual */
-		unmap_kernel_range_noflush(IHK_SMP_MAP_KERNEL_START,
+		ihk__unmap_kernel_range_noflush(IHK_SMP_MAP_KERNEL_START,
 				MODULES_END - IHK_SMP_MAP_KERNEL_START);
 
 #if (!defined(RHEL_RELEASE_CODE) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)) || \
 	(defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8, 4))
-		unsigned long flags;
-
 		spin_lock_irqsave(ihk_vmap_area_lock, flags);
 		ihk___free_vmap_area(lwk_va);
 		lwk_va = NULL;
@@ -5409,6 +5415,11 @@ static int ihk_smp_symbols_init(void)
 	if (WARN_ON(!ihk__free_vmap_area))
 		goto err;
 #endif
+
+	ihk__unmap_kernel_range_noflush =
+			(void *)kallsyms_lookup_name("unmap_kernel_range_noflush");
+	if (WARN_ON(!ihk__unmap_kernel_range_noflush))
+		goto err;
 
 #ifdef IHK_IKC_USE_LINUX_WORK_IRQ
 #ifndef CONFIG_IRQ_WORK
